@@ -39,8 +39,7 @@ static void pvR5Task( void *pvParameters )
 		switch (pkt_type) {
 		case XRT_XFR_PKT_TYPE_PDI:
 			/* Note: for R5, we pass whole xsabin instead of pdi for authentication */
-//			rmgmt_get_xsabin(&ov);
-			rmgmt_get_xclbin(&ov);
+			rmgmt_get_xsabin(&ov);
 			break;
 		case XRT_XFR_PKT_TYPE_XCLBIN:
 			rmgmt_get_xclbin(&ov);
@@ -68,7 +67,7 @@ static void pvR5Task( void *pvParameters )
 //	}
 //}
 
-static int testEndian() {
+static void  testEndian() {
 	int x = 1;
 	char *c = (char *)&x;
 	RMGMT_DBG("Endian is %s\r\n", (int)c[0] == 1 ? "Little" : "Big");
@@ -79,13 +78,13 @@ int main( void )
 
 	testEndian();
 
-//	if (xTaskCreate( pvHostTask, 					/* The function that implements the task. */
-//					( const char * ) "Host", 	/* Text name for the task, provided to assist debugging only. */
-//					configMINIMAL_STACK_SIZE, 	/* The stack allocated to the task. */
-//					NULL, 						/* The task parameter is not used, so set to NULL. */
-//					tskIDLE_PRIORITY,			/* The task runs at the idle priority. */
-//					&xHostTask
-//					) != pdPASS) {
+//	if (xTaskCreate( pvHostTask, 	/* The function that implements the task. */
+//		( const char * ) "Host", 	/* Text name for the task, provided to assist debugging only. */
+//		configMINIMAL_STACK_SIZE, 	/* The stack allocated to the task. */
+//		NULL, 						/* The task parameter is not used, so set to NULL. */
+//		tskIDLE_PRIORITY,			/* The task runs at the idle priority. */
+//		&xHostTask
+//		) != pdPASS) {
 //		xil_printf("pvHostTask fail \n");
 //	}
 

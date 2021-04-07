@@ -193,7 +193,6 @@ int ospi_flush_intr(u8 *WriteBuffer, u32 len)
 	XOspiPsv_Config *OspiPsvConfig;
 	u8 *ReadBuffer;
 
-	xil_printf("DZ in flush intr\r\n");
 	Status = XOspiPsv_DeviceReset(XOSPIPSV_HWPIN_RESET);
 	if (Status != XST_SUCCESS)
 		return XST_FAILURE;

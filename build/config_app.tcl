@@ -1,5 +1,3 @@
-puts "build app"
 setws .
+puts "config app"
 app config -name rmgmt -add include-path ../src/include
-
-app build -name rmgmt 

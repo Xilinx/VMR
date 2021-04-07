@@ -11,8 +11,8 @@
 
 static inline u32 wait_for_status(struct zocl_ov_dev *ov, u8 status)
 {
-		u32 header;
-		struct pdi_packet *pkt = (struct pdi_packet *)&header;
+	u32 header;
+	struct pdi_packet *pkt = (struct pdi_packet *)&header;
 
         for (;;) {
                 header = IO_SYNC_READ32(ov->base);
@@ -38,11 +38,6 @@ u8 rmgmt_get_pkt_flags(struct zocl_ov_dev *ov)
 	return get_pkt_flags(ov);
 }
 
-//static void print_pkt(struct pdi_packet *pkt)
-//{
-//	xil_printf("status: %d, flags: %d, size: %d\r\n", pkt->pkt_status, pkt->pkt_flags, pkt->pkt_size);
-//}
-
 static inline int check_for_status(struct zocl_ov_dev *ov, u8 status)
 {
         struct pdi_packet *pkt;
@@ -50,7 +45,6 @@ static inline int check_for_status(struct zocl_ov_dev *ov, u8 status)
 
         pkt = (struct pdi_packet *)&header;
         header = IO_SYNC_READ32(ov->base);
-//        print_pkt(pkt);
 
         return (pkt->pkt_status == status);
 }
@@ -94,8 +88,7 @@ static inline void read_data(u32 *addr, u32 *data, size_t sz)
 	u32 i;
 
 	for (i = 0; i < sz; ++i) {
-			*(data + i) = IO_SYNC_READ32((INTPTR)(addr + i));
-			//xil_printf("i %d, *(data) 0x%x, addr 0x%x\r\n", i, *(data + i/4), (addr + i));
+		*(data + i) = IO_SYNC_READ32((INTPTR)(addr + i));
 	}
 }
 
