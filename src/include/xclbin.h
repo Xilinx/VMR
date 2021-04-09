@@ -42,6 +42,9 @@
   #include <cstdint>
   #include <algorithm>
   #include "windows/uuid.h"
+#elif defined(_RPU_)
+  #include <stdint.h>
+  typedef unsigned char xuid_t[16];
 #else
   #if defined(__KERNEL__)
     #include <linux/types.h>
@@ -55,24 +58,24 @@
   #else
     #include <stdlib.h>
     #include <stdint.h>
-//    #include <uuid/uuid.h>
+    #include <uuid/uuid.h>
   #endif
 
-//  #if !defined(__KERNEL__)
-//    typedef uuid_t xuid_t;
-//  #else //(__KERNEL__)
-//    #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0)
-//      typedef uuid_t xuid_t;
-//    #elif defined(RHEL_RELEASE_CODE)
-//      #if RHEL_RELEASE_CODE > RHEL_RELEASE_VERSION(7,4)
-//        typedef uuid_t xuid_t;
-//      #else
-//        typedef uuid_le xuid_t;
-//      #endif
-//    #else
-//      typedef uuid_le xuid_t;
-//    #endif
-//  #endif
+  #if !defined(__KERNEL__)
+    typedef uuid_t xuid_t;
+  #else //(__KERNEL__)
+    #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0)
+      typedef uuid_t xuid_t;
+    #elif defined(RHEL_RELEASE_CODE)
+      #if RHEL_RELEASE_CODE > RHEL_RELEASE_VERSION(7,4)
+        typedef uuid_t xuid_t;
+      #else
+        typedef uuid_le xuid_t;
+      #endif
+    #else
+      typedef uuid_le xuid_t;
+    #endif
+  #endif
 #endif
 
 // ----------------- Custom Assert Macro -------------------------
@@ -227,7 +230,7 @@ extern "C" {
         unsigned char m_platformVBNV[64];   /* e.g. xilinx:xil-accel-rd-ku115:4ddr-xpr:3.4: null terminated */
 	union {
 	    char m_next_axlf[16];           /* Name of next xclbin file in the daisy chain */
-//	    xuid_t uuid;                    /* uuid of this xclbin*/
+	    xuid_t uuid;                    /* uuid of this xclbin*/
 	};
         char m_debug_bin[16];               /* Name of binary with debug information */
         uint32_t m_numSections;             /* Number of section headers */

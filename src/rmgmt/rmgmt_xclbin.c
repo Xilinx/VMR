@@ -3,8 +3,8 @@
 * SPDX-License-Identifier: MIT
 *******************************************************************************/
 
-#include "rmgmt_xclbin.h"
 #include "rmgmt_main.h"
+#include "rmgmt_xclbin.h"
 
 static const struct axlf_section_header *
 rmgmt_xclbin_get_section_hdr(const struct axlf *xclbin,

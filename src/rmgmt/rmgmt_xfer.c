@@ -188,54 +188,6 @@ static void* rtos_memcpy( void *pvDest, const void *pvSource, size_t ulBytes )
 	return pvDest;
 }
 
-static int zocl_ov_to_xclbin(struct zocl_ov_dev *ov, struct axlf **xclbin, u32 *length)
-{
-	struct zocl_ov_pkt_node *node = ov->head;
-	u8 *xp;
-	size_t len = 0;
-	int flag = 1;
-
-	RMGMT_DBG("-> zocl_ov_to_xclbin \r\n");
-
-	while (node) {
-		len += node->zn_size;
-		node = node->zn_next;
-	}
-
-	if (len == 0) {
-		RMGMT_LOG("ERR: received 0 xclbin.\r\n");
-		return -1;
-	}
-
-
-	*xclbin = malloc(len);
-	if (!(*xclbin)) {
-		RMGMT_LOG("ERR: failed to allocate xclbin buffer\r\n");
-		return -1;
-	}
-
-	xp = (u8 *)*xclbin;
-	node = ov->head;
-	while (node) {
-		/* we might need safer memcpy here */
-//		rtos_memcpy(xp, node->zn_datap, node->zn_size);
-		memcpy(xp, node->zn_datap, node->zn_size);
-		xp += node->zn_size;
-		node = node->zn_next;
-
-		if (flag) {
-			print_pkg((u8 *)(*xclbin), 8);
-			flag = 0;
-		}
-	}
-
-	*length = len;
-
-	RMGMT_DBG("<- zocl_ov_to_xclbin \r\n");
-
-	return 0;
-}
-
 static int zocl_ov_to_data(struct zocl_ov_dev *ov, u8 **data, u32 *length)
 {
 	struct zocl_ov_pkt_node *node = ov->head;
@@ -264,8 +216,6 @@ static int zocl_ov_to_data(struct zocl_ov_dev *ov, u8 **data, u32 *length)
 	xp = *data;
 	node = ov->head;
 	while (node) {
-		/* we might need safer memcpy here */
-//		rtos_memcpy(xp, node->zn_datap, node->zn_size);
 		memcpy(xp, node->zn_datap, node->zn_size);
 		xp += node->zn_size;
 		node = node->zn_next;
@@ -299,119 +249,6 @@ static void zocl_ov_clean(struct zocl_ov_dev *ov)
         ov->head = NULL;
 }
 
-//static int rmgmt_get_partial_pdi(struct zocl_ov_dev *ov)
-//{
-//	u8 *pdi = NULL;
-//	u32 len;
-//	int ret;
-//	u32 addr = XFPGA_BASE_ADDRESS; /*Note: we have to write PDI into this location then load */
-//	XFpga XFpgaInstance = { 0U };
-//
-//	xil_printf("partial pdi is being downloaded...\r\n");
-//
-//	ret = zocl_ov_receive(ov);
-//	if (ret) {
-//		set_status(ov, XRT_XFR_PKT_STATUS_FAIL);
-//		xil_printf("Fail to receive xclbin %d\r\n", ret);
-//		goto out;
-//	}
-//	xil_printf("partial pdi is transferred\r\n");
-//
-//	ret = zocl_ov_to_data(ov, &pdi, &len);
-//	if (ret) {
-//		set_status(ov, XRT_XFR_PKT_STATUS_FAIL);
-//		xil_printf("Fail to copy xclbin %d\r\n", ret);
-//		goto out;
-//	}
-//
-//	rtos_memcpy((u8 *)addr, pdi, len);
-//
-//	ret = XFpga_Initialize(&XFpgaInstance);
-//	if (ret != XST_SUCCESS) {
-//		set_status(ov, XRT_XFR_PKT_STATUS_FAIL);
-//		xil_printf("FPGA init failed %d\r\n", ret);
-//		goto out;
-//	}
-//
-//	//ret = XFpga_PL_BitStream_Load(&XFpgaInstance, addr, (UINTPTR)len, PDI_LOAD);
-//	ret = XFpga_PL_BitStream_Load(&XFpgaInstance, addr, BITSTREAM_SIZE, PDI_LOAD);
-//	if (ret != XFPGA_SUCCESS) {
-//		set_status(ov, XRT_XFR_PKT_STATUS_FAIL);
-//		xil_printf("FPGA load pdi failed %d\r\n", ret);
-//		goto out;
-//	}
-//
-//	xil_printf("FPGA load pdi finished.\r\n");
-//
-//	set_status(ov, XRT_XFR_PKT_STATUS_DONE);
-//
-//out:
-//	zocl_ov_clean(ov);
-//	if (pdi)
-//		free(pdi);
-//
-//	wait_for_status(ov, XRT_XFR_PKT_STATUS_IDLE);
-//	set_version(ov);
-//
-//	xil_printf("FPGA load pdi done. %d\r\n", ret);
-//	return ret;
-//}
-//
-///*
-// * Get whole PDI data from OCM and flash it by ospi driver
-// */
-//static int rmgmt_get_pdi(struct zocl_ov_dev *ov)
-//{
-//	u8 *pdi = NULL;
-//	u32 len;
-//	int ret;
-//	int retry = 0;
-//
-//	xil_printf("pdi is being downloaded...\r\n");
-//
-//	ret = zocl_ov_receive(ov);
-//	if (ret) {
-//		set_status(ov, XRT_XFR_PKT_STATUS_FAIL);
-//		xil_printf("Fail to receive pdi %d\r\n", ret);
-//		goto out;
-//	}
-//	xil_printf("pdi is transferred\r\n");
-//
-//	ret = zocl_ov_to_data(ov, &pdi, &len);
-//	if (ret) {
-//		set_status(ov, XRT_XFR_PKT_STATUS_FAIL);
-//		xil_printf("Fail to copy pdi %d\r\n", ret);
-//		goto out;
-//	}
-//
-//	ret = ospi_flush_polled(pdi, len);
-//	while (ret != 0 && retry++ < 10) {
-//		xil_printf("ospi_flush retrying... %d\r\n", retry);
-//		ret = ospi_flush_polled(pdi, len);
-//	}
-//
-//	if (ret) {
-//		set_status(ov, XRT_XFR_PKT_STATUS_FAIL);
-//		xil_printf("OSPI fails to load pdi %d\r\n", ret);
-//		goto out;
-//	}
-//
-//	xil_printf("OSPI load pdi finished.\r\n");
-//
-//	set_status(ov, XRT_XFR_PKT_STATUS_DONE);
-//
-//out:
-//	zocl_ov_clean(ov);
-//	if (pdi)
-//		free(pdi);
-//
-//	wait_for_status(ov, XRT_XFR_PKT_STATUS_IDLE);
-//	set_version(ov);
-//
-//	xil_printf("OSPI load pdi done. %d\r\n", ret);
-//	return ret;
-//}
-
 int rmgmt_init_xfer(struct zocl_ov_dev *ov)
 {
 	ov->base = OSPI_VERSAL_BASE;
@@ -436,7 +273,8 @@ int rmgmt_init_xfer(struct zocl_ov_dev *ov)
 
 static int rmgmt_download_xclbin(struct zocl_ov_dev *ov, u8 *buf, u32 len)
 {
-	u32 addr = XFPGA_BASE_ADDRESS; /*Note: we have to write PDI into this location then load */
+	/*Note: we have to write PDI into this location then load */
+	u32 addr = XFPGA_BASE_ADDRESS; 
 	XFpga XFpgaInstance = { 0U };
 	int ret;
 	struct axlf *axlf = (struct axlf *)buf;
@@ -459,6 +297,7 @@ static int rmgmt_download_xclbin(struct zocl_ov_dev *ov, u8 *buf, u32 len)
 		goto out;
 	}
 
+	/*TODO: isolate PR gate */
 	ret = XFpga_PL_BitStream_Load(&XFpgaInstance, addr, (UINTPTR)size, PDI_LOAD);
 	if (ret != XFPGA_SUCCESS) {
 		set_status(ov, XRT_XFR_PKT_STATUS_FAIL);

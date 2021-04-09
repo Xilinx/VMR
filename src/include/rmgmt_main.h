@@ -7,8 +7,9 @@
 #define RMGMT_MAIN_H
 
 #define RMGMT_VERBOSE
+#define _RPU_
 
-/* FreeRTOS includes. */
+/* FreeRTOS includes */
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
@@ -18,7 +19,7 @@
 #include "stdlib.h"
 #include "stdio.h"
 
-/* Xilinx includes. */
+/* Xilinx includes */
 #include "xil_printf.h"
 #include "xil_io.h"
 #include "xil_cache.h"

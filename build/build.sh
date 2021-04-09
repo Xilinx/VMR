@@ -13,11 +13,16 @@ build_clean() {
 	rm -r xsa .metadata rmgmt_platform rmgmt_system rmgmt
 }
 
-build_app() {
-	if [ ! -d "rmgmt" ];then
-		echo "no application found"
-		exit 1;
-	fi
+build_app_all() {
+	xsct ./create_app.tcl
+	cp -r ../src rmgmt
+	xsct ./config_app.tcl
+	xsct ./make_app.tcl
+}
+
+build_app_incremental() {
+	rm -r rmgmt/src
+	cp -r ../src rmgmt
 	xsct ./make_app.tcl
 }
 
@@ -26,7 +31,7 @@ usage() {
     echo 
     echo "-clean                     Remove build directories"  
     echo "-xsa                       XSA file"  
-    echo "-app                       Build Application only"  
+    echo "-app                       Re-build Application only"  
     echo "-help"
     exit $1
 }
@@ -66,7 +71,7 @@ if [[ $BUILD_CLEAN == 1 ]];then
 fi
 
 if [[ $BUILD_APP == 1 ]];then
-	build_app
+	build_app_incremental
 	exit 0;
 fi
 
@@ -75,7 +80,9 @@ echo "=== Build BSP ==="
 build_clean
 mkdir xsa
 if [ -z $BUILD_XSA ];then
-	cp ../xsa/gen3x16.xsa xsa/gen3x16.xsa
+	echo "Building BSP requires xsa.";
+	usage
+	exit 1;
 else
 	cp $BUILD_XSA xsa/gen3x16.xsa
 	if [[ $? -ne 0 ]];then
@@ -88,7 +95,4 @@ fi
 xsct ./create_bsp.tcl
 
 echo "=== Build APP ==="
-xsct ./create_app.tcl
-cp -r ../src rmgmt
-xsct ./config_app.tcl
-xsct ./make_app.tcl
+build_app_all
