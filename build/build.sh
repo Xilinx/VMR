@@ -1,0 +1,98 @@
+#!/bin/bash
+
+STABLE_VITIS=/proj/xbuilds/2020.2_daily_latest/installs/lin64/Vitis/HEAD/settings64.sh
+
+default_env() {
+	echo -ne "no xsct, using default stable version: "
+	. ${STABLE_VITIS}
+	which xsct
+}
+
+build_clean() {
+	echo "=== Remove build directories ==="
+	rm -r xsa .metadata rmgmt_platform rmgmt_system rmgmt
+}
+
+build_app_all() {
+	xsct ./create_app.tcl
+	cp -r ../src rmgmt
+	xsct ./config_app.tcl
+	xsct ./make_app.tcl
+}
+
+build_app_incremental() {
+	rm -r rmgmt/src
+	cp -r ../src rmgmt
+	xsct ./make_app.tcl
+}
+
+usage() {
+    echo "Usage:"
+    echo 
+    echo "-clean                     Remove build directories"  
+    echo "-xsa                       XSA file"  
+    echo "-app                       Re-build Application only"  
+    echo "-help"
+    exit $1
+}
+
+while [ $# -gt 0 ] && [[ $1 == "-"* ]];
+do
+        opt="$1";
+        shift;
+        case "$opt" in
+                -help)
+                        usage 0
+                        ;;
+                -xsa)
+                        BUILD_XSA=$1
+                        ;;
+                -clean)
+                        BUILD_CLEAN=1
+                        ;;
+		-app)
+			BUILD_APP=1
+			;;
+                *)
+                        echo "Invalid argument: $1"
+                        usage 1
+                        ;;
+        esac
+done
+
+which xsct
+if [ $? -ne 0 ];then
+	default_env
+fi
+
+if [[ $BUILD_CLEAN == 1 ]];then
+	build_clean
+	exit 0;
+fi
+
+if [[ $BUILD_APP == 1 ]];then
+	build_app_incremental
+	exit 0;
+fi
+
+echo "=== Build BSP ==="
+# always perform build clean for a clean build env
+build_clean
+mkdir xsa
+if [ -z $BUILD_XSA ];then
+	echo "Building BSP requires xsa.";
+	usage
+	exit 1;
+else
+	cp $BUILD_XSA xsa/gen3x16.xsa
+	if [[ $? -ne 0 ]];then
+		invalid $BUILD_XSA
+		exit 1;
+	fi
+fi
+
+
+xsct ./create_bsp.tcl
+
+echo "=== Build APP ==="
+build_app_all
