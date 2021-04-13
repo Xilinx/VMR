@@ -9,6 +9,10 @@
 #include "rmgmt_xfer.h"
 #include "rmgmt_ospi.h"
 
+#define PR_ISOLATION_REG 0x80000000
+#define PR_ISOLATION_FREEZE 0x0
+#define PR_ISOLATION_UNFREEZE 0x3
+
 static inline u32 wait_for_status(struct zocl_ov_dev *ov, u8 status)
 {
 	u32 header;
@@ -297,8 +301,10 @@ static int rmgmt_download_xclbin(struct zocl_ov_dev *ov, u8 *buf, u32 len)
 		goto out;
 	}
 
-	/*TODO: isolate PR gate */
+	/* isolate PR gate */
+	IO_SYNC_WRITE32(PR_ISOLATION_FREEZE, ov->base + PR_ISOLATION_REG);
 	ret = XFpga_PL_BitStream_Load(&XFpgaInstance, addr, (UINTPTR)size, PDI_LOAD);
+	IO_SYNC_WRITE32(PR_ISOLATION_UNFREEZE, ov->base + PR_ISOLATION_REG);
 	if (ret != XFPGA_SUCCESS) {
 		set_status(ov, XRT_XFR_PKT_STATUS_FAIL);
 		xil_printf("FPGA load pdi failed %d\r\n", ret);
