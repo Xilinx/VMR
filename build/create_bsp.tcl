@@ -4,6 +4,10 @@ setws .
 puts "create platform as rmgmt_platform"
 platform create -out rmgmt_platform -name "rmgmt_platform" -hw xsa/gen3x16.xsa -proc psv_cortexr5_0 -os freertos10_xilinx
 
+puts "redirect output to 1"
+bsp config stdin psv_sbsauart_1
+bsp config stdout psv_sbsauart_1
+
 #this is a temporary workaround to enable adding xilmailbox onto freerots, once Vitis has the fix, this line will be removed 
 puts "customize ssw repo"
 repo -set /proj/rdi/staff/davidzha/embeddedsw
