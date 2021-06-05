@@ -124,14 +124,15 @@ static int zocl_ov_receive(struct zocl_ov_dev *ov)
 
 		new = malloc(sizeof (struct zocl_ov_pkt_node));
 		if (!new) {
-			xil_printf("pkt_node: no mem %d", sizeof (struct zocl_ov_pkt_node));
+			RMGMT_DBG("pkt_node: no mem %d", sizeof (struct zocl_ov_pkt_node));
 			ret = -1;
 			break;
 		}
 		new->zn_datap = malloc(ov->size);
 		if (!new->zn_datap) {
 			//			free(new); memory leaks?
-			xil_printf("zn_datap: no mem %d", ov->size);
+			free(new);
+			RMGMT_DBG("zn_datap: no mem %d\r\n", ov->size);
 			ret = -1;
 			break;
 		}
@@ -142,7 +143,7 @@ static int zocl_ov_receive(struct zocl_ov_dev *ov)
 				new->zn_datap, (ov->size - sizeof(struct pdi_packet)) / 4);
 
 		if (a) {
-			xil_printf("pkt_size: %d \r\n", new->zn_size);
+			RMGMT_DBG("pkt_size: %d \r\n", new->zn_size);
 			print_pkg((u8 *)new->zn_datap, 8);
 			a = 0;
 		}
@@ -152,7 +153,7 @@ static int zocl_ov_receive(struct zocl_ov_dev *ov)
 		len += ov->size;
 
 		if ((len / 1000000) > next) {
-			xil_printf("\r%d M", len / 1000000);
+			RMGMT_DBG("\r%d M", len / 1000000);
 			fflush(stdout);
 			next++;
 		}
@@ -174,6 +175,7 @@ static int zocl_ov_receive(struct zocl_ov_dev *ov)
 	return ret;
 }
 
+#if 0
 static void* rtos_memcpy( void *pvDest, const void *pvSource, size_t ulBytes )
 {
 	unsigned char *pcDest = ( unsigned char * ) pvDest, *pcSource = ( unsigned char * ) pvSource;
@@ -191,6 +193,7 @@ static void* rtos_memcpy( void *pvDest, const void *pvSource, size_t ulBytes )
 
 	return pvDest;
 }
+#endif
 
 static int zocl_ov_to_data(struct zocl_ov_dev *ov, u8 **data, u32 *length)
 {
@@ -260,7 +263,7 @@ int rmgmt_init_xfer(struct zocl_ov_dev *ov)
 	ov->head = NULL;
 
 	if (ov->size & 0x3) {
-		xil_printf("xfer size: %d is not 32bit aligned\r\n", ov->size);
+		RMGMT_DBG("xfer size: %d is not 32bit aligned\r\n", ov->size);
 		return -1;
 	}
 
@@ -278,44 +281,49 @@ int rmgmt_init_xfer(struct zocl_ov_dev *ov)
 static int rmgmt_download_xclbin(struct zocl_ov_dev *ov, u8 *buf, u32 len)
 {
 	/*Note: we have to write PDI into this location then load */
-	u32 addr = XFPGA_BASE_ADDRESS; 
+	void *data = NULL;
 	XFpga XFpgaInstance = { 0U };
 	int ret;
 	struct axlf *axlf = (struct axlf *)buf;
-	uint64_t offset = 0;
 	uint64_t size = 0;
 
-	ret = rmgmt_xclbin_section_info(axlf, BITSTREAM_PARTIAL_PDI, &offset, &size);
+	ret = rmgmt_xclbin_get_section(axlf, BITSTREAM_PARTIAL_PDI, &data, &size);
 	if (ret) {
 		set_status(ov, XRT_XFR_PKT_STATUS_FAIL);
-		xil_printf("get PDI from xsabin failed %d\r\n", ret);
+		RMGMT_DBG("get PDI from xsabin failed %d\r\n", ret);
 		goto out;
 	}
+	/* Sync data from cache to memory */
+	Xil_DCacheFlush();
 
-	rtos_memcpy((u8 *)addr, buf+offset, size);
+	//rtos_memcpy((u8 *)addr, buf+offset, size);
 
 	ret = XFpga_Initialize(&XFpgaInstance);
 	if (ret != XST_SUCCESS) {
 		set_status(ov, XRT_XFR_PKT_STATUS_FAIL);
-		xil_printf("FPGA init failed %d\r\n", ret);
+		RMGMT_DBG("FPGA init failed %d\r\n", ret);
 		goto out;
 	}
 
 	/* isolate PR gate */
 	IO_SYNC_WRITE32(PR_ISOLATION_FREEZE, ov->base + PR_ISOLATION_REG);
-	ret = XFpga_PL_BitStream_Load(&XFpgaInstance, addr, (UINTPTR)size, PDI_LOAD);
+
+	ret = XFpga_PL_BitStream_Load(&XFpgaInstance, (UINTPTR)data, (UINTPTR)size, PDI_LOAD);
+
 	IO_SYNC_WRITE32(PR_ISOLATION_UNFREEZE, ov->base + PR_ISOLATION_REG);
+
 	if (ret != XFPGA_SUCCESS) {
 		set_status(ov, XRT_XFR_PKT_STATUS_FAIL);
-		xil_printf("FPGA load pdi failed %d\r\n", ret);
+		RMGMT_DBG("FPGA load pdi failed %d\r\n", ret);
 		goto out;
 	}
 
-	xil_printf("FPGA load pdi finished.\r\n");
-
 	set_status(ov, XRT_XFR_PKT_STATUS_DONE);
-
+	RMGMT_DBG("FPGA load pdi finished.\r\n");
 out:
+	if (data)
+		free(data);
+
 	return ret;
 }
 
@@ -332,19 +340,19 @@ static int rmgmt_download_xsabin(struct zocl_ov_dev *ov, u8 *buf, u32 len)
 	ret = rmgmt_xclbin_section_info(axlf, PDI, &offset, &size);
 	if (ret) {
 		set_status(ov, XRT_XFR_PKT_STATUS_FAIL);
-		xil_printf("get PDI from xsabin failed %d\r\n", ret);
+		RMGMT_DBG("get PDI from xsabin failed %d\r\n", ret);
 		goto out;
 	}
 
 	ret = ospi_flush_polled(buf + offset, size);
 	while (ret != 0 && retry++ < 10) {
-		xil_printf("ospi_flush retrying... %d\r\n", retry);
+		RMGMT_DBG("ospi_flush retrying... %d\r\n", retry);
 		ret = ospi_flush_polled(buf + offset, size);
 	}
 
 	if (ret) {
 		set_status(ov, XRT_XFR_PKT_STATUS_FAIL);
-		xil_printf("OSPI fails to load pdi %d\r\n", ret);
+		RMGMT_DBG("OSPI fails to load pdi %d\r\n", ret);
 		goto out;
 	}
 
@@ -365,20 +373,20 @@ static int rmgmt_recv_pkt(struct zocl_ov_dev *ov, u8 **buf, u32 *len)
 	ret = zocl_ov_receive(ov);
 	if (ret) {
 		set_status(ov, XRT_XFR_PKT_STATUS_FAIL);
-		xil_printf("Fail to receive pkt %d\r\n", ret);
+		RMGMT_DBG("Fail to receive pkt %d\r\n", ret);
 		goto out;
 	}
 
 	ret = zocl_ov_to_data(ov, buf, len);
 	if (ret) {
 		set_status(ov, XRT_XFR_PKT_STATUS_FAIL);
-		xil_printf("Fail to copy pkt %d\r\n", ret);
+		RMGMT_DBG("Fail to copy pkt %d\r\n", ret);
 		goto out;
 	}
 
 	print_pkg((*buf), 8);
 
-	/*XXX verify signature */
+	/*TODO: verify signature */
 
 	RMGMT_DBG("<- rmgmt_recv_pkt\r\n");
 
@@ -395,7 +403,7 @@ static void rmgmt_done_pkt(struct zocl_ov_dev *ov, u8 *buf)
 	wait_for_status(ov, XRT_XFR_PKT_STATUS_IDLE);
 	set_version(ov);
 
-	xil_printf("rmgmt_done_pkt%d\r\n");
+	RMGMT_DBG("<- rmgmt_done_pkt\r\n");
 }
 
 struct rmgmt_ops {
@@ -423,7 +431,7 @@ static int rmgmt_xfer_download(struct zocl_ov_dev *ov, struct rmgmt_ops *ops)
 	int ret;
 
 	if (ops == NULL) {
-		xil_printf("rmgmt_ops cannot be NULL\r\n");
+		RMGMT_DBG("rmgmt_ops cannot be NULL\r\n");
 		return -1;
 	}
 

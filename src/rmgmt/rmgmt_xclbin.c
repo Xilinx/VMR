@@ -47,46 +47,47 @@ rmgmt_xclbin_section_info(const struct axlf *xclbin, enum axlf_section_kind kind
 
         memHeader = rmgmt_xclbin_get_section_hdr(xclbin, kind);
         if (!memHeader) {
-        	xil_printf("no section for kind %d\r\n", kind);
+        	RMGMT_DBG("no section for kind %d\r\n", kind);
         	return -1;
         }
 
         xclbin_len = xclbin->m_header.m_length;
         err = rmgmt_xclbin_check_section_hdr(memHeader, xclbin_len);
         if (err) {
-        	xil_printf("check section header failed, len%d\r\n", xclbin_len);
+        	RMGMT_DBG("check section header failed, len%d\r\n", xclbin_len);
         	return err;
         }
 
         *offset = memHeader->m_sectionOffset;
         *size = memHeader->m_sectionSize;
 
-        xil_printf("Found section @ 0x%llx, size %lld\r\n", *offset, *size);
+        RMGMT_DBG("Found section @ 0x%llx, size %lld\r\n", *offset, *size);
         return 0;
 }
 
 /* caller should free the allocated memory for **data */
-//int rmgmt_xclbin_get_section(const struct axlf *xclbin, enum axlf_section_kind kind,
-//		void **data, uint64_t *len)
-//{
-//        void *section = NULL;
-//        int err = 0;
-//        uint64_t offset = 0;
-//        uint64_t size = 0;
-//
-//        err = rmgmt_xclbin_section_info(xclbin, kind, &offset, &size);
-//        if (err)
-//                return err;
-//
-//        section = malloc(size);
-//        if (section == NULL)
-//                return -1;
-//
-//        memcpy(section, ((const char *)xclbin) + offset, size);
-//
-//        *data = section;
-//        *len = size;
-//
-//        return 0;
-//}
+int rmgmt_xclbin_get_section(const struct axlf *xclbin, enum axlf_section_kind kind,
+		void **data, uint64_t *len)
+{
+        void *section = NULL;
+        int err = 0;
+        uint64_t offset = 0;
+        uint64_t size = 0;
 
+        err = rmgmt_xclbin_section_info(xclbin, kind, &offset, &size);
+        if (err)
+                return err;
+
+        section = malloc(size);
+        if (section == NULL) {
+        	RMGMT_DBG("get section failed, no memory size%lld\r\n", size);
+                return -1;
+	}
+
+        memcpy(section, ((const char *)xclbin) + offset, size);
+
+        *data = section;
+        *len = size;
+
+        return 0;
+}

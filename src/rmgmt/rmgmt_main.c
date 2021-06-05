@@ -17,22 +17,24 @@ static TaskHandle_t xR5Task;
  */
 static void pvR5Task( void *pvParameters )
 {
-	const TickType_t x1second = pdMS_TO_TICKS( 10000*1 );
+	const TickType_t x1second = pdMS_TO_TICKS( 1000*1 );
 	struct zocl_ov_dev ov = { 0 };
 	u8 pkt_flags, pkt_type;
+	int cnt = 0;
 
 	if (rmgmt_init_xfer(&ov) != 0)
 		return;
-	xil_printf("Init ospi xfer done.\r\n");
+	RMGMT_LOG("Init ospi xfer done.\r\n");
 
 	for( ;; )
 	{
 		if (rmgmt_check_for_status(&ov, XRT_XFR_PKT_STATUS_IDLE)) {
-			xil_printf("wait 10 seconds\r\n");
+			/* increment count every tick */
+			IO_SYNC_WRITE32(cnt++, RMGMT_HEARTBEAT_REG);
 			vTaskDelay( x1second );
 			continue;
 		}
-		xil_printf("get new pkt, processing ... \r\n");
+		RMGMT_LOG("get new pkt, processing ... \r\n");
 		pkt_flags = rmgmt_get_pkt_flags(&ov);
 		pkt_type = pkt_flags >> XRT_XFR_PKT_TYPE_SHIFT &
 				XRT_XFR_PKT_TYPE_MASK;
@@ -45,10 +47,11 @@ static void pvR5Task( void *pvParameters )
 			rmgmt_get_xclbin(&ov);
 			break;
 		default:
-			xil_printf("Unknown packet type: %d\r\n", pkt_type);
+			RMGMT_LOG("Unknown packet type: %d\r\n", pkt_type);
 			break;
 		}
-		xil_printf("processing done, wait for next pkt ...\r\n");
+		cnt = 0;
+		RMGMT_LOG("processing done, wait for next pkt ...\r\n");
 	}
 }
 

@@ -76,21 +76,26 @@ if [[ $BUILD_APP == 1 ]];then
 fi
 
 echo "=== Build BSP ==="
-# always perform build clean for a clean build env
-build_clean
-mkdir xsa
 if [ -z $BUILD_XSA ];then
 	echo "Building BSP requires xsa.";
 	usage
 	exit 1;
-else
-	cp $BUILD_XSA xsa/gen3x16.xsa
-	if [[ $? -ne 0 ]];then
-		invalid $BUILD_XSA
-		exit 1;
-	fi
 fi
 
+ls $BUILD_XSA
+if [[ $? -ne 0 ]];then
+	invalid $BUILD_XSA
+	exit 1;
+fi
+
+# always perform build clean for a clean build env
+build_clean
+mkdir xsa
+cp $BUILD_XSA xsa/gen3x16.xsa
+if [[ $? -ne 0 ]];then
+	invalid $BUILD_XSA
+	exit 1;
+fi
 
 xsct ./create_bsp.tcl
 
