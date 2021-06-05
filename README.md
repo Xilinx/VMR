@@ -8,7 +8,7 @@
 ## Build Instructions
     To build entire platform and applications:
       cd build
-      ./build.sh -xsa /public/bugcases/CR/1086000-1086999/1086872/20210330/gen3x16.xsa
+      ./build.sh -xsa /public/bugcases/CR/1086000-1086999/1086872/20210412/gen3x16.xsa
 
     To build entire application:
       cd build:
