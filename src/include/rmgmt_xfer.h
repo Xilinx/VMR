@@ -6,11 +6,22 @@
 #ifndef RMGMT_XFER_H
 #define RMGMT_XFER_H
 
+/* Versal Platform related definition */
+#define OSPI_VERSAL_BASE (XPAR_PSV_OCM_RAM_0_S_AXI_BASEADDR + 0x8000)
+
+#define TEST_ADDRESS	0x0
+
+#define BITSTREAM_SIZE	0x1000000U /* Bin or bit or PDI image max size (256M) */
+#define versal
+#ifdef versal
+#define PDI_LOAD        0U
+#endif
+
 /* Versal transfer cache packet definition */
 
 #define XRT_XFR_VER                     1
 
-#define XRT_XFR_RES_SIZE				0x1000 //4096 bytes
+#define XRT_XFR_RES_SIZE		0x1000 //4096 bytes
 /*
  * Note: we should keep the existing PKT status and flags
  *       stable to not breaking the old versal platform
@@ -36,6 +47,8 @@
         XRT_XFR_PKT_TYPE_SHIFT)
 #define XRT_XFR_PKT_FLAGS_VER           (XRT_XFR_VER << XRT_XFR_PKT_VER_SHIFT)
 
+#define ARRAY_SIZE(x) (sizeof(x) / sizeof (*(x)))
+
 struct pdi_packet {
 	union {
 		struct {
@@ -47,35 +60,17 @@ struct pdi_packet {
 	};
 };
 
-
-
-struct zocl_ov_pkt_node {
-	size_t	zn_size;
-	u32		*zn_datap;
-	struct zocl_ov_pkt_node *zn_next;
+struct rmgmt_handler {
+	u32 rh_base;
+	u32 rh_data_size;
+	u8  *rh_data; 	/* static malloc and never free */
 };
 
-struct zocl_ov_dev {
-	u32 base;
-	size_t size;
-	struct zocl_ov_pkt_node *head;
-};
+int rmgmt_download_xsabin(struct rmgmt_handler *rh);
+int rmgmt_download_xclbin(struct rmgmt_handler *rh);
 
-#define OSPI_VERSAL_BASE 		(XPAR_PSV_OCM_RAM_0_S_AXI_BASEADDR + 0x8000)
-
-#define TEST_ADDRESS		0x0
-
-/* For Versal platform Passing the below definition is Optional */
-#define BITSTREAM_SIZE	0x1000000U /* Bin or bit or PDI image size */
-#define versal
-#ifdef versal
-#define PDI_LOAD        0U
-#endif
-
-u8 rmgmt_get_pkt_flags(struct zocl_ov_dev *ov);
-int rmgmt_check_for_status(struct zocl_ov_dev *ov, u8 status);
-int rmgmt_init_xfer(struct zocl_ov_dev *ov);
-int rmgmt_get_xsabin(struct zocl_ov_dev *ov);
-int rmgmt_get_xclbin(struct zocl_ov_dev *ov);
+int rmgmt_init_handler(struct rmgmt_handler *rh);
+int rmgmt_check_for_status(struct rmgmt_handler *rh, u8 status);
+u8 rmgmt_get_pkt_flags(struct rmgmt_handler *rh);
 
 #endif
