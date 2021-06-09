@@ -315,7 +315,7 @@ int rmgmt_init_handler(struct rmgmt_handler *rh)
 	if (rmgmt_init_xfer(rh) != 0)
 		return -1;
 
-	rh->rh_data_size = BITSTREAM_SIZE * 2; /* 32M */
+	rh->rh_data_size = BITSTREAM_SIZE;
 	rh->rh_data = (u8 *)malloc(rh->rh_data_size);
 	if (rh->rh_data == NULL) {
 		RMGMT_LOG("malloc %d bytes failed\r\n", rh->rh_data_size);

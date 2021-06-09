@@ -11,7 +11,7 @@
 
 #define TEST_ADDRESS	0x0
 
-#define BITSTREAM_SIZE	0x1000000U /* Bin or bit or PDI image max size (256M) */
+#define BITSTREAM_SIZE	0x2000000U /* Bin or bit or PDI image max size (32M) */
 #define versal
 #ifdef versal
 #define PDI_LOAD        0U
