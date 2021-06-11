@@ -19,11 +19,14 @@ rmgmt_xclbin_get_section_hdr(const struct axlf *xclbin,
 		return NULL;
 
 	for (i = 0; i < xclbin->m_header.m_numSections; i++) {
-		RMGMT_DBG("find kind %d\r\n", xclbin->m_sections[i].m_sectionKind);
-		if (xclbin->m_sections[i].m_sectionKind == kind)
+		if (xclbin->m_sections[i].m_sectionKind == kind) {
+			RMGMT_DBG("found kind[%d]= %d\r\n", i, kind);
 			return &xclbin->m_sections[i];
+		}
 	}
 
+	RMGMT_DBG("did not find kind %d from %d sections\r\n",
+		kind, xclbin->m_header.m_numSections);
 	return NULL;
 }
 
@@ -46,10 +49,8 @@ rmgmt_xclbin_section_info(const struct axlf *xclbin, enum axlf_section_kind kind
         RMGMT_DBG("magic %s\r\n", xclbin->m_magic);
 
         memHeader = rmgmt_xclbin_get_section_hdr(xclbin, kind);
-        if (!memHeader) {
-        	RMGMT_DBG("no section for kind %d\r\n", kind);
+        if (!memHeader)
         	return -1;
-        }
 
         xclbin_len = xclbin->m_header.m_length;
         err = rmgmt_xclbin_check_section_hdr(memHeader, xclbin_len);
@@ -61,7 +62,9 @@ rmgmt_xclbin_section_info(const struct axlf *xclbin, enum axlf_section_kind kind
         *offset = memHeader->m_sectionOffset;
         *size = memHeader->m_sectionSize;
 
-        RMGMT_DBG("Found section @ 0x%llx, size %lld\r\n", *offset, *size);
+	RMGMT_LOG("%lld, %lld\r\n", memHeader->m_sectionOffset, memHeader->m_sectionSize);
+
+        RMGMT_DBG("Found section offset: %lld, size: %lld\r\n", *offset, *size);
         return 0;
 }
 

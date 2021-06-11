@@ -13,13 +13,13 @@
 #define PR_ISOLATION_FREEZE 0x0
 #define PR_ISOLATION_UNFREEZE 0x3
 
-static inline u32 wait_for_status(struct zocl_ov_dev *ov, u8 status)
+static inline u32 wait_for_status(struct rmgmt_handler *rh, u8 status)
 {
 	u32 header;
 	struct pdi_packet *pkt = (struct pdi_packet *)&header;
 
         for (;;) {
-                header = IO_SYNC_READ32(ov->base);
+                header = IO_SYNC_READ32(rh->rh_base);
                 if (pkt->pkt_status == status)
                         break;
         }
@@ -27,85 +27,79 @@ static inline u32 wait_for_status(struct zocl_ov_dev *ov, u8 status)
         return header;
 }
 
-static inline u8 get_pkt_flags(struct zocl_ov_dev *ov)
+u8 rmgmt_get_pkt_flags(struct rmgmt_handler *rh)
 {
         struct pdi_packet *pkt;
         u32 header;
 
         pkt = (struct pdi_packet *)&header;
-        header = IO_SYNC_READ32(ov->base);
+        header = IO_SYNC_READ32(rh->rh_base);
         return pkt->pkt_flags;
 }
 
-u8 rmgmt_get_pkt_flags(struct zocl_ov_dev *ov)
-{
-	return get_pkt_flags(ov);
-}
-
-static inline int check_for_status(struct zocl_ov_dev *ov, u8 status)
+int rmgmt_check_for_status(struct rmgmt_handler *rh, u8 status)
 {
         struct pdi_packet *pkt;
         u32 header;
 
         pkt = (struct pdi_packet *)&header;
-        header = IO_SYNC_READ32(ov->base);
+        header = IO_SYNC_READ32(rh->rh_base);
 
         return (pkt->pkt_status == status);
 }
 
-int rmgmt_check_for_status(struct zocl_ov_dev *ov, u8 status)
-{
-	return check_for_status(ov, status);
-}
-
-static inline void set_flags(struct zocl_ov_dev *ov, u8 flags)
+static inline void set_flags(struct rmgmt_handler *rh, u8 flags)
 {
         struct pdi_packet *pkt;
         u32 header;
 
         pkt = (struct pdi_packet *)&header;
-        header = IO_SYNC_READ32(ov->base);
+        header = IO_SYNC_READ32(rh->rh_base);
         pkt->pkt_flags = flags;
 
-        IO_SYNC_WRITE32(pkt->header, ov->base);
+        IO_SYNC_WRITE32(pkt->header, rh->rh_base);
 }
 
-static inline void set_version(struct zocl_ov_dev *ov)
+static inline void set_version(struct rmgmt_handler *rh)
 {
-        set_flags(ov, XRT_XFR_VER <<  XRT_XFR_PKT_VER_SHIFT);
+        set_flags(rh, XRT_XFR_VER <<  XRT_XFR_PKT_VER_SHIFT);
 }
 
-static inline void set_status(struct zocl_ov_dev *ov, u8 status)
+static inline void set_status(struct rmgmt_handler *rh, u8 status)
 {
-		volatile struct pdi_packet *pkt;
-		volatile u32 header;
+	volatile struct pdi_packet *pkt;
+	volatile u32 header;
 
-        header = IO_SYNC_READ32(ov->base);
+        header = IO_SYNC_READ32(rh->rh_base);
         pkt = (struct pdi_packet *)&header;
         pkt->pkt_status = status;
 
-        IO_SYNC_WRITE32(pkt->header, ov->base);
+        IO_SYNC_WRITE32(pkt->header, rh->rh_base);
 }
 
-static inline void read_data(u32 *addr, u32 *data, size_t sz)
+static inline void read_data32(u32 *addr, u32 *data, size_t sz)
 {
 	u32 i;
 
 	for (i = 0; i < sz; ++i) {
-		*(data + i) = IO_SYNC_READ32((INTPTR)(addr + i));
+		*(data + i) = IO_SYNC_READ32((UINTPTR)(addr + i));
 	}
 }
 
 static void print_pkg(u8 *data, int len) {
 
-	for (int i = 0; i < len; i++)
-		RMGMT_DBG("%d:[0x%02x] \r\n", i, data[i]);
+	for (int i = 0; i < len;) {
+		RMGMT_DBG("%02x ", data[i]);
+		if (++i % 16 == 0)
+			RMGMT_DBG("\r\n");
+	}
 }
 
+#if 0
 static int zocl_ov_receive(struct zocl_ov_dev *ov)
 {
 	struct zocl_ov_pkt_node *node = ov->head;
-	u32 *base = (u32 *)ov->base;
+	u32 *ov_base = (u32 *)ov->base;
 	int len = 0, next = 0;
 	int ret;
 	int a = 1;
@@ -139,8 +133,8 @@ static int zocl_ov_receive(struct zocl_ov_dev *ov)
 		new->zn_size = pkt->pkt_size;
 
 		/* Read packet data payload on a 4 bytes base */
-		read_data(base + (sizeof(struct pdi_packet)) / 4,
-				new->zn_datap, (ov->size - sizeof(struct pdi_packet)) / 4);
+		read_data32(ov_base + (sizeof(struct pdi_packet)) / 4,
+			new->zn_datap, (ov->size - sizeof(struct pdi_packet)) / 4);
 
 		if (a) {
 			RMGMT_DBG("pkt_size: %d \r\n", new->zn_size);
@@ -174,26 +168,6 @@ static int zocl_ov_receive(struct zocl_ov_dev *ov)
 	RMGMT_DBG("<- zocl_ov_receive \r\n");
 	return ret;
 }
-
-#if 0
-static void* rtos_memcpy( void *pvDest, const void *pvSource, size_t ulBytes )
-{
-	unsigned char *pcDest = ( unsigned char * ) pvDest, *pcSource = ( unsigned char * ) pvSource;
-	size_t x;
-
-	for( x = 0; x < ulBytes; x++ )
-	{
-		*pcDest = *pcSource;
-		pcDest++;
-		pcSource++;
-	}
-
-	/* Sync data from cache to memory */
-	Xil_DCacheFlush();
-
-	return pvDest;
-}
-#endif
 
 static int zocl_ov_to_data(struct zocl_ov_dev *ov, u8 **data, u32 *length)
 {
@@ -240,193 +214,261 @@ static int zocl_ov_to_data(struct zocl_ov_dev *ov, u8 **data, u32 *length)
 	return 0;
 }
 
-static void zocl_ov_clean(struct zocl_ov_dev *ov)
+static void* rtos_memcpy( void *pvDest, const void *pvSource, size_t ulBytes )
 {
-        struct zocl_ov_pkt_node *node;
-        struct zocl_ov_pkt_node *pnode;
+	unsigned char *pcDest = ( unsigned char * ) pvDest, *pcSource = ( unsigned char * ) pvSource;
+	size_t x;
 
-        node = ov->head;
-        while (node != NULL) {
-                pnode = node;
-                node = pnode->zn_next;
-                free(pnode->zn_datap);
-                free(pnode);
-        }
+	for( x = 0; x < ulBytes; x++ )
+	{
+		*pcDest = *pcSource;
+		pcDest++;
+		pcSource++;
+	}
 
-        ov->head = NULL;
+	/* Sync data from cache to memory */
+	Xil_DCacheFlush();
+
+	RMGMT_LOG("x %lld, size %lld\r\n", x, ulBytes);
+
+	return pvDest;
+}
+#endif
+
+
+
+static int rmgmt_data_receive(struct rmgmt_handler *rh, u32 *len)
+{
+	u32 offset = 0, next = 0;
+	int ret;
+	int a = 0;
+
+	RMGMT_DBG("-> rmgmt_data_receive \r\n");
+	for (;;) {
+		u32 pkt_header;
+		struct pdi_packet *pkt = (struct pdi_packet *)&pkt_header;
+		int lastpkt;
+
+		/* Busy wait here until we get a new packet */
+		pkt_header = wait_for_status(rh, XRT_XFR_PKT_STATUS_NEW);
+		lastpkt = pkt->pkt_flags & XRT_XFR_PKT_FLAGS_LAST;
+
+		if ((offset + pkt->pkt_size) > rh->rh_data_size) {
+			RMGMT_LOG("max: %d M, received %d M\r\n",
+				rh->rh_data_size / 0x100000,
+				(offset + pkt->pkt_size) / 0x100000);
+			return -1;
+		}
+		/* Read packet data payload on a 4 bytes base */
+		read_data32((u32 *)rh->rh_base + (sizeof(struct pdi_packet)) / 4,
+			(u32 *)(rh->rh_data) + offset / 4,
+			pkt->pkt_size / 4);
+
+		if (a == 0) {
+			RMGMT_LOG("pkt_size %d, xfer size %d\r\n",
+				pkt->pkt_size, (XRT_XFR_RES_SIZE - sizeof(struct pdi_packet)));
+			a++;
+		}
+		/* Notify host that the data has been read */
+		set_status(rh, XRT_XFR_PKT_STATUS_IDLE);
+
+		/* Set len to next offset */
+		offset += pkt->pkt_size;
+		if ((offset / 0x100000) > next) {
+			RMGMT_DBG("\r%d M", offset / 0x100000);
+			fflush(stdout);
+			next++;
+		}
+
+		/* Bail out here if this is the last packet */
+		if (lastpkt) {
+			RMGMT_DBG("\r\n");
+			ret = 0;
+			break;
+		}
+	}
+
+	*len = offset;
+	RMGMT_DBG("<- rmgmt_data_receive, len:%d\r\n", *len);
+	return ret;
 }
 
-int rmgmt_init_xfer(struct zocl_ov_dev *ov)
+static int rmgmt_init_xfer(struct rmgmt_handler *rh)
 {
-	ov->base = OSPI_VERSAL_BASE;
-	ov->size = XRT_XFR_RES_SIZE;
-	ov->head = NULL;
-
-	if (ov->size & 0x3) {
-		RMGMT_DBG("xfer size: %d is not 32bit aligned\r\n", ov->size);
+	if (XRT_XFR_RES_SIZE & 0x3) {
+		RMGMT_LOG("xfer size: %d is not 32bit aligned\r\n", XRT_XFR_RES_SIZE);
 		return -1;
 	}
 
-	for (int i = 0; i < ov->size; i += 4) {
-		IO_SYNC_WRITE32(0x0, ov->base + i * 4);
+	/* Special init BRAM from random data to all ZERO */
+	for (int i = 0; i < XRT_XFR_RES_SIZE; i += 4) {
+		IO_SYNC_WRITE32(0x0, rh->rh_base + i * 4);
 	}
-
-	set_version(ov);
-
-	set_status(ov, XRT_XFR_PKT_STATUS_IDLE);
 
 	return 0;
 }
 
-static int rmgmt_download_xclbin(struct zocl_ov_dev *ov, u8 *buf, u32 len)
+int rmgmt_init_handler(struct rmgmt_handler *rh)
 {
-	/*Note: we have to write PDI into this location then load */
-	void *data = NULL;
+	rh->rh_base = OSPI_VERSAL_BASE;
+
+	if (rmgmt_init_xfer(rh) != 0)
+		return -1;
+
+	rh->rh_data_size = BITSTREAM_SIZE * 2; /* 32M */
+	rh->rh_data = (u8 *)malloc(rh->rh_data_size);
+	if (rh->rh_data == NULL) {
+		RMGMT_LOG("malloc %d bytes failed\r\n", rh->rh_data_size);
+		return -1;
+	}
+
+	set_version(rh);
+
+	set_status(rh, XRT_XFR_PKT_STATUS_IDLE);
+
+	RMGMT_DBG("rmgmt_init_handler done\r\n");
+	return 0;
+}
+
+static int rmgmt_fpga_download(struct rmgmt_handler *rh, u32 len)
+{
 	XFpga XFpgaInstance = { 0U };
 	int ret;
-	struct axlf *axlf = (struct axlf *)buf;
+	struct axlf *axlf = (struct axlf *)rh->rh_data;
+	uint64_t offset = 0;
 	uint64_t size = 0;
 
-	ret = rmgmt_xclbin_get_section(axlf, BITSTREAM_PARTIAL_PDI, &data, &size);
-	if (ret) {
-		set_status(ov, XRT_XFR_PKT_STATUS_FAIL);
-		RMGMT_DBG("get PDI from xsabin failed %d\r\n", ret);
-		goto out;
-	}
-	/* Sync data from cache to memory */
-	Xil_DCacheFlush();
+	RMGMT_LOG("-> rmgmt_fpga_download\r\n");
 
-	//rtos_memcpy((u8 *)addr, buf+offset, size);
+	RMGMT_LOG(" head should be 0x78 0x63 0x6c 0x62 etc. \r\n");
+	print_pkg(rh->rh_data, 16);
 
 	ret = XFpga_Initialize(&XFpgaInstance);
 	if (ret != XST_SUCCESS) {
-		set_status(ov, XRT_XFR_PKT_STATUS_FAIL);
+		set_status(rh, XRT_XFR_PKT_STATUS_FAIL);
 		RMGMT_DBG("FPGA init failed %d\r\n", ret);
 		goto out;
 	}
 
+	ret = rmgmt_xclbin_section_info(axlf, BITSTREAM_PARTIAL_PDI, &offset, &size);
+	if (ret) {
+		set_status(rh, XRT_XFR_PKT_STATUS_FAIL);
+		RMGMT_DBG("get PARTIAL PDI from xclbin failed %d\r\n", ret);
+		goto out;
+	}
+
+	/* Sync data from cache to memory */
+	Xil_DCacheFlush();
+
 	/* isolate PR gate */
-	IO_SYNC_WRITE32(PR_ISOLATION_FREEZE, ov->base + PR_ISOLATION_REG);
+	//IO_SYNC_WRITE32(PR_ISOLATION_FREEZE, rh->rh_base + PR_ISOLATION_REG);
 
-	ret = XFpga_PL_BitStream_Load(&XFpgaInstance, (UINTPTR)data, (UINTPTR)size, PDI_LOAD);
+	ret = XFpga_PL_BitStream_Load(&XFpgaInstance,
+		(UINTPTR)((const char *)axlf + offset), (UINTPTR)size, PDI_LOAD);
 
-	IO_SYNC_WRITE32(PR_ISOLATION_UNFREEZE, ov->base + PR_ISOLATION_REG);
+	//IO_SYNC_WRITE32(PR_ISOLATION_UNFREEZE, rh->rh_base + PR_ISOLATION_REG);
 
 	if (ret != XFPGA_SUCCESS) {
-		set_status(ov, XRT_XFR_PKT_STATUS_FAIL);
+		set_status(rh, XRT_XFR_PKT_STATUS_FAIL);
 		RMGMT_DBG("FPGA load pdi failed %d\r\n", ret);
 		goto out;
 	}
 
-	set_status(ov, XRT_XFR_PKT_STATUS_DONE);
-	RMGMT_DBG("FPGA load pdi finished.\r\n");
+	set_status(rh, XRT_XFR_PKT_STATUS_DONE);
 out:
-	if (data)
-		free(data);
 
+	RMGMT_LOG("<- rmgmt_fpga_download %d\r\n", ret);
 	return ret;
 }
 
-static int rmgmt_download_xsabin(struct zocl_ov_dev *ov, u8 *buf, u32 len)
+static int rmgmt_ospi_download(struct rmgmt_handler *rh, u32 len)
 {
 	int retry = 0;
 	int ret;
-	struct axlf *axlf = (struct axlf *)buf;
+	struct axlf *axlf = (struct axlf *)rh->rh_data;
 	uint64_t offset = 0;
 	uint64_t size = 0;
 
-	RMGMT_LOG("-> rmgmt_download_xsabin\r\n");
+	RMGMT_LOG("-> rmgmt_ospi_download\r\n");
 
 	ret = rmgmt_xclbin_section_info(axlf, PDI, &offset, &size);
 	if (ret) {
-		set_status(ov, XRT_XFR_PKT_STATUS_FAIL);
+		set_status(rh, XRT_XFR_PKT_STATUS_FAIL);
 		RMGMT_DBG("get PDI from xsabin failed %d\r\n", ret);
 		goto out;
 	}
+	/* Sync data from cache to memory */
+	//Xil_DCacheFlush();
 
-	ret = ospi_flush_polled(buf + offset, size);
+	ret = ospi_flush_polled(rh->rh_data + offset, size);
 	while (ret != 0 && retry++ < 10) {
 		RMGMT_DBG("ospi_flush retrying... %d\r\n", retry);
-		ret = ospi_flush_polled(buf + offset, size);
+		ret = ospi_flush_polled(rh->rh_data + offset, size);
 	}
 
 	if (ret) {
-		set_status(ov, XRT_XFR_PKT_STATUS_FAIL);
+		set_status(rh, XRT_XFR_PKT_STATUS_FAIL);
 		RMGMT_DBG("OSPI fails to load pdi %d\r\n", ret);
 		goto out;
 	}
 
-	RMGMT_LOG("<- rmgmt_download_xsabin\r\n");
 
-	set_status(ov, XRT_XFR_PKT_STATUS_DONE);
+	set_status(rh, XRT_XFR_PKT_STATUS_DONE);
 
 out:
+	RMGMT_LOG("<- rmgmt_ospi_download %d\r\n", ret);
 	return ret;
 }
 
-static int rmgmt_recv_pkt(struct zocl_ov_dev *ov, u8 **buf, u32 *len)
+static int rmgmt_recv_pkt(struct rmgmt_handler *rh, u32 *len)
 {
 	int ret;
 
 	RMGMT_DBG("-> rmgmt_recv_pkt\r\n");
 
-	ret = zocl_ov_receive(ov);
+	ret = rmgmt_data_receive(rh, len);
 	if (ret) {
-		set_status(ov, XRT_XFR_PKT_STATUS_FAIL);
+		set_status(rh, XRT_XFR_PKT_STATUS_FAIL);
 		RMGMT_DBG("Fail to receive pkt %d\r\n", ret);
 		goto out;
 	}
 
-	ret = zocl_ov_to_data(ov, buf, len);
-	if (ret) {
-		set_status(ov, XRT_XFR_PKT_STATUS_FAIL);
-		RMGMT_DBG("Fail to copy pkt %d\r\n", ret);
-		goto out;
-	}
-
-	print_pkg((*buf), 8);
-
 	/*TODO: verify signature */
 
 	RMGMT_DBG("<- rmgmt_recv_pkt\r\n");
-
 out:
 	return ret;
 }
 
-static void rmgmt_done_pkt(struct zocl_ov_dev *ov, u8 *buf)
+static void rmgmt_done_pkt(struct rmgmt_handler *rh)
 {
-	zocl_ov_clean(ov);
-	if (buf)
-		free(buf);
+	wait_for_status(rh, XRT_XFR_PKT_STATUS_IDLE);
 
-	wait_for_status(ov, XRT_XFR_PKT_STATUS_IDLE);
-	set_version(ov);
+	set_version(rh);
 
 	RMGMT_DBG("<- rmgmt_done_pkt\r\n");
 }
 
 struct rmgmt_ops {
-	int (*rmgmt_recv_op)(struct zocl_ov_dev *ov, u8 **buf, u32 *len);
-	int (*rmgmt_download_op)(struct zocl_ov_dev *ov, u8 *buf, u32 len);
-	void (*rmgmt_done_op)(struct zocl_ov_dev *ov, u8 *buf);
+	int (*rmgmt_recv_op)(struct rmgmt_handler *rh, u32 *len);
+	int (*rmgmt_download_op)(struct rmgmt_handler *rh, u32 len);
+	void (*rmgmt_done_op)(struct rmgmt_handler *rh);
 };
 
 static struct rmgmt_ops xsabin_ops = {
 	.rmgmt_recv_op = rmgmt_recv_pkt,
-	.rmgmt_download_op = rmgmt_download_xsabin,
+	.rmgmt_download_op = rmgmt_ospi_download,
 	.rmgmt_done_op = rmgmt_done_pkt,
 };
 
 static struct rmgmt_ops xclbin_ops = {
 	.rmgmt_recv_op = rmgmt_recv_pkt,
-	.rmgmt_download_op = rmgmt_download_xclbin,
+	.rmgmt_download_op = rmgmt_fpga_download,
 	.rmgmt_done_op = rmgmt_done_pkt,
 };
 
-static int rmgmt_xfer_download(struct zocl_ov_dev *ov, struct rmgmt_ops *ops)
+static int rmgmt_xfer_download(struct rmgmt_handler *rh, struct rmgmt_ops *ops)
 {
-	u8 *buffer = NULL;
 	u32 len;
 	int ret;
 
@@ -435,23 +477,23 @@ static int rmgmt_xfer_download(struct zocl_ov_dev *ov, struct rmgmt_ops *ops)
 		return -1;
 	}
 
-	ret = ops->rmgmt_recv_op(ov, &buffer, &len);
+	ret = ops->rmgmt_recv_op(rh, &len);
 	if (ret)
 		goto done;
 
-	ret = ops->rmgmt_download_op(ov, buffer, len);
+	ret = ops->rmgmt_download_op(rh, len);
 
 done:
-	ops->rmgmt_done_op(ov, buffer);
+	ops->rmgmt_done_op(rh);
 	return ret;
 }
 
-int rmgmt_get_xclbin(struct zocl_ov_dev *ov)
+int rmgmt_download_xclbin(struct rmgmt_handler *rh)
 {
-	return rmgmt_xfer_download(ov, &xclbin_ops);
+	return rmgmt_xfer_download(rh, &xclbin_ops);
 }
 
-int rmgmt_get_xsabin(struct zocl_ov_dev *ov)
+int rmgmt_download_xsabin(struct rmgmt_handler *rh)
 {
-	return rmgmt_xfer_download(ov, &xsabin_ops);
+	return rmgmt_xfer_download(rh, &xsabin_ops);
 }

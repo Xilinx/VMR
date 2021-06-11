@@ -10,7 +10,8 @@ bsp config stdout psv_sbsauart_1
 
 #this is a temporary workaround to enable adding xilmailbox onto freerots, once Vitis has the fix, this line will be removed 
 puts "customize ssw repo"
-repo -set /proj/rdi/staff/davidzha/embeddedsw
+#repo -set /proj/rdi/staff/davidzha/embeddedsw
+repo -set /public/bugcases/CR/1086000-1086999/1086872/embeddedsw
 
 puts "customize bsp libs"
 bsp setlib xilfpga
