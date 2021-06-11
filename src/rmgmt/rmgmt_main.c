@@ -48,7 +48,9 @@ static void pvR5Task( void *pvParameters )
 			rmgmt_download_xsabin(&rh);
 			break;
 		case XRT_XFR_PKT_TYPE_XCLBIN:
+			FreeRTOS_ClearTickInterrupt();
 			rmgmt_download_xclbin(&rh);
+			FreeRTOS_SetupTickInterrupt();
 			break;
 		default:
 			RMGMT_LOG("WARN: Unknown packet type: %d\r\n", pkt_type);
