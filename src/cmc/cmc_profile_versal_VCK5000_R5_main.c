@@ -70,6 +70,7 @@
 #include "cmc_profile_versal_VCK5000_R5.h"
 #include "FreeRTOS.h"
 #include "task.h"
+#include "rpu_main.h"
 
  /* Optional functions - most linkers will remove unused functions anyway. */
 #define INCLUDE_vTaskPrioritySet                1

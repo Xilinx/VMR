@@ -46,8 +46,9 @@
 #include "FreeRTOS.h"
 #include "task.h"
 
-#include "../include/rmgmt_ospi.h"
-#include "../include/xospipsv_flash_config.h"
+#include "rmgmt_util.h"
+#include "rmgmt_ospi.h"
+#include "xospipsv_flash_config.h"
 
 /************************** Constant Definitions *****************************/
 
@@ -57,24 +58,6 @@
  * change all the needed parameters in one place.
  */
 #define OSPIPSV_DEVICE_ID		XPAR_XOSPIPSV_0_DEVICE_ID
-
-///*
-// * Number of flash pages to be written.
-// */
-//#define PAGE_COUNT		32
-//
-///*
-// * Max page size to initialize write and read buffer
-// */
-//#define MAX_PAGE_SIZE 1024
-
-/*
- * Flash address to which data is to be written.
- */
-#define TEST_ADDRESS		0x0
-
-
-//#define UNIQUE_VALUE		0x09
 
 /**************************** Type Definitions *******************************/
 
@@ -92,6 +75,8 @@ static int FlashLinearWrite(XOspiPsv *OspiPsvPtr, u32 Address, u32 ByteCount,
 				u8 *WriteBfrPtr);
 
 static int FlashRead(XOspiPsv *OspiPsvPtr, u32 Address, u32 ByteCount,
+				u8 *WriteBfrPtr, u8 *ReadBfrPtr);
+static int FlashRead_async(XOspiPsv *OspiPsvPtr, u32 Address, u32 ByteCount,
 				u8 *WriteBfrPtr, u8 *ReadBfrPtr);
 static u32 GetRealAddr(XOspiPsv *OspiPsvPtr, u32 Address);
 static int BulkErase(XOspiPsv *OspiPsvPtr, u8 *WriteBfrPtr);
@@ -131,19 +116,7 @@ static XOspiPsv_Msg FlashMsg;
  */
 int Test = 1;
 
-/*
- * The following variables are used to read and write to the flash and they
- * are global to avoid having large buffers on the stack
- */
-//#ifdef __ICCARM__
-//#pragma data_alignment = 64
-//u8 ReadBuffer[(PAGE_COUNT * MAX_PAGE_SIZE)];
-//#pragma data_alignment = 4
-//u8 WriteBuffer[(PAGE_COUNT * MAX_PAGE_SIZE)];
-//#else
-//u8 ReadBuffer[(PAGE_COUNT * MAX_PAGE_SIZE)] __attribute__ ((aligned(64)));
-//u8 WriteBuffer[(PAGE_COUNT * MAX_PAGE_SIZE)] __attribute__ ((aligned(4)));
-//#endif
+u8 ReadBuffer[OSPI_VERSAL_PAGESIZE] __attribute__ ((aligned(64)));
 
 u8 CmdBfr[8];
 
@@ -232,6 +205,83 @@ static int pollTransfer(XOspiPsv *OspiPsvPtr, XOspiPsv_Msg *flashMsg) {
 	if (Status != 0)
 		xil_printf("retry failed\r\n");
 	return Status;
+}
+
+/*****************************************************************************/
+/**
+*
+* This function performs read. DMA is the default setting.
+*
+* @param	OspiPsvPtr is a pointer to the OSPIPSV driver component to use.
+* @param	Address contains the address of the first sector which needs to
+*			be erased.
+* @param	ByteCount contains the total size to be erased.
+* @param	Pointer to the write buffer which contains data to be transmitted
+* @param	Pointer to the read buffer to which valid received data should be
+* 			written
+*
+* @return	XST_SUCCESS if successful, else XST_FAILURE.
+*
+* @note		None.
+*
+******************************************************************************/
+int FlashRead_async(XOspiPsv *OspiPsvPtr, u32 Address, u32 ByteCount,
+				u8 *WriteBfrPtr, u8 *ReadBfrPtr)
+{
+	u8 Status;
+	u32 RealAddr;
+	u32 BytesToRead;
+	u32 ByteCnt = ByteCount;
+
+	xil_printf("ReadCmd 0x%x\r\n", Flash_Config_Table[FCTIndex].ReadCmd);
+
+	if ((Address < Flash_Config_Table[FCTIndex].FlashDeviceSize) &&
+		((Address + ByteCount) >= Flash_Config_Table[FCTIndex].FlashDeviceSize) &&
+		(OspiPsvPtr->Config.ConnectionMode == XOSPIPSV_CONNECTION_MODE_STACKED)) {
+		BytesToRead = (Flash_Config_Table[FCTIndex].FlashDeviceSize - Address);
+	} else {
+		BytesToRead = ByteCount;
+	}
+	while (ByteCount != 0) {
+		/*
+		 * Translate address based on type of connection
+		 * If stacked assert the slave select based on address
+		 */
+		RealAddr = GetRealAddr(OspiPsvPtr, Address);
+
+		FlashMsg.Opcode = (u8)Flash_Config_Table[FCTIndex].ReadCmd;
+		FlashMsg.Addrsize = 4;
+		FlashMsg.Addrvalid = 1;
+		FlashMsg.TxBfrPtr = NULL;
+		FlashMsg.RxBfrPtr = ReadBfrPtr;
+		FlashMsg.ByteCount = BytesToRead;
+		FlashMsg.Flags = XOSPIPSV_MSG_FLAG_RX;
+		FlashMsg.Addr = RealAddr;
+		FlashMsg.Proto = XOspiPsv_Get_Proto(OspiPsvPtr, 1);
+		FlashMsg.Dummy = Flash_Config_Table[FCTIndex].DummyCycles +
+				OspiPsvPtr->Extra_DummyCycle;
+		FlashMsg.IsDDROpCode = 0;
+		if (OspiPsvPtr->SdrDdrMode == XOSPIPSV_EDGE_MODE_DDR_PHY) {
+			FlashMsg.Proto = XOSPIPSV_READ_8_8_8;
+			FlashMsg.Dummy = 16 + OspiPsvPtr->Extra_DummyCycle;
+		}
+
+		Status = XOspiPsv_StartDmaTransfer(OspiPsvPtr, &FlashMsg);
+		if (Status != XST_SUCCESS) {
+			return XST_FAILURE;
+		}
+		Status = XOspiPsv_CheckDmaDone(OspiPsvPtr);
+		while(Status != XST_SUCCESS) {
+			Status = XOspiPsv_CheckDmaDone(OspiPsvPtr);
+		}
+
+		ByteCount -= BytesToRead;
+		Address += BytesToRead;
+		ReadBfrPtr += BytesToRead;
+		BytesToRead = ByteCnt - BytesToRead;
+	}
+
+	return 0;
 }
 
 /*****************************************************************************/
@@ -408,8 +458,7 @@ int FlashIoWrite(XOspiPsv *OspiPsvPtr, u32 Address, u32 ByteCount,
 			FlashMsg.Proto = XOSPIPSV_WRITE_8_0_0;
 		}
 
-//		Status = XOspiPsv_PollTransfer(OspiPsvPtr, &FlashMsg);
-		Status = pollTransfer(OspiPsvPtr, &FlashMsg);
+		Status = XOspiPsv_PollTransfer(OspiPsvPtr, &FlashMsg);
 		if (Status != XST_SUCCESS) {
 			xil_printf("poll transfer0 failed\r\n");
 			return XST_FAILURE;
@@ -437,8 +486,8 @@ int FlashIoWrite(XOspiPsv *OspiPsvPtr, u32 Address, u32 ByteCount,
 		if (OspiPsvPtr->SdrDdrMode == XOSPIPSV_EDGE_MODE_DDR_PHY) {
 			FlashMsg.Proto = XOSPIPSV_WRITE_8_8_8;
 		}
-//		Status = XOspiPsv_PollTransfer(OspiPsvPtr, &FlashMsg);
-		Status = pollTransfer(OspiPsvPtr, &FlashMsg);		if (Status != XST_SUCCESS) {
+		Status = XOspiPsv_PollTransfer(OspiPsvPtr, &FlashMsg);
+		if (Status != XST_SUCCESS) {
 			xil_printf("poll transfer1 failed\r\n");
 			return XST_FAILURE;
 		}
@@ -463,8 +512,7 @@ int FlashIoWrite(XOspiPsv *OspiPsvPtr, u32 Address, u32 ByteCount,
 				FlashMsg.Dummy += 8;
 			}
 
-//			Status = XOspiPsv_PollTransfer(OspiPsvPtr, &FlashMsg);
-			Status = pollTransfer(OspiPsvPtr, &FlashMsg);
+			Status = XOspiPsv_PollTransfer(OspiPsvPtr, &FlashMsg);
 			if (Status != XST_SUCCESS) {
 				xil_printf("poll transfer n failed\r\n");
 				return XST_FAILURE;
@@ -473,7 +521,7 @@ int FlashIoWrite(XOspiPsv *OspiPsvPtr, u32 Address, u32 ByteCount,
 			if ((FlashStatus[0] & 0x80) != 0)
 				break;
 		}
-}
+	}
 	return 0;
 }
 
@@ -723,8 +771,9 @@ int FlashRead(XOspiPsv *OspiPsvPtr, u32 Address, u32 ByteCount,
 			FlashMsg.Dummy = 16 + OspiPsvPtr->Extra_DummyCycle;
 		}
 
-		Status = pollTransfer(OspiPsvPtr, &FlashMsg);
+		Status = XOspiPsv_PollTransfer(OspiPsvPtr, &FlashMsg);
 		if (Status != XST_SUCCESS) {
+			xil_printf("FlashRead fail: %d\r\n", Status);
 			return XST_FAILURE;
 		}
 
@@ -1182,27 +1231,17 @@ u32 GetRealAddr(XOspiPsv *OspiPsvPtr, u32 Address)
 	return RealAddr;
 }
 
-int ospi_flush_polled(u8 *WriteBuffer, u32 len)
+int ospi_flash_init()
 {
 	int Status;
-	int Count;
-	int Page = 0;
-	u32 PAGE_COUNT = 0;
 	u32 PAGE_SIZE = 0;
-
-	const TickType_t x1second = pdMS_TO_TICKS( 1000*1 );
-
 
 	XOspiPsv *OspiPsvInstancePtr = &OspiPsvInstance;
 	XOspiPsv_Config *OspiPsvConfig;
-	u8 *ReadBuffer;
 
 	Status = XOspiPsv_DeviceReset(XOSPIPSV_HWPIN_RESET);
 	if (Status != XST_SUCCESS)
 		return XST_FAILURE;
-
-	xil_printf("wait 1s after reset\r\n");
-	vTaskDelay( x1second );
 
 	/*
 	 * Initialize the OSPIPSV driver so that it's ready to use
@@ -1280,121 +1319,140 @@ int ospi_flush_polled(u8 *WriteBuffer, u32 len)
 	}
 
 	PAGE_SIZE = (Flash_Config_Table[FCTIndex].PageSize);
-	if (len % PAGE_SIZE) {
-		xil_printf("WARN: len %d is not page %d aligned\r\n", len, PAGE_SIZE);
-	}
-
-	PAGE_COUNT = len / PAGE_SIZE + 1;
-
-	xil_printf("Flashing... Page %d, PageSize %d\r\n", PAGE_COUNT, PAGE_SIZE);
-
-	xil_printf("buffer: 0x%x\t", WriteBuffer[0]);
-	xil_printf("buffer: 0x%x\t", WriteBuffer[1]);
-	xil_printf("buffer: 0x%x\t", WriteBuffer[2]);
-	xil_printf("buffer: 0x%x\t", WriteBuffer[3]);
-	xil_printf("\r\n");
-
-	ReadBuffer = malloc(PAGE_SIZE);
-	if (!ReadBuffer) {
-		free(WriteBuffer);
-		xil_printf("Failed to allocate read %d buffer\r\n", PAGE_SIZE);
+	if (PAGE_SIZE != OSPI_VERSAL_PAGESIZE) {
+		RMGMT_LOG("ERR: page size is: %d, expected: %d\r\n",
+			PAGE_SIZE, OSPI_VERSAL_PAGESIZE);
 		return XST_FAILURE;
 	}
 
-//	/* read and compare */
-//	for (Count = 0; Count < len; Count += PAGE_SIZE) {
-//		Status = FlashRead(OspiPsvInstancePtr, TEST_ADDRESS + Count, len,
-//				CmdBfr, ReadBuffer);
-//		if (Status != XST_SUCCESS) {
-//			xil_printf("Read failed:%d\r\n", Status);
-//			free(WriteBuffer);
-//			free(ReadBuffer);
-//			return XST_FAILURE;
-//		}
-//
-//		for (int i = 0; i < PAGE_SIZE; i++) {
-//			if (ReadBuffer[i] != WriteBuffer[Count+i]) {
-//				xil_printf("0x%x,", ReadBuffer[i]);
-//				xil_printf("0x%x,", WriteBuffer[Count+i]);
-//				xil_printf("mis-match offset: %d, read 0x%x: pdi 0x%x\r\n", Count+i, ReadBuffer[i], WriteBuffer[Count+i]);
-//				free(WriteBuffer);
-//				free(ReadBuffer);
-//				return XST_FAILURE;
-//			}
-//		}
-//	}
+	return XST_SUCCESS;
+}
 
-	/* erase and write */
-	Status = FlashErase(OspiPsvInstancePtr, TEST_ADDRESS, len, CmdBfr);
+int ospi_flash_read(u32 baseAddress, u8 *buffer, u32 len)
+{
+	int Status;
+
+	XOspiPsv *OspiPsvInstancePtr = &OspiPsvInstance;
+
+	RMGMT_DBG("ospi_flash_read: 0x%x len %d\r\n", baseAddress, len);
+
+	bzero(buffer, len);
+	Status = FlashRead(OspiPsvInstancePtr, baseAddress, len, CmdBfr, buffer);
 	if (Status != XST_SUCCESS) {
-		xil_printf("Flash Erase Failed:%d\r\n", Status);
-		xil_printf("wait 1s and retry.\r\n");
-		vTaskDelay( x1second );		/* erase twice */
-		Status = FlashErase(OspiPsvInstancePtr, TEST_ADDRESS, len, CmdBfr);
-		if (Status != XST_SUCCESS) {
-			xil_printf("Flash Erase Failed:%d\r\n", Status);
-			return XST_FAILURE;
-		}
+		RMGMT_LOG("ERR: Read failed:%d\r\n", Status);
+		return XST_FAILURE;
 	}
 
+	for (int i = 0; i < 16; i++)
+		RMGMT_LOG("%02x ", buffer[i]);
+	RMGMT_LOG("\r\n");
+
+	RMGMT_LOG("flash read done.\r\n");
+	return 0;
+}
+
+int ospi_flash_write(u32 baseAddress, u8 *WriteBuffer, u32 len)
+{
+	int Status;
+	int Count;
+	int Page = 0;
+	u32 PAGE_COUNT = 0;
+	u32 PAGE_SIZE = OSPI_VERSAL_PAGESIZE;
+
+	XOspiPsv *OspiPsvInstancePtr = &OspiPsvInstance;
+
+	RMGMT_DBG("ospi_flash_write: 0x%x, len %d\r\n", baseAddress, len);
+
+	if (baseAddress & OSPI_VERSAL_PAGESIZE) {
+		RMGMT_LOG("base address is not %d aligned\r\n", OSPI_VERSAL_PAGESIZE); 
+	}
+
+	PAGE_COUNT = len / PAGE_SIZE;
+	if (len % PAGE_SIZE) {
+		PAGE_COUNT++;
+		RMGMT_LOG("WARN: len %d is not page %d aligned\r\n", len, PAGE_SIZE);
+
+	}
+	RMGMT_DBG("Flashing... Page Count: %d, PageSize %d\r\n", PAGE_COUNT, PAGE_SIZE);
 
 	/* Write first, then read back and verify */
 	if (XOspiPsv_GetOptions(OspiPsvInstancePtr) == XOSPIPSV_DAC_EN_OPTION) {
-		xil_printf("1WriteCmd: 0x%x\n\r", (u8)(Flash_Config_Table[FCTIndex].WriteCmd >> 8));
-		Status = FlashLinearWrite(OspiPsvInstancePtr, TEST_ADDRESS,
+		xil_printf("WriteCmd: 0x%x\n\r", (u8)(Flash_Config_Table[FCTIndex].WriteCmd >> 8));
+		Status = FlashLinearWrite(OspiPsvInstancePtr, baseAddress,
 		(Flash_Config_Table[FCTIndex].PageSize * PAGE_COUNT), WriteBuffer);
 		if (Status != XST_SUCCESS)
 			return XST_FAILURE;
 	} else {
-		xil_printf("2WriteCmd: 0x%x pages:%d\n\r", (u8)Flash_Config_Table[FCTIndex].WriteCmd, PAGE_COUNT);
+		xil_printf("WriteCmd: 0x%x \n\r", (u8)Flash_Config_Table[FCTIndex].WriteCmd);
 		for (Page = 0; Page < PAGE_COUNT; Page++) {
 			u32 offset = (Page * Flash_Config_Table[FCTIndex].PageSize);
 
-			xil_printf("\r%d", Page*100/PAGE_COUNT);
+			RMGMT_DBG("\r%d", Page*100/PAGE_COUNT);
 			fflush(stdout);
 
 			Status = FlashIoWrite(OspiPsvInstancePtr,
-			offset + TEST_ADDRESS,
+			offset + baseAddress,
 			((Flash_Config_Table[FCTIndex].PageSize)), WriteBuffer + offset);
 			if (Status != XST_SUCCESS) {
-				xil_printf("write failed: %d\r\n", Status);
+				RMGMT_LOG("ERR: write failed: %d\r\n", Status);
 				return XST_FAILURE;
 			}
 		}
 	}
 
-	/* read back: random check some pages numbers */
+	/* read back: check some pages numbers */
+	RMGMT_DBG("write done. read back to verify. \r\n");
+	bzero(ReadBuffer, sizeof (ReadBuffer));
 	for (Count = 0; Count < len; Count += PAGE_SIZE ) {
-		if (Count % (PAGE_COUNT / 10))
+		if (Count != 0 && (Count % (PAGE_COUNT / 10)))
 			continue;
-		xil_printf("\r%d", Count*100/len);
-		fflush(stdout);
 
-		Status = FlashRead(OspiPsvInstancePtr, TEST_ADDRESS + Count, len,
-				CmdBfr, ReadBuffer);
+		Status = FlashRead(OspiPsvInstancePtr, baseAddress + Count, PAGE_SIZE,
+			CmdBfr, ReadBuffer);
 		if (Status != XST_SUCCESS) {
-			xil_printf("Read failed:%d\r\n", Status);
-			free(WriteBuffer);
-			free(ReadBuffer);
+			RMGMT_LOG("ERR: Read failed:%d\r\n", Status);
 			return XST_FAILURE;
 		}
-
+		
 		for (int i = 0; i < PAGE_SIZE; i++) {
-			if (ReadBuffer[i] != WriteBuffer[Count+i]) {
-				xil_printf("0x%x,", ReadBuffer[i]);
-				xil_printf("0x%x,", WriteBuffer[Count+i]);
-				xil_printf("mis-match offset: %d, read 0x%x: pdi 0x%x\r\n", Count+i, ReadBuffer[i], WriteBuffer[Count+i]);
-				free(WriteBuffer);
-				free(ReadBuffer);
-				return XST_FAILURE;
+			if (*((u32 *)ReadBuffer) != -1 ||
+			    (Count + i) >= len ||
+			    ReadBuffer[i] == WriteBuffer[Count+i])
+				continue;
+
+			for (int idx = 0; idx < 16; idx++) {
+				RMGMT_LOG("%02x ", ReadBuffer[idx]);
 			}
+			RMGMT_LOG(" <= data in ospi\r\n");
+			for (int idx = 0; idx < 16; idx++) {
+				RMGMT_LOG("%02x ", WriteBuffer[Count+idx]);
+			}
+			RMGMT_LOG(" <= data from pdi\r\n");
+
+			RMGMT_LOG("mis-match offset: %d, read 0x%x: pdi 0x%x\r\n",
+				Count+i, ReadBuffer[i], WriteBuffer[Count+i]);
+			return XST_FAILURE;
 		}
 	}
 
-	xil_printf("flash done.\r\n");
-	free(WriteBuffer);
-	free(ReadBuffer);
-	xil_printf("free buffer done.\r\n");
+	RMGMT_LOG("flash write done. \r\n");
 	return 0;
 }
 
+int ospi_flash_erase(u32 baseAddress, u32 len)
+{
+	int Status;
+
+	XOspiPsv *OspiPsvInstancePtr = &OspiPsvInstance;
+
+	RMGMT_DBG("ospi_flash_erase: 0x%x, len: %d\r\n", baseAddress, len);
+
+	if (baseAddress & OSPI_VERSAL_PAGESIZE) {
+		RMGMT_LOG("base address is not %d aligned\r\n", OSPI_VERSAL_PAGESIZE); 
+	}
+
+	Status = FlashErase(OspiPsvInstancePtr, baseAddress, len, CmdBfr);
+
+	RMGMT_LOG("ospi_flash_erase: %d \r\n", Status);
+	return Status;
+}
