@@ -25,6 +25,8 @@
 #include "xil_cache.h"
 #include "xil_types.h"
 
+#define ARRAY_SIZE(x) (sizeof(x) / sizeof (*(x)))
+
 #ifdef RMGMT_VERBOSE
 #define RMGMT_DBG(format, ...) xil_printf(format, ##__VA_ARGS__)
 #else

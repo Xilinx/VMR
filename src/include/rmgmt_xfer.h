@@ -11,7 +11,7 @@
 
 #define TEST_ADDRESS	0x0
 
-#define BITSTREAM_SIZE	0x1000000U /* Bin or bit or PDI image max size (256M) */
+#define BITSTREAM_SIZE	0x2000000U /* Bin or bit or PDI image max size (32M) */
 #define versal
 #ifdef versal
 #define PDI_LOAD        0U
@@ -39,15 +39,17 @@
 
 #define XRT_XFR_PKT_TYPE_PDI            0
 #define XRT_XFR_PKT_TYPE_XCLBIN         1
+#define XRT_XFR_PKT_TYPE_APU_PDI        2
 
 #define XRT_XFR_PKT_FLAGS_LAST          (1 << 0)
 #define XRT_XFR_PKT_FLAGS_PDI           (XRT_XFR_PKT_TYPE_PDI << \
         XRT_XFR_PKT_TYPE_SHIFT)
 #define XRT_XFR_PKT_FLAGS_XCLBIN        (XRT_XFR_PKT_TYPE_XCLBIN << \
         XRT_XFR_PKT_TYPE_SHIFT)
+#define XRT_XFR_PKT_FLAGS_APU_PDI        (XRT_XFR_PKT_TYPE_APU_PDI << \
+        XRT_XFR_PKT_TYPE_SHIFT)
 #define XRT_XFR_PKT_FLAGS_VER           (XRT_XFR_VER << XRT_XFR_PKT_VER_SHIFT)
 
-#define ARRAY_SIZE(x) (sizeof(x) / sizeof (*(x)))
 
 struct pdi_packet {
 	union {
@@ -66,8 +68,10 @@ struct rmgmt_handler {
 	u8  *rh_data; 	/* static malloc and never free */
 };
 
-int rmgmt_download_xsabin(struct rmgmt_handler *rh);
+int rmgmt_download_apu_pdi(struct rmgmt_handler *rh);
+int rmgmt_download_rpu_pdi(struct rmgmt_handler *rh);
 int rmgmt_download_xclbin(struct rmgmt_handler *rh);
+int rmgmt_load_apu(struct rmgmt_handler *rh);
 
 int rmgmt_init_handler(struct rmgmt_handler *rh);
 int rmgmt_check_for_status(struct rmgmt_handler *rh, u8 status);
