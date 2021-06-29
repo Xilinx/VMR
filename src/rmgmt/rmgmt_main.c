@@ -59,11 +59,11 @@ static void pvR5Task( void *pvParameters )
 	RMGMT_LOG("FATAL: should never be here!\r\n");
 }
 
-void RMGMT_Launch( void )
+int RMGMT_Launch( void )
 {	
 	if (rmgmt_init_handler(&rh) != 0) {
 		RMGMT_LOG("FATAL: init rmgmt handler failed.\r\n");
-		return;
+		return -1;
 	}
 
 	rmgmt_load_apu(&rh);
@@ -75,6 +75,10 @@ void RMGMT_Launch( void )
 		 tskIDLE_PRIORITY + 1,
 		 &xR5Task
 		 ) != pdPASS) {
-		xil_printf("pvR5Task fail \r\n");
+		RMGMT_LOG("FATAL: pvR5Task creation failed.\r\n");
+		return -1;
 	}
+
+	RMGMT_LOG("INFO: pvR5Task creation succeeded.\r\n");
+	return 0;
 }

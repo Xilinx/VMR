@@ -1,0 +1,54 @@
+diff --git a/src/cmc/cmc_scheduler.c b/src/cmc/cmc_scheduler.c
+index 693c115..05672c4 100644
+--- a/src/cmc/cmc_scheduler.c
++++ b/src/cmc/cmc_scheduler.c
+@@ -62,7 +62,8 @@
+ 
+ 
+ #include "cmc_scheduler.h"
+-
++#include "FreeRTOS.h"
++#include "task.h"
+ 
+ 
+ uint32_t NextThread(uint32_t AnyThread)
+@@ -84,10 +85,12 @@ void Scheduler(SCHEDULER_CONTEXT_TYPE *pContext)
+ {
+     bool StillProcessing=true;
+     bool ThreadFound;
++    const TickType_t yieldms = pdMS_TO_TICKS( 100*1 );
+ 
+     SchedulerEnter(pContext);
+     while(StillProcessing)
+     {
++	vTaskDelay( yieldms );
+         ThreadTimeDifferenceMetaData_UpdateEnter(&pContext->Element[pContext->iElement].Meta);
+         StillProcessing=(*pContext->Element[pContext->iElement].pFN_Thread)(pContext->Element[pContext->iElement].pThreadContext);
+         ThreadTimeDifferenceMetaData_UpdateExit(&pContext->Element[pContext->iElement].Meta);
+diff --git a/src/rmgmt/rmgmt_xfer.c b/src/rmgmt/rmgmt_xfer.c
+index c5af13a..a06487e 100644
+--- a/src/rmgmt/rmgmt_xfer.c
++++ b/src/rmgmt/rmgmt_xfer.c
+@@ -271,8 +271,7 @@ int rmgmt_load_apu(struct rmgmt_handler *rh)
+ 	/* Sync data from cache to memory */
+ 	Xil_DCacheFlush();
+ 
+-	RMGMT_LOG("skip loading for now\r\n");
+-	ret = fpga_pl_pdi_download((UINTPTR)rh->rh_data, (UINTPTR)size);
++	//ret = fpga_pl_pdi_download((UINTPTR)rh->rh_data, (UINTPTR)size);
+ 
+ 	return ret;
+ }
+diff --git a/src/rpu_main/rpu_main.c b/src/rpu_main/rpu_main.c
+index 3f738c0..90c9b5b 100644
+--- a/src/rpu_main/rpu_main.c
++++ b/src/rpu_main/rpu_main.c
+@@ -13,7 +13,7 @@
+ 
+ int main( void )
+ {
+-	//CMC_Launch();
++	CMC_Launch();
+ 
+ 	RMGMT_Launch();
+ 

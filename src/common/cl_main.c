@@ -8,14 +8,20 @@
 #include "queue.h"
 #include "timers.h"
 
-#include "rpu_main.h"
+#include "cl_main.h"
 #include "xil_printf.h"
 
 int main( void )
 {
 	//CMC_Launch();
 
-	RMGMT_Launch();
+	//RMGMT_Launch();
+	
+	int len = sizeof (handler) / sizeof(*handler);
+
+	for (int i = 0; i < len; i++) {
+		configASSERT(handler[i]() == 0);
+	}
 
 	vTaskStartScheduler();
 

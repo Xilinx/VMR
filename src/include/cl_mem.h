@@ -20,7 +20,14 @@
  * 	2) easy to dump memory for easy debugging;
  */
 
-#define malloc(size) cl_malloc(size)
-#define free(prt) cl_free(ptr)
+#define APP_ID_CMC 	0x434d4321	/* CMC! */ 
+#define APP_ID_RMGMT	0x58525421 	/* XRT! */
+
+typedef struct app_signature {
+	u32 app_id;
+} app_signature_t;
+
+#define malloc(app_signature, size) cl_malloc(app_signature, size)
+#define free(app_signature, prt) cl_free(app_signature, ptr)
 
 #endif

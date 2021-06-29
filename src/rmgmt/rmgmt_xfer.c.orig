@@ -4,7 +4,7 @@
 *******************************************************************************/
 
 #include "xilfpga.h"
-#include "rmgmt_util.h"
+#include "rmgmt_main.h"
 #include "rmgmt_xclbin.h"
 #include "rmgmt_xfer.h"
 #include "rmgmt_ospi.h"
@@ -95,6 +95,148 @@ static void print_pkg(u8 *data, int len) {
 	}
 }
 
+#if 0
+static int zocl_ov_receive(struct zocl_ov_dev *ov)
+{
+	struct zocl_ov_pkt_node *node = ov->head;
+	u32 *ov_base = (u32 *)ov->base;
+	int len = 0, next = 0;
+	int ret;
+	int a = 1;
+
+	RMGMT_DBG("-> zocl_ov_receive \r\n");
+	for (;;) {
+		u32 pkt_header;
+		struct pdi_packet *pkt = (struct pdi_packet *)&pkt_header;
+		struct zocl_ov_pkt_node *new;
+		int lastpkt;
+
+
+		/* Busy wait here until we get a new packet */
+		pkt_header = wait_for_status(ov, XRT_XFR_PKT_STATUS_NEW);
+		lastpkt = pkt->pkt_flags & XRT_XFR_PKT_FLAGS_LAST;
+
+		new = malloc(sizeof (struct zocl_ov_pkt_node));
+		if (!new) {
+			RMGMT_DBG("pkt_node: no mem %d", sizeof (struct zocl_ov_pkt_node));
+			ret = -1;
+			break;
+		}
+		new->zn_datap = malloc(ov->size);
+		if (!new->zn_datap) {
+			//			free(new); memory leaks?
+			free(new);
+			RMGMT_DBG("zn_datap: no mem %d\r\n", ov->size);
+			ret = -1;
+			break;
+		}
+		new->zn_size = pkt->pkt_size;
+
+		/* Read packet data payload on a 4 bytes base */
+		read_data32(ov_base + (sizeof(struct pdi_packet)) / 4,
+			new->zn_datap, (ov->size - sizeof(struct pdi_packet)) / 4);
+
+		if (a) {
+			RMGMT_DBG("pkt_size: %d \r\n", new->zn_size);
+			print_pkg((u8 *)new->zn_datap, 8);
+			a = 0;
+		}
+		/* Notify host that the data has been read */
+		set_status(ov, XRT_XFR_PKT_STATUS_IDLE);
+
+		len += ov->size;
+
+		if ((len / 1000000) > next) {
+			RMGMT_DBG("\r%d M", len / 1000000);
+			fflush(stdout);
+			next++;
+		}
+
+		/* Add packet data to linked list */
+		if (node)
+			node->zn_next = new;
+		else
+			ov->head = new;
+		node = new;
+
+		/* Bail out here if this is the last packet */
+		if (lastpkt) {
+			ret = 0;
+			break;
+		}
+	}
+	RMGMT_DBG("<- zocl_ov_receive \r\n");
+	return ret;
+}
+
+static int zocl_ov_to_data(struct zocl_ov_dev *ov, u8 **data, u32 *length)
+{
+	struct zocl_ov_pkt_node *node = ov->head;
+	u8 *xp;
+	size_t len = 0;
+	int flag = 1;
+
+	RMGMT_DBG("-> zocl_ov_to_data \r\n");
+
+	while (node) {
+		len += node->zn_size;
+		node = node->zn_next;
+	}
+
+	if (len == 0) {
+		RMGMT_LOG("ERR: received 0 data.\r\n");
+		return -1;
+	}
+
+	*data = malloc(len);
+	if (!(*data)) {
+		RMGMT_LOG("ERR: failed to allocate data buffer\r\n");
+		return -1;
+	}
+
+	xp = *data;
+	node = ov->head;
+	while (node) {
+		memcpy(xp, node->zn_datap, node->zn_size);
+		xp += node->zn_size;
+		node = node->zn_next;
+
+		if (flag) {
+			print_pkg((*data), 8);
+			flag = 0;
+		}
+	}
+
+	*length = len;
+
+	RMGMT_DBG("<- zocl_ov_to_data len: %d \r\n", len);
+
+	return 0;
+}
+
+static void* rtos_memcpy( void *pvDest, const void *pvSource, size_t ulBytes )
+{
+	unsigned char *pcDest = ( unsigned char * ) pvDest, *pcSource = ( unsigned char * ) pvSource;
+	size_t x;
+
+	for( x = 0; x < ulBytes; x++ )
+	{
+		*pcDest = *pcSource;
+		pcDest++;
+		pcSource++;
+	}
+
+	/* Sync data from cache to memory */
+	Xil_DCacheFlush();
+
+	RMGMT_LOG("x %lld, size %lld\r\n", x, ulBytes);
+
+	return pvDest;
+}
+#endif
+
+
+
 static int rmgmt_data_receive(struct rmgmt_handler *rh, u32 *len)
 {
 	u32 offset = 0, next = 0;
@@ -173,46 +315,24 @@ int rmgmt_init_handler(struct rmgmt_handler *rh)
 	if (rmgmt_init_xfer(rh) != 0)
 		return -1;
 
-	rh->rh_data_size = BITSTREAM_SIZE; /* 32M */
+	rh->rh_data_size = BITSTREAM_SIZE * 2; /* 32M */
 	rh->rh_data = (u8 *)malloc(rh->rh_data_size);
 	if (rh->rh_data == NULL) {
 		RMGMT_LOG("malloc %d bytes failed\r\n", rh->rh_data_size);
 		return -1;
 	}
 
-	/* init ospi flash driver */
-	ospi_flash_init();
-
 	set_version(rh);
+
 	set_status(rh, XRT_XFR_PKT_STATUS_IDLE);
 
 	RMGMT_DBG("rmgmt_init_handler done\r\n");
 	return 0;
 }
 
-static int fpga_pl_pdi_download(UINTPTR data, UINTPTR size)
-{
-	int ret;
-	XFpga XFpgaInstance = { 0U };
-
-	ret = XFpga_Initialize(&XFpgaInstance);
-	if (ret != XST_SUCCESS) {
-		RMGMT_DBG("FPGA init failed %d\r\n", ret);
-		return ret;
-	}
-
-	/* isolate PR gate */
-	//IO_SYNC_WRITE32(PR_ISOLATION_FREEZE, rh->rh_base + PR_ISOLATION_REG);
-
-	ret = XFpga_PL_BitStream_Load(&XFpgaInstance, data, size, PDI_LOAD);
-	
-	//IO_SYNC_WRITE32(PR_ISOLATION_UNFREEZE, rh->rh_base + PR_ISOLATION_REG);
-	
-	return ret;
-}
-
 static int rmgmt_fpga_download(struct rmgmt_handler *rh, u32 len)
 {
+	XFpga XFpgaInstance = { 0U };
 	int ret;
 	struct axlf *axlf = (struct axlf *)rh->rh_data;
 	uint64_t offset = 0;
@@ -220,17 +340,34 @@ static int rmgmt_fpga_download(struct rmgmt_handler *rh, u32 len)
 
 	RMGMT_LOG("-> rmgmt_fpga_download\r\n");
 
+	RMGMT_LOG(" head should be 0x78 0x63 0x6c 0x62 etc. \r\n");
+	print_pkg(rh->rh_data, 16);
+
+	ret = XFpga_Initialize(&XFpgaInstance);
+	if (ret != XST_SUCCESS) {
+		set_status(rh, XRT_XFR_PKT_STATUS_FAIL);
+		RMGMT_DBG("FPGA init failed %d\r\n", ret);
+		goto out;
+	}
+
 	ret = rmgmt_xclbin_section_info(axlf, BITSTREAM_PARTIAL_PDI, &offset, &size);
 	if (ret) {
 		set_status(rh, XRT_XFR_PKT_STATUS_FAIL);
 		RMGMT_DBG("get PARTIAL PDI from xclbin failed %d\r\n", ret);
 		goto out;
 	}
+
 	/* Sync data from cache to memory */
 	Xil_DCacheFlush();
 
-	ret = fpga_pl_pdi_download((UINTPTR)((const char *)axlf + offset),
-		(UINTPTR)size);
+	/* isolate PR gate */
+	//IO_SYNC_WRITE32(PR_ISOLATION_FREEZE, rh->rh_base + PR_ISOLATION_REG);
+
+	ret = XFpga_PL_BitStream_Load(&XFpgaInstance,
+		(UINTPTR)((const char *)axlf + offset), (UINTPTR)size, PDI_LOAD);
+
+	//IO_SYNC_WRITE32(PR_ISOLATION_UNFREEZE, rh->rh_base + PR_ISOLATION_REG);
+
 	if (ret != XFPGA_SUCCESS) {
 		set_status(rh, XRT_XFR_PKT_STATUS_FAIL);
 		RMGMT_DBG("FPGA load pdi failed %d\r\n", ret);
@@ -244,143 +381,42 @@ out:
 	return ret;
 }
 
-int rmgmt_load_apu(struct rmgmt_handler *rh)
+static int rmgmt_ospi_download(struct rmgmt_handler *rh, u32 len)
 {
-	int ret = 0;
-	u32 size;
-	u8 pdiHeader[OSPI_VERSAL_PAGESIZE] = { 0 };
-
-	ret = ospi_flash_read(APU_PDI_ADDRESS, pdiHeader, OSPI_VERSAL_PAGESIZE);
-	if (*(u32 *)pdiHeader != MAGIC_NUM32) {
-		RMGMT_LOG("WARN: skip loading RPU, magic %x is not %x\r\n",
-			*(u32 *)pdiHeader, MAGIC_NUM32);
-		return 0;
-	}
-
-	size = *(((u32 *)pdiHeader) + 1);
-	if (size == 0) {
-		RMGMT_LOG("ERR: pdi size is 0.\r\n");
-		return -1;
-	}
-	RMGMT_DBG("apu pdi size is: %d\r\n", size);
-
-	ret = ospi_flash_read(APU_PDI_ADDRESS + OSPI_VERSAL_PAGESIZE, rh->rh_data, size);
-	if (ret)
-		return ret;
-
-	/* Sync data from cache to memory */
-	Xil_DCacheFlush();
-
-	RMGMT_LOG("skip loading for now\r\n");
-	ret = fpga_pl_pdi_download((UINTPTR)rh->rh_data, (UINTPTR)size);
-
-	return ret;
-}
-
-static int ospi_flash_write_with_retry(u32 baseAddress, u8 *data, u32 size)
-{
-	int retry = 0, ret;
-
-	ret = ospi_flash_write(baseAddress, data, size);
-	while (ret != 0 && retry++ < 10) {
-		RMGMT_DBG("ospi_flash retrying... %d\r\n", retry);
-		ret = ospi_flash_write(baseAddress, data, size);
-	}
-
-	return ret;
-}
-
-static int ospi_flash_erase_with_retry(u32 baseAddress, u32 size)
-{
-	int retry = 0, ret;
-
-	ret = ospi_flash_erase(baseAddress, size);
-	while (ret != 0 && retry++ < 10) {
-		RMGMT_DBG("ospi_erase retrying... %d\r\n", retry);
-		ret = ospi_flash_erase(baseAddress, size);
-	}
-
-	return ret;
-}
-
-static int rmgmt_ospi_rpu_download(struct rmgmt_handler *rh, u32 len)
-{
+	int retry = 0;
 	int ret;
+	struct axlf *axlf = (struct axlf *)rh->rh_data;
+	uint64_t offset = 0;
+	uint64_t size = 0;
 
-	RMGMT_LOG("-> rmgmt_ospi_rpu_download\r\n");
+	RMGMT_LOG("-> rmgmt_ospi_download\r\n");
 
+	ret = rmgmt_xclbin_section_info(axlf, PDI, &offset, &size);
+	if (ret) {
+		set_status(rh, XRT_XFR_PKT_STATUS_FAIL);
+		RMGMT_DBG("get PDI from xsabin failed %d\r\n", ret);
+		goto out;
+	}
 	/* Sync data from cache to memory */
-	Xil_DCacheFlush();
+	//Xil_DCacheFlush();
 
-	/* erase */
-	ret = ospi_flash_erase_with_retry(RPU_PDI_ADDRESS, len);
+	ret = ospi_flush_polled(rh->rh_data + offset, size);
+	while (ret != 0 && retry++ < 10) {
+		RMGMT_DBG("ospi_flush retrying... %d\r\n", retry);
+		ret = ospi_flush_polled(rh->rh_data + offset, size);
+	}
+
 	if (ret) {
 		set_status(rh, XRT_XFR_PKT_STATUS_FAIL);
 		RMGMT_DBG("OSPI fails to load pdi %d\r\n", ret);
 		goto out;
 	}
 
-	/* write */
-	ret = ospi_flash_write(RPU_PDI_ADDRESS, rh->rh_data, len);
-	if (ret) {
-		set_status(rh, XRT_XFR_PKT_STATUS_FAIL);
-		RMGMT_DBG("OSPI fails to load pdi %d\r\n", ret);
-		goto out;
-	}
-
-	/* need ready verify */
 
 	set_status(rh, XRT_XFR_PKT_STATUS_DONE);
+
 out:
-	RMGMT_LOG("<- rmgmt_ospi_rpu_download %d\r\n", ret);
-	return ret;
-}
-
-static int rmgmt_ospi_apu_download(struct rmgmt_handler *rh, u32 len)
-{
-	int ret;
-	u8 pdiHeader[OSPI_VERSAL_PAGESIZE] = { 0 };
-
-	RMGMT_LOG("-> rmgmt_ospi_apu_download\r\n");
-
-	*((u32 *)pdiHeader) = MAGIC_NUM32;
-	*((u32 *)pdiHeader + 1) = len;
-
-	/* Sync data from cache to memory */
-	Xil_DCacheFlush();
-
-	RMGMT_LOG("write header[0] %x header[1] %d\r\n",
-		*(u32 *)pdiHeader, *((u32 *)pdiHeader + 1));
-
-	ret = ospi_flash_erase_with_retry(APU_PDI_ADDRESS, OSPI_VERSAL_PAGESIZE + len);
-	if (ret) {
-		set_status(rh, XRT_XFR_PKT_STATUS_FAIL);
-		RMGMT_DBG("OSPI fails to load pdi %d\r\n", ret);
-		goto out;
-	}
-
-	/* flash rpu base pdi from offset 0(RPU_PDI_ADDRES) */
-	ret = ospi_flash_write(APU_PDI_ADDRESS,
-		pdiHeader, OSPI_VERSAL_PAGESIZE);
-	if (ret) {
-		set_status(rh, XRT_XFR_PKT_STATUS_FAIL);
-		RMGMT_DBG("OSPI fails to load pdi %d\r\n", ret);
-		goto out;
-	}
-
-	ret = ospi_flash_write(APU_PDI_ADDRESS + OSPI_VERSAL_PAGESIZE,
-		rh->rh_data, len);
-	if (ret) {
-		set_status(rh, XRT_XFR_PKT_STATUS_FAIL);
-		RMGMT_DBG("OSPI fails to load pdi %d\r\n", ret);
-		goto out;
-	}
-
-	/* need ready verify */
-
-	set_status(rh, XRT_XFR_PKT_STATUS_DONE);
-out:
-	RMGMT_LOG("<- rmgmt_ospi_apu_download %d\r\n", ret);
+	RMGMT_LOG("<- rmgmt_ospi_download %d\r\n", ret);
 	return ret;
 }
 
@@ -419,15 +455,9 @@ struct rmgmt_ops {
 	void (*rmgmt_done_op)(struct rmgmt_handler *rh);
 };
 
-static struct rmgmt_ops rpu_ops = {
+static struct rmgmt_ops xsabin_ops = {
 	.rmgmt_recv_op = rmgmt_recv_pkt,
-	.rmgmt_download_op = rmgmt_ospi_rpu_download,
-	.rmgmt_done_op = rmgmt_done_pkt,
-};
-
-static struct rmgmt_ops apu_ops = {
-	.rmgmt_recv_op = rmgmt_recv_pkt,
-	.rmgmt_download_op = rmgmt_ospi_apu_download,
+	.rmgmt_download_op = rmgmt_ospi_download,
 	.rmgmt_done_op = rmgmt_done_pkt,
 };
 
@@ -463,12 +493,7 @@ int rmgmt_download_xclbin(struct rmgmt_handler *rh)
 	return rmgmt_xfer_download(rh, &xclbin_ops);
 }
 
-int rmgmt_download_rpu_pdi(struct rmgmt_handler *rh)
+int rmgmt_download_xsabin(struct rmgmt_handler *rh)
 {
-	return rmgmt_xfer_download(rh, &rpu_ops);
-}
-
-int rmgmt_download_apu_pdi(struct rmgmt_handler *rh)
-{
-	return rmgmt_xfer_download(rh, &apu_ops);
+	return rmgmt_xfer_download(rh, &xsabin_ops);
 }

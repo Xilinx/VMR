@@ -105,19 +105,22 @@ void cmcTask(void* pvParameters)
     return;
 }
 
-void CMC_Launch(void)
+int CMC_Launch(void)
 {
+    int ret = 0;
+
     // Create a task for UART Receive
     CMC_BuildProfile_Versal_VCK5000_R5_Peripheral_uart_sc_communications_UART_SERVICES_INITIALIZE_FREERTOS();
 
     // Create a task for the rest of CMC
-    xTaskCreate(cmcTask,
+    ret = xTaskCreate(cmcTask,
         (const char*) "CMC",
         0x2000,/* The stack allocated to the task. */
         NULL,
         tskIDLE_PRIORITY + 1,
         &cmcTaskHandle);
-
+    
+    return ret;
 }
 
 /* Theis was in freertos_hello_world.c */
@@ -156,7 +159,7 @@ void CMC_Launch(void)
 
 
 
-extern void CMC_Launch(void);
+extern int CMC_Launch(void);
 /*-----------------------------------------------------------*/
 
 

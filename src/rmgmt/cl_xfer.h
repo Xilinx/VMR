@@ -3,8 +3,8 @@
 * SPDX-License-Identifier: MIT
 *******************************************************************************/
 
-#ifndef RMGMT_XFER_H
-#define RMGMT_XFER_H
+#ifndef COMMON_XFER_H
+#define COMMON_XFER_H
 
 /* Versal Platform related definition */
 #define OSPI_VERSAL_BASE (XPAR_PSV_OCM_RAM_0_S_AXI_BASEADDR + 0x8000)
@@ -73,7 +73,6 @@ int rmgmt_download_rpu_pdi(struct rmgmt_handler *rh);
 int rmgmt_download_xclbin(struct rmgmt_handler *rh);
 int rmgmt_load_apu(struct rmgmt_handler *rh);
 
-int rmgmt_init_handler(struct rmgmt_handler *rh);
 int rmgmt_check_for_status(struct rmgmt_handler *rh, u8 status);
 u8 rmgmt_get_pkt_flags(struct rmgmt_handler *rh);
 

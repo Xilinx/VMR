@@ -1,0 +1,12 @@
+--- src/rmgmt/rmgmt_xfer.c
++++ src/rmgmt/rmgmt_xfer.c
+@@ -271,8 +271,7 @@
+ 	/* Sync data from cache to memory */
+ 	Xil_DCacheFlush();
+ 
+-	RMGMT_LOG("skip loading for now\r\n");
+-	ret = fpga_pl_pdi_download((UINTPTR)rh->rh_data, (UINTPTR)size);
++	//ret = fpga_pl_pdi_download((UINTPTR)rh->rh_data, (UINTPTR)size);
+ 
+ 	return ret;
+ }

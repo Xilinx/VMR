@@ -15,11 +15,13 @@ enum flash_service {
 /**
  * @type:	flash service type
  * @buffer:	buffer data
+ * @offset:	offset	
  * @len:	buffer length
  */
 typedef struct flash_handle {
 	flash_type_t type;
 	u8 *buffer;
+	u32 offset;
 	u32 len;
 
 } flash_handle_t;
