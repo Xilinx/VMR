@@ -14,20 +14,17 @@
  * build. We recomment to have our own memory management by
  * leveraging FreeRTOS pvPortMalloc/vPortFree.
  * We will malloc memory when system started, and maintain
- * different slab blocks managemented by ourselve.
+ * different slab blocks managed by ourselves.
  * In this we, we can easily:
  * 	1) add footprint in each memory to trace memory leaks;
  * 	2) easy to dump memory for easy debugging;
  */
 
-#define APP_ID_CMC 	0x434d4321	/* CMC! */ 
-#define APP_ID_RMGMT	0x58525421 	/* XRT! */
 
-typedef struct app_signature {
-	u32 app_id;
-} app_signature_t;
+void *cl_malloc(app_type_t app, size_t size);
+void cl_free(void *ptr);
 
-#define malloc(app_signature, size) cl_malloc(app_signature, size)
-#define free(app_signature, prt) cl_free(app_signature, ptr)
+#define malloc(app, size) cl_malloc(app, size)
+#define free(prt) cl_free(ptr)
 
 #endif

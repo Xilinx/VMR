@@ -7,6 +7,14 @@
 #define COMMON_MAIN_H
 
 /**
+ * Application type id for logging, mem signature etc.
+ */
+typedef enum app_type {
+	APP_RMGMT = 0,
+	APP_VMC,
+} app_type_t;
+
+/**
  * 1) Applications should add callback function definition
  * below and into handler[] array;
  * 

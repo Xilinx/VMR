@@ -9,7 +9,7 @@
 /**
  * Comment VERBOSE out in production code
  */
-#define COMMON_LOG_VERBOSE
+#define CL_VERBOSE
 
 /* C includes */
 #include "stdlib.h"
@@ -18,12 +18,19 @@
 /* Xilinx includes */
 #include "xil_printf.h"
 
-#define RMGMT_LOG(fmt, arg...) xil_printf("[INFO]" fmt "\n", ##arg)
+/**
+ * Note: preprocessors are complier related...
+ */
+#define CL_LOG(app, fmt, arg...) 		\
+	xil_printf("%d: %s" fmt "\r\n", 	\
+		app, __FUNCTION__, ##arg)
 
-#ifdef RMGMT_VERBOSE
-#define RMGMT_DBG(fmt, arg...) xil_printf("[DEBUG]" fmt "\n", ##arg)
+#ifdef CL_VERBOSE
+#define CL_DBG(app, fmt, arg...) 		\
+	xil_printf("%d: %s %s" fmt "\r\n", 	\
+		app, __FILE__, __LINE__, __FUNCTION__, ##arg)
 #else
-#define RMGMT_DBG(fmt, arg...)
+#define CL_DBG(app, fmt, arg...)
 #endif
 
 #endif

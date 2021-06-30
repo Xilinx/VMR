@@ -6,27 +6,13 @@
 #ifndef COMMON_FLASH_H
 #define COMMON_FLASH_H
 
-enum flash_service {
+enum flash_area {
 	CL_FLASH_RPU_PDI = 0,
 	CL_FLASH_APU_PDI,
 	CL_FLASH_SC_IMAGE,
-} flash_service_t;
+} flash_area_t;
 
-/**
- * @type:	flash service type
- * @buffer:	buffer data
- * @offset:	offset	
- * @len:	buffer length
- */
-typedef struct flash_handle {
-	flash_type_t type;
-	u8 *buffer;
-	u32 offset;
-	u32 len;
-
-} flash_handle_t;
-
-int ospi_flash_read(flash_handle_t *hdl);
-int ospi_flash_write(flash_handle_t *hdl);
+int ospi_flash_read(flash_area_t area, u8 *buffer, u32 offset, u32 len);
+int ospi_flash_write(flash_area_t area, u8 *buffer, u32 offset, u32 len);
 
 #endif
