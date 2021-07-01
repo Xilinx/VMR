@@ -4,10 +4,11 @@
 *******************************************************************************/
 
 #include "xilfpga.h"
-#include "rmgmt_util.h"
-#include "rmgmt_xclbin.h"
+#include "cl_log.h"
+#include "cl_io.h"
+#include "cl_flash.h"
 #include "rmgmt_xfer.h"
-#include "rmgmt_ospi.h"
+#include "rmgmt_xclbin.h"
 
 #define PR_ISOLATION_REG 0x80000000
 #define PR_ISOLATION_FREEZE 0x0
@@ -89,9 +90,9 @@ static inline void read_data32(u32 *addr, u32 *data, size_t sz)
 static void print_pkg(u8 *data, int len) {
 
 	for (int i = 0; i < len;) {
-		RMGMT_DBG("%02x ", data[i]);
+		CL_DBG(APP_RMGMT, "%02x ", data[i]);
 		if (++i % 16 == 0)
-			RMGMT_DBG("\r\n");
+			CL_DBG(APP_RMGMT, "\r\n");
 	}
 }
 
@@ -101,7 +102,7 @@ static int rmgmt_data_receive(struct rmgmt_handler *rh, u32 *len)
 	int ret;
 	int a = 0;
 
-	RMGMT_DBG("-> rmgmt_data_receive \r\n");
+	CL_DBG(APP_RMGMT, "-> rmgmt_data_receive \r\n");
 	for (;;) {
 		u32 pkt_header;
 		struct pdi_packet *pkt = (struct pdi_packet *)&pkt_header;
@@ -112,7 +113,7 @@ static int rmgmt_data_receive(struct rmgmt_handler *rh, u32 *len)
 		lastpkt = pkt->pkt_flags & XRT_XFR_PKT_FLAGS_LAST;
 
 		if ((offset + pkt->pkt_size) > rh->rh_data_size) {
-			RMGMT_LOG("max: %d M, received %d M\r\n",
+			CL_LOG(APP_RMGMT, "max: %d M, received %d M\r\n",
 				rh->rh_data_size / 0x100000,
 				(offset + pkt->pkt_size) / 0x100000);
 			return -1;
@@ -123,7 +124,7 @@ static int rmgmt_data_receive(struct rmgmt_handler *rh, u32 *len)
 			pkt->pkt_size / 4);
 
 		if (a == 0) {
-			RMGMT_LOG("pkt_size %d, xfer size %d\r\n",
+			CL_LOG(APP_RMGMT, "pkt_size %d, xfer size %d\r\n",
 				pkt->pkt_size, (XRT_XFR_RES_SIZE - sizeof(struct pdi_packet)));
 			a++;
 		}
@@ -133,28 +134,28 @@ static int rmgmt_data_receive(struct rmgmt_handler *rh, u32 *len)
 		/* Set len to next offset */
 		offset += pkt->pkt_size;
 		if ((offset / 0x100000) > next) {
-			RMGMT_DBG("\r%d M", offset / 0x100000);
+			CL_DBG(APP_RMGMT, "\r%d M", offset / 0x100000);
 			fflush(stdout);
 			next++;
 		}
 
 		/* Bail out here if this is the last packet */
 		if (lastpkt) {
-			RMGMT_DBG("\r\n");
+			CL_DBG(APP_RMGMT, "\r\n");
 			ret = 0;
 			break;
 		}
 	}
 
 	*len = offset;
-	RMGMT_DBG("<- rmgmt_data_receive, len:%d\r\n", *len);
+	CL_DBG(APP_RMGMT, "<- rmgmt_data_receive, len:%d\r\n", *len);
 	return ret;
 }
 
 static int rmgmt_init_xfer(struct rmgmt_handler *rh)
 {
 	if (XRT_XFR_RES_SIZE & 0x3) {
-		RMGMT_LOG("xfer size: %d is not 32bit aligned\r\n", XRT_XFR_RES_SIZE);
+		CL_LOG(APP_RMGMT, "xfer size: %d is not 32bit aligned\r\n", XRT_XFR_RES_SIZE);
 		return -1;
 	}
 
@@ -176,17 +177,16 @@ int rmgmt_init_handler(struct rmgmt_handler *rh)
 	rh->rh_data_size = BITSTREAM_SIZE; /* 32M */
 	rh->rh_data = (u8 *)malloc(rh->rh_data_size);
 	if (rh->rh_data == NULL) {
-		RMGMT_LOG("malloc %d bytes failed\r\n", rh->rh_data_size);
+		CL_LOG(APP_MGMT, "malloc %d bytes failed\r\n", rh->rh_data_size);
 		return -1;
 	}
 
-	/* init ospi flash driver */
-	ospi_flash_init();
+	/* ospi flash should alreay be initialized */
 
 	set_version(rh);
 	set_status(rh, XRT_XFR_PKT_STATUS_IDLE);
 
-	RMGMT_DBG("rmgmt_init_handler done\r\n");
+	CL_DBG(APP_MGMT, "rmgmt_init_handler done\r\n");
 	return 0;
 }
 

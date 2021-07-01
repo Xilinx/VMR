@@ -46,18 +46,20 @@
 #include "FreeRTOS.h"
 #include "task.h"
 
-#include "rmgmt_util.h"
-#include "rmgmt_ospi.h"
+#include "cl_log.h"
 #include "xospipsv_flash_config.h"
 
-/************************** Constant Definitions *****************************/
+/* default ospi device */
+#define OSPIPSV_DEVICE_ID		XPAR_XOSPIPSV_0_DEVICE_ID /* from xparameters.h */
+/* pdi start location offset */
+#define RPU_PDI_ADDRESS		0x0
+#define APU_PDI_ADDRESS		(RPU_PDI_ADDRESS + 0x1000000) /* RPU + 16 M */
+/* default flash media page size */
+#define OSPI_VERSAL_PAGESIZE	256
+#define MAGIC_NUM32 0x585254 /* XRT */
 
-/*
- * The following constants map to the XPAR parameters created in the
- * xparameters.h file. They are defined here such that a user can easily
- * change all the needed parameters in one place.
- */
-#define OSPIPSV_DEVICE_ID		XPAR_XOSPIPSV_0_DEVICE_ID
+
+/************************** Constant Definitions *****************************/
 
 /**************************** Type Definitions *******************************/
 

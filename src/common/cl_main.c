@@ -9,22 +9,19 @@
 #include "timers.h"
 
 #include "cl_main.h"
-#include "xil_printf.h"
+#include "cl_log.h"
 
 int main( void )
 {
-	//CMC_Launch();
+	/* Init flash device */
+	ospi_flash_init();
 
-	//RMGMT_Launch();
-	
-	int len = sizeof (handler) / sizeof(*handler);
-
-	for (int i = 0; i < len; i++) {
+	for (int i = 0; i < ARRAY_SIZE(handler); i++) {
 		configASSERT(handler[i]() == 0);
 	}
 
 	vTaskStartScheduler();
 
 	/* Should never go here unless there is not enough memory */
-	xil_printf( "not enough memory\n" );
+	CL_LOG(APP_MAIN, "not enough memory, exit.");
 }

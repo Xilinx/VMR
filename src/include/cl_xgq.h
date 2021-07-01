@@ -10,10 +10,11 @@
 #include "xgq_impl.h"
 
 /**
+ * TODO: refine and move this block comment close to real code implementation.
+ *
  * Assume: XGQ is attached already. Internal xQueue and xHandleTask are
  *         also created.
  *
- * cl_xgq_handle_init();
  *
  * Note: details of unblocking RTOS task design by counting semaphore.
  * When there is incoming entry in XGQ, xgq_consume will be called
@@ -31,6 +32,24 @@
  *     remove msg_type from XGQ;
  *     Note: this is rare situation. Most of the time, xga_handler stays alive.
  *
+ *
+ * cl_xgq_handle_init(); -> xgq_attach();
+ *
+ * new entry from SQ -> xgq_consume -> xQueueSend -> xgq_notify_consumed.
+ *                                       +
+ *                                       |-> vTaskNOtifyGive(xHandleTask)
+ *
+ * vHandleTask {
+ * 	for (;;) {
+ * 		ulNotifyValue = ulTaskNotifyTake();
+ * 		if (ulNotifyValue > 0) {
+ * 			xQueueReceive;
+ * 		}
+ * 	}
+ * }
+ *
+ * cl_xgq_complete -> xgq_produce -> xgq_notify_produced
+ *
  */
 typedef enum cl_msg_type {
 	CL_MSG_UNKNOWN = 0,
@@ -40,15 +59,17 @@ typedef enum cl_msg_type {
 	CL_MSG_VMC,
 } cl_msg_type_t;
 
-typedef int (*process_msg_cb)(void *);
+typedef int (*process_msg_cb)(void *arg);
 
 typedef struct xgq_handle {
 	u32 xgq_entry;
-	cl_msg_type_t msg_type;
+	cl_msg_type_t type;
 	process_msg_cb cb;
+	void *arg;
 } xgq_handle_t;
 
-int cl_xgq_handle_init(xgq_handle_t *xgq_hdl, cl_msg_type_t type, process_msg_cb cb);
+int cl_xgq_handle_init(xgq_handle_t *xgq_hdl, cl_msg_type_t type,
+	process_msg_cb cb, void *arg);
 int cl_xga_handle_complete(xgq_handle_t *xgq_hdl);
 void cl_xgq_handle_fini(xga_handle_t *xgq_hdl);
 

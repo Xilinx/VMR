@@ -10,7 +10,8 @@
  * Application type id for logging, mem signature etc.
  */
 typedef enum app_type {
-	APP_RMGMT = 0,
+	APP_MAIN = 0,
+	APP_RMGMT,
 	APP_VMC,
 } app_type_t;
 
@@ -34,5 +35,7 @@ static tasks_register_t handler[] = {
 	CMC_Launch,	
 	RMGMT_Launch,
 };
+
+#define ARRAY_SIZE(x) (sizeof(x) / sizeof (*(x)))
 
 #endif

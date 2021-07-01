@@ -7,8 +7,8 @@
 #define COMMON_FLASH_H
 
 enum flash_area {
-	CL_FLASH_RPU_PDI = 0,
-	CL_FLASH_APU_PDI,
+	CL_FLASH_BOOT = 0,
+	CL_FLASH_APU,
 	CL_FLASH_SC_IMAGE,
 } flash_area_t;
 
