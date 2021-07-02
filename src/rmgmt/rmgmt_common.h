@@ -24,6 +24,14 @@
 #include "xil_cache.h"
 #include "xil_types.h"
 
+#include "cl_log.h"
+#include "cl_main.h"
+#include "cl_io.h"
+
+#define RMGMT_LOG(fmt, arg...)	\
+	CL_LOG(APP_RMGMT, fmt, ##arg)
+#define RMGMT_DBG(fmt, arg...)	\
+	CL_DBG(APP_RMGMT, fmt, ##arg)
 /*
  * temporary use unused register(this address is reserved for RPU-1)
  * to log hartbeat count

@@ -4,15 +4,18 @@
 *******************************************************************************/
 
 #include "xilfpga.h"
-#include "cl_log.h"
-#include "cl_io.h"
-#include "cl_flash.h"
+#include "rmgmt_common.h"
 #include "rmgmt_xfer.h"
 #include "rmgmt_xclbin.h"
+
+#include "cl_io.h"
+#include "cl_flash.h"
 
 #define PR_ISOLATION_REG 0x80000000
 #define PR_ISOLATION_FREEZE 0x0
 #define PR_ISOLATION_UNFREEZE 0x3
+
+extern int ospi_flash_erase(flash_area_t area, u32 offset, u32 len);
 
 static inline u32 wait_for_status(struct rmgmt_handler *rh, u8 status)
 {
@@ -90,9 +93,9 @@ static inline void read_data32(u32 *addr, u32 *data, size_t sz)
 static void print_pkg(u8 *data, int len) {
 
 	for (int i = 0; i < len;) {
-		CL_DBG(APP_RMGMT, "%02x ", data[i]);
+		RMGMT_DBG("%02x ", data[i]);
 		if (++i % 16 == 0)
-			CL_DBG(APP_RMGMT, "\r\n");
+			RMGMT_DBG("\r\n");
 	}
 }
 
@@ -102,7 +105,7 @@ static int rmgmt_data_receive(struct rmgmt_handler *rh, u32 *len)
 	int ret;
 	int a = 0;
 
-	CL_DBG(APP_RMGMT, "-> rmgmt_data_receive \r\n");
+	RMGMT_DBG("-> rmgmt_data_receive \r\n");
 	for (;;) {
 		u32 pkt_header;
 		struct pdi_packet *pkt = (struct pdi_packet *)&pkt_header;
@@ -113,7 +116,7 @@ static int rmgmt_data_receive(struct rmgmt_handler *rh, u32 *len)
 		lastpkt = pkt->pkt_flags & XRT_XFR_PKT_FLAGS_LAST;
 
 		if ((offset + pkt->pkt_size) > rh->rh_data_size) {
-			CL_LOG(APP_RMGMT, "max: %d M, received %d M\r\n",
+			RMGMT_DBG("max: %d M, received %d M\r\n",
 				rh->rh_data_size / 0x100000,
 				(offset + pkt->pkt_size) / 0x100000);
 			return -1;
@@ -124,7 +127,7 @@ static int rmgmt_data_receive(struct rmgmt_handler *rh, u32 *len)
 			pkt->pkt_size / 4);
 
 		if (a == 0) {
-			CL_LOG(APP_RMGMT, "pkt_size %d, xfer size %d\r\n",
+			RMGMT_DBG("pkt_size %d, xfer size %d\r\n",
 				pkt->pkt_size, (XRT_XFR_RES_SIZE - sizeof(struct pdi_packet)));
 			a++;
 		}
@@ -134,28 +137,28 @@ static int rmgmt_data_receive(struct rmgmt_handler *rh, u32 *len)
 		/* Set len to next offset */
 		offset += pkt->pkt_size;
 		if ((offset / 0x100000) > next) {
-			CL_DBG(APP_RMGMT, "\r%d M", offset / 0x100000);
+			RMGMT_DBG("\r%d M", offset / 0x100000);
 			fflush(stdout);
 			next++;
 		}
 
 		/* Bail out here if this is the last packet */
 		if (lastpkt) {
-			CL_DBG(APP_RMGMT, "\r\n");
+			RMGMT_DBG("\r\n");
 			ret = 0;
 			break;
 		}
 	}
 
 	*len = offset;
-	CL_DBG(APP_RMGMT, "<- rmgmt_data_receive, len:%d\r\n", *len);
+	RMGMT_DBG("<- rmgmt_data_receive, len:%d\r\n", *len);
 	return ret;
 }
 
 static int rmgmt_init_xfer(struct rmgmt_handler *rh)
 {
 	if (XRT_XFR_RES_SIZE & 0x3) {
-		CL_LOG(APP_RMGMT, "xfer size: %d is not 32bit aligned\r\n", XRT_XFR_RES_SIZE);
+		RMGMT_LOG("xfer size: %d is not 32bit aligned\r\n", XRT_XFR_RES_SIZE);
 		return -1;
 	}
 
@@ -177,7 +180,7 @@ int rmgmt_init_handler(struct rmgmt_handler *rh)
 	rh->rh_data_size = BITSTREAM_SIZE; /* 32M */
 	rh->rh_data = (u8 *)malloc(rh->rh_data_size);
 	if (rh->rh_data == NULL) {
-		CL_LOG(APP_MGMT, "malloc %d bytes failed\r\n", rh->rh_data_size);
+		RMGMT_LOG("malloc %d bytes failed\r\n", rh->rh_data_size);
 		return -1;
 	}
 
@@ -186,7 +189,7 @@ int rmgmt_init_handler(struct rmgmt_handler *rh)
 	set_version(rh);
 	set_status(rh, XRT_XFR_PKT_STATUS_IDLE);
 
-	CL_DBG(APP_MGMT, "rmgmt_init_handler done\r\n");
+	RMGMT_DBG("rmgmt_init_handler done\r\n");
 	return 0;
 }
 
@@ -250,9 +253,9 @@ int rmgmt_load_apu(struct rmgmt_handler *rh)
 	u32 size;
 	u8 pdiHeader[OSPI_VERSAL_PAGESIZE] = { 0 };
 
-	ret = ospi_flash_read(APU_PDI_ADDRESS, pdiHeader, OSPI_VERSAL_PAGESIZE);
+	ret = ospi_flash_read(CL_FLASH_APU, pdiHeader, 0, OSPI_VERSAL_PAGESIZE);
 	if (*(u32 *)pdiHeader != MAGIC_NUM32) {
-		RMGMT_LOG("WARN: skip loading RPU, magic %x is not %x\r\n",
+		RMGMT_LOG("WARN: skip loading APU, magic %x is not %x\r\n",
 			*(u32 *)pdiHeader, MAGIC_NUM32);
 		return 0;
 	}
@@ -262,21 +265,21 @@ int rmgmt_load_apu(struct rmgmt_handler *rh)
 		RMGMT_LOG("ERR: pdi size is 0.\r\n");
 		return -1;
 	}
-	RMGMT_DBG("apu pdi size is: %d\r\n", size);
+	RMGMT_DBG("APU PDI size: %d\r\n", size);
 
-	ret = ospi_flash_read(APU_PDI_ADDRESS + OSPI_VERSAL_PAGESIZE, rh->rh_data, size);
+	ret = ospi_flash_read(CL_FLASH_APU, rh->rh_data, OSPI_VERSAL_PAGESIZE, size);
 	if (ret)
 		return ret;
 
 	/* Sync data from cache to memory */
 	Xil_DCacheFlush();
 
-	RMGMT_LOG("skip loading for now\r\n");
 	ret = fpga_pl_pdi_download((UINTPTR)rh->rh_data, (UINTPTR)size);
 
 	return ret;
 }
 
+/*
 static int ospi_flash_write_with_retry(u32 baseAddress, u8 *data, u32 size)
 {
 	int retry = 0, ret;
@@ -302,6 +305,7 @@ static int ospi_flash_erase_with_retry(u32 baseAddress, u32 size)
 
 	return ret;
 }
+*/
 
 static int rmgmt_ospi_rpu_download(struct rmgmt_handler *rh, u32 len)
 {
@@ -313,7 +317,7 @@ static int rmgmt_ospi_rpu_download(struct rmgmt_handler *rh, u32 len)
 	Xil_DCacheFlush();
 
 	/* erase */
-	ret = ospi_flash_erase_with_retry(RPU_PDI_ADDRESS, len);
+	ret = ospi_flash_erase(CL_FLASH_BOOT, 0, len);
 	if (ret) {
 		set_status(rh, XRT_XFR_PKT_STATUS_FAIL);
 		RMGMT_DBG("OSPI fails to load pdi %d\r\n", ret);
@@ -321,7 +325,7 @@ static int rmgmt_ospi_rpu_download(struct rmgmt_handler *rh, u32 len)
 	}
 
 	/* write */
-	ret = ospi_flash_write(RPU_PDI_ADDRESS, rh->rh_data, len);
+	ret = ospi_flash_write(CL_FLASH_BOOT, rh->rh_data, 0, len);
 	if (ret) {
 		set_status(rh, XRT_XFR_PKT_STATUS_FAIL);
 		RMGMT_DBG("OSPI fails to load pdi %d\r\n", ret);
@@ -349,10 +353,7 @@ static int rmgmt_ospi_apu_download(struct rmgmt_handler *rh, u32 len)
 	/* Sync data from cache to memory */
 	Xil_DCacheFlush();
 
-	RMGMT_LOG("write header[0] %x header[1] %d\r\n",
-		*(u32 *)pdiHeader, *((u32 *)pdiHeader + 1));
-
-	ret = ospi_flash_erase_with_retry(APU_PDI_ADDRESS, OSPI_VERSAL_PAGESIZE + len);
+	ret = ospi_flash_erase(CL_FLASH_APU, 0, OSPI_VERSAL_PAGESIZE + len);
 	if (ret) {
 		set_status(rh, XRT_XFR_PKT_STATUS_FAIL);
 		RMGMT_DBG("OSPI fails to load pdi %d\r\n", ret);
@@ -360,23 +361,21 @@ static int rmgmt_ospi_apu_download(struct rmgmt_handler *rh, u32 len)
 	}
 
 	/* flash rpu base pdi from offset 0(RPU_PDI_ADDRES) */
-	ret = ospi_flash_write(APU_PDI_ADDRESS,
-		pdiHeader, OSPI_VERSAL_PAGESIZE);
+	ret = ospi_flash_write(CL_FLASH_APU, pdiHeader,
+		0, OSPI_VERSAL_PAGESIZE);
 	if (ret) {
 		set_status(rh, XRT_XFR_PKT_STATUS_FAIL);
 		RMGMT_DBG("OSPI fails to load pdi %d\r\n", ret);
 		goto out;
 	}
 
-	ret = ospi_flash_write(APU_PDI_ADDRESS + OSPI_VERSAL_PAGESIZE,
-		rh->rh_data, len);
+	ret = ospi_flash_write(CL_FLASH_APU, rh->rh_data,
+		OSPI_VERSAL_PAGESIZE, len);
 	if (ret) {
 		set_status(rh, XRT_XFR_PKT_STATUS_FAIL);
 		RMGMT_DBG("OSPI fails to load pdi %d\r\n", ret);
 		goto out;
 	}
-
-	/* need ready verify */
 
 	set_status(rh, XRT_XFR_PKT_STATUS_DONE);
 out:

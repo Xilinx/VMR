@@ -11,6 +11,16 @@
 #include "cl_main.h"
 #include "cl_log.h"
 
+int ospi_flash_init();
+
+int CMC_Launch(void);
+int RMGMT_Launch(void);
+
+static tasks_register_t handler[] = {
+	CMC_Launch,	
+	RMGMT_Launch,
+};
+
 int main( void )
 {
 	/* Init flash device */

@@ -28,14 +28,6 @@ typedef enum app_type {
  */
 typedef int (*tasks_register_t)(void); 
 
-int CMC_Launch(void);
-int RMGMT_Launch(void);
-
-static tasks_register_t handler[] = {
-	CMC_Launch,	
-	RMGMT_Launch,
-};
-
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof (*(x)))
 
 #endif

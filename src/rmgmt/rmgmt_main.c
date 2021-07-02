@@ -1,10 +1,9 @@
-/n******************************************************************************
+/******************************************************************************
 * Copyright (C) 2020 Xilinx, Inc.  All rights reserved.
 * SPDX-License-Identifier: MIT
 *******************************************************************************/
 
-#include "cl_main.h"
-#include "rmgmt_util.h"
+#include "rmgmt_common.h"
 #include "rmgmt_xfer.h"
 
 static TaskHandle_t xR5Task;

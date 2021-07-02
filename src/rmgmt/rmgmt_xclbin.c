@@ -3,7 +3,7 @@
 * SPDX-License-Identifier: MIT
 *******************************************************************************/
 
-#include "cl_log.h"
+#include "rmgmt_common.h"
 #include "rmgmt_xclbin.h"
 
 static const struct axlf_section_header *
