@@ -23,8 +23,8 @@ static void pvR5Task( void *pvParameters )
 		if (rmgmt_check_for_status(&rh, XRT_XFR_PKT_STATUS_IDLE)) {
 			/* increment count every tick */
 			IO_SYNC_WRITE32(cnt++, RMGMT_HEARTBEAT_REG);
-			if (++cnt % 10 == 0)
-				CL_DBG(APP_RMGMT, "1 heartbeat %d\r\n", cnt);
+			if (++cnt % 100 == 0)
+				RMGMT_DBG("heartbeat %d", cnt);
 			vTaskDelay( x1second );
 			continue;
 		}
@@ -51,16 +51,16 @@ static void pvR5Task( void *pvParameters )
 			break;
 		}
 
-		CL_LOG(APP_RMGMT, "Re-start for next pkt ...\r\n");
+		RMGMT_LOG("Re-start for next pkt ...\r\n");
 	}
 
-	CL_LOG(APP_RMGMT, "FATAL: should never be here!\r\n");
+	RMGMT_LOG("FATAL: should never be here!\r\n");
 }
 
 int RMGMT_Launch( void )
 {	
 	if (rmgmt_init_handler(&rh) != 0) {
-		CL_LOG(APP_RMGMT, "FATAL: init rmgmt handler failed.\r\n");
+		RMGMT_LOG("FATAL: init rmgmt handler failed.\r\n");
 		return -1;
 	}
 
@@ -73,10 +73,10 @@ int RMGMT_Launch( void )
 		 tskIDLE_PRIORITY + 1,
 		 &xR5Task
 		 ) != pdPASS) {
-		CL_LOG(APP_RMGMT, "FATAL: pvR5Task creation failed.\r\n");
+		RMGMT_LOG("FATAL: pvR5Task creation failed.\r\n");
 		return -1;
 	}
 
-	CL_LOG(APP_RMGMT, "INFO: pvR5Task creation succeeded.\r\n");
+	RMGMT_LOG("INFO: pvR5Task creation succeeded.\r\n");
 	return 0;
 }

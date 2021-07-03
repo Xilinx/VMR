@@ -17,7 +17,7 @@ int CMC_Launch(void);
 int RMGMT_Launch(void);
 
 static tasks_register_t handler[] = {
-	CMC_Launch,	
+	//CMC_Launch,	
 	RMGMT_Launch,
 };
 

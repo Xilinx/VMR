@@ -101,9 +101,8 @@ static void print_pkg(u8 *data, int len) {
 
 static int rmgmt_data_receive(struct rmgmt_handler *rh, u32 *len)
 {
-	u32 offset = 0, next = 0;
+	u32 offset = 0;
 	int ret;
-	int a = 0;
 
 	RMGMT_DBG("-> rmgmt_data_receive \r\n");
 	for (;;) {
@@ -126,21 +125,11 @@ static int rmgmt_data_receive(struct rmgmt_handler *rh, u32 *len)
 			(u32 *)(rh->rh_data) + offset / 4,
 			pkt->pkt_size / 4);
 
-		if (a == 0) {
-			RMGMT_DBG("pkt_size %d, xfer size %d\r\n",
-				pkt->pkt_size, (XRT_XFR_RES_SIZE - sizeof(struct pdi_packet)));
-			a++;
-		}
 		/* Notify host that the data has been read */
 		set_status(rh, XRT_XFR_PKT_STATUS_IDLE);
 
 		/* Set len to next offset */
 		offset += pkt->pkt_size;
-		if ((offset / 0x100000) > next) {
-			RMGMT_DBG("\r%d M", offset / 0x100000);
-			fflush(stdout);
-			next++;
-		}
 
 		/* Bail out here if this is the last packet */
 		if (lastpkt) {
@@ -311,7 +300,7 @@ static int rmgmt_ospi_rpu_download(struct rmgmt_handler *rh, u32 len)
 {
 	int ret;
 
-	RMGMT_LOG("-> rmgmt_ospi_rpu_download\r\n");
+	RMGMT_DBG("-> ");
 
 	/* Sync data from cache to memory */
 	Xil_DCacheFlush();
@@ -320,7 +309,7 @@ static int rmgmt_ospi_rpu_download(struct rmgmt_handler *rh, u32 len)
 	ret = ospi_flash_erase(CL_FLASH_BOOT, 0, len);
 	if (ret) {
 		set_status(rh, XRT_XFR_PKT_STATUS_FAIL);
-		RMGMT_DBG("OSPI fails to load pdi %d\r\n", ret);
+		RMGMT_LOG("OSPI fails to load pdi %d", ret);
 		goto out;
 	}
 
@@ -328,7 +317,7 @@ static int rmgmt_ospi_rpu_download(struct rmgmt_handler *rh, u32 len)
 	ret = ospi_flash_write(CL_FLASH_BOOT, rh->rh_data, 0, len);
 	if (ret) {
 		set_status(rh, XRT_XFR_PKT_STATUS_FAIL);
-		RMGMT_DBG("OSPI fails to load pdi %d\r\n", ret);
+		RMGMT_LOG("OSPI fails to load pdi %d", ret);
 		goto out;
 	}
 
@@ -336,7 +325,7 @@ static int rmgmt_ospi_rpu_download(struct rmgmt_handler *rh, u32 len)
 
 	set_status(rh, XRT_XFR_PKT_STATUS_DONE);
 out:
-	RMGMT_LOG("<- rmgmt_ospi_rpu_download %d\r\n", ret);
+	RMGMT_DBG("<- %d", ret);
 	return ret;
 }
 
@@ -409,7 +398,7 @@ static void rmgmt_done_pkt(struct rmgmt_handler *rh)
 
 	set_version(rh);
 
-	RMGMT_DBG("<- rmgmt_done_pkt\r\n");
+	RMGMT_DBG("<-");
 }
 
 struct rmgmt_ops {

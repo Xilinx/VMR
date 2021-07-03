@@ -22,12 +22,12 @@
  * Note: preprocessors are complier related...
  */
 #define CL_LOG(app, fmt, arg...) 		\
-	xil_printf("%d: %s" fmt "\r\n", 	\
+	xil_printf("%d: %s " fmt "\r\n", 	\
 		app, __FUNCTION__, ##arg)
 
 #ifdef CL_VERBOSE
 #define CL_DBG(app, fmt, arg...) 		\
-	xil_printf("%d: %s %s %s" fmt "\r\n", 	\
+	xil_printf("%d: %s:%d %s " fmt "\r\n", 	\
 		app, __FILE__, __LINE__, __FUNCTION__, ##arg)
 #else
 #define CL_DBG(app, fmt, arg...)
