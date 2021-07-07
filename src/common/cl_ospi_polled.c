@@ -46,18 +46,21 @@
 #include "FreeRTOS.h"
 #include "task.h"
 
-#include "rmgmt_util.h"
-#include "rmgmt_ospi.h"
+#include "cl_log.h"
+#include "cl_main.h"
+#include "cl_flash.h"
 #include "xospipsv_flash_config.h"
 
-/************************** Constant Definitions *****************************/
+#define OSPI_LOG(fmt, arg...) \
+	CL_LOG(APP_MAIN, fmt, ##arg)
 
-/*
- * The following constants map to the XPAR parameters created in the
- * xparameters.h file. They are defined here such that a user can easily
- * change all the needed parameters in one place.
- */
-#define OSPIPSV_DEVICE_ID		XPAR_XOSPIPSV_0_DEVICE_ID
+/* default ospi device */
+#define OSPIPSV_DEVICE_ID		XPAR_XOSPIPSV_0_DEVICE_ID /* from xparameters.h */
+/* pdi start location offset */
+#define RPU_PDI_ADDRESS		0x0
+#define APU_PDI_ADDRESS		(RPU_PDI_ADDRESS + 0x1000000) /* RPU + 16 M */
+
+/************************** Constant Definitions *****************************/
 
 /**************************** Type Definitions *******************************/
 
@@ -1320,7 +1323,7 @@ int ospi_flash_init()
 
 	PAGE_SIZE = (Flash_Config_Table[FCTIndex].PageSize);
 	if (PAGE_SIZE != OSPI_VERSAL_PAGESIZE) {
-		RMGMT_LOG("ERR: page size is: %d, expected: %d\r\n",
+		OSPI_LOG("ERR: page size is: %d, expected: %d\r\n",
 			PAGE_SIZE, OSPI_VERSAL_PAGESIZE);
 		return XST_FAILURE;
 	}
@@ -1328,56 +1331,70 @@ int ospi_flash_init()
 	return XST_SUCCESS;
 }
 
-int ospi_flash_read(u32 baseAddress, u8 *buffer, u32 len)
+static inline u32 getBaseAddress(flash_area_t area) {
+	switch (area) {
+	case (CL_FLASH_BOOT) :
+		return RPU_PDI_ADDRESS;
+	case (CL_FLASH_APU) :
+		return APU_PDI_ADDRESS;
+	default:
+		OSPI_LOG("unknown flash area %d, fail.", area);
+		break;
+	}
+
+	return (-1);
+}
+
+int ospi_flash_read(flash_area_t area, u8 *buffer, u32 offset, u32 len)
 {
 	int Status;
+	u32 baseAddress = getBaseAddress(area);
 
+	baseAddress += offset;
 	XOspiPsv *OspiPsvInstancePtr = &OspiPsvInstance;
 
-	RMGMT_DBG("ospi_flash_read: 0x%x len %d\r\n", baseAddress, len);
+	OSPI_LOG("0x%x len %d\r\n", baseAddress, len);
 
 	bzero(buffer, len);
 	Status = FlashRead(OspiPsvInstancePtr, baseAddress, len, CmdBfr, buffer);
 	if (Status != XST_SUCCESS) {
-		RMGMT_LOG("ERR: Read failed:%d\r\n", Status);
+		OSPI_LOG("ERR: Read failed:%d\r\n", Status);
 		return XST_FAILURE;
 	}
 
-	for (int i = 0; i < 16; i++)
-		RMGMT_LOG("%02x ", buffer[i]);
-	RMGMT_LOG("\r\n");
-
-	RMGMT_LOG("flash read done.\r\n");
+	OSPI_LOG("done");
 	return 0;
 }
 
-int ospi_flash_write(u32 baseAddress, u8 *WriteBuffer, u32 len)
+int ospi_flash_write(flash_area_t area, u8 *WriteBuffer, u32 offset, u32 len)
 {
 	int Status;
 	int Count;
 	int Page = 0;
 	u32 PAGE_COUNT = 0;
 	u32 PAGE_SIZE = OSPI_VERSAL_PAGESIZE;
+	u32 baseAddress = getBaseAddress(area);
 
+	baseAddress += offset;
 	XOspiPsv *OspiPsvInstancePtr = &OspiPsvInstance;
 
-	RMGMT_DBG("ospi_flash_write: 0x%x, len %d\r\n", baseAddress, len);
+	OSPI_LOG("0x%x, len %d", baseAddress, len);
 
 	if (baseAddress & OSPI_VERSAL_PAGESIZE) {
-		RMGMT_LOG("base address is not %d aligned\r\n", OSPI_VERSAL_PAGESIZE); 
+		OSPI_LOG("base address is not %d aligned", OSPI_VERSAL_PAGESIZE); 
 	}
 
 	PAGE_COUNT = len / PAGE_SIZE;
 	if (len % PAGE_SIZE) {
 		PAGE_COUNT++;
-		RMGMT_LOG("WARN: len %d is not page %d aligned\r\n", len, PAGE_SIZE);
+		OSPI_LOG("WARN: len %d is not page %d aligned", len, PAGE_SIZE);
 
 	}
-	RMGMT_DBG("Flashing... Page Count: %d, PageSize %d\r\n", PAGE_COUNT, PAGE_SIZE);
+	OSPI_LOG("Flashing... Page Count: %d, PageSize %d", PAGE_COUNT, PAGE_SIZE);
 
 	/* Write first, then read back and verify */
 	if (XOspiPsv_GetOptions(OspiPsvInstancePtr) == XOSPIPSV_DAC_EN_OPTION) {
-		xil_printf("WriteCmd: 0x%x\n\r", (u8)(Flash_Config_Table[FCTIndex].WriteCmd >> 8));
+		xil_printf("WriteCmd: 0x%x \n\r", (u8)(Flash_Config_Table[FCTIndex].WriteCmd >> 8));
 		Status = FlashLinearWrite(OspiPsvInstancePtr, baseAddress,
 		(Flash_Config_Table[FCTIndex].PageSize * PAGE_COUNT), WriteBuffer);
 		if (Status != XST_SUCCESS)
@@ -1387,21 +1404,21 @@ int ospi_flash_write(u32 baseAddress, u8 *WriteBuffer, u32 len)
 		for (Page = 0; Page < PAGE_COUNT; Page++) {
 			u32 offset = (Page * Flash_Config_Table[FCTIndex].PageSize);
 
-			RMGMT_DBG("\r%d", Page*100/PAGE_COUNT);
+			xil_printf("\r%d", Page*100/PAGE_COUNT);
 			fflush(stdout);
 
 			Status = FlashIoWrite(OspiPsvInstancePtr,
 			offset + baseAddress,
 			((Flash_Config_Table[FCTIndex].PageSize)), WriteBuffer + offset);
 			if (Status != XST_SUCCESS) {
-				RMGMT_LOG("ERR: write failed: %d\r\n", Status);
+				OSPI_LOG("ERR: write failed: %d\r\n", Status);
 				return XST_FAILURE;
 			}
 		}
 	}
 
 	/* read back: check some pages numbers */
-	RMGMT_DBG("write done. read back to verify. \r\n");
+	OSPI_LOG("write done. read back to verify.");
 	bzero(ReadBuffer, sizeof (ReadBuffer));
 	for (Count = 0; Count < len; Count += PAGE_SIZE ) {
 		if (Count != 0 && (Count % (PAGE_COUNT / 10)))
@@ -1410,7 +1427,7 @@ int ospi_flash_write(u32 baseAddress, u8 *WriteBuffer, u32 len)
 		Status = FlashRead(OspiPsvInstancePtr, baseAddress + Count, PAGE_SIZE,
 			CmdBfr, ReadBuffer);
 		if (Status != XST_SUCCESS) {
-			RMGMT_LOG("ERR: Read failed:%d\r\n", Status);
+			OSPI_LOG("ERR: Read failed:%d", Status);
 			return XST_FAILURE;
 		}
 		
@@ -1421,38 +1438,40 @@ int ospi_flash_write(u32 baseAddress, u8 *WriteBuffer, u32 len)
 				continue;
 
 			for (int idx = 0; idx < 16; idx++) {
-				RMGMT_LOG("%02x ", ReadBuffer[idx]);
+				OSPI_LOG("%02x ", ReadBuffer[idx]);
 			}
-			RMGMT_LOG(" <= data in ospi\r\n");
+			OSPI_LOG(" <= data in ospi");
 			for (int idx = 0; idx < 16; idx++) {
-				RMGMT_LOG("%02x ", WriteBuffer[Count+idx]);
+				OSPI_LOG("%02x ", WriteBuffer[Count+idx]);
 			}
-			RMGMT_LOG(" <= data from pdi\r\n");
+			OSPI_LOG(" <= data from pdi");
 
-			RMGMT_LOG("mis-match offset: %d, read 0x%x: pdi 0x%x\r\n",
+			OSPI_LOG("mis-match offset: %d, read 0x%x: pdi 0x%x",
 				Count+i, ReadBuffer[i], WriteBuffer[Count+i]);
 			return XST_FAILURE;
 		}
 	}
 
-	RMGMT_LOG("flash write done. \r\n");
+	OSPI_LOG("done.");
 	return 0;
 }
 
-int ospi_flash_erase(u32 baseAddress, u32 len)
+int ospi_flash_erase(flash_area_t area, u32 offset, u32 len)
 {
 	int Status;
+	u32 baseAddress = getBaseAddress(area);
 
+	baseAddress += offset;
 	XOspiPsv *OspiPsvInstancePtr = &OspiPsvInstance;
 
-	RMGMT_DBG("ospi_flash_erase: 0x%x, len: %d\r\n", baseAddress, len);
+	OSPI_LOG("0x%x, len: %d", baseAddress, len);
 
 	if (baseAddress & OSPI_VERSAL_PAGESIZE) {
-		RMGMT_LOG("base address is not %d aligned\r\n", OSPI_VERSAL_PAGESIZE); 
+		OSPI_LOG("base address is not %d aligned", OSPI_VERSAL_PAGESIZE); 
 	}
 
 	Status = FlashErase(OspiPsvInstancePtr, baseAddress, len, CmdBfr);
 
-	RMGMT_LOG("ospi_flash_erase: %d \r\n", Status);
+	OSPI_LOG("done %d", Status);
 	return Status;
 }

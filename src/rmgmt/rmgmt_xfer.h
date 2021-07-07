@@ -50,7 +50,6 @@
         XRT_XFR_PKT_TYPE_SHIFT)
 #define XRT_XFR_PKT_FLAGS_VER           (XRT_XFR_VER << XRT_XFR_PKT_VER_SHIFT)
 
-
 struct pdi_packet {
 	union {
 		struct {

@@ -8,17 +8,30 @@
 #include "queue.h"
 #include "timers.h"
 
-#include "rpu_main.h"
-#include "xil_printf.h"
+#include "cl_main.h"
+#include "cl_log.h"
+
+int ospi_flash_init();
+
+int CMC_Launch(void);
+int RMGMT_Launch(void);
+
+static tasks_register_t handler[] = {
+	//CMC_Launch,	
+	RMGMT_Launch,
+};
 
 int main( void )
 {
-	//CMC_Launch();
+	/* Init flash device */
+	ospi_flash_init();
 
-	RMGMT_Launch();
+	for (int i = 0; i < ARRAY_SIZE(handler); i++) {
+		configASSERT(handler[i]() == 0);
+	}
 
 	vTaskStartScheduler();
 
 	/* Should never go here unless there is not enough memory */
-	xil_printf( "not enough memory\n" );
+	CL_LOG(APP_MAIN, "not enough memory, exit.");
 }
