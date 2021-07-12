@@ -62,7 +62,8 @@
 
 
 #include "cmc_scheduler.h"
-
+#include "FreeRTOS.h"
+#include "task.h"
 
 
 uint32_t NextThread(uint32_t AnyThread)
@@ -84,10 +85,12 @@ void Scheduler(SCHEDULER_CONTEXT_TYPE *pContext)
 {
     bool StillProcessing=true;
     bool ThreadFound;
+    const TickType_t yieldms = pdMS_TO_TICKS( 100*1 );
 
     SchedulerEnter(pContext);
     while(StillProcessing)
     {
+	vTaskDelay( yieldms );
         ThreadTimeDifferenceMetaData_UpdateEnter(&pContext->Element[pContext->iElement].Meta);
         StillProcessing=(*pContext->Element[pContext->iElement].pFN_Thread)(pContext->Element[pContext->iElement].pThreadContext);
         ThreadTimeDifferenceMetaData_UpdateExit(&pContext->Element[pContext->iElement].Meta);
