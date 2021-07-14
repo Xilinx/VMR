@@ -3,11 +3,8 @@
 * SPDX-License-Identifier: MIT
 *******************************************************************************/
 
-#ifndef COMMON_XGQ_H
-#define COMMON_XGQ_H
-
-/* Xilinx includes */
-#include "xgq_impl.h"
+#ifndef COMMON_MSG_H
+#define COMMON_MSG_H
 
 /**
  * TODO: refine and move this block comment close to real code implementation.
@@ -51,26 +48,65 @@
  * cl_xgq_complete -> xgq_produce -> xgq_notify_produced
  *
  */
+
+//#define XGQ_DEBUG_IP
+
+typedef union {
+        struct {
+                u32 version:16;
+                u32 type:16;
+                u32 cid:16;
+                u32 rcode:16;
+        };
+        u32 head[2];
+} xgq_vmr_head_t;
+
+struct xgq_vmr_payload_xclbin {
+        u64 address;
+        u32 size;
+};
+
+struct xgq_vmr_payload_af {
+        u64 buffer_addr;
+        u32 buffer_size;
+};
+
+struct xgq_vmr_pkt {
+        xgq_vmr_head_t head;
+        union {
+                struct xgq_vmr_payload_xclbin payload_xclbin;
+                struct xgq_vmr_payload_af payload_af;
+        };
+};
+
+/* Note:
+ * this exactly matches the xrt_xgq_pkt_type_t.
+ * We might use xrt interface, but we cannot use cl in XRT code base.
+ * When the interface is stable, we should push this into XRT/include that we get
+ * xgq_cmd.h so that we don't have dup code.
+ */
 typedef enum cl_msg_type {
 	CL_MSG_UNKNOWN = 0,
-	CL_MSG_PDI_RPU,
-	CL_MSG_PDI_APU,
+	CL_MSG_PDI,
 	CL_MSG_XCLBIN,
-	CL_MSG_VMC,
+	CL_MSG_AF,
 } cl_msg_type_t;
 
-typedef int (*process_msg_cb)(void *arg);
+typedef struct cl_msg {
+	struct xgq_vmr_pkt pkt;
+} cl_msg_t;
 
-typedef struct xgq_handle {
-	u32 xgq_entry;
+typedef int (*process_msg_cb)(cl_msg_t *msg, void *arg);
+
+typedef struct msg_handle {
 	cl_msg_type_t type;
-	process_msg_cb cb;
+	process_msg_cb msg_cb;
 	void *arg;
-} xgq_handle_t;
+} msg_handle_t;
 
-int cl_xgq_handle_init(xgq_handle_t *xgq_hdl, cl_msg_type_t type,
+int cl_msg_handle_init(msg_handle_t **hdl, cl_msg_type_t type,
 	process_msg_cb cb, void *arg);
-int cl_xga_handle_complete(xgq_handle_t *xgq_hdl);
-void cl_xgq_handle_fini(xga_handle_t *xgq_hdl);
+int cl_msg_handle_complete(cl_msg_t *msg);
+void cl_msg_handle_fini(msg_handle_t *hdl);
 
 #endif

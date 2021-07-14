@@ -7,7 +7,8 @@
 #define RMGMT_XFER_H
 
 /* Versal Platform related definition */
-#define OSPI_VERSAL_BASE (XPAR_PSV_OCM_RAM_0_S_AXI_BASEADDR + 0x8000)
+//#define OSPI_VERSAL_BASE (XPAR_PSV_OCM_RAM_0_S_AXI_BASEADDR + 0x8000)
+#define OSPI_VERSAL_BASE (0xFFFE0000 + 0x8000)
 
 #define TEST_ADDRESS	0x0
 

@@ -1,6 +1,7 @@
 #!/bin/bash
 
 STABLE_VITIS=/proj/xbuilds/2020.2_daily_latest/installs/lin64/Vitis/HEAD/settings64.sh
+STABLE_XRT=/proj/xbuilds/2021.2_daily_latest/xbb/xrt/packages/setenv.sh
 
 default_env() {
 	echo -ne "no xsct, using default stable version: "
@@ -15,14 +16,16 @@ build_clean() {
 
 build_app_all() {
 	xsct ./create_app.tcl
-	cp -r ../src rmgmt
+#	cp -r ../src rmgmt
+	rsync -av ../src rmgmt --exclude cmc
 	xsct ./config_app.tcl
 	xsct ./make_app.tcl
 }
 
 build_app_incremental() {
 	rm -r rmgmt/src
-	cp -r ../src rmgmt
+#	cp -r ../src rmgmt
+	rsync -av ../src rmgmt --exclude cmc
 	xsct ./make_app.tcl
 }
 
@@ -63,6 +66,11 @@ done
 which xsct
 if [ $? -ne 0 ];then
 	default_env
+fi
+
+if [ -z $XILINX_XRT ];then
+	. ${STABLE_XRT}
+	echo $XILINX_XRT
 fi
 
 if [[ $BUILD_CLEAN == 1 ]];then
