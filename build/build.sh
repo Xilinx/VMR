@@ -1,6 +1,7 @@
 #!/bin/bash
 
-STABLE_VITIS=/proj/xbuilds/2020.2_daily_latest/installs/lin64/Vitis/HEAD/settings64.sh
+TOOL_VERSION="2020.2"
+STABLE_VITIS=/proj/xbuilds/${TOOL_VERSION}_daily_latest/installs/lin64/Vitis/HEAD/settings64.sh
 
 default_env() {
 	echo -ne "no xsct, using default stable version: "
@@ -63,6 +64,13 @@ done
 which xsct
 if [ $? -ne 0 ];then
 	default_env
+else
+	version=$(xsct -eval "puts [version]" | awk 'NR==1{print $2}')
+	if [ ${version} != ${TOOL_VERSION} ]
+	then
+		echo -ne "Detected xsct version: ${version}, Please use xsct from ${TOOL_VERSION} to build"
+		exit
+	fi
 fi
 
 if [[ $BUILD_CLEAN == 1 ]];then
