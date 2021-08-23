@@ -16,14 +16,14 @@ build_clean() {
 
 build_app_all() {
 	xsct ./create_app.tcl
-	cp -r ../src rmgmt
+	cp -r ../src rmgmt/
 	xsct ./config_app.tcl
 	xsct ./make_app.tcl
 }
 
 build_app_incremental() {
 	rm -r rmgmt/src
-	cp -r ../src rmgmt
+	cp -r ../src rmgmt/
 	xsct ./make_app.tcl
 }
 
