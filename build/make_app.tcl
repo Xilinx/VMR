@@ -1,3 +1,3 @@
 setws .
 puts "build app"
-app build -name rmgmt 
+app build -name vmr 

@@ -20,6 +20,7 @@ int xgq_af_flag = 0;
 
 int xgq_firewall_cid = -1;
 
+#if 0
 static void verify(struct rmgmt_handler *rh)
 {
 	u32 i, base = 0x0;
@@ -35,6 +36,7 @@ static void verify(struct rmgmt_handler *rh)
 	for (i = 0; i < 8; i++)
 		xil_printf("%X ", *((u32 *)(rh->rh_data + base) + i));
 }
+#endif
 
 static int xgq_pdi_cb(cl_msg_t *msg, void *arg)
 {
@@ -237,7 +239,7 @@ static int rmgmt_create_tasks(void)
 		 tskIDLE_PRIORITY + 1,
 		 &xXGQTask) != pdPASS) {
 
-		RMGMT_LOG("FATAL: pvXGQTask creation failed.\r\n");
+		RMGMT_LOG("FATAL: pvXGQTask creation failed.");
 		return -1;
 	}
 
@@ -251,16 +253,13 @@ int RMGMT_Launch( void )
 
 	ret = rmgmt_init_handler(&rh);
 	if (ret != 0) {
-		RMGMT_LOG("FATAL: init rmgmt handler failed.\r\n");
+		RMGMT_LOG("FATAL: init rmgmt handler failed.");
 		return ret;
 	}
 
 #if 0
 	rmgmt_load_apu(&rh);
 #endif
-
-	ospi_flash_read(CL_FLASH_BOOT, rh.rh_data, 0, 4100000);
-	verify(&rh);
 
 	ret = rmgmt_create_tasks();
 	if (ret != 0)
