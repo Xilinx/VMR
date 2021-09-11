@@ -203,11 +203,11 @@ static int fpga_pl_pdi_download(UINTPTR data, UINTPTR size)
 	}
 
 	/* isolate PR gate */
-	//IO_SYNC_WRITE32(PR_ISOLATION_FREEZE, PR_ISOLATION_REG);
+	IO_SYNC_WRITE32(PR_ISOLATION_FREEZE, PR_ISOLATION_REG);
 
 	ret = XFpga_PL_BitStream_Load(&XFpgaInstance, data, size, PDI_LOAD);
 	
-	//IO_SYNC_WRITE32(PR_ISOLATION_UNFREEZE, PR_ISOLATION_REG);
+	IO_SYNC_WRITE32(PR_ISOLATION_UNFREEZE, PR_ISOLATION_REG);
 	
 	return ret;
 }

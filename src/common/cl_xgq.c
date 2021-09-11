@@ -17,6 +17,7 @@
 #define MSG_LOG(fmt, arg...) \
 	CL_LOG(APP_MAIN, fmt, ##arg)
 
+/* Note: eventually we should be driven by xparameter.h */
 #define RPU_RING_BASE (0x38000000)
 #define RPU_SQ_BASE (0x80011000)
 #define RPU_CQ_BASE (0x80010000)
@@ -24,6 +25,7 @@
 
 #define RPU_RING_LEN 0x1000
 #define RPU_SLOT_SIZE 512
+#define RPU_XGQ_DEV_STATE_OFFSET (RPU_RING_LEN)
 
 static void receiveTask( void *pvParameters );
 static void dispatchTask( void *pvParameters );
@@ -96,20 +98,17 @@ static int submit_to_queue(u32 sq_addr)
 	/* cast data to RPU common message type */
 	cl_msg_t msg = { 0 };
 
-	u32 *dst = (u32 *)&msg;
-
 	cl_memcpy_fromio((u32)cmd + sizeof(*cmd), &msg, sizeof(cl_msg_t));
 	msg.pkt.head.cid = cmd->cid; //remember the cid, cmd will be freed
 
-	MSG_LOG("version %d", msg.pkt.head.version);
-	MSG_LOG("type %d", msg.pkt.head.type);
+	//MSG_LOG("version %d", msg.pkt.head.version);
+	//MSG_LOG("type %d", msg.pkt.head.type);
 
 	/* send will do deep copy of msg, so that we preserved data */
 	if (xQueueSend(xQueue, &msg, (TickType_t) 0) != pdPASS) {
 		MSG_LOG("FATAL: failed to send msg");
 		return -1;
 	};
-	MSG_LOG("Successfully sent msg to xQueue, then notify dispatchTask");
 	xTaskNotifyGive( dispatchTaskHandle );
 	return 0;
 }
@@ -158,7 +157,7 @@ static void process_from_queue(cl_msg_t *msg)
 				MSG_LOG("no handle for msg type %d", msg->pkt.head.type);
 				return;
 			}
-			MSG_LOG("handle msg type %d", msg->pkt.head.type);
+			//MSG_LOG("handle msg type %d", msg->pkt.head.type);
 			hdl->msg_cb(msg, hdl->arg);
 			return;
 		}
@@ -179,11 +178,12 @@ static void dispatchTask (void *pvParameters )
 		MSG_LOG("Block to wait for receiveTask to notify ");
 
 		ulNotifiedValue = ulTaskNotifyTake( pdFALSE, portMAX_DELAY );
-		MSG_LOG("Notified by receiveTask, value %d ", ulNotifiedValue);
 		if (ulNotifiedValue > 0 &&
 		    xQueueReceive( xQueue, &msg, portMAX_DELAY) == pdPASS) {
 			/* now we can use recvMsg */
 			process_from_queue(&msg);
+		} else {
+			MSG_LOG("value %d", ulNotifiedValue);
 		}
 	}
 }
@@ -191,12 +191,17 @@ static void dispatchTask (void *pvParameters )
 static void receiveTask(void *pvParameters)
 {
 	const TickType_t xBlockTime = pdMS_TO_TICKS(1000*1);
+	u32 cnt = 0;
 
 	for( ;; ) {
 		uint64_t sq_slot_addr;
 		
 		vTaskDelay(xBlockTime);
-		//MSG_DBG("xgq_consume tick");
+
+		cnt++;
+		/* when cnt is not 0, xgq is healthy */
+		IO_SYNC_WRITE32(cnt, RPU_XGQ_DEV_STATE_OFFSET);	
+
 		if (xgq_consume(&rpu_xgq, &sq_slot_addr))
 			continue;
 
@@ -216,15 +221,18 @@ static int init_xgq()
 	size_t ring_len = RPU_RING_LEN;
 
 	MSG_LOG("->");
+#if 0
 	MSG_LOG("write range 0x%x to 0x%x all zero", RPU_RING_BASE, RPU_RING_BASE + 0xfff);
 	{
-		 u32 i;
-		 for (i = RPU_RING_BASE; i < RPU_RING_BASE + 0x1000; i += 4) {
-			 //xil_printf("%x\r", i);
-			 IO_SYNC_WRITE32(0x0, i);
-		 }
-		 IO_SYNC_WRITE32(0x0, RPU_CQ_BASE);	
+		u32 i;
+		for (i = RPU_RING_BASE; i < RPU_RING_BASE + 0x1000; i += 4) {
+			//xil_printf("%x\r", i);
+			IO_SYNC_WRITE32(0x0, i);
+		}
+		//IO_SYNC_WRITE32(0x0, RPU_CQ_BASE);	
 	}
+#endif	
+	IO_SYNC_WRITE32(0x0, RPU_XGQ_DEV_STATE_OFFSET);	
         ret = xgq_alloc(&rpu_xgq, XGQ_SERVER, xgq_io_hdl, RPU_RING_BASE, &ring_len,
 		RPU_SLOT_SIZE, RPU_SQ_BASE, RPU_CQ_BASE);
 	if (ret) {
@@ -299,11 +307,13 @@ static int init_queue()
 	return 0;
 }
 
+/*
 static void fini_queue()
 {
 	if (xQueue != NULL)
 		vQueueDelete(xQueue);
 }
+*/
 
 static int cl_msg_service_start(void)
 {

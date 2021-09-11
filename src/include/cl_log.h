@@ -47,7 +47,7 @@ static const char *app_type_name[] = {
 
 #ifdef CL_VERBOSE
 #define CL_DBG(app, fmt, arg...) 		\
-	xil_printf("%s: %s:%d %s " fmt "\r\n", 	\
+	xil_printf("%s[DEBUG]: %s:%d %s " fmt "\r\n", 	\
 		app_type_name[app], __FILE__, __LINE__, __FUNCTION__, ##arg)
 #else
 #define CL_DBG(app, fmt, arg...)

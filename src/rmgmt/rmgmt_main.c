@@ -8,7 +8,7 @@
 #include "cl_msg.h"
 #include "cl_flash.h"
 
-static TaskHandle_t xR5Task;
+//static TaskHandle_t xR5Task;
 static TaskHandle_t xXGQTask;
 static struct rmgmt_handler rh = { 0 };
 msg_handle_t *pdi_hdl;
@@ -17,8 +17,6 @@ msg_handle_t *af_hdl;
 int xgq_pdi_flag = 0;
 int xgq_xclbin_flag = 0;
 int xgq_af_flag = 0;
-
-int xgq_firewall_cid = -1;
 
 #if 0
 static void verify(struct rmgmt_handler *rh)
@@ -90,47 +88,35 @@ static int xgq_xclbin_cb(cl_msg_t *msg, void *arg)
 	return 0;
 }
 
-static int xgq_af_cb(cl_msg_t *msg, void *arg)
-{
-	RMGMT_DBG("cb to enable firewall checking for id%d", msg->pkt.head.cid);
-	xgq_firewall_cid = msg->pkt.head.cid;
-	return 0;
-}
-
 #define FAULT_STATUS            0x0
 #define BIT(n) 			(1UL << (n))
 #define READ_RESPONSE_BUSY      BIT(0)
 #define WRITE_RESPONSE_BUSY     BIT(16)
 #define FIREWALL_STATUS_BUSY    (READ_RESPONSE_BUSY | WRITE_RESPONSE_BUSY)
-#define IS_FIRED(val) (val & ~FIREWALL_STATUS_BUSY)
+#define IS_FIRED(val) 		(val & ~FIREWALL_STATUS_BUSY)
 
-static void check_firewall()
+static int check_firewall()
 {
-	cl_msg_t msg;
-	u32 firewall_h2c = 0x80000000; /* TODO, get from xparameters.h */
+	u32 firewall = 0x80001000; /* TODO, get from xparameters.h */
 	u32 val;
 
-	if (xgq_firewall_cid == -1) {
-		return;
-	}
+	val = IO_SYNC_READ32(firewall);
 
-	xil_printf("async check firewall on cid %d\r", xgq_firewall_cid);
-	/* register cannot be read now, skip */
-	return;
-#if 0
-	val = IO_SYNC_READ32(firewall_h2c);
-	if (!IS_FIRED(val)) {
-		return;
-	}
+	return IS_FIRED(val);
+}
 
-	RMGMT_DBG("firewall fired val 0x%x cid %d", val, xgq_firewall_cid);
+static int xgq_af_cb(cl_msg_t *msg, void *arg)
+{
+	msg->pkt.head.rcode = check_firewall();
 
-	msg.pkt.head.cid = xgq_firewall_cid;
-	msg.pkt.head.rcode = 1;
+	RMGMT_DBG("complete msg id%d, ret %d",
+		msg->pkt.head.cid, msg->pkt.head.rcode);
 
-	xgq_firewall_cid = -1;
-	cl_msg_handle_complete(&msg);
-#endif
+	/*TODO: value is read as 0x10 always. Ignore rcode for now */
+	msg->pkt.head.rcode = 0;
+
+	cl_msg_handle_complete(msg);
+	return 0;
 }
 
 static void pvXGQTask( void *pvParameters )
@@ -162,13 +148,12 @@ static void pvXGQTask( void *pvParameters )
 		    cl_msg_handle_init(&af_hdl, CL_MSG_AF, xgq_af_cb, NULL) == 0) {
 			RMGMT_LOG("init firewall handle done.");
 			xgq_af_flag = 1;
-		} else if ((xgq_af_flag == 1) && (cnt % 5 == 0)) {
-			check_firewall();
 		}
 	}
 	RMGMT_DBG("<-");
 }
 
+#if 0
 /*
  * Task on R5 (same as zocl_ov_thread)
  */
@@ -216,6 +201,7 @@ static void pvR5Task( void *pvParameters )
 
 	RMGMT_LOG("FATAL: should never be here!\r\n");
 }
+#endif
 
 static int rmgmt_create_tasks(void)
 {
@@ -249,7 +235,6 @@ static int rmgmt_create_tasks(void)
 int RMGMT_Launch( void )
 {	
 	int ret = 0;
-	u8 pdiHeader[OSPI_VERSAL_PAGESIZE] = { 0 };
 
 	ret = rmgmt_init_handler(&rh);
 	if (ret != 0) {

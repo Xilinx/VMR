@@ -1,10 +1,10 @@
 #!/bin/bash
 
-TOOL_VERSION="2021.1"
-#STABLE_VITIS=/proj/xbuilds/${TOOL_VERSION}_daily_latest/installs/lin64/Vitis/HEAD/settings64.sh
-#STABLE_XRT=/proj/xbuilds/${TOOL_VERSION}_daily_latest/xbb/xrt/packages/setenv.sh
-STABLE_VITIS=/proj/xbuilds/2020.2_daily_latest/installs/lin64/Vitis/HEAD/settings64.sh
-STABLE_XRT=/proj/xbuilds/2021.2_daily_latest/xbb/xrt/packages/setenv.sh
+TOOL_VERSION="2021.2"
+STABLE_VITIS=/proj/xbuilds/${TOOL_VERSION}_daily_latest/installs/lin64/Vitis/HEAD/settings64.sh
+STABLE_XRT=/proj/xbuilds/${TOOL_VERSION}_daily_latest/xbb/xrt/packages/setenv.sh
+#STABLE_VITIS=/proj/xbuilds/2020.2_daily_latest/installs/lin64/Vitis/HEAD/settings64.sh
+#STABLE_XRT=/proj/xbuilds/2021.2_daily_latest/xbb/xrt/packages/setenv.sh
 
 default_env() {
 	echo -ne "no xsct, using default stable version: "

@@ -79,8 +79,10 @@ static int FlashLinearWrite(XOspiPsv *OspiPsvPtr, u32 Address, u32 ByteCount,
 
 static int FlashRead(XOspiPsv *OspiPsvPtr, u32 Address, u32 ByteCount,
 				u8 *WriteBfrPtr, u8 *ReadBfrPtr);
+/*
 static int FlashRead_async(XOspiPsv *OspiPsvPtr, u32 Address, u32 ByteCount,
 				u8 *WriteBfrPtr, u8 *ReadBfrPtr);
+*/
 static u32 GetRealAddr(XOspiPsv *OspiPsvPtr, u32 Address);
 static int BulkErase(XOspiPsv *OspiPsvPtr, u8 *WriteBfrPtr);
 static int DieErase(XOspiPsv *OspiPsvPtr, u8 *WriteBfrPtr);
@@ -109,57 +111,10 @@ u32 FCTIndex;	/* Flash configuration table index */
  * but should at least be static so they are zeroed.
  */
 static XOspiPsv OspiPsvInstance;
-
 static XOspiPsv_Msg FlashMsg;
 
-/*
- * The following variable allows a test value to be added to the values that
- * are written to the Flash such that unique values can be generated to
- * guarantee the writes to the Flash were successful
- */
-int Test = 1;
-
 u8 ReadBuffer[OSPI_VERSAL_PAGESIZE] __attribute__ ((aligned(64)));
-
 u8 CmdBfr[8];
-
-/*
- * The following constants specify the max amount of data and the size of the
- * the buffer required to hold the data and overhead to transfer the data to
- * and from the Flash. Initialized to single flash page size.
- */
-//u32 MaxData = PAGE_COUNT*256;
-
-/*****************************************************************************/
-/**
-*
-* Main function to call the OSPIPSV Flash Polled example.
-*
-* @param	None
-*
-* @return	XST_SUCCESS if successful, otherwise XST_FAILURE.
-*
-* @note		None
-*
-******************************************************************************/
-//int amain(void)
-//{
-//	int Status;
-//
-//	xil_printf("OSPIPSV Flash Polled Example Test\r\n");
-//
-//	/*
-//	 * Run the OspiPsv Polled example.
-//	 */
-//	Status = OspiPsvPolledFlashExample(&OspiPsvInstance, OSPIPSV_DEVICE_ID);
-//	if (Status != XST_SUCCESS) {
-//		xil_printf("OSPIPSV Flash Polled Ex Failed\r\n");
-//		return XST_FAILURE;
-//	}
-//
-//	xil_printf("Successfully ran OSPIPSV Flash Polled Ex\r\n");
-//	return XST_SUCCESS;
-//}
 
 /*****************************************************************************/
 /**
@@ -210,6 +165,7 @@ static int pollTransfer(XOspiPsv *OspiPsvPtr, XOspiPsv_Msg *flashMsg) {
 	return Status;
 }
 
+#if 0
 /*****************************************************************************/
 /**
 *
@@ -286,6 +242,7 @@ int FlashRead_async(XOspiPsv *OspiPsvPtr, u32 Address, u32 ByteCount,
 
 	return 0;
 }
+#endif
 
 /*****************************************************************************/
 /**
