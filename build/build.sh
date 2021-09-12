@@ -1,7 +1,10 @@
 #!/bin/bash
 
-TOOL_VERSION="2020.2"
+TOOL_VERSION="2021.2"
 STABLE_VITIS=/proj/xbuilds/${TOOL_VERSION}_daily_latest/installs/lin64/Vitis/HEAD/settings64.sh
+STABLE_XRT=/proj/xbuilds/${TOOL_VERSION}_daily_latest/xbb/xrt/packages/setenv.sh
+#STABLE_VITIS=/proj/xbuilds/2020.2_daily_latest/installs/lin64/Vitis/HEAD/settings64.sh
+#STABLE_XRT=/proj/xbuilds/2021.2_daily_latest/xbb/xrt/packages/setenv.sh
 
 default_env() {
 	echo -ne "no xsct, using default stable version: "
@@ -11,19 +14,19 @@ default_env() {
 
 build_clean() {
 	echo "=== Remove build directories ==="
-	rm -r xsa .metadata rmgmt_platform rmgmt_system rmgmt
+	rm -r xsa .metadata vmr_platform vmr_system vmr 
 }
 
 build_app_all() {
 	xsct ./create_app.tcl
-	cp -r ../src rmgmt/
+	rsync -av ../src vmr --exclude cmc
 	xsct ./config_app.tcl
 	xsct ./make_app.tcl
 }
 
 build_app_incremental() {
-	rm -r rmgmt/src
-	cp -r ../src rmgmt/
+	rm -r vmr/src
+	rsync -av ../src vmr --exclude cmc
 	xsct ./make_app.tcl
 }
 
@@ -71,6 +74,11 @@ else
 		echo -ne "Detected xsct version: ${version}, Please use xsct from ${TOOL_VERSION} to build"
 		exit
 	fi
+fi
+
+if [ -z $XILINX_XRT ];then
+	. ${STABLE_XRT}
+	echo $XILINX_XRT
 fi
 
 if [[ $BUILD_CLEAN == 1 ]];then

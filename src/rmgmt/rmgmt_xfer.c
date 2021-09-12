@@ -11,7 +11,7 @@
 #include "cl_io.h"
 #include "cl_flash.h"
 
-#define PR_ISOLATION_REG 0x80000000
+#define PR_ISOLATION_REG 0x80020000
 #define PR_ISOLATION_FREEZE 0x0
 #define PR_ISOLATION_UNFREEZE 0x3
 
@@ -90,15 +90,6 @@ static inline void read_data32(u32 *addr, u32 *data, size_t sz)
 	}
 }
 
-static void print_pkg(u8 *data, int len) {
-
-	for (int i = 0; i < len;) {
-		RMGMT_DBG("%02x ", data[i]);
-		if (++i % 16 == 0)
-			RMGMT_DBG("\r\n");
-	}
-}
-
 static int rmgmt_data_receive(struct rmgmt_handler *rh, u32 *len)
 {
 	u32 offset = 0;
@@ -144,6 +135,7 @@ static int rmgmt_data_receive(struct rmgmt_handler *rh, u32 *len)
 	return ret;
 }
 
+#if 0
 static int rmgmt_init_xfer(struct rmgmt_handler *rh)
 {
 	if (XRT_XFR_RES_SIZE & 0x3) {
@@ -159,15 +151,15 @@ static int rmgmt_init_xfer(struct rmgmt_handler *rh)
 	return 0;
 }
 
-int rmgmt_init_handler(struct rmgmt_handler *rh)
+static int rmgmt_init_xfer_handler(struct rmgmt_handler *rh)
 {
 	rh->rh_base = OSPI_VERSAL_BASE;
 
 	if (rmgmt_init_xfer(rh) != 0)
 		return -1;
 
-	rh->rh_data_size = BITSTREAM_SIZE; /* 32M */
-	rh->rh_data = (u8 *)malloc(rh->rh_data_size);
+	rh->rh_max_size = BITSTREAM_SIZE; /* 32M */
+	rh->rh_data = (u8 *)malloc(rh->rh_max_size);
 	if (rh->rh_data == NULL) {
 		RMGMT_LOG("malloc %d bytes failed\r\n", rh->rh_data_size);
 		return -1;
@@ -179,6 +171,23 @@ int rmgmt_init_handler(struct rmgmt_handler *rh)
 	set_status(rh, XRT_XFR_PKT_STATUS_IDLE);
 
 	RMGMT_DBG("rmgmt_init_handler done\r\n");
+	return 0;
+}
+#endif
+
+int rmgmt_init_handler(struct rmgmt_handler *rh)
+{
+	//rh->rh_base = OSPI_VERSAL_BASE;
+
+	rh->rh_max_size = BITSTREAM_SIZE; /* 32M */
+	rh->rh_data = (u8 *)malloc(rh->rh_max_size);
+	if (rh->rh_data == NULL) {
+		RMGMT_LOG("malloc %d bytes failed\r\n", rh->rh_data_size);
+		return -1;
+	}
+
+	/* ospi flash should alreay be initialized */
+	RMGMT_LOG("done\r\n");
 	return 0;
 }
 
@@ -194,11 +203,11 @@ static int fpga_pl_pdi_download(UINTPTR data, UINTPTR size)
 	}
 
 	/* isolate PR gate */
-	//IO_SYNC_WRITE32(PR_ISOLATION_FREEZE, rh->rh_base + PR_ISOLATION_REG);
+	IO_SYNC_WRITE32(PR_ISOLATION_FREEZE, PR_ISOLATION_REG);
 
 	ret = XFpga_PL_BitStream_Load(&XFpgaInstance, data, size, PDI_LOAD);
 	
-	//IO_SYNC_WRITE32(PR_ISOLATION_UNFREEZE, rh->rh_base + PR_ISOLATION_REG);
+	IO_SYNC_WRITE32(PR_ISOLATION_UNFREEZE, PR_ISOLATION_REG);
 	
 	return ret;
 }
@@ -407,19 +416,19 @@ struct rmgmt_ops {
 	void (*rmgmt_done_op)(struct rmgmt_handler *rh);
 };
 
-static struct rmgmt_ops rpu_ops = {
+static struct rmgmt_ops xfer_rpu_ops = {
 	.rmgmt_recv_op = rmgmt_recv_pkt,
 	.rmgmt_download_op = rmgmt_ospi_rpu_download,
 	.rmgmt_done_op = rmgmt_done_pkt,
 };
 
-static struct rmgmt_ops apu_ops = {
+static struct rmgmt_ops xfer_apu_ops = {
 	.rmgmt_recv_op = rmgmt_recv_pkt,
 	.rmgmt_download_op = rmgmt_ospi_apu_download,
 	.rmgmt_done_op = rmgmt_done_pkt,
 };
 
-static struct rmgmt_ops xclbin_ops = {
+static struct rmgmt_ops xfer_xclbin_ops = {
 	.rmgmt_recv_op = rmgmt_recv_pkt,
 	.rmgmt_download_op = rmgmt_fpga_download,
 	.rmgmt_done_op = rmgmt_done_pkt,
@@ -446,17 +455,32 @@ done:
 	return ret;
 }
 
+int rmgmt_xfer_download_xclbin(struct rmgmt_handler *rh)
+{
+	return rmgmt_xfer_download(rh, &xfer_xclbin_ops);
+}
+
+int rmgmt_xfer_download_rpu_pdi(struct rmgmt_handler *rh)
+{
+	return rmgmt_xfer_download(rh, &xfer_rpu_ops);
+}
+
+int rmgmt_xfer_download_apu_pdi(struct rmgmt_handler *rh)
+{
+	return rmgmt_xfer_download(rh, &xfer_apu_ops);
+}
+
 int rmgmt_download_xclbin(struct rmgmt_handler *rh)
 {
-	return rmgmt_xfer_download(rh, &xclbin_ops);
+	return rmgmt_fpga_download(rh, rh->rh_data_size);
 }
 
 int rmgmt_download_rpu_pdi(struct rmgmt_handler *rh)
 {
-	return rmgmt_xfer_download(rh, &rpu_ops);
+	return rmgmt_ospi_rpu_download(rh, rh->rh_data_size);
 }
 
 int rmgmt_download_apu_pdi(struct rmgmt_handler *rh)
 {
-	return rmgmt_xfer_download(rh, &apu_ops);
+	return rmgmt_ospi_apu_download(rh, rh->rh_data_size);
 }
