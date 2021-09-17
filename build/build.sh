@@ -36,6 +36,7 @@ usage() {
     echo "-clean                     Remove build directories"  
     echo "-xsa                       XSA file"  
     echo "-app                       Re-build Application only"  
+	echo "-config_VMR                Update VMR project too edit in Vitis GUI"
     echo "-help"
     exit $1
 }
@@ -54,9 +55,16 @@ do
                 -clean)
                         BUILD_CLEAN=1
                         ;;
-		-app)
-			BUILD_APP=1
-			;;
+	          	-app)
+		            	BUILD_APP=1
+						;;
+				-config_VMR)
+						if [ ! -f vmr/.project  ]; then
+							echo "vmr project was not initialized. Please run ./build.sh -xsa <path to your xsa>"
+							exit 1
+						fi
+						./update_VMR_vitis_project.sh
+						;;
                 *)
                         echo "Invalid argument: $1"
                         usage 1
