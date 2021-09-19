@@ -112,9 +112,6 @@ static int xgq_af_cb(cl_msg_t *msg, void *arg)
 	RMGMT_DBG("complete msg id%d, ret %d",
 		msg->pkt.head.cid, msg->pkt.head.rcode);
 
-	/*TODO: value is read as 0x10 always. Ignore rcode for now */
-	msg->pkt.head.rcode = 0;
-
 	cl_msg_handle_complete(msg);
 	return 0;
 }

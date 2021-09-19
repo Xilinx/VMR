@@ -95,7 +95,6 @@ static int rmgmt_data_receive(struct rmgmt_handler *rh, u32 *len)
 	u32 offset = 0;
 	int ret;
 
-	RMGMT_DBG("-> rmgmt_data_receive \r\n");
 	for (;;) {
 		u32 pkt_header;
 		struct pdi_packet *pkt = (struct pdi_packet *)&pkt_header;
@@ -131,7 +130,6 @@ static int rmgmt_data_receive(struct rmgmt_handler *rh, u32 *len)
 	}
 
 	*len = offset;
-	RMGMT_DBG("<- rmgmt_data_receive, len:%d\r\n", *len);
 	return ret;
 }
 
@@ -195,6 +193,7 @@ static int fpga_pl_pdi_download(UINTPTR data, UINTPTR size)
 {
 	int ret;
 	XFpga XFpgaInstance = { 0U };
+	UINTPTR KeyAddr = (UINTPTR)NULL;
 
 	ret = XFpga_Initialize(&XFpgaInstance);
 	if (ret != XST_SUCCESS) {
@@ -205,7 +204,7 @@ static int fpga_pl_pdi_download(UINTPTR data, UINTPTR size)
 	/* isolate PR gate */
 	IO_SYNC_WRITE32(PR_ISOLATION_FREEZE, PR_ISOLATION_REG);
 
-	ret = XFpga_PL_BitStream_Load(&XFpgaInstance, data, size, PDI_LOAD);
+	ret = XFpga_BitStream_Load(&XFpgaInstance, data, KeyAddr, size, PDI_LOAD);
 	
 	IO_SYNC_WRITE32(PR_ISOLATION_UNFREEZE, PR_ISOLATION_REG);
 	
@@ -219,12 +218,10 @@ static int rmgmt_fpga_download(struct rmgmt_handler *rh, u32 len)
 	uint64_t offset = 0;
 	uint64_t size = 0;
 
-	RMGMT_LOG("-> rmgmt_fpga_download\r\n");
-
 	ret = rmgmt_xclbin_section_info(axlf, BITSTREAM_PARTIAL_PDI, &offset, &size);
 	if (ret) {
 		set_status(rh, XRT_XFR_PKT_STATUS_FAIL);
-		RMGMT_DBG("get PARTIAL PDI from xclbin failed %d\r\n", ret);
+		RMGMT_LOG("get PARTIAL PDI from xclbin failed %d\r\n", ret);
 		goto out;
 	}
 	/* Sync data from cache to memory */
@@ -234,14 +231,12 @@ static int rmgmt_fpga_download(struct rmgmt_handler *rh, u32 len)
 		(UINTPTR)size);
 	if (ret != XFPGA_SUCCESS) {
 		set_status(rh, XRT_XFR_PKT_STATUS_FAIL);
-		RMGMT_DBG("FPGA load pdi failed %d\r\n", ret);
+		RMGMT_LOG("FPGA load pdi failed %d\r\n", ret);
 		goto out;
 	}
 
 	set_status(rh, XRT_XFR_PKT_STATUS_DONE);
 out:
-
-	RMGMT_LOG("<- rmgmt_fpga_download %d\r\n", ret);
 	return ret;
 }
 
@@ -309,8 +304,6 @@ static int rmgmt_ospi_rpu_download(struct rmgmt_handler *rh, u32 len)
 {
 	int ret;
 
-	RMGMT_DBG("-> ");
-
 	/* Sync data from cache to memory */
 	Xil_DCacheFlush();
 
@@ -334,7 +327,6 @@ static int rmgmt_ospi_rpu_download(struct rmgmt_handler *rh, u32 len)
 
 	set_status(rh, XRT_XFR_PKT_STATUS_DONE);
 out:
-	RMGMT_DBG("<- %d", ret);
 	return ret;
 }
 

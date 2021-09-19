@@ -698,7 +698,7 @@ int FlashRead(XOspiPsv *OspiPsvPtr, u32 Address, u32 ByteCount,
 	u32 BytesToRead;
 	u32 ByteCnt = ByteCount;
 
-	xil_printf("ReadCmd 0x%x\r\n", Flash_Config_Table[FCTIndex].ReadCmd);
+	//xil_printf("ReadCmd 0x%x\r\n", Flash_Config_Table[FCTIndex].ReadCmd);
 
 	if ((Address < Flash_Config_Table[FCTIndex].FlashDeviceSize) &&
 		((Address + ByteCount) >= Flash_Config_Table[FCTIndex].FlashDeviceSize) &&

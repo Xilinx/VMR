@@ -28,10 +28,14 @@
 #define RPU_XGQ_DEV_STATE_OFFSET (RPU_RING_LEN)
 
 static void receiveTask( void *pvParameters );
-static void dispatchTask( void *pvParameters );
 static TaskHandle_t receiveTaskHandle = NULL;
-static TaskHandle_t dispatchTaskHandle = NULL;
-static QueueHandle_t xQueue = NULL;
+
+static void quickTask( void *pvParameters );
+static void slowTask( void *pvParameters );
+static TaskHandle_t quickTaskHandle = NULL;
+static TaskHandle_t slowTaskHandle = NULL;
+static QueueHandle_t quickTaskQueue = NULL;
+static QueueHandle_t slowTaskQueue = NULL;
 
 static struct xgq rpu_xgq;
 static int xgq_io_hdl = 0;
@@ -92,24 +96,46 @@ int cl_msg_handle_complete(cl_msg_t *msg)
 	return 0;
 }
 
+/*
+ * submit dispatch msg to different software queues based on msg_type.
+ * The quickTask only handles commands should be complished very fast.
+ * The slowTask should handle all other messages which can run longer.
+ * quick: < 10s vs. slow: 10s to minutes
+ * In the future, we might use per task per message type if necessary.
+ */
 static int submit_to_queue(u32 sq_addr)
 {
+	int msg_type;
 	struct xrt_sub_queue_entry *cmd = (struct xrt_sub_queue_entry *)sq_addr;
 	/* cast data to RPU common message type */
 	cl_msg_t msg = { 0 };
 
 	cl_memcpy_fromio((u32)cmd + sizeof(*cmd), &msg, sizeof(cl_msg_t));
 	msg.pkt.head.cid = cmd->cid; //remember the cid, cmd will be freed
+	msg_type = msg.pkt.head.type;
 
-	//MSG_LOG("version %d", msg.pkt.head.version);
-	//MSG_LOG("type %d", msg.pkt.head.type);
-
-	/* send will do deep copy of msg, so that we preserved data */
-	if (xQueueSend(xQueue, &msg, (TickType_t) 0) != pdPASS) {
-		MSG_LOG("FATAL: failed to send msg");
+	switch (msg_type) {
+	case CL_MSG_PDI:
+	case CL_MSG_XCLBIN:
+		/* send will do deep copy of msg, so that we preserved data */
+		if (xQueueSend(slowTaskQueue, &msg, (TickType_t) 0) != pdPASS) {
+			MSG_LOG("FATAL: failed to send msg");
+			return -1;
+		};
+		xTaskNotifyGive( slowTaskHandle );
+		break;
+	case CL_MSG_AF:
+		if (xQueueSend(quickTaskQueue, &msg, (TickType_t) 0) != pdPASS) {
+			MSG_LOG("FATAL: failed to send msg");
+			return -1;
+		};
+		xTaskNotifyGive( quickTaskHandle );
+		break;
+	default:
+		MSG_LOG("Unknown mest type:%d", msg_type);
 		return -1;
-	};
-	xTaskNotifyGive( dispatchTaskHandle );
+	}
+
 	return 0;
 }
 
@@ -146,6 +172,11 @@ static void inline process_msg(u32 sq_slot_addr)
 	return;
 }
 
+/*
+ * Note: we don't need lock here yet.
+ *     because different msg_type will be handled
+ *     separately with different copy of msg, hdl.
+ */
 static void process_from_queue(cl_msg_t *msg)
 {
 	msg_handle_t *hdl;
@@ -165,11 +196,11 @@ static void process_from_queue(cl_msg_t *msg)
 
 	/* complete unhandled msg too */
 	MSG_LOG("unhandled msg type %d", msg->pkt.head.type);
-	msg->pkt.head.rcode = 1;
+	msg->pkt.head.rcode = -EINVAL;
 	cl_msg_handle_complete(msg);
 }
 
-static void dispatchTask (void *pvParameters )
+static void quickTask (void *pvParameters )
 {
 	u32 ulNotifiedValue;
 	cl_msg_t msg;
@@ -179,7 +210,26 @@ static void dispatchTask (void *pvParameters )
 
 		ulNotifiedValue = ulTaskNotifyTake( pdFALSE, portMAX_DELAY );
 		if (ulNotifiedValue > 0 &&
-		    xQueueReceive( xQueue, &msg, portMAX_DELAY) == pdPASS) {
+		    xQueueReceive( quickTaskQueue, &msg, portMAX_DELAY) == pdPASS) {
+			/* now we can use recvMsg */
+			process_from_queue(&msg);
+		} else {
+			MSG_LOG("value %d", ulNotifiedValue);
+		}
+	}
+}
+
+static void slowTask (void *pvParameters )
+{
+	u32 ulNotifiedValue;
+	cl_msg_t msg;
+
+	for( ;; ) {
+		MSG_LOG("Block to wait for receiveTask to notify ");
+
+		ulNotifiedValue = ulTaskNotifyTake( pdFALSE, portMAX_DELAY );
+		if (ulNotifiedValue > 0 &&
+		    xQueueReceive( slowTaskQueue, &msg, portMAX_DELAY) == pdPASS) {
 			/* now we can use recvMsg */
 			process_from_queue(&msg);
 		} else {
@@ -258,6 +308,18 @@ static int init_xgq()
 	return 0;
 }
 
+static void fini_task()
+{
+	if (receiveTaskHandle != NULL)
+		vTaskDelete(receiveTaskHandle);
+
+	if (quickTaskHandle != NULL)
+		vTaskDelete(quickTaskHandle);
+
+	if (slowTaskHandle != NULL)
+		vTaskDelete(slowTaskHandle);
+}
+
 static int init_task()
 {
 	if (xTaskCreate( receiveTask,
@@ -271,15 +333,27 @@ static int init_task()
 		return -1;
 	}
 
-	if (xTaskCreate( dispatchTask,
-		( const char *) "dispatch Task",
+	if (xTaskCreate( quickTask,
+		( const char *) "quick Task",
 		1024,
 		NULL,
 		tskIDLE_PRIORITY + 1,
-		&dispatchTaskHandle) != pdPASS) {
+		&quickTaskHandle) != pdPASS) {
 
-		MSG_LOG("FATAL: dispatchTask creation failed");
-		vTaskDelete(receiveTaskHandle);
+		MSG_LOG("FATAL: quickTask creation failed");
+		fini_task();
+		return -1;
+	}
+
+	if (xTaskCreate( slowTask,
+		( const char *) "slow Task",
+		1024,
+		NULL,
+		tskIDLE_PRIORITY + 1,
+		&slowTaskHandle) != pdPASS) {
+
+		MSG_LOG("FATAL: slowTask creation failed");
+		fini_task();
 		return -1;
 	}
 
@@ -287,33 +361,32 @@ static int init_task()
 	return 0;
 }
 
-static void fini_task()
+static void fini_queue()
 {
-	if (receiveTaskHandle != NULL)
-		vTaskDelete(receiveTaskHandle);
+	if (quickTaskQueue != NULL)
+		vQueueDelete(quickTaskQueue);
 
-	if (dispatchTaskHandle != NULL)
-		vTaskDelete(dispatchTaskHandle);
+	if (slowTaskQueue != NULL)
+		vQueueDelete(slowTaskQueue);
 }
 
 static int init_queue()
 {
-	xQueue = xQueueCreate(32, sizeof (cl_msg_t));
-	if (xQueue == NULL) {
-		MSG_LOG("FATAL: xQueue creation failed");
+	quickTaskQueue = xQueueCreate(32, sizeof (cl_msg_t));
+	if (quickTaskQueue == NULL) {
+		MSG_LOG("FATAL: quickTaskQueue creation failed");
 		return -1;
 	}
-	MSG_LOG("INFO: xQueue creation succeeded");
+
+	slowTaskQueue = xQueueCreate(32, sizeof (cl_msg_t));
+	if (slowTaskQueue == NULL) {
+		MSG_LOG("FATAL: slowTaskQueue creation failed");
+		fini_queue();
+		return -1;
+	}
+	MSG_LOG("INFO: quick|slow TaskQueue creation succeeded");
 	return 0;
 }
-
-/*
-static void fini_queue()
-{
-	if (xQueue != NULL)
-		vQueueDelete(xQueue);
-}
-*/
 
 static int cl_msg_service_start(void)
 {
