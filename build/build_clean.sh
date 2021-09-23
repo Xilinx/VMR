@@ -1,3 +1,3 @@
 #!/bin/bash
 
-rm -r xsa .metadata rmgmt_platform rmgmt_system rmgmt
+rm -r xsa .metadata vmr_platform vmr_system vmr

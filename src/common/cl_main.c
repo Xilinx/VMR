@@ -15,12 +15,12 @@
 
 int ospi_flash_init();
 
-int CMC_Launch(void);
+int VMC_Launch(void);
 int RMGMT_Launch(void);
 int cl_msg_service_launch(void);
 
 static tasks_register_t handler[] = {
-	//CMC_Launch,	
+	VMC_Launch,	
 	RMGMT_Launch,
 	cl_msg_service_launch,
 };
