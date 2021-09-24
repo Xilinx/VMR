@@ -10,8 +10,7 @@
 
 #include "cl_main.h"
 #include "cl_log.h"
-
-#include "uart_rtos.h"
+#include "cl_uart_rtos.h"
 
 int ospi_flash_init();
 
@@ -27,17 +26,17 @@ static tasks_register_t handler[] = {
 
 uart_rtos_handle_t uart_log;
 
+
 int main( void )
 {
 	CL_DBG(APP_MAIN, "->");
 
-	/* Init flash service */
+	/* Init flash device */
 	ospi_flash_init();
 
 	/* Enable FreeRTOS Debug UART */
 	UART_RTOS_Debug_Enable(&uart_log);
 
-	/* Init application tasks */
 	for (int i = 0; i < ARRAY_SIZE(handler); i++) {
 		configASSERT(handler[i]() == 0);
 	}

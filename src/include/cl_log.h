@@ -15,8 +15,8 @@
 #include "stdlib.h"
 #include "stdio.h"
 
-/* Xilinx includes */
-#include "xil_printf.h"
+#include "../vmc/vmc_api.h"
+
 
 /**
  * Application type id for logging, mem signature etc.
@@ -37,18 +37,30 @@ static const char *app_type_name[] = {
 	"VMC",
 };
 
-
 /**
  * Note: preprocessors are complier related...
  */
+
+#define CL_ERR(app, fmt, arg...) 		\
+	VMC_Printf(__FILENAME__, __LINE__, VMC_LOG_LEVEL_ERROR,"%s[ERROR]: %s" fmt "\r\n", 	\
+			app_type_name[app], __FUNCTION__, ##arg)
+
+#define CL_DMO(app, fmt, arg...) 		\
+	VMC_Printf(__FILENAME__, __LINE__, VMC_LOG_LEVEL_DEMO_MENU, fmt,##arg)
+
+#define CL_PRNT(app, fmt, arg...) 		\
+	VMC_Printf(__FILENAME__, __LINE__, VMC_LOG_LEVEL_INFO, fmt,##arg)
+
 #define CL_LOG(app, fmt, arg...) 		\
-	xil_printf("%s: %s " fmt "\r\n", 	\
-		app_type_name[app], __FUNCTION__, ##arg)
+	VMC_Printf(__FILENAME__, __LINE__, VMC_LOG_LEVEL_INFO, "%s: %s " fmt "\r\n", 	\
+			app_type_name[app], __FUNCTION__, ##arg)
 
 #ifdef CL_VERBOSE
+
 #define CL_DBG(app, fmt, arg...) 		\
-	xil_printf("%s[DEBUG]: %s:%d %s " fmt "\r\n", 	\
-		app_type_name[app], __FILE__, __LINE__, __FUNCTION__, ##arg)
+	VMC_Printf(__FILENAME__, __LINE__, VMC_LOG_LEVEL_DEBUG,"%s[DEBUG]: %s:%d %s " fmt "\r\n", 	\
+			app_type_name[app], __FILENAME__, __LINE__, __FUNCTION__, ##arg)
+
 #else
 #define CL_DBG(app, fmt, arg...)
 #endif

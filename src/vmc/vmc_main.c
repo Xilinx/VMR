@@ -6,19 +6,19 @@
 #include "FreeRTOS.h"
 #include "task.h"
 
-#include "uart_rtos.h"
+#include "cl_uart_rtos.h"
 #include "cl_log.h"
 #include "cl_i2c.h"
+#include "vmc_api.h"
 
 static TaskHandle_t xVMCTask;
 static TaskHandle_t xSensorMonTask;
-extern uart_rtos_handle_t uart_log;
-#define MSG	"\n\r VMC launched \n\r"
 
+int Enable_DemoMenu(void);
 
 static void SensorMonitorTask(void *params)
 {
-    CL_LOG(APP_VMC, "Sensor Monitor Task Created !!!\n\r");
+	VMC_LOG("\n\rSensor Monitor Task Created !!!\n\r");
 }
 
 static void pVMCTask(void *params)
@@ -26,7 +26,11 @@ static void pVMCTask(void *params)
     /* Platform Init will Initialise I2C, GPIO, SPI, etc
      */
 
-    UART_RTOS_Send(&uart_log, (u8 *)MSG, strlen(MSG));
+	VMC_LOG("\n\r VMC launched \n\r");
+
+    /* Demo menu log is enabled */
+	Enable_DemoMenu();
+
     I2CInit();
 
     /* Read the EEPROM */
