@@ -1,61 +1,7 @@
-
-/* (c) Copyright 2018 Xilinx, Inc. All rights reserved.
- *
- *  This file contains confidential and proprietary information
- *  of Xilinx, Inc. and is protected under U.S. and
- *  international copyright and other intellectual property
- *  laws.
- *
- *  DISCLAIMER
- *  This disclaimer is not a license and does not grant any
- *  rights to the materials distributed herewith. Except as
- *  otherwise provided in a valid license issued to you by
- *  Xilinx, and to the maximum extent permitted by applicable
- *  law: (1) THESE MATERIALS ARE MADE AVAILABLE "AS IS" AND
- *  WITH ALL FAULTS, AND XILINX HEREBY DISCLAIMS ALL WARRANTIES
- *  AND CONDITIONS, EXPRESS, IMPLIED, OR STATUTORY, INCLUDING
- *  BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, NON-
- *  INFRINGEMENT, OR FITNESS FOR ANY PARTICULAR PURPOSE; and
- *  (2) Xilinx shall not be liable (whether in contract or tort,
- *  including negligence, or under any other theory of
- *  liability) for any loss or damage of any kind or nature
- *  related to, arising under or in connection with these
- *  materials, including for any direct, or any indirect,
- *  special, incidental, or consequential loss or damage
- *  (including loss of data, profits, goodwill, or any type of
- *  loss or damage suffered as a result of any action brought
- *  by a third party) even if such damage or loss was
- *  reasonably foreseeable or Xilinx had been advised of the
- *  possibility of the same.
- *
- *  CRITICAL APPLICATIONS
- *  Xilinx products are not designed or intended to be fail-
- *  safe, or for use in any application requiring fail-safe
- *  performance, such as life-support or safety devices or
- *  systems, Class III medical devices, nuclear facilities,
- *  applications related to the deployment of airbags, or any
- *  other applications that could lead to death, personal
- *  injury, or severe property or environmental damage
- *  (individually and collectively, "Critical
- *  Applications"). Customer assumes the sole risk and
- *  liability of any use of Xilinx products in Critical
- *  Applications, subject only to applicable laws and
- *  regulations governing limitations on product liability.
- *
- *  THIS COPYRIGHT NOTICE AND DISCLAIMER MUST BE RETAINED AS
- *  PART OF THIS FILE AT ALL TIMES.
- */
-
-/***
- *
- * @file uart_rtos.c
- *
- * Author: Shahab.A
- * Date: 2021-09-03
- *
- * @brief FreeRTOS wrapper for UART driver.
- */
-
+/******************************************************************************
+* Copyright (C) 2020 Xilinx, Inc.  All rights reserved.
+* SPDX-License-Identifier: MIT
+*******************************************************************************/
 
 /* FreeRTOS includes. */
 #include "FreeRTOS.h"
@@ -66,7 +12,7 @@
 #include "event_groups.h"
 #include "portmacro.h"
 
-#include "uart_rtos.h"
+#include "cl_uart_rtos.h"
 
 
 
@@ -85,9 +31,9 @@
 
 /************************** Function Prototypes *****************************/
 
-static void UART_Task(void* pvParameters);
-static void UART_RTOS_Handler(void *CallBackRef, u32 Event, unsigned int EventData);
-static int UartConfig(uart_rtos_handle_t *handle, XUartPsv *UartInstPtr, u16 DeviceId, u16 UartIntrId);
+static void 	UART_Task(void* pvParameters);
+static void 	UART_RTOS_Handler(void *CallBackRef, u32 Event, unsigned int EventData);
+static int32_t 	UART_Config(uart_rtos_handle_t *handle, XUartPsv *UartInstPtr, uint16_t DeviceId, uint16_t UartIntrId);
 
 /************************** Variable Definitions ***************************/
 
@@ -211,7 +157,7 @@ static void UART_RTOS_Handler(void *CallBackRef, u32 Event, unsigned int EventDa
 * @note
 *
 **************************************************************************/
-static s32 UART_RTOS_Init(uart_rtos_handle_t *handle, XScuGic *IntcInstPtr, u16 DeviceId, u16 UartIntrId){
+static int32_t UART_RTOS_Init(uart_rtos_handle_t *handle, XScuGic *IntcInstPtr, u16 DeviceId, u16 UartIntrId){
 	UART_STATUS ret = UART_SUCCESS;
 	if(NULL == handle){
 		return UART_ERROR_INIT;
@@ -247,7 +193,7 @@ static s32 UART_RTOS_Init(uart_rtos_handle_t *handle, XScuGic *IntcInstPtr, u16 
 	memset(&handle->cb_msg,0,sizeof(handle->cb_msg));
 
 
-	ret = UartConfig(handle, &handle->uartPsv,DeviceId,UartIntrId);
+	ret = UART_Config(handle, &handle->uartPsv,DeviceId,UartIntrId);
 
 	return ret;
 }
@@ -277,11 +223,11 @@ static s32 UART_RTOS_Init(uart_rtos_handle_t *handle, XScuGic *IntcInstPtr, u16 
 * @note
 *
 **************************************************************************/
-static int UartConfig(uart_rtos_handle_t *handle, XUartPsv *UartInstPtr, u16 DeviceId, u16 UartIntrId)
+static int32_t UART_Config(uart_rtos_handle_t *handle, XUartPsv *UartInstPtr, uint16_t DeviceId, uint16_t UartIntrId)
 {
-	int Status;
+	int32_t Status;
 	XUartPsv_Config *Config;
-	u32 IntrMask;
+	uint32_t IntrMask;
 
 
 	/*
@@ -349,7 +295,7 @@ static int UartConfig(uart_rtos_handle_t *handle, XUartPsv *UartInstPtr, u16 Dev
 * @note
 *
 **************************************************************************/
-static s32 UART_RTOS_Deinit(uart_rtos_handle_t *handle)
+static int32_t UART_RTOS_Deinit(uart_rtos_handle_t *handle)
 {
 	vEventGroupDelete(handle->rxEvent);
 	vEventGroupDelete(handle->txEvent);
@@ -386,12 +332,12 @@ static s32 UART_RTOS_Deinit(uart_rtos_handle_t *handle)
 * @note
 *
 **************************************************************************/
-s32 UART_RTOS_Send(uart_rtos_handle_t *handle, u8 *buf, u32 size)
+int32_t UART_RTOS_Send(uart_rtos_handle_t *handle, uint8_t *buf, uint32_t size)
 {
 
 	EventBits_t ev;
 	UART_STATUS retVal = UART_SUCCESS;
-	//u32 byteSent = 0;
+	//uint32_t byteSent = 0;
 
 	if(handle == NULL)
 	{
@@ -458,7 +404,7 @@ s32 UART_RTOS_Send(uart_rtos_handle_t *handle, u8 *buf, u32 size)
 * @note
 *
 **************************************************************************/
-s32 UART_RTOS_Receive(uart_rtos_handle_t *handle, u8 *buf, u32 size, u32 *received){
+int32_t UART_RTOS_Receive(uart_rtos_handle_t *handle, uint8_t *buf, uint32_t size, uint32_t *received){
 
 
 	EventBits_t ev;
@@ -529,7 +475,7 @@ s32 UART_RTOS_Receive(uart_rtos_handle_t *handle, u8 *buf, u32 size, u32 *receiv
 **************************************************************************/
 static void UART_Task(void* pvParameters)
 {
-	int status;
+	int32_t status;
 
 	uart_rtos_config_t *uartConf = (uart_rtos_config_t *)pvParameters;
 
@@ -559,7 +505,7 @@ static void UART_Task(void* pvParameters)
 * @note
 *
 **************************************************************************/
-s32 UART_RTOS_Enable(uart_rtos_config_t *uartConfig)
+int32_t UART_RTOS_Enable(uart_rtos_config_t *uartConfig)
 {
     if(xTaskCreate(UART_Task,"UART_Task", UART_RTOS_TASK_STACK_SIZE, uartConfig, UART_RTOS_TASK_PRIORITY, NULL) != pdPASS)
     {
@@ -584,7 +530,7 @@ s32 UART_RTOS_Enable(uart_rtos_config_t *uartConfig)
 * @note
 *
 **************************************************************************/
-s32 UART_RTOS_Disable(uart_rtos_handle_t *handle)
+int32_t UART_RTOS_Disable(uart_rtos_handle_t *handle)
 {
 	return UART_RTOS_Deinit(handle);
 }
