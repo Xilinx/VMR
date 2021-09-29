@@ -41,8 +41,8 @@ static int xgq_pdi_cb(cl_msg_t *msg, void *arg)
 	int ret = 0;
 
 	/* TODO: the base 0x38000000 should be got from xparameters.h */
-	u32 address = 0x38000000 + (u32)msg->pkt.payload_xclbin.address;
-	u32 size = msg->pkt.payload_xclbin.size;
+	u32 address = 0x38000000 + (u32)msg->data_payload.address;
+	u32 size = msg->data_payload.size;
 	if (size > rh.rh_max_size) {
 		RMGMT_LOG("ERROR: size %d is too big", size);
 		ret = 1;
@@ -54,9 +54,9 @@ static int xgq_pdi_cb(cl_msg_t *msg, void *arg)
 
 	ret = rmgmt_download_rpu_pdi(&rh);
 
-	msg->pkt.head.rcode = ret;
+	msg->hdr.rcode = ret;
 
-	RMGMT_DBG("complete msg id%d, ret %d", msg->pkt.head.cid, ret);
+	RMGMT_DBG("complete msg id%d, ret %d", msg->hdr.cid, ret);
 	cl_msg_handle_complete(msg);
 	return 0;
 }
@@ -66,8 +66,8 @@ static int xgq_xclbin_cb(cl_msg_t *msg, void *arg)
 	int ret = 0;
 
 	/* TODO: the base 0x38000000 should be got from xparameters.h */
-	u32 address = 0x38000000 + (u32)msg->pkt.payload_xclbin.address;
-	u32 size = msg->pkt.payload_xclbin.size;
+	u32 address = 0x38000000 + (u32)msg->data_payload.address;
+	u32 size = msg->data_payload.size;
 	if (size > rh.rh_max_size) {
 		RMGMT_LOG("ERROR: size %d is too big", size);
 		ret = 1;
@@ -81,9 +81,9 @@ static int xgq_xclbin_cb(cl_msg_t *msg, void *arg)
 	ret = rmgmt_download_xclbin(&rh);
 	FreeRTOS_SetupTickInterrupt();
 
-	msg->pkt.head.rcode = ret;
+	msg->hdr.rcode = ret;
 
-	RMGMT_DBG("complete msg id%d, ret %d", msg->pkt.head.cid, ret);
+	RMGMT_DBG("complete msg id%d, ret %d", msg->hdr.cid, ret);
 	cl_msg_handle_complete(msg);
 	return 0;
 }
@@ -107,10 +107,13 @@ static int check_firewall()
 
 static int xgq_af_cb(cl_msg_t *msg, void *arg)
 {
-	msg->pkt.head.rcode = check_firewall();
+	msg->hdr.rcode = check_firewall();
 
-	RMGMT_DBG("complete msg id%d, ret %d",
-		msg->pkt.head.cid, msg->pkt.head.rcode);
+	RMGMT_LOG("complete msg id %d, ret 0x%x",
+		msg->hdr.cid, msg->hdr.rcode);
+
+	/* workaround due to CU config will trigger this */
+	msg->hdr.rcode = 0;
 
 	cl_msg_handle_complete(msg);
 	return 0;
@@ -125,9 +128,9 @@ static void pvXGQTask( void *pvParameters )
 	for ( ;; )
 	{
 		vTaskDelay( x1second );
-		cnt++;
 
-		xil_printf("%d\r", cnt);
+		cnt++;
+		xil_printf("%d  xgqTask\r", cnt);
 
 		if (xgq_pdi_flag == 0 &&
 		    cl_msg_handle_init(&pdi_hdl, CL_MSG_PDI, xgq_pdi_cb, NULL) == 0) {

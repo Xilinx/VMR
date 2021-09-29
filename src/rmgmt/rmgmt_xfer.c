@@ -11,9 +11,9 @@
 #include "cl_io.h"
 #include "cl_flash.h"
 
-#define PR_ISOLATION_REG 0x80020000
-#define PR_ISOLATION_FREEZE 0x0
-#define PR_ISOLATION_UNFREEZE 0x3
+/*TODO: get this info from xparameters.h when xsa is stable */
+#define PR_ISOLATION_REG 	0x80020000
+#define UCS_CONTROL_REG 	0x81002008
 
 extern int ospi_flash_erase(flash_area_t area, u32 offset, u32 len);
 
@@ -189,6 +189,69 @@ int rmgmt_init_handler(struct rmgmt_handler *rh)
 	return 0;
 }
 
+static void axigate_freeze()
+{
+	u32 freeze = 0;
+
+	IO_SYNC_WRITE32(0, PR_ISOLATION_REG);
+	vTaskDelay(1);
+}
+
+static void axigate_free()
+{
+	u32 free = 0;
+
+	IO_SYNC_WRITE32(0x3, PR_ISOLATION_REG);
+}
+
+static void ucs_stop()
+{
+	u32 ucs = 0;
+	
+	ucs = IO_SYNC_READ32(UCS_CONTROL_REG);
+	if (!ucs)
+		return;
+
+	IO_SYNC_WRITE32(0x0, UCS_CONTROL_REG);
+}
+
+static void ucs_start()
+{
+	u32 ucs = 0;
+	
+	ucs = IO_SYNC_READ32(UCS_CONTROL_REG);
+	if (ucs)
+		return;
+
+	IO_SYNC_WRITE32(0x1, UCS_CONTROL_REG);
+}
+
+static void check_firewall()
+{
+#define FAULT_STATUS            0x0
+#define BIT(n) 			(1UL << (n))
+#define READ_RESPONSE_BUSY      BIT(0)
+#define WRITE_RESPONSE_BUSY     BIT(16)
+#define FIREWALL_STATUS_BUSY    (READ_RESPONSE_BUSY | WRITE_RESPONSE_BUSY)
+#define IS_FIRED(val) 		(val & ~FIREWALL_STATUS_BUSY)
+
+
+	u32 fire = 0;
+
+	fire = IO_SYNC_READ32(0x80001000);
+
+	if (IS_FIRED(fire)) {
+		IO_SYNC_WRITE32(0x0, 0x80001004);
+		IO_SYNC_WRITE32(0x1, 0x80001008);
+	}
+
+	if (IS_FIRED(fire)) {
+		RMGMT_LOG("failed clear firewall");
+	} else {
+		RMGMT_LOG("done clean firewall");
+	}
+}
+
 static int fpga_pl_pdi_download(UINTPTR data, UINTPTR size)
 {
 	int ret;
@@ -201,12 +264,14 @@ static int fpga_pl_pdi_download(UINTPTR data, UINTPTR size)
 		return ret;
 	}
 
-	/* isolate PR gate */
-	IO_SYNC_WRITE32(PR_ISOLATION_FREEZE, PR_ISOLATION_REG);
+
+	//axigate_freeze();
+	//ucs_stop();
 
 	ret = XFpga_BitStream_Load(&XFpgaInstance, data, KeyAddr, size, PDI_LOAD);
-	
-	IO_SYNC_WRITE32(PR_ISOLATION_UNFREEZE, PR_ISOLATION_REG);
+
+	ucs_start();
+	//axigate_free();
 	
 	return ret;
 }
