@@ -191,16 +191,12 @@ int rmgmt_init_handler(struct rmgmt_handler *rh)
 
 static void axigate_freeze()
 {
-	u32 freeze = 0;
-
 	IO_SYNC_WRITE32(0, PR_ISOLATION_REG);
 	vTaskDelay(1);
 }
 
 static void axigate_free()
 {
-	u32 free = 0;
-
 	IO_SYNC_WRITE32(0x3, PR_ISOLATION_REG);
 }
 
@@ -224,32 +220,6 @@ static void ucs_start()
 		return;
 
 	IO_SYNC_WRITE32(0x1, UCS_CONTROL_REG);
-}
-
-static void check_firewall()
-{
-#define FAULT_STATUS            0x0
-#define BIT(n) 			(1UL << (n))
-#define READ_RESPONSE_BUSY      BIT(0)
-#define WRITE_RESPONSE_BUSY     BIT(16)
-#define FIREWALL_STATUS_BUSY    (READ_RESPONSE_BUSY | WRITE_RESPONSE_BUSY)
-#define IS_FIRED(val) 		(val & ~FIREWALL_STATUS_BUSY)
-
-
-	u32 fire = 0;
-
-	fire = IO_SYNC_READ32(0x80001000);
-
-	if (IS_FIRED(fire)) {
-		IO_SYNC_WRITE32(0x0, 0x80001004);
-		IO_SYNC_WRITE32(0x1, 0x80001008);
-	}
-
-	if (IS_FIRED(fire)) {
-		RMGMT_LOG("failed clear firewall");
-	} else {
-		RMGMT_LOG("done clean firewall");
-	}
 }
 
 static int fpga_pl_pdi_download(UINTPTR data, UINTPTR size)
