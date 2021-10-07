@@ -53,6 +53,7 @@ static int xgq_pdi_cb(cl_msg_t *msg, void *arg)
 	cl_memcpy_fromio(address, rh.rh_data, size);
 
 	ret = rmgmt_download_rpu_pdi(&rh);
+	//ret = rmgmt_download_apu_pdi(&rh);
 
 	msg->hdr.rcode = ret;
 
@@ -130,7 +131,7 @@ static void pvXGQTask( void *pvParameters )
 		vTaskDelay( x1second );
 
 		cnt++;
-		xil_printf("%d  xgqTask\r", cnt);
+		//xil_printf("%d  xgqTask\r", cnt);
 
 		if (xgq_pdi_flag == 0 &&
 		    cl_msg_handle_init(&pdi_hdl, CL_MSG_PDI, xgq_pdi_cb, NULL) == 0) {

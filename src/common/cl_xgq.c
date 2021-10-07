@@ -16,6 +16,8 @@
 
 #define MSG_LOG(fmt, arg...) \
 	CL_LOG(APP_MAIN, fmt, ##arg)
+#define MSG_DBG(fmt, arg...) \
+	CL_DBG(APP_MAIN, fmt, ##arg)
 
 /* Note: eventually we should be driven by xparameter.h */
 #define RPU_RING_BASE (0x38000000)
@@ -116,8 +118,7 @@ static int submit_to_queue(u32 sq_addr)
 	Xil_DCacheFlush();
 
 	msg.hdr.cid = cmd->cid;
-	MSG_LOG("opcode %d, count %d, state %d, cid %d",
-		cmd->opcode, cmd->count, cmd->state, cmd->cid);
+	MSG_DBG("get cid %d opcode %d", cmd->cid, cmd->opcode);
 
 	/* Convert xgq opcode to cl_common msg type */
 	switch (cmd->opcode) {
@@ -127,7 +128,7 @@ static int submit_to_queue(u32 sq_addr)
 	case XRT_CMD_OP_DOWNLOAD_PDI:
 		msg.hdr.type = CL_MSG_PDI;
 		break;
-	case XRT_CMD_OP_FIREWALL:
+	case XRT_CMD_OP_GET_LOG_PAGE:
 		msg.hdr.type = CL_MSG_AF;
 		break;
 	case XRT_CMD_OP_CLOCK:
@@ -140,8 +141,6 @@ static int submit_to_queue(u32 sq_addr)
 		MSG_LOG("Unhandled opcode:%d", cmd->opcode);
 		return -1;
 	}
-
-	MSG_LOG("handle type %d", msg.hdr.type);
 
 	/*
 	 * set up payload based on msg type
@@ -216,7 +215,6 @@ static void process_from_queue(cl_msg_t *msg)
 				MSG_LOG("no handle for msg type %d", msg->hdr.type);
 				return;
 			}
-			MSG_LOG("handle msg type %d", msg->hdr.type);
 			hdl->msg_cb(msg, hdl->arg);
 			return;
 		}
@@ -234,7 +232,7 @@ static void quickTask (void *pvParameters )
 	cl_msg_t msg;
 
 	for( ;; ) {
-		MSG_LOG("Block to wait for receiveTask to notify ");
+		MSG_DBG("Block to wait for receiveTask to notify ");
 
 		ulNotifiedValue = ulTaskNotifyTake( pdFALSE, portMAX_DELAY );
 		if (ulNotifiedValue > 0 &&
@@ -253,7 +251,7 @@ static void slowTask (void *pvParameters )
 	cl_msg_t msg;
 
 	for( ;; ) {
-		MSG_LOG("Block to wait for receiveTask to notify ");
+		MSG_DBG("Block to wait for receiveTask to notify ");
 
 		ulNotifiedValue = ulTaskNotifyTake( pdFALSE, portMAX_DELAY );
 		if (ulNotifiedValue > 0 &&
@@ -277,7 +275,7 @@ static void receiveTask(void *pvParameters)
 		vTaskDelay(xBlockTime);
 
 		cnt++;
-		xil_printf("%d receiveTask\r", cnt);
+		//xil_printf("%d receiveTask\r", cnt);
 
 		/* when cnt is not 0, xgq is healthy */
 		IO_SYNC_WRITE32(cnt, RPU_XGQ_DEV_STATE_OFFSET);	

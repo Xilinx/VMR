@@ -7,7 +7,7 @@
 ## Build Instructions
     To build entire platform and applications:
       cd build
-      ./build.sh -xsa /public/bugcases/CR/1105000-1105999/1105240/2021_09_08_Drop_9/xilinx_vck5000_gen4x8_xdma_base_2.xsa
+      ./build.sh -xsa /public/bugcases/CR/1105000-1105999/1105240/2021_10_06_Drop_15/xilinx_vck5000_gen4x8_xdma_base_1.xsa
 
       /* Older working xsa */
       ./build.sh -xsa /public/bugcases/CR/1086000-1086999/1086872/20210412/gen3x16.xsa
