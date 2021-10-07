@@ -16,6 +16,8 @@
 
 #define MSG_LOG(fmt, arg...) \
 	CL_LOG(APP_MAIN, fmt, ##arg)
+#define MSG_DBG(fmt, arg...) \
+	CL_DBG(APP_MAIN, fmt, ##arg)
 
 /* Note: eventually we should be driven by xparameter.h */
 #define RPU_RING_BASE (0x38000000)
@@ -44,6 +46,8 @@ static msg_handle_t handles[] = {
 	{ .type = CL_MSG_PDI },
 	{ .type = CL_MSG_XCLBIN },
 	{ .type = CL_MSG_AF },
+	{ .type = CL_MSG_CLOCK },
+	{ .type = CL_MSG_VMC },
 };
 
 int cl_msg_handle_init(msg_handle_t **hdl, cl_msg_type_t type,
@@ -82,8 +86,8 @@ void cl_msg_handle_fini(msg_handle_t *hdl)
 int cl_msg_handle_complete(cl_msg_t *msg)
 {
 	struct xrt_com_queue_entry cq_cmd = {
-		.rcode = msg->pkt.head.rcode,
-		.cid = msg->pkt.head.cid,
+		.rcode = msg->hdr.rcode,
+		.cid = msg->hdr.cid,
 		.state = XRT_CMD_STATE_COMPLETED,
 	};
 	u64 cq_slot_addr;
@@ -105,18 +109,51 @@ int cl_msg_handle_complete(cl_msg_t *msg)
  */
 static int submit_to_queue(u32 sq_addr)
 {
-	int msg_type;
 	struct xrt_sub_queue_entry *cmd = (struct xrt_sub_queue_entry *)sq_addr;
+	struct xrt_cmd_sq *sq = (struct xrt_cmd_sq *)sq_addr;
 	/* cast data to RPU common message type */
 	cl_msg_t msg = { 0 };
 
-	cl_memcpy_fromio((u32)cmd + sizeof(*cmd), &msg, sizeof(cl_msg_t));
-	msg.pkt.head.cid = cmd->cid; //remember the cid, cmd will be freed
-	msg_type = msg.pkt.head.type;
+	/* Sync data from cache to memory */
+	Xil_DCacheFlush();
 
-	switch (msg_type) {
-	case CL_MSG_PDI:
+	msg.hdr.cid = cmd->cid;
+	MSG_DBG("get cid %d opcode %d", cmd->cid, cmd->opcode);
+
+	/* Convert xgq opcode to cl_common msg type */
+	switch (cmd->opcode) {
+	case XRT_CMD_OP_LOAD_XCLBIN:
+		msg.hdr.type = CL_MSG_XCLBIN;
+		break;
+	case XRT_CMD_OP_DOWNLOAD_PDI:
+		msg.hdr.type = CL_MSG_PDI;
+		break;
+	case XRT_CMD_OP_GET_LOG_PAGE:
+		msg.hdr.type = CL_MSG_AF;
+		break;
+	case XRT_CMD_OP_CLOCK:
+		msg.hdr.type = CL_MSG_CLOCK;
+		break;
+	case XRT_CMD_OP_VMC:
+		msg.hdr.type = CL_MSG_VMC;
+		break;
+	default:
+		MSG_LOG("Unhandled opcode:%d", cmd->opcode);
+		return -1;
+	}
+
+	/*
+	 * set up payload based on msg type
+	 * quick task handles time sensitive requests
+	 * slow task handles time insensitive requests
+	 */
+	switch (msg.hdr.type) {
 	case CL_MSG_XCLBIN:
+	case CL_MSG_PDI:
+
+		msg.data_payload.address = (u32)sq->data_payload.address;
+		msg.data_payload.size = (u32)sq->data_payload.size;
+
 		/* send will do deep copy of msg, so that we preserved data */
 		if (xQueueSend(slowTaskQueue, &msg, (TickType_t) 0) != pdPASS) {
 			MSG_LOG("FATAL: failed to send msg");
@@ -125,6 +162,7 @@ static int submit_to_queue(u32 sq_addr)
 		xTaskNotifyGive( slowTaskHandle );
 		break;
 	case CL_MSG_AF:
+	case CL_MSG_VMC:
 		if (xQueueSend(quickTaskQueue, &msg, (TickType_t) 0) != pdPASS) {
 			MSG_LOG("FATAL: failed to send msg");
 			return -1;
@@ -132,7 +170,7 @@ static int submit_to_queue(u32 sq_addr)
 		xTaskNotifyGive( quickTaskHandle );
 		break;
 	default:
-		MSG_LOG("Unknown mest type:%d", msg_type);
+		MSG_LOG("Unknown msg type:%d", msg.hdr.type);
 		return -1;
 	}
 
@@ -142,33 +180,22 @@ static int submit_to_queue(u32 sq_addr)
 static void abort_msg(u32 sq_addr)
 {
 	struct xrt_cmd_configure *cmd = (struct xrt_cmd_configure *)sq_addr;
-	cl_msg_t *msg = (cl_msg_t *)cmd->data;
-	msg->pkt.head.cid = cmd->cid;
-	msg->pkt.head.rcode = 1;
-	cl_msg_handle_complete(msg);
+	cl_msg_t msg = { 0 };
+
+	msg.hdr.cid = cmd->cid;
+	msg.hdr.rcode = -EINVAL;
+
+	MSG_LOG("cid %d", cmd->cid);
+	cl_msg_handle_complete(&msg);
 }
 
 static void inline process_msg(u32 sq_slot_addr)
 {
-	/*
-	 * Cast incoming sq_slot_addr to customized cmd,
-	 * then we can decode type of this cmd,
-	 * and dispatch it into software queue.
-	 */
-	struct xrt_sub_queue_entry *cmd = (struct xrt_sub_queue_entry *)sq_slot_addr;
-
-	switch (cmd->opcode) {
-	case XRT_CMD_OP_CONFIGURE:
-		MSG_LOG("handling opcode 0x%x cid %d", cmd->opcode, cmd->cid);
-		if (submit_to_queue(sq_slot_addr) != 0)
-			break;
-		return;
-	default:
-		MSG_LOG("unhandled opcode 0x%x", cmd->opcode);
-		break;
+	
+	if (submit_to_queue(sq_slot_addr)) {
+		abort_msg(sq_slot_addr);
 	}
-	/*TODO: complete with error */
-	abort_msg(sq_slot_addr);
+
 	return;
 }
 
@@ -183,20 +210,19 @@ static void process_from_queue(cl_msg_t *msg)
 
 	for (int i = 0; i < ARRAY_SIZE(handles); i++) {
 		hdl = &handles[i];
-		if (hdl->type == msg->pkt.head.type) {
+		if (hdl->type == msg->hdr.type) {
 			if (hdl->msg_cb == NULL) {
-				MSG_LOG("no handle for msg type %d", msg->pkt.head.type);
+				MSG_LOG("no handle for msg type %d", msg->hdr.type);
 				return;
 			}
-			//MSG_LOG("handle msg type %d", msg->pkt.head.type);
 			hdl->msg_cb(msg, hdl->arg);
 			return;
 		}
 	}
 
 	/* complete unhandled msg too */
-	MSG_LOG("unhandled msg type %d", msg->pkt.head.type);
-	msg->pkt.head.rcode = -EINVAL;
+	MSG_LOG("unhandled msg type %d", msg->hdr.type);
+	msg->hdr.rcode = -EINVAL;
 	cl_msg_handle_complete(msg);
 }
 
@@ -206,7 +232,7 @@ static void quickTask (void *pvParameters )
 	cl_msg_t msg;
 
 	for( ;; ) {
-		MSG_LOG("Block to wait for receiveTask to notify ");
+		MSG_DBG("Block to wait for receiveTask to notify ");
 
 		ulNotifiedValue = ulTaskNotifyTake( pdFALSE, portMAX_DELAY );
 		if (ulNotifiedValue > 0 &&
@@ -225,7 +251,7 @@ static void slowTask (void *pvParameters )
 	cl_msg_t msg;
 
 	for( ;; ) {
-		MSG_LOG("Block to wait for receiveTask to notify ");
+		MSG_DBG("Block to wait for receiveTask to notify ");
 
 		ulNotifiedValue = ulTaskNotifyTake( pdFALSE, portMAX_DELAY );
 		if (ulNotifiedValue > 0 &&
@@ -249,17 +275,15 @@ static void receiveTask(void *pvParameters)
 		vTaskDelay(xBlockTime);
 
 		cnt++;
+		//xil_printf("%d receiveTask\r", cnt);
+
 		/* when cnt is not 0, xgq is healthy */
 		IO_SYNC_WRITE32(cnt, RPU_XGQ_DEV_STATE_OFFSET);	
 
 		if (xgq_consume(&rpu_xgq, &sq_slot_addr))
 			continue;
 
-		MSG_LOG("xgq_consume slot 0x%x", (u32)sq_slot_addr);
-
 		process_msg(sq_slot_addr);
-
-		MSG_LOG("slot 0x%x consumed", (u32)sq_slot_addr);
 
 		xgq_notify_peer_consumed(&rpu_xgq);
 	}

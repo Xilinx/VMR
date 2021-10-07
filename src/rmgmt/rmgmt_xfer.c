@@ -11,9 +11,9 @@
 #include "cl_io.h"
 #include "cl_flash.h"
 
-#define PR_ISOLATION_REG 0x80020000
-#define PR_ISOLATION_FREEZE 0x0
-#define PR_ISOLATION_UNFREEZE 0x3
+/*TODO: get this info from xparameters.h when xsa is stable */
+#define PR_ISOLATION_REG 	0x80020000 
+#define UCS_CONTROL_REG 	0x80031000
 
 extern int ospi_flash_erase(flash_area_t area, u32 offset, u32 len);
 
@@ -189,6 +189,39 @@ int rmgmt_init_handler(struct rmgmt_handler *rh)
 	return 0;
 }
 
+static void axigate_freeze()
+{
+	IO_SYNC_WRITE32(0, PR_ISOLATION_REG);
+	vTaskDelay(1);
+}
+
+static void axigate_free()
+{
+	IO_SYNC_WRITE32(0x3, PR_ISOLATION_REG);
+}
+
+static void ucs_stop()
+{
+	u32 ucs = 0;
+	
+	ucs = IO_SYNC_READ32(UCS_CONTROL_REG);
+	if (!ucs)
+		return;
+
+	IO_SYNC_WRITE32(0x0, UCS_CONTROL_REG);
+}
+
+static void ucs_start()
+{
+	u32 ucs = 0;
+	
+	ucs = IO_SYNC_READ32(UCS_CONTROL_REG);
+	if (ucs)
+		return;
+
+	IO_SYNC_WRITE32(0x1, UCS_CONTROL_REG);
+}
+
 static int fpga_pl_pdi_download(UINTPTR data, UINTPTR size)
 {
 	int ret;
@@ -201,12 +234,14 @@ static int fpga_pl_pdi_download(UINTPTR data, UINTPTR size)
 		return ret;
 	}
 
-	/* isolate PR gate */
-	IO_SYNC_WRITE32(PR_ISOLATION_FREEZE, PR_ISOLATION_REG);
+
+	axigate_freeze();
+	ucs_stop();
 
 	ret = XFpga_BitStream_Load(&XFpgaInstance, data, KeyAddr, size, PDI_LOAD);
-	
-	IO_SYNC_WRITE32(PR_ISOLATION_UNFREEZE, PR_ISOLATION_REG);
+
+	ucs_start();
+	axigate_free();
 	
 	return ret;
 }
@@ -220,7 +255,6 @@ static int rmgmt_fpga_download(struct rmgmt_handler *rh, u32 len)
 
 	ret = rmgmt_xclbin_section_info(axlf, BITSTREAM_PARTIAL_PDI, &offset, &size);
 	if (ret) {
-		set_status(rh, XRT_XFR_PKT_STATUS_FAIL);
 		RMGMT_LOG("get PARTIAL PDI from xclbin failed %d\r\n", ret);
 		goto out;
 	}
@@ -230,12 +264,10 @@ static int rmgmt_fpga_download(struct rmgmt_handler *rh, u32 len)
 	ret = fpga_pl_pdi_download((UINTPTR)((const char *)axlf + offset),
 		(UINTPTR)size);
 	if (ret != XFPGA_SUCCESS) {
-		set_status(rh, XRT_XFR_PKT_STATUS_FAIL);
 		RMGMT_LOG("FPGA load pdi failed %d\r\n", ret);
 		goto out;
 	}
 
-	set_status(rh, XRT_XFR_PKT_STATUS_DONE);
 out:
 	return ret;
 }
@@ -272,34 +304,6 @@ int rmgmt_load_apu(struct rmgmt_handler *rh)
 	return ret;
 }
 
-/*
-static int ospi_flash_write_with_retry(u32 baseAddress, u8 *data, u32 size)
-{
-	int retry = 0, ret;
-
-	ret = ospi_flash_write(baseAddress, data, size);
-	while (ret != 0 && retry++ < 10) {
-		RMGMT_DBG("ospi_flash retrying... %d\r\n", retry);
-		ret = ospi_flash_write(baseAddress, data, size);
-	}
-
-	return ret;
-}
-
-static int ospi_flash_erase_with_retry(u32 baseAddress, u32 size)
-{
-	int retry = 0, ret;
-
-	ret = ospi_flash_erase(baseAddress, size);
-	while (ret != 0 && retry++ < 10) {
-		RMGMT_DBG("ospi_erase retrying... %d\r\n", retry);
-		ret = ospi_flash_erase(baseAddress, size);
-	}
-
-	return ret;
-}
-*/
-
 static int rmgmt_ospi_rpu_download(struct rmgmt_handler *rh, u32 len)
 {
 	int ret;
@@ -310,7 +314,6 @@ static int rmgmt_ospi_rpu_download(struct rmgmt_handler *rh, u32 len)
 	/* erase */
 	ret = ospi_flash_erase(CL_FLASH_BOOT, 0, len);
 	if (ret) {
-		set_status(rh, XRT_XFR_PKT_STATUS_FAIL);
 		RMGMT_LOG("OSPI fails to load pdi %d", ret);
 		goto out;
 	}
@@ -318,18 +321,28 @@ static int rmgmt_ospi_rpu_download(struct rmgmt_handler *rh, u32 len)
 	/* write */
 	ret = ospi_flash_write(CL_FLASH_BOOT, rh->rh_data, 0, len);
 	if (ret) {
-		set_status(rh, XRT_XFR_PKT_STATUS_FAIL);
 		RMGMT_LOG("OSPI fails to load pdi %d", ret);
 		goto out;
 	}
 
-	/* need ready verify */
-
-	set_status(rh, XRT_XFR_PKT_STATUS_DONE);
+	/*TODO: need authentication */
 out:
 	return ret;
 }
 
+static int rmgmt_ospi_apu_download(struct rmgmt_handler *rh, u32 len)
+{
+	int ret = 0;
+
+	Xil_DCacheFlush();
+
+	ret = fpga_pl_pdi_download((UINTPTR)rh->rh_data, (UINTPTR)len);
+
+	return ret;
+}
+
+/* Temporary disable old apu design flow */
+#if 0
 static int rmgmt_ospi_apu_download(struct rmgmt_handler *rh, u32 len)
 {
 	int ret;
@@ -372,6 +385,7 @@ out:
 	RMGMT_LOG("<- rmgmt_ospi_apu_download %d\r\n", ret);
 	return ret;
 }
+#endif
 
 static int rmgmt_recv_pkt(struct rmgmt_handler *rh, u32 *len)
 {

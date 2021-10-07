@@ -2,9 +2,6 @@
 
 TOOL_VERSION="2021.2"
 STABLE_VITIS=/proj/xbuilds/${TOOL_VERSION}_daily_latest/installs/lin64/Vitis/HEAD/settings64.sh
-STABLE_XRT=/proj/xbuilds/${TOOL_VERSION}_daily_latest/xbb/xrt/packages/setenv.sh
-#STABLE_VITIS=/proj/xbuilds/2020.2_daily_latest/installs/lin64/Vitis/HEAD/settings64.sh
-#STABLE_XRT=/proj/xbuilds/2021.2_daily_latest/xbb/xrt/packages/setenv.sh
 
 default_env() {
 	echo -ne "no xsct, using default stable version: "
@@ -82,11 +79,6 @@ else
 		echo -ne "Detected xsct version: ${version}, Please use xsct from ${TOOL_VERSION} to build"
 		exit
 	fi
-fi
-
-if [ -z $XILINX_XRT ];then
-	. ${STABLE_XRT}
-	echo $XILINX_XRT
 fi
 
 if [[ $BUILD_CLEAN == 1 ]];then
