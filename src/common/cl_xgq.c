@@ -11,7 +11,7 @@
 #include "cl_log.h"
 #include "cl_msg.h"
 #include "cl_main.h"
-#include "xgq_cmd.h"
+#include "xgq_cmd_vmr.h"
 #include "cl_xgq_plat.h"
 
 #define MSG_LOG(fmt, arg...) \
@@ -42,12 +42,17 @@ static QueueHandle_t slowTaskQueue = NULL;
 static struct xgq rpu_xgq;
 static int xgq_io_hdl = 0;
 
+enum task_level {
+	TASK_SLOW = 0,
+	TASK_QUICK,
+};
+
 static msg_handle_t handles[] = {
 	{ .type = CL_MSG_PDI },
 	{ .type = CL_MSG_XCLBIN },
 	{ .type = CL_MSG_AF },
 	{ .type = CL_MSG_CLOCK },
-	{ .type = CL_MSG_VMC },
+	{ .type = CL_MSG_SENSOR },
 };
 
 int cl_msg_handle_init(msg_handle_t **hdl, cl_msg_type_t type,
@@ -61,7 +66,7 @@ int cl_msg_handle_init(msg_handle_t **hdl, cl_msg_type_t type,
 	for (int i = 0; i < ARRAY_SIZE(handles); i++) {
 		if (handles[i].type == type) {
 			if (handles[i].msg_cb != NULL) {
-				MSG_LOG("FATAL: dup init with same type");
+				MSG_LOG("FATAL: dup init with same type %d", type);
 				return -1;
 			}
 			handles[i].msg_cb = cb;
@@ -85,19 +90,70 @@ void cl_msg_handle_fini(msg_handle_t *hdl)
 
 int cl_msg_handle_complete(cl_msg_t *msg)
 {
-	struct xrt_com_queue_entry cq_cmd = {
+	struct xgq_com_queue_entry cq_cmd = {
+		.hdr.cid = msg->hdr.cid,
+		.hdr.state = XGQ_CMD_STATE_COMPLETED,
 		.rcode = msg->hdr.rcode,
-		.cid = msg->hdr.cid,
-		.state = XRT_CMD_STATE_COMPLETED,
 	};
 	u64 cq_slot_addr;
 
 	xgq_produce(&rpu_xgq, &cq_slot_addr);
 
-	cl_memcpy_toio(cq_slot_addr, &cq_cmd, sizeof(struct xrt_com_queue_entry));
+	cl_memcpy_toio(cq_slot_addr, &cq_cmd, sizeof(struct xgq_com_queue_entry));
 	xgq_notify_peer_produced(&rpu_xgq);
 
 	return 0;
+}
+
+static int dispatch_to_queue(cl_msg_t *msg, int task_level)
+{
+	switch (task_level) {
+	case TASK_SLOW:
+		/* send will do deep copy of msg, so that we preserved data */
+		if (xQueueSend(slowTaskQueue, msg, (TickType_t) 0) != pdPASS) {
+			MSG_LOG("FATAL: failed to send msg");
+			return -1;
+		};
+		xTaskNotifyGive( slowTaskHandle );
+		break;
+	case TASK_QUICK:
+		if (xQueueSend(quickTaskQueue, msg, (TickType_t) 0) != pdPASS) {
+			MSG_LOG("FATAL: failed to send msg");
+			return -1;
+		};
+		xTaskNotifyGive( quickTaskHandle );
+		break;
+	default:
+		MSG_LOG("FATAL: unhandled task_level %d", task_level);
+		return -1;
+	}
+
+	return 0;
+}
+
+static cl_sensor_type_t convert_pid(enum xgq_cmd_sensor_page_id xgq_id)
+{
+	cl_sensor_type_t sid = CL_SENSOR_ALL;
+
+	switch (xgq_id) {
+	case XGQ_CMD_SENSOR_PID_BDINFO:
+		sid = CL_SENSOR_BDINFO;
+		break;	
+	case XGQ_CMD_SENSOR_PID_TEMP:
+		sid = CL_SENSOR_TEMP;
+		break;	
+	case XGQ_CMD_SENSOR_PID_VOLTAGE:
+		sid = CL_SENSOR_VOLTAGE;
+		break;	
+	case XGQ_CMD_SENSOR_PID_POWER:
+		sid = CL_SENSOR_POWER;
+		break;	
+	default:
+		sid = CL_SENSOR_ALL;
+		break;
+	}
+
+	return sid;
 }
 
 /*
@@ -109,36 +165,38 @@ int cl_msg_handle_complete(cl_msg_t *msg)
  */
 static int submit_to_queue(u32 sq_addr)
 {
-	struct xrt_sub_queue_entry *cmd = (struct xrt_sub_queue_entry *)sq_addr;
-	struct xrt_cmd_sq *sq = (struct xrt_cmd_sq *)sq_addr;
+	struct xgq_sub_queue_entry *cmd = (struct xgq_sub_queue_entry *)sq_addr;
+	struct xgq_cmd_sq *sq = (struct xgq_cmd_sq *)sq_addr;
+	int ret = 0;
+
 	/* cast data to RPU common message type */
 	cl_msg_t msg = { 0 };
 
 	/* Sync data from cache to memory */
 	Xil_DCacheFlush();
 
-	msg.hdr.cid = cmd->cid;
-	MSG_DBG("get cid %d opcode %d", cmd->cid, cmd->opcode);
+	msg.hdr.cid = cmd->hdr.cid;
+	MSG_DBG("get cid %d opcode %d", cmd->hdr.cid, cmd->hdr.opcode);
 
 	/* Convert xgq opcode to cl_common msg type */
-	switch (cmd->opcode) {
-	case XRT_CMD_OP_LOAD_XCLBIN:
+	switch (cmd->hdr.opcode) {
+	case XGQ_CMD_OP_LOAD_XCLBIN:
 		msg.hdr.type = CL_MSG_XCLBIN;
 		break;
-	case XRT_CMD_OP_DOWNLOAD_PDI:
+	case XGQ_CMD_OP_DOWNLOAD_PDI:
 		msg.hdr.type = CL_MSG_PDI;
 		break;
-	case XRT_CMD_OP_GET_LOG_PAGE:
+	case XGQ_CMD_OP_GET_LOG_PAGE:
 		msg.hdr.type = CL_MSG_AF;
 		break;
-	case XRT_CMD_OP_CLOCK:
+	case XGQ_CMD_OP_CLOCK:
 		msg.hdr.type = CL_MSG_CLOCK;
 		break;
-	case XRT_CMD_OP_VMC:
-		msg.hdr.type = CL_MSG_VMC;
+	case XGQ_CMD_OP_SENSOR:
+		msg.hdr.type = CL_MSG_SENSOR;
 		break;
 	default:
-		MSG_LOG("Unhandled opcode:%d", cmd->opcode);
+		MSG_LOG("Unhandled opcode:%d", cmd->hdr.opcode);
 		return -1;
 	}
 
@@ -149,37 +207,50 @@ static int submit_to_queue(u32 sq_addr)
 	 */
 	switch (msg.hdr.type) {
 	case CL_MSG_XCLBIN:
+		msg.data_payload.address = (u32)sq->xclbin_payload.address;
+		msg.data_payload.size = (u32)sq->xclbin_payload.size;
+
+		ret = dispatch_to_queue(&msg, TASK_SLOW);
+		break;
 	case CL_MSG_PDI:
+		msg.data_payload.address = (u32)sq->pdi_payload.address;
+		msg.data_payload.size = (u32)sq->pdi_payload.size;
 
-		msg.data_payload.address = (u32)sq->data_payload.address;
-		msg.data_payload.size = (u32)sq->data_payload.size;
-
-		/* send will do deep copy of msg, so that we preserved data */
-		if (xQueueSend(slowTaskQueue, &msg, (TickType_t) 0) != pdPASS) {
-			MSG_LOG("FATAL: failed to send msg");
-			return -1;
-		};
-		xTaskNotifyGive( slowTaskHandle );
+		ret = dispatch_to_queue(&msg, TASK_SLOW);
 		break;
 	case CL_MSG_AF:
-	case CL_MSG_VMC:
-		if (xQueueSend(quickTaskQueue, &msg, (TickType_t) 0) != pdPASS) {
-			MSG_LOG("FATAL: failed to send msg");
-			return -1;
-		};
-		xTaskNotifyGive( quickTaskHandle );
+		ret = dispatch_to_queue(&msg, TASK_QUICK);
+		break;
+	case CL_MSG_CLOCK:
+		msg.clock_payload.ocl_region = sq->clock_payload.ocl_region;
+		msg.clock_payload.num_clock = sq->clock_payload.num_clock;
+		/* deep copy freq requests */
+		for (int i = 0; i < ARRAY_SIZE(msg.clock_payload.ocl_target_freq);
+			i++) {
+			msg.clock_payload.ocl_target_freq[i] =
+				sq->clock_payload.ocl_target_freq[i];
+		}
+		ret = dispatch_to_queue(&msg, TASK_QUICK);
+		break;
+	case CL_MSG_SENSOR:
+		msg.log_payload.address = (u32)sq->sensor_payload.address;
+		msg.log_payload.size = (u32)sq->sensor_payload.size;
+		msg.log_payload.pid = convert_pid(sq->sensor_payload.pid);
+
+		ret = dispatch_to_queue(&msg, TASK_SLOW);
 		break;
 	default:
 		MSG_LOG("Unknown msg type:%d", msg.hdr.type);
-		return -1;
+		ret = -1;
+		break;
 	}
 
-	return 0;
+	return ret;
 }
 
 static void abort_msg(u32 sq_addr)
 {
-	struct xrt_cmd_configure *cmd = (struct xrt_cmd_configure *)sq_addr;
+	struct xgq_cmd_sq_hdr *cmd = (struct xgq_cmd_sq_hdr *)sq_addr;
 	cl_msg_t msg = { 0 };
 
 	msg.hdr.cid = cmd->cid;
@@ -294,7 +365,6 @@ static int init_xgq()
 	int ret = 0;
 	size_t ring_len = RPU_RING_LEN;
 
-	MSG_LOG("->");
 #if 0
 	MSG_LOG("write range 0x%x to 0x%x all zero", RPU_RING_BASE, RPU_RING_BASE + 0xfff);
 	{
@@ -326,8 +396,6 @@ static int init_xgq()
         MSG_LOG("CQ xr_produced_addr 0x%lx", (u32)rpu_xgq.xq_cq.xr_produced_addr);
         MSG_LOG("CQ xr_consumed_addr 0x%lx", (u32)rpu_xgq.xq_cq.xr_consumed_addr);
         MSG_LOG("================================================");
-
-	MSG_LOG("<-");
 
 	return 0;
 }
