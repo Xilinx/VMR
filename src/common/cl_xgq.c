@@ -11,7 +11,7 @@
 #include "cl_log.h"
 #include "cl_msg.h"
 #include "cl_main.h"
-#include "xgq_cmd.h"
+#include "mgmt_xgq_cmd.h"
 #include "cl_xgq_plat.h"
 
 #define MSG_LOG(fmt, arg...) \
@@ -42,12 +42,17 @@ static QueueHandle_t slowTaskQueue = NULL;
 static struct xgq rpu_xgq;
 static int xgq_io_hdl = 0;
 
+enum task_level {
+	TASK_SLOW = 0,
+	TASK_QUICK,
+};
+
 static msg_handle_t handles[] = {
 	{ .type = CL_MSG_PDI },
 	{ .type = CL_MSG_XCLBIN },
 	{ .type = CL_MSG_AF },
 	{ .type = CL_MSG_CLOCK },
-	{ .type = CL_MSG_VMC },
+	{ .type = CL_MSG_SENSOR },
 };
 
 int cl_msg_handle_init(msg_handle_t **hdl, cl_msg_type_t type,
@@ -100,6 +105,57 @@ int cl_msg_handle_complete(cl_msg_t *msg)
 	return 0;
 }
 
+static int dispatch_to_queue(cl_msg_t *msg, int task_level)
+{
+	switch (task_level) {
+	case TASK_SLOW:
+		/* send will do deep copy of msg, so that we preserved data */
+		if (xQueueSend(slowTaskQueue, msg, (TickType_t) 0) != pdPASS) {
+			MSG_LOG("FATAL: failed to send msg");
+			return -1;
+		};
+		xTaskNotifyGive( slowTaskHandle );
+		break;
+	case TASK_QUICK:
+		if (xQueueSend(quickTaskQueue, msg, (TickType_t) 0) != pdPASS) {
+			MSG_LOG("FATAL: failed to send msg");
+			return -1;
+		};
+		xTaskNotifyGive( quickTaskHandle );
+		break;
+	default:
+		MSG_LOG("FATAL: unhandled task_level %d", task_level);
+		return -1;
+	}
+
+	return 0;
+}
+
+static cl_sensor_type_t convert_pid(enum xrt_cmd_sensor_page_id xgq_id)
+{
+	cl_sensor_type_t sid = CL_SENSOR_ALL;
+
+	switch (xgq_id) {
+	case XRT_CMD_SENSOR_PID_BDINFO:
+		sid = CL_SENSOR_BDINFO;
+		break;	
+	case XRT_CMD_SENSOR_PID_TEMP:
+		sid = CL_SENSOR_TEMP;
+		break;	
+	case XRT_CMD_SENSOR_PID_VOLTAGE:
+		sid = CL_SENSOR_VOLTAGE;
+		break;	
+	case XRT_CMD_SENSOR_PID_POWER:
+		sid = CL_SENSOR_POWER;
+		break;	
+	default:
+		sid = CL_SENSOR_ALL;
+		break;
+	}
+
+	return sid;
+}
+
 /*
  * submit dispatch msg to different software queues based on msg_type.
  * The quickTask only handles commands should be complished very fast.
@@ -111,6 +167,8 @@ static int submit_to_queue(u32 sq_addr)
 {
 	struct xrt_sub_queue_entry *cmd = (struct xrt_sub_queue_entry *)sq_addr;
 	struct xrt_cmd_sq *sq = (struct xrt_cmd_sq *)sq_addr;
+	int ret = 0;
+
 	/* cast data to RPU common message type */
 	cl_msg_t msg = { 0 };
 
@@ -134,8 +192,8 @@ static int submit_to_queue(u32 sq_addr)
 	case XRT_CMD_OP_CLOCK:
 		msg.hdr.type = CL_MSG_CLOCK;
 		break;
-	case XRT_CMD_OP_VMC:
-		msg.hdr.type = CL_MSG_VMC;
+	case XRT_CMD_OP_SENSOR_DATA:
+		msg.hdr.type = CL_MSG_SENSOR;
 		break;
 	default:
 		MSG_LOG("Unhandled opcode:%d", cmd->opcode);
@@ -149,32 +207,34 @@ static int submit_to_queue(u32 sq_addr)
 	 */
 	switch (msg.hdr.type) {
 	case CL_MSG_XCLBIN:
+		msg.data_payload.address = (u32)sq->xclbin_payload.address;
+		msg.data_payload.size = (u32)sq->xclbin_payload.size;
+
+		ret = dispatch_to_queue(&msg, TASK_SLOW);
+		break;
 	case CL_MSG_PDI:
+		msg.data_payload.address = (u32)sq->pdi_payload.address;
+		msg.data_payload.size = (u32)sq->pdi_payload.size;
 
-		msg.data_payload.address = (u32)sq->data_payload.address;
-		msg.data_payload.size = (u32)sq->data_payload.size;
-
-		/* send will do deep copy of msg, so that we preserved data */
-		if (xQueueSend(slowTaskQueue, &msg, (TickType_t) 0) != pdPASS) {
-			MSG_LOG("FATAL: failed to send msg");
-			return -1;
-		};
-		xTaskNotifyGive( slowTaskHandle );
+		ret = dispatch_to_queue(&msg, TASK_SLOW);
 		break;
 	case CL_MSG_AF:
-	case CL_MSG_VMC:
-		if (xQueueSend(quickTaskQueue, &msg, (TickType_t) 0) != pdPASS) {
-			MSG_LOG("FATAL: failed to send msg");
-			return -1;
-		};
-		xTaskNotifyGive( quickTaskHandle );
+		ret = dispatch_to_queue(&msg, TASK_QUICK);
+		break;
+	case CL_MSG_SENSOR:
+		msg.log_payload.address = (u32)sq->sensor_payload.address;
+		msg.log_payload.size = (u32)sq->sensor_payload.size;
+		msg.log_payload.pid = convert_pid(sq->sensor_payload.pid);
+
+		ret = dispatch_to_queue(&msg, TASK_SLOW);
 		break;
 	default:
 		MSG_LOG("Unknown msg type:%d", msg.hdr.type);
-		return -1;
+		ret = -1;
+		break;
 	}
 
-	return 0;
+	return ret;
 }
 
 static void abort_msg(u32 sq_addr)

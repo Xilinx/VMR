@@ -61,9 +61,8 @@ enum xrt_cmd_opcode {
 	XRT_CMD_OP_GET_LOG_PAGE		= 0x8,
 
 	XRT_CMD_OP_DOWNLOAD_PDI		= 0xa,
-	XRT_CMD_OP_FIREWALL		= 0xb,
-	XRT_CMD_OP_CLOCK		= 0xc,
-	XRT_CMD_OP_VMC			= 0xd,
+	XRT_CMD_OP_CLOCK		= 0xb,
+	XRT_CMD_OP_SENSOR_DATA		= 0xc,
 
 	XRT_CMD_OP_START_PL_CUIDX	= 0x100,
 	XRT_CMD_OP_START_PL_CUIDX_INDIR	= 0x101,
@@ -256,43 +255,15 @@ struct xrt_cmd_exit_ert {
 	};
 };
 
+/*
+ * TODO: xgq sq header generic definition.
+ */
 struct xrt_cmd_sq_hdr {
 	uint32_t opcode:16; /* [15-0]   */
 	uint32_t count:15;  /* [30-16] */
 	uint32_t state:1;   /* [31] */
 	uint16_t cid;
 	uint16_t rsvd;
-};
-
-struct xrt_cmd_log_payload {
-	uint64_t address;
-	uint32_t size;
-	uint32_t pid:16;
-	uint32_t addr_type:4;
-	uint32_t rsvd1:12;
-};
-
-struct xrt_cmd_clock_payload {
-	uint32_t ocl_region;
-	uint32_t num_clock;
-	uint8_t  ocl_target_freq[4];
-};
-
-struct xrt_cmd_data_payload {
-	uint64_t address;
-	uint32_t size;
-	uint32_t addr_type:4;
-	uint32_t rsvd1:28;
-	uint32_t pad1;
-};
-
-struct xrt_cmd_sq {
-	struct xrt_cmd_sq_hdr hdr;
-	union {
-		struct xrt_cmd_log_payload 	log_payload;
-		struct xrt_cmd_clock_payload 	clock_payload;
-		struct xrt_cmd_data_payload 	data_payload;
-	};
 };
 
 #endif

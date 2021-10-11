@@ -12,12 +12,32 @@ typedef enum cl_msg_type {
 	CL_MSG_XCLBIN,
 	CL_MSG_AF,
 	CL_MSG_CLOCK,
-	CL_MSG_VMC,
+	CL_MSG_SENSOR,
 } cl_msg_type_t;
 
+typedef enum cl_sensor_type {
+	CL_SENSOR_ALL 		= 0x0,
+	CL_SENSOR_BDINFO 	= 0xC0,
+	CL_SENSOR_TEMP 		= 0xC1,
+	CL_SENSOR_VOLTAGE	= 0xC2,
+	CL_SENSOR_POWER 	= 0xC3,
+	CL_SENSOR_QSFP 		= 0xC4,
+} cl_sensor_type_t;
+
 struct xgq_vmr_data_payload {
-	u32 address;
-	u32 size;
+	uint32_t address;
+	uint32_t size;
+	uint32_t addr_type:4;
+	uint32_t rsvd1:28;
+	uint32_t pad1;
+};
+
+struct xgq_vmr_log_payload {
+	uint32_t address;
+	uint32_t size;
+	uint32_t pid:16;
+	uint32_t addr_type:3;
+	uint32_t rsvd1:13;
 };
 
 struct xgq_vmr_head {
@@ -27,11 +47,11 @@ struct xgq_vmr_head {
 	u16 rcode;
 };
 
-/* TODO: add payload if necessary */
 typedef struct cl_msg {
 	struct xgq_vmr_head hdr;
 	union {
 		struct xgq_vmr_data_payload data_payload;
+		struct xgq_vmr_log_payload log_payload;
 	};
 } cl_msg_t;
 

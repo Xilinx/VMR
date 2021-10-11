@@ -14,34 +14,66 @@ static struct rmgmt_handler rh = { 0 };
 msg_handle_t *pdi_hdl;
 msg_handle_t *xclbin_hdl;
 msg_handle_t *af_hdl;
+msg_handle_t *sensor_hdl;
 int xgq_pdi_flag = 0;
 int xgq_xclbin_flag = 0;
 int xgq_af_flag = 0;
+int xgq_sensor_flag = 0;
 
-#if 0
-static void verify(struct rmgmt_handler *rh)
+/* TODO: the base 0x38000000 should be got from xparameters.h */
+#define RING_BUFFER_BASE 0x38000000
+#define FIREWALL_USER_BASE 0x80001000
+
+uint8_t dataBuffer[][255] = {
+//BoardInfo SDR Data (0xc0)
+{0x01, 0xc0, 0x01, 0x02, 0x7f, 0x01, 0xcc, 0x50, 0x72, 0x6f, 0x64, 0x75, 0x63, 0x74, 0x20, 0x4e, 0x61, 0x6d, 0x65, 0xce, 0x41, 0x4c, 0x56, 0x45, 0x4f, 0x20, 0x55, 0x33, 0x30, 0x4d, 0x41, 0x20, 0x50, 0x51, 0x00, 0x7f, 0x00, 0x7f, 0x02, 0xcd, 0x53, 0x65, 0x72, 0x69, 0x61, 0x6c, 0x20, 0x4e, 0x75, 0x6d, 0x62, 0x65, 0x72, 0xcc, 0x58, 0x46, 0x4c, 0x31, 0x54, 0x4e, 0x48, 0x4e, 0x4e, 0x4d,0x48, 0x31, 0x78, 0x32, 0x00, 0x7f, 0x00, 0x7f, 0x45, 0x4e, 0x44},
+
+//Temperature SDR Data (0xc1)
+{ 0x01, 0xC1, 0x01, 0x02, 0x7F, 0x01, 0xD0, 0x46, 0x50, 0x47, 0x41, 0x20, 0x54, 0x65, 0x6D, 0x70, 0x65, 0x72, 0x61, 0x74, 0x75, 0x72, 0x65, 0x01, 0x21, 0xC7, 0x43, 0x65, 0x6C, 0x63, 0x69, 0x75, 0x73, 0x00, 0x07, 0x5A, 0x5F, 0x64, 0x01, 0x02, 0xD1, 0x51, 0x53, 0x46, 0x50, 0x30, 0x20, 0x54, 0x65, 0x6D, 0x70, 0x65, 0x72, 0x61, 0x74, 0x75, 0x72, 0x65, 0x01, 0x01, 0xC7, 0x43, 0x65, 0x6C, 0x63, 0x69, 0x75, 0x73, 0x00, 0x07, 0x50, 0x55, 0x5A, 0x01, 0x45, 0x4E, 0x44, 0xFF, 0xFF },
+
+//Voltage SDR Data (0xc2)
+{ 0x01, 0xC2, 0x01, 0x01, 0x7F, 0x01, 0xCB, 0x31, 0x32, 0x56, 0x20, 0x56, 0x6F, 0x6C, 0x74, 0x61, 0x67, 0x65, 0x02, 0xA8, 0x2F, 0xC5, 0x56, 0x6F, 0x6C, 0x74, 0x73, 0xFD, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x45, 0x4E, 0x44, 0xFF },
+
+//Power SDR Data (0xc3)
+{0x01, 0xC3, 0x01, 0x01, 0x7F, 0x01, 0xCB, 0x42, 0x6F, 0x61, 0x72, 0x64, 0x20, 0x50, 0x6F, 0x77, 0x65, 0x72, 0x02, 0x0B, 0x00, 0xC5, 0x57, 0x61, 0x74, 0x74, 0x73, 0x00, 0x07, 0xD5, 0x00, 0xDE, 0x00, 0xE3, 0x00, 0x01, 0x45, 0x4E, 0x44, 0xFF, 0xFF}
+};
+
+static int xgq_sensor_cb(cl_msg_t *msg, void *arg)
 {
-	u32 i, base = 0x0;
+	u32 address = RING_BUFFER_BASE + (u32)msg->data_payload.address;
+	u32 size = msg->data_payload.size;
+	int ret = 0;
 
-	xil_printf("len %d\r\n", rh->rh_data_size);
+	switch (msg->log_payload.pid) {
+	case CL_SENSOR_BDINFO:
+		cl_memcpy_toio(address, dataBuffer[0], size);	
+		break;
+	case CL_SENSOR_TEMP:
+		cl_memcpy_toio(address, dataBuffer[1], size);	
+		break;
+	case CL_SENSOR_VOLTAGE:
+		cl_memcpy_toio(address, dataBuffer[2], size);	
+		break;
+	case CL_SENSOR_POWER:
+		cl_memcpy_toio(address, dataBuffer[3], size);	
+		break;
+	default:
+		RMGMT_LOG("ERROR: unknown pid %d", msg->log_payload.pid);
+		ret = -1;
+		break;
+	}
 
-	xil_printf("base: %X \r\n", base);
-	for (i = 0; i < 8; i++)
-		xil_printf("%X ", *((u32 *)(rh->rh_data + base) + i));
-
-	base = 0x13b0;
-	xil_printf("base: %X \r\n", base);
-	for (i = 0; i < 8; i++)
-		xil_printf("%X ", *((u32 *)(rh->rh_data + base) + i));
+	msg->hdr.rcode = ret;
+	RMGMT_DBG("complete msg id%d, ret %d", msg->hdr.cid, ret);
+	cl_msg_handle_complete(msg);
+	return 0;
 }
-#endif
 
 static int xgq_pdi_cb(cl_msg_t *msg, void *arg)
 {
 	int ret = 0;
 
-	/* TODO: the base 0x38000000 should be got from xparameters.h */
-	u32 address = 0x38000000 + (u32)msg->data_payload.address;
+	u32 address = RING_BUFFER_BASE + (u32)msg->data_payload.address;
 	u32 size = msg->data_payload.size;
 	if (size > rh.rh_max_size) {
 		RMGMT_LOG("ERROR: size %d is too big", size);
@@ -52,8 +84,8 @@ static int xgq_pdi_cb(cl_msg_t *msg, void *arg)
 	rh.rh_data_size = size;
 	cl_memcpy_fromio(address, rh.rh_data, size);
 
-	ret = rmgmt_download_rpu_pdi(&rh);
-	//ret = rmgmt_download_apu_pdi(&rh);
+	//ret = rmgmt_download_rpu_pdi(&rh);
+	ret = rmgmt_download_apu_pdi(&rh);
 
 	msg->hdr.rcode = ret;
 
@@ -66,8 +98,7 @@ static int xgq_xclbin_cb(cl_msg_t *msg, void *arg)
 {
 	int ret = 0;
 
-	/* TODO: the base 0x38000000 should be got from xparameters.h */
-	u32 address = 0x38000000 + (u32)msg->data_payload.address;
+	u32 address = RING_BUFFER_BASE + (u32)msg->data_payload.address;
 	u32 size = msg->data_payload.size;
 	if (size > rh.rh_max_size) {
 		RMGMT_LOG("ERROR: size %d is too big", size);
@@ -98,7 +129,7 @@ static int xgq_xclbin_cb(cl_msg_t *msg, void *arg)
 
 static int check_firewall()
 {
-	u32 firewall = 0x80001000; /* TODO, get from xparameters.h */
+	u32 firewall = FIREWALL_USER_BASE;
 	u32 val;
 
 	val = IO_SYNC_READ32(firewall);
@@ -110,8 +141,7 @@ static int xgq_af_cb(cl_msg_t *msg, void *arg)
 {
 	msg->hdr.rcode = check_firewall();
 
-	RMGMT_LOG("complete msg id %d, ret 0x%x",
-		msg->hdr.cid, msg->hdr.rcode);
+	RMGMT_DBG("complete msg id %d, ret 0x%x", msg->hdr.cid, msg->hdr.rcode);
 
 	/* workaround due to CU config will trigger this */
 	msg->hdr.rcode = 0;
@@ -149,6 +179,12 @@ static void pvXGQTask( void *pvParameters )
 		    cl_msg_handle_init(&af_hdl, CL_MSG_AF, xgq_af_cb, NULL) == 0) {
 			RMGMT_LOG("init firewall handle done.");
 			xgq_af_flag = 1;
+		}
+
+		if (xgq_sensor_flag == 0 &&
+		    cl_msg_handle_init(&sensor_hdl, CL_MSG_SENSOR, xgq_sensor_cb, NULL) == 0) {
+			RMGMT_LOG("init sensor handle done.");
+			xgq_sensor_flag = 1;
 		}
 	}
 	RMGMT_DBG("<-");

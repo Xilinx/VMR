@@ -198,6 +198,7 @@ static void axigate_freeze()
 static void axigate_free()
 {
 	IO_SYNC_WRITE32(0x3, PR_ISOLATION_REG);
+	vTaskDelay(1);
 }
 
 static void ucs_stop()
