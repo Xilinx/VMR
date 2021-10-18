@@ -11,9 +11,8 @@
 #include "cl_io.h"
 #include "cl_flash.h"
 
-/*TODO: get this info from xparameters.h when xsa is stable */
-#define PR_ISOLATION_REG 	0x80020000 
-#define UCS_CONTROL_REG 	0x80031000
+#define PR_ISOLATION_REG 	XPAR_GPIO_0_BASEADDR
+#define UCS_CONTROL_REG 	XPAR_GPIO_2_BASEADDR + 0x8
 
 extern int ospi_flash_erase(flash_area_t area, u32 offset, u32 len);
 
@@ -192,7 +191,6 @@ int rmgmt_init_handler(struct rmgmt_handler *rh)
 static void axigate_freeze()
 {
 	IO_SYNC_WRITE32(0, PR_ISOLATION_REG);
-	vTaskDelay(1);
 }
 
 static void axigate_free()
@@ -202,24 +200,16 @@ static void axigate_free()
 
 static void ucs_stop()
 {
-	u32 ucs = 0;
-	
-	ucs = IO_SYNC_READ32(UCS_CONTROL_REG);
-	if (!ucs)
-		return;
-
 	IO_SYNC_WRITE32(0x0, UCS_CONTROL_REG);
 }
 
 static void ucs_start()
 {
-	u32 ucs = 0;
-	
-	ucs = IO_SYNC_READ32(UCS_CONTROL_REG);
-	if (ucs)
-		return;
-
 	IO_SYNC_WRITE32(0x1, UCS_CONTROL_REG);
+
+	/*TODO: wait 10ms till we can check status busy */
+	vTaskDelay(pdMS_TO_TICKS(10));
+	RMGMT_DBG("done");
 }
 
 static int fpga_pl_pdi_download(UINTPTR data, UINTPTR size)
