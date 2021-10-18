@@ -46,6 +46,26 @@
 #define __FILENAME__                 (strrchr(__FILE__, '/') ? (strrchr(__FILE__, '/')+1) : __FILE__)
 #endif
 
+typedef struct Versal_BoardInfo
+{
+    unsigned char product_name[17];
+    unsigned char board_rev[9];
+    unsigned char board_serial[15];
+    unsigned char eeprom_version[4];
+    unsigned char board_mac[4][7];
+    unsigned char board_act_pas[2];
+    unsigned char board_config_mode[2];
+    unsigned char board_mfg_date[4];
+    unsigned char board_part_num[10];
+    unsigned char board_uuid[17];
+    unsigned char board_pcie_info[9];
+    unsigned char board_max_power_mode[2];
+    unsigned char Memory_size[5];
+    unsigned char OEM_ID[5];
+    unsigned char DIMM_size[5];
+    unsigned char Num_MAC_IDS;
+} Versal_BoardInfo;
+
 /*****************************************************************************/
 /**
 * @brief Set Logging level for log messages
@@ -141,5 +161,17 @@ void EepromTest(void);
 **
 ******************************************************************************/
 void EepromDump(void);
+/*****************************************************************************/
+/**
+* @brief This function is to read Board Info from EEPROM
+*
+* @param None
+*
+* @return u8
+*
+* @note None
+**
+******************************************************************************/
+u8 Versal_EEPROM_ReadBoardIno(void);
 
 #endif /* INC_VMC_API_H_ */
