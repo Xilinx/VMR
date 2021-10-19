@@ -21,9 +21,8 @@
 
 /* Note: eventually we should be driven by xparameter.h */
 #define RPU_RING_BASE (0x38000000)
-#define RPU_SQ_BASE (0x80011000)
-#define RPU_CQ_BASE (0x80010000)
-//#define RPU_CQ_BASE XPAR_BLP_BLP_LOGIC_XGQ_R2M_S00_AXI_BASEADDR
+#define RPU_SQ_BASE XPAR_BLP_BLP_LOGIC_XGQ_M2R_BASEADDR
+#define RPU_CQ_BASE XPAR_BLP_BLP_LOGIC_XGQ_R2M_BASEADDR
 
 #define RPU_RING_LEN 0x1000
 #define RPU_SLOT_SIZE 512
@@ -168,6 +167,7 @@ static int submit_to_queue(u32 sq_addr)
 	struct xgq_sub_queue_entry *cmd = (struct xgq_sub_queue_entry *)sq_addr;
 	struct xgq_cmd_sq *sq = (struct xgq_cmd_sq *)sq_addr;
 	int ret = 0;
+	int num_clock = 0;
 
 	/* cast data to RPU common message type */
 	cl_msg_t msg = { 0 };
@@ -224,9 +224,15 @@ static int submit_to_queue(u32 sq_addr)
 	case CL_MSG_CLOCK:
 		msg.clock_payload.ocl_region = sq->clock_payload.ocl_region;
 		msg.clock_payload.num_clock = sq->clock_payload.num_clock;
+		num_clock = msg.clock_payload.num_clock;
+		if (num_clock > ARRAY_SIZE(msg.clock_payload.ocl_target_freq)) {
+			MSG_LOG("num_clock out of range", num_clock);
+			ret = -1;
+			break;
+		}
+
 		/* deep copy freq requests */
-		for (int i = 0; i < ARRAY_SIZE(msg.clock_payload.ocl_target_freq);
-			i++) {
+		for (int i = 0; i < num_clock; i++) {
 			msg.clock_payload.ocl_target_freq[i] =
 				sq->clock_payload.ocl_target_freq[i];
 		}
