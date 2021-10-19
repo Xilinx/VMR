@@ -35,21 +35,24 @@
  *
  */
 
-#ifndef MGMT_XGQ_CMD_H
-#define MGMT_XGQ_CMD_H
+#ifndef XGQ_CMD_VMR_H
+#define XGQ_CMD_VMR_H
 
-#include "xgq_cmd.h"
+/* !!! This header file is for internal project use only and it is subject to removal without notice !!! */
+#include "xgq_cmd_common.h"
 
-enum xrt_cmd_sensor_page_id {
-	XRT_CMD_SENSOR_PID_ALL 		= 0x0,
-	XRT_CMD_SENSOR_PID_BDINFO 	= 0x1,
-	XRT_CMD_SENSOR_PID_TEMP 	= 0x2,
-	XRT_CMD_SENSOR_PID_VOLTAGE 	= 0x3,
-	XRT_CMD_SENSOR_PID_POWER 	= 0x4,
-	XRT_CMD_SENSOR_PID_QSFP		= 0x5,
+/* This header file defines struct of mgmt command type opcode */
+
+enum xgq_cmd_sensor_page_id {
+	XGQ_CMD_SENSOR_PID_ALL		= 0x0,
+	XGQ_CMD_SENSOR_PID_BDINFO	= 0x1,
+	XGQ_CMD_SENSOR_PID_TEMP		= 0x2,
+	XGQ_CMD_SENSOR_PID_VOLTAGE	= 0x3,
+	XGQ_CMD_SENSOR_PID_POWER	= 0x4,
+	XGQ_CMD_SENSOR_PID_QSFP		= 0x5,
 };
 
-struct xrt_cmd_log_payload {
+struct xgq_cmd_log_payload {
 	uint64_t address;
 	uint32_t size;
 	uint32_t pid:16;
@@ -57,13 +60,13 @@ struct xrt_cmd_log_payload {
 	uint32_t rsvd1:13;
 };
 
-struct xrt_cmd_clock_payload {
+struct xgq_cmd_clock_payload {
 	uint32_t ocl_region;
 	uint32_t num_clock;
 	uint8_t  ocl_target_freq[4];
 };
 
-struct xrt_cmd_data_payload {
+struct xgq_cmd_data_payload {
 	uint64_t address;
 	uint32_t size;
 	uint32_t addr_type:4;
@@ -71,14 +74,14 @@ struct xrt_cmd_data_payload {
 	uint32_t pad1;
 };
 
-struct xrt_cmd_sq {
-	struct xrt_cmd_sq_hdr hdr;
+struct xgq_cmd_sq {
+	struct xgq_cmd_sq_hdr hdr;
 	union {
-		struct xrt_cmd_log_payload 	log_payload;
-		struct xrt_cmd_clock_payload 	clock_payload;
-		struct xrt_cmd_data_payload 	pdi_payload;
-		struct xrt_cmd_data_payload 	xclbin_payload;
-		struct xrt_cmd_log_payload 	sensor_payload;
+		struct xgq_cmd_log_payload 	log_payload;
+		struct xgq_cmd_clock_payload 	clock_payload;
+		struct xgq_cmd_data_payload 	pdi_payload;
+		struct xgq_cmd_data_payload 	xclbin_payload;
+		struct xgq_cmd_log_payload 	sensor_payload;
 	};
 };
 
