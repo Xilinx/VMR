@@ -5,8 +5,11 @@
 
 #include "rmgmt_common.h"
 #include "rmgmt_xfer.h"
+#include "rmgmt_clock.h"
+
 #include "cl_msg.h"
 #include "cl_flash.h"
+
 
 //static TaskHandle_t xR5Task;
 static TaskHandle_t xXGQTask;
@@ -21,10 +24,6 @@ int xgq_xclbin_flag = 0;
 int xgq_af_flag = 0;
 int xgq_sensor_flag = 0;
 int xgq_clock_flag = 0;
-
-/*TODO: relocate all those res mapping into a standalone header file */
-#define RING_BUFFER_BASE 0x38000000
-#define FIREWALL_USER_BASE XPAR_AXI_FIREWALL_0_BASEADDR
 
 /*TDDO: remove this array once VMC has implemented real callback */
 uint8_t dataBuffer[][255] = {
@@ -43,7 +42,7 @@ uint8_t dataBuffer[][255] = {
 
 static int xgq_sensor_cb(cl_msg_t *msg, void *arg)
 {
-	u32 address = RING_BUFFER_BASE + (u32)msg->data_payload.address;
+	u32 address = EP_RING_BUFFER_BASE + (u32)msg->data_payload.address;
 	u32 size = msg->data_payload.size;
 	int ret = 0;
 
@@ -72,7 +71,6 @@ static int xgq_sensor_cb(cl_msg_t *msg, void *arg)
 	return 0;
 }
 
-#define CLOCK_WIZ_MAX_RES 4
 static int xgq_clock_cb(cl_msg_t *msg, void *arg)
 {
 	int ret = 0;
@@ -89,7 +87,7 @@ static int xgq_pdi_cb(cl_msg_t *msg, void *arg)
 {
 	int ret = 0;
 
-	u32 address = RING_BUFFER_BASE + (u32)msg->data_payload.address;
+	u32 address = EP_RING_BUFFER_BASE + (u32)msg->data_payload.address;
 	u32 size = msg->data_payload.size;
 	if (size > rh.rh_max_size) {
 		RMGMT_LOG("ERROR: size %d is too big", size);
@@ -114,7 +112,7 @@ static int xgq_xclbin_cb(cl_msg_t *msg, void *arg)
 {
 	int ret = 0;
 
-	u32 address = RING_BUFFER_BASE + (u32)msg->data_payload.address;
+	u32 address = EP_RING_BUFFER_BASE + (u32)msg->data_payload.address;
 	u32 size = msg->data_payload.size;
 	if (size > rh.rh_max_size) {
 		RMGMT_LOG("ERROR: size %d is too big", size);
@@ -145,7 +143,7 @@ static int xgq_xclbin_cb(cl_msg_t *msg, void *arg)
 
 static int check_firewall()
 {
-	u32 firewall = FIREWALL_USER_BASE;
+	u32 firewall = EP_FIREWALL_USER_BASE;
 	u32 val;
 
 	val = IO_SYNC_READ32(firewall);
