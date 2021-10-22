@@ -19,6 +19,7 @@
  */
 #define MENU_THREADSTACKSIZE    2048
 
+extern void AsdmSensor_Display(void);
 
 #define demoMenu_task_PRIORITY	tskIDLE_PRIORITY + 1
 
@@ -68,8 +69,10 @@ TestMenu TestsMenu[] =
 {
     {"Set Log Level", NULL, App_SetLogLevel},
     {"EEPROM Test (U005)", EEPROMTests, NULL},
-    {"Sensor Data Read", NULL, SensorData_Display},
+    {"Asdm Sensor Read", NULL, AsdmSensor_Display},
     {"Get Board Info", NULL, BoardInfoTest},
+    {"Sensor Data Read", NULL, SensorData_Display},
+
     {NULL, NULL, NULL}
 };
 

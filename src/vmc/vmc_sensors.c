@@ -12,12 +12,109 @@
 #include "sensors/inc/se98a.h"
 #include "sensors/inc/max6639.h"
 #include "vmc_sensors.h"
+#include "vmc_asdm.h"
 
 
 #define MAX6639_FAN_TACHO_TO_RPM(x) (8000*60)/(x*2)
 
 Versal_sensor_readings sensor_readings;
 u8 i2c_num = 1;  // LPD_I2C0
+#define LPD_I2C_0	0x1
+
+s8 Temperature_Read_Inlet(snsrRead_t *snsrData)
+{
+	s8 status = XST_FAILURE;
+	s32 tempValue = 0;
+
+	status = SE98A_ReadTemperature(LPD_I2C_0, SLAVE_ADDRESS_SE98A_0, &tempValue);
+	if (status == XST_SUCCESS)
+	{
+		memcpy(snsrData->snsrValue,&tempValue,sizeof(tempValue));
+		snsrData->sensorValueSize = sizeof(tempValue);
+		snsrData->snsrSatus = Vmc_Snsr_State_Normal;
+	}
+	else
+	{
+		snsrData->snsrSatus = Vmc_Snsr_State_Comms_failure;
+		VMC_ERR("Failed to read slave : %d \n\r",SLAVE_ADDRESS_SE98A_0);
+	}
+
+	return status;
+}
+
+s8 Temperature_Read_Outlet(snsrRead_t *snsrData)
+{
+	s8 status = XST_FAILURE;
+	s32 tempValue = 0;
+
+	status = SE98A_ReadTemperature(LPD_I2C_0, SLAVE_ADDRESS_SE98A_1, &tempValue);
+	if (status == XST_SUCCESS)
+	{
+		memcpy(snsrData->snsrValue,&tempValue,sizeof(tempValue));
+		snsrData->sensorValueSize = sizeof(tempValue);
+		snsrData->snsrSatus = Vmc_Snsr_State_Normal;
+	}
+	else
+	{
+		snsrData->snsrSatus = Vmc_Snsr_State_Comms_failure;
+		VMC_ERR("Failed to read slave : %d \n\r",SLAVE_ADDRESS_SE98A_1);
+	}
+
+	return status;
+}
+
+s8 Temperature_Read_Board(snsrRead_t *snsrData)
+{
+	s8 status = XST_FAILURE;
+	float TempReading = 0;
+
+	status = max6639_ReadDDRTemperature(i2c_num, SLAVE_ADDRESS_MAX6639, &TempReading);
+	if (status == XST_SUCCESS)
+	{
+		memcpy(snsrData->snsrValue,&TempReading,sizeof(TempReading));
+		snsrData->sensorValueSize = sizeof(TempReading);
+		snsrData->snsrSatus = Vmc_Snsr_State_Normal;
+	}
+	else
+	{
+		snsrData->snsrSatus = Vmc_Snsr_State_Comms_failure;
+		VMC_ERR("Failed to read slave : %d \n\r",SLAVE_ADDRESS_MAX6639);
+	}
+
+	return status;
+}
+
+s8 Fan_RPM_Read(snsrRead_t *snsrData)
+{
+	s8 status = XST_FAILURE;
+	u8 fanSpeed = 0;
+	u16 fanRPM1 = 0;
+	u16 fanRPM2 = 0;
+	u16 avgFanRPM = 0;
+
+
+	status = max6639_ReadFanTach(i2c_num, SLAVE_ADDRESS_MAX6639, 1, &fanSpeed);
+	fanRPM1 = MAX6639_FAN_TACHO_TO_RPM(fanSpeed);
+
+	fanSpeed = 0;
+	status = max6639_ReadFanTach(i2c_num, SLAVE_ADDRESS_MAX6639, 2, &fanSpeed);
+	fanRPM2 = MAX6639_FAN_TACHO_TO_RPM(fanSpeed);
+
+	avgFanRPM = (fanRPM1 + fanRPM2)/2;
+	if (status == XST_SUCCESS)
+	{
+		memcpy(snsrData->snsrValue,&avgFanRPM,sizeof(avgFanRPM));
+		snsrData->sensorValueSize = sizeof(avgFanRPM);
+		snsrData->snsrSatus = Vmc_Snsr_State_Normal;
+	}
+	else
+	{
+		snsrData->snsrSatus = Vmc_Snsr_State_Comms_failure;
+		VMC_ERR("Failed to  read  Fan Speed from slave : 0x%x \n\r",SLAVE_ADDRESS_MAX6639);
+	}
+
+	return status;
+}
 
 void se98a_monitor(void)
 {
@@ -28,12 +125,8 @@ void se98a_monitor(void)
 		status = SE98A_ReadTemperature(i2c_num, SLAVE_ADDRESS_SE98A_0 + i, &sensor_readings.board_temp[i]);
 		if (status == XST_FAILURE)
 		{
-			CL_LOG(APP_VMC, "Failed to read SE98A_%d \n\r",i);
+			VMC_ERR("Failed to read SE98A_%d \n\r",i);
 		}
-		//else
-		//{
-		//	CL_LOG(APP_VMC, "SE98A_%d temperature : %d \n\r",i,sensor_readings.board_temperature_sensor[i].temperature);
-		//}
 	}
 	return;
 }
@@ -49,7 +142,7 @@ void max6639_monitor(void)
 	status = max6639_ReadFPGATemperature(i2c_num, SLAVE_ADDRESS_MAX6639, &TempReading);
         if (status == XST_FAILURE)
 	{
-		CL_LOG(APP_VMC, "Failed to read MAX6639 \n\r");
+		VMC_ERR("Failed to read MAX6639 \n\r");
 		return;
 	}
 	//CL_LOG (APP_VMC,"fpga temp %f",TempReading);
@@ -58,7 +151,7 @@ void max6639_monitor(void)
         status = max6639_ReadDDRTemperature(i2c_num, SLAVE_ADDRESS_MAX6639, &TempReading);
         if (status == XST_FAILURE)
         {
-                CL_LOG(APP_VMC, "Failed to read MAX6639 \n\r");
+                VMC_ERR( "Failed to read MAX6639 \n\r");
                 return;
         }
         //CL_LOG (APP_VMC,"local temp %f",TempReading);
