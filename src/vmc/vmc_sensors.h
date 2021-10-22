@@ -2,6 +2,7 @@
  * Copyright (C) 2020 Xilinx, Inc.  All rights reserved.
  * SPDX-License-Identifier: MIT
  *******************************************************************************/
+#include "xil_types.h"
 
 #define BOARD_TEMPERATURE_SENSOR_NUM 2
 
