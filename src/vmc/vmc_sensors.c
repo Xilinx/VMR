@@ -13,7 +13,10 @@
 #include "sensors/inc/max6639.h"
 #include "vmc_sensors.h"
 #include "vmc_asdm.h"
+#include "sysmon.h"
 
+extern XSysMonPsv InstancePtr;
+extern XScuGic IntcInst;
 
 #define MAX6639_FAN_TACHO_TO_RPM(x) (8000*60)/(x*2)
 
@@ -172,3 +175,17 @@ void max6639_monitor(void)
 
 }
 
+void sysmon_monitor(void)
+{
+
+	float TempReading = 0.0;
+	if (XSysMonPsv_ReadTempProcessed(&InstancePtr, SYSMONPSV_TEMP_MAX, &TempReading))
+	{
+		CL_LOG(APP_VMC, "Failed to read sysmon temperature \n\r");
+		sensor_readings.sysmon_max_temp = -1.0;
+		return;
+	}
+
+	sensor_readings.sysmon_max_temp = TempReading;
+	return;
+}

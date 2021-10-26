@@ -16,6 +16,7 @@ typedef struct
 	s32 board_temp[BOARD_TEMPERATURE_SENSOR_NUM];
 	float local_temp;
 	float remote_temp;
+	float sysmon_max_temp;
 	u16 fanRpm;
 
 } Versal_sensor_readings;

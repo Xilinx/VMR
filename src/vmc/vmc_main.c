@@ -16,6 +16,7 @@
 #include "sensors/inc/max6639.h"
 #include "vmc_asdm.h"
 
+#include "sysmon.h"
 
 static TaskHandle_t xVMCTask;
 static TaskHandle_t xSensorMonTask;
@@ -66,6 +67,7 @@ static int xgq_sensor_cb(cl_msg_t *msg, void *arg)
 
 static void SensorMonitorTask(void *params)
 {
+
 	VMC_LOG("\n\rSensor Monitor Task Created !!!\n\r");
 
 	if (xgq_sensor_flag == 0 &&
@@ -87,7 +89,7 @@ static void SensorMonitorTask(void *params)
 		/* Todo: Replace once ASDM is stable */
 		se98a_monitor();
 		max6639_monitor();
-
+		sysmon_monitor();
 		vTaskDelay(500);
 	}
 
