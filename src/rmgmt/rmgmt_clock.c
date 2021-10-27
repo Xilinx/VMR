@@ -13,11 +13,19 @@
 #define CLOCK_DBG(fmt, arg...) \
 	CL_DBG(APP_RMGMT, fmt, ##arg)
 
+
 u32 clock_wiz_bases[] = {
 	EP_ACLK_KERNEL_0,
 	EP_ACLK_KERNEL_1,
 	EP_ACLK_HBM_0,
 	EP_ACLK_SHUTDOWN_0,
+};
+
+u32 clock_counter_bases[] = {
+	EP_ACLK_FREQ_KERNEL_0,
+	EP_ACLK_FREQ_KERNEL_1,
+	EP_ACLK_FREQ_HBM,
+	EP_ACLK_FREQ_K1_K2,
 };
 
 static inline int clock_wiz_busy(int idx, int cycle, int interval)
@@ -67,10 +75,10 @@ static int rmgmt_clock_freq_scaling_impl(struct cl_msg *msg)
 	u32 val;
 	int err = 0;
 	int i = 0;
-	int num_clock = msg->clock_payload.num_clock;
+	int num_clock = msg->clock_payload.ocl_req_num;
 
 	for (i = 0; i < num_clock; i++) {
-		u8 freq = msg->clock_payload.ocl_target_freq[i];
+		u32 freq = msg->clock_payload.ocl_req_freq[i];
 		if (freq == 0)
 			continue;
 
@@ -152,11 +160,11 @@ static int rmgmt_clock_freq_scaling_impl(struct cl_msg *msg)
                         break;
         }
 
-        CLOCK_LOG("returns %d", err);
+        CLOCK_LOG("num_clock %d, returns %d", num_clock, err);
         return err;
 }
 
-int rmgmt_clock_freq_scaling_asap(struct cl_msg *msg)
+int rmgmt_clock_freq_scaling(struct cl_msg *msg)
 {
 	int ret = 0;
 
@@ -167,3 +175,38 @@ int rmgmt_clock_freq_scaling_asap(struct cl_msg *msg)
 	return ret;
 }
 
+uint32_t rmgmt_clock_get_freq(int idx, enum clock_ip ip)
+{
+        uint32_t freq = 0, status;
+        int times = 10;
+
+	/* Check array size, should never happen */
+	if (idx > CLOCK_COUNTER_MAX_RES)
+		return 0;
+
+	/* For versal, we use counter for both wizard and counter freq */
+	if (ip != RMGMT_CLOCK_WIZARD && ip != RMGMT_CLOCK_COUNTER)
+		return 0;
+
+	if (clock_counter_bases[idx]) {
+		u32 base = clock_counter_bases[idx];
+
+		while (times != 0) {
+			status = IO_SYNC_READ32(base);
+			if ((status & OCL_CLKWIZ_STATUS_MASK) ==
+				OCL_CLKWIZ_STATUS_MEASURE_DONE)
+				break;
+			MDELAY(1);
+			times--;
+		};
+		if ((status & OCL_CLKWIZ_STATUS_MASK) ==
+			OCL_CLKWIZ_STATUS_MEASURE_DONE) {
+			freq = (status & OCL_CLK_FREQ_V5_CLK0_ENABLED) ?
+				IO_SYNC_READ32(base + OCL_CLK_FREQ_V5_COUNTER_OFFSET) :
+				IO_SYNC_READ32(base + OCL_CLK_FREQ_COUNTER_OFFSET);
+		}
+	}
+
+	CLOCK_DBG("idx %d freq %d", idx, freq);
+	return freq;
+}

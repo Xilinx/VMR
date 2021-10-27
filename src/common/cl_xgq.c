@@ -94,10 +94,14 @@ int cl_msg_handle_complete(cl_msg_t *msg)
 		.hdr.state = XGQ_CMD_STATE_COMPLETED,
 		.rcode = msg->hdr.rcode,
 	};
+	struct xgq_cmd_cq *cmd_cq = (struct xgq_cmd_cq *)&cq_cmd;
 	u64 cq_slot_addr;
 
-	xgq_produce(&rpu_xgq, &cq_slot_addr);
+	if (msg->hdr.type == CL_MSG_CLOCK)
+		/* only 1 place to hold ocl_freq, alway get from index 0 */
+		cmd_cq->clock_payload.ocl_freq = msg->clock_payload.ocl_req_freq[0];
 
+	xgq_produce(&rpu_xgq, &cq_slot_addr);
 	cl_memcpy_toio(cq_slot_addr, &cq_cmd, sizeof(struct xgq_com_queue_entry));
 	xgq_notify_peer_produced(&rpu_xgq);
 
@@ -128,6 +132,28 @@ static int dispatch_to_queue(cl_msg_t *msg, int task_level)
 	}
 
 	return 0;
+}
+
+static cl_clock_type_t convert_ctype(enum xgq_cmd_clock_req_type req_type)
+{
+	cl_clock_type_t cid = CL_CLOCK_UNKNOWN;
+
+	switch (req_type) {
+	case XGQ_CMD_CLOCK_WIZARD:
+		cid = CL_CLOCK_WIZARD;
+		break;	
+	case XGQ_CMD_CLOCK_COUNTER:
+		cid = CL_CLOCK_COUNTER;
+		break;	
+	case XGQ_CMD_CLOCK_SCALE:
+		cid = CL_CLOCK_SCALE;
+		break;	
+	default:
+		cid = CL_CLOCK_UNKNOWN;
+		break;
+	}
+
+	return cid;
 }
 
 static cl_sensor_type_t convert_pid(enum xgq_cmd_sensor_page_id xgq_id)
@@ -223,9 +249,17 @@ static int submit_to_queue(u32 sq_addr)
 		break;
 	case CL_MSG_CLOCK:
 		msg.clock_payload.ocl_region = sq->clock_payload.ocl_region;
-		msg.clock_payload.num_clock = sq->clock_payload.num_clock;
-		num_clock = msg.clock_payload.num_clock;
-		if (num_clock > ARRAY_SIZE(msg.clock_payload.ocl_target_freq)) {
+		msg.clock_payload.ocl_req_type =
+			convert_ctype(sq->clock_payload.ocl_req_type);
+		msg.clock_payload.ocl_req_id = sq->clock_payload.ocl_req_id;
+		msg.clock_payload.ocl_req_num = sq->clock_payload.ocl_req_num;
+		num_clock = msg.clock_payload.ocl_req_num;
+		MSG_DBG("req_type %d, req_id %d, req_num %d",
+			sq->clock_payload.ocl_req_type,
+			sq->clock_payload.ocl_req_id,
+			sq->clock_payload.ocl_req_num);
+
+		if (num_clock > ARRAY_SIZE(msg.clock_payload.ocl_req_freq)) {
 			MSG_LOG("num_clock out of range", num_clock);
 			ret = -1;
 			break;
@@ -233,8 +267,8 @@ static int submit_to_queue(u32 sq_addr)
 
 		/* deep copy freq requests */
 		for (int i = 0; i < num_clock; i++) {
-			msg.clock_payload.ocl_target_freq[i] =
-				sq->clock_payload.ocl_target_freq[i];
+			msg.clock_payload.ocl_req_freq[i] =
+				sq->clock_payload.ocl_req_freq[i];
 		}
 		ret = dispatch_to_queue(&msg, TASK_QUICK);
 		break;
@@ -343,7 +377,7 @@ static void slowTask (void *pvParameters )
 
 static void receiveTask(void *pvParameters)
 {
-	const TickType_t xBlockTime = pdMS_TO_TICKS(1000*1);
+	const TickType_t xBlockTime = pdMS_TO_TICKS(500);
 	u32 cnt = 0;
 
 	for( ;; ) {

@@ -197,15 +197,27 @@ static int fpga_pl_pdi_download(UINTPTR data, UINTPTR size)
 		return ret;
 	}
 
+	//FreeRTOS_ClearTickInterrupt();
 
 	axigate_freeze();
 	ucs_stop();
 
-	ret = XFpga_BitStream_Load(&XFpgaInstance, data, KeyAddr, size, PDI_LOAD);
+	//ret = XFpga_BitStream_Load(&XFpgaInstance, data, KeyAddr, size, PDI_LOAD);
+
+	IO_SYNC_WRITE32(0x30701, 0xff3f0440);
+	IO_SYNC_WRITE32(0xf, 0xff3f0444);
+	IO_SYNC_WRITE32(0x0, 0xff3f0448);
+	IO_SYNC_WRITE32(data, 0xff3f044c);
+	IO_SYNC_WRITE32(0x2, 0xff330000);
+	/* wait for async operation done in case of firewall trip */
+	MDELAY(1000);
 
 	ucs_start();
+	MDELAY(10);
+
 	axigate_free();
-	
+	//FreeRTOS_SetupTickInterrupt();
+
 	return ret;
 }
 

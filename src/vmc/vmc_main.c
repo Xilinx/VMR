@@ -69,7 +69,7 @@ static void SensorMonitorTask(void *params)
 	VMC_LOG("\n\rSensor Monitor Task Created !!!\n\r");
 
 	if (xgq_sensor_flag == 0 &&
-			cl_msg_handle_init(&sensor_hdl, CL_MSG_SENSOR, xgq_sensor_cb, NULL) == 0) {
+		cl_msg_handle_init(&sensor_hdl, CL_MSG_SENSOR, xgq_sensor_cb, NULL) == 0) {
 		VMC_LOG("init sensor handle done.");
 		xgq_sensor_flag = 1;
 	}
