@@ -34,9 +34,11 @@
 #define VALID_CLKSHUTDOWN_BITS  (CLK_SHUTDOWN_BIT|DEBUG_CLK_SHUTDOWN_BIT)
 
 #define CLK_ACAP_MAX_VALUE_FOR_O        4320
-#define CLK_ACAP_INPUT_FREQ             33.333
+//#define CLK_ACAP_INPUT_FREQ             33.333
 /* no float number in kernel, x/33.333 will be converted to x * 1000 / 33333) */
-#define CLK_ACAP_INPUT_FREQ_X_1000      33333
+//#define CLK_ACAP_INPUT_FREQ_X_1000      33333
+#define CLK_ACAP_INPUT_FREQ             100.000 
+#define CLK_ACAP_INPUT_FREQ_X_1000      100000
 
 #define CLK_TYPE_DATA   0
 #define CLK_TYPE_KERNEL 1
