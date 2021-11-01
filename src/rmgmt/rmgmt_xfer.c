@@ -185,23 +185,6 @@ int rmgmt_init_handler(struct rmgmt_handler *rh)
 	return 0;
 }
 
-static int fpga_pdi_download(UINTPTR data, UINTPTR size)
-{
-	int ret;
-	XFpga XFpgaInstance = { 0U };
-	UINTPTR KeyAddr = (UINTPTR)NULL;
-
-	ret = XFpga_Initialize(&XFpgaInstance);
-	if (ret != XST_SUCCESS) {
-		RMGMT_DBG("FPGA init failed %d\r\n", ret);
-		return ret;
-	}
-
-	ret = XFpga_BitStream_Load(&XFpgaInstance, data, KeyAddr, size, PDI_LOAD);
-
-	return ret;
-}
-
 static int fpga_pl_pdi_download(UINTPTR data, UINTPTR size)
 {
 	int ret;
@@ -220,8 +203,6 @@ static int fpga_pl_pdi_download(UINTPTR data, UINTPTR size)
 	ucs_stop();
 
 	//ret = XFpga_BitStream_Load(&XFpgaInstance, data, KeyAddr, size, PDI_LOAD);
-
-	//RMGMT_LOG("0x%x", data);
 
 	IO_SYNC_WRITE32(0x30701, 0xff3f0440);
 	IO_SYNC_WRITE32(0xf, 0xff3f0444);
@@ -249,7 +230,7 @@ static int rmgmt_fpga_download(struct rmgmt_handler *rh, u32 len)
 
 	ret = rmgmt_xclbin_section_info(axlf, BITSTREAM_PARTIAL_PDI, &offset, &size);
 	if (ret) {
-		RMGMT_LOG("get PARTIAL PDI from xclbin failed %d", ret);
+		RMGMT_LOG("get PARTIAL PDI from xclbin failed %d\r\n", ret);
 		goto out;
 	}
 	/* Sync data from cache to memory */
@@ -259,34 +240,6 @@ static int rmgmt_fpga_download(struct rmgmt_handler *rh, u32 len)
 		(UINTPTR)size);
 	if (ret != XFPGA_SUCCESS) {
 		RMGMT_LOG("FPGA load pdi failed %d\r\n", ret);
-		goto out;
-	}
-	
-	/*
-	 * The xclbin might has PDI section for APU
-	 */
-	ret = rmgmt_xclbin_section_info(axlf, PDI, &offset, &size);
-	if (ret) {
-		RMGMT_LOG("no APU PDI in xclbin, skip. ret: %d", ret);
-		ret = 0;
-		goto out;
-	}
-
-	/*
-	 * TODO: to make sure each time we can download new PDI successfully
-	 * we need:
-	 *   1) correct system.dtb or equivlent device config for APU PDI
-	 *   2) reset the APU to the state that can be booted correctly
-	 *   3) load the PDI and boot it successfully.
-	 *
-	 * BUT: for now just dowload the PDI, the system will boot to correct
-	 *   status after first cold reboot.
-	 */
-	ret = fpga_pdi_download((UINTPTR)((const char *)axlf + offset),
-		(UINTPTR)size);
-	if (ret) {
-		RMGMT_LOG("cannot download APU PDI, skip. ret: %d", ret);
-		ret = 0;
 		goto out;
 	}
 
