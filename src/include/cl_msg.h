@@ -24,6 +24,13 @@ typedef enum cl_sensor_type {
 	CL_SENSOR_QSFP 		= 0xC4,
 } cl_sensor_type_t;
 
+typedef enum cl_clock_type {
+	CL_CLOCK_UNKNOWN 	= 0x0,
+	CL_CLOCK_WIZARD	 	= 0x1,
+	CL_CLOCK_COUNTER	= 0x2,
+	CL_CLOCK_SCALE		= 0x3,
+} cl_clock_type_t;
+
 struct xgq_vmr_data_payload {
 	uint32_t address;
 	uint32_t size;
@@ -42,8 +49,10 @@ struct xgq_vmr_log_payload {
 
 struct xgq_vmr_clock_payload {
 	uint32_t ocl_region;
-	uint32_t num_clock;
-	uint8_t  ocl_target_freq[4];
+	uint32_t ocl_req_type;
+	uint32_t ocl_req_id;
+	uint32_t ocl_req_num;
+	uint32_t ocl_req_freq[4];
 };
 
 struct xgq_vmr_head {

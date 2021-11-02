@@ -53,12 +53,14 @@
 #define EP_ACLK_FREQ_0		XPAR_SHELL_UTILS_FREQUENCY_COUNTER_0_BASEADDR
 #define EP_ACLK_FREQ_KERNEL_0	XPAR_SHELL_UTILS_FREQUENCY_COUNTER_1_BASEADDR
 #define EP_ACLK_FREQ_KERNEL_1	XPAR_SHELL_UTILS_FREQUENCY_COUNTER_2_BASEADDR
+#define EP_ACLK_FREQ_HBM	0
+#define EP_ACLK_FREQ_K1_K2	0
 
 #define MDELAY(n) vTaskDelay( pdMS_TO_TICKS(n) )
 
 static void inline axigate_freeze()
 {
-	IO_SYNC_WRITE32(0, EP_PR_ISOLATION);
+	IO_SYNC_WRITE32(0x0, EP_PR_ISOLATION);
 }
 
 static void inline axigate_free()
@@ -74,10 +76,6 @@ static void inline ucs_stop()
 static void inline ucs_start()
 {
 	IO_SYNC_WRITE32(0x1, EP_UCS_CONTROL);
-
-	/*TODO: wait 10ms till we can check status busy */
-	vTaskDelay(pdMS_TO_TICKS(10));
-	RMGMT_DBG("done");
 }
 
 #endif

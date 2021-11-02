@@ -27,12 +27,31 @@ int xgq_clock_flag = 0;
 static int xgq_clock_cb(cl_msg_t *msg, void *arg)
 {
 	int ret = 0;
+	uint32_t freq = 0;
 
-	//ret = rmgmt_clock_freq_scaling_acap();
+	switch (msg->clock_payload.ocl_req_type) {
+	case CL_CLOCK_SCALE:
+		ret = rmgmt_clock_freq_scaling(msg);
+		break;
+	case CL_CLOCK_WIZARD:
+		freq = rmgmt_clock_get_freq(msg->clock_payload.ocl_req_id,
+			RMGMT_CLOCK_WIZARD);
+		msg->clock_payload.ocl_req_freq[0] = freq;
+		break;
+	case CL_CLOCK_COUNTER:
+		freq = rmgmt_clock_get_freq(msg->clock_payload.ocl_req_id,
+			RMGMT_CLOCK_COUNTER);
+		msg->clock_payload.ocl_req_freq[0] = freq;
+		break;
+	default:
+		RMGMT_LOG("ERROR: unknown req_type %d",
+			msg->clock_payload.ocl_req_type);
+		break;
+	}
 
 	msg->hdr.rcode = ret;
 	cl_msg_handle_complete(msg);
-	RMGMT_DBG("complete msg id%d, ret %d", msg->hdr.cid, ret);
+	RMGMT_DBG("complete msg id %d, ret %d", msg->hdr.cid, ret);
 	return 0;
 }
 
@@ -76,9 +95,7 @@ static int xgq_xclbin_cb(cl_msg_t *msg, void *arg)
 	rh.rh_data_size = size;
 	cl_memcpy_fromio(address, rh.rh_data, size);
 
-	FreeRTOS_ClearTickInterrupt();
 	ret = rmgmt_download_xclbin(&rh);
-	FreeRTOS_SetupTickInterrupt();
 
 	msg->hdr.rcode = ret;
 

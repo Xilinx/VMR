@@ -6,7 +6,9 @@
 #ifndef RMGMT_CLOCK_H
 #define RMGMT_CLOCK_H
 
-#define CLOCK_WIZ_MAX_RES               4
+#define CLOCK_COUNTER_MAX_RES		4
+#define CLOCK_WIZ_MAX_RES		4
+
 #define OCL_CLKWIZ_STATUS_OFFSET        0x4
 #define OCL_CLKWIZ_STATUS_MASK          0xffff
 #define OCL_CLKWIZ_STATUS_MEASURE_START 0x1
@@ -101,6 +103,11 @@ struct acap_clkfbout_fract {
 
 struct cl_msg;
 
-int rmgmt_clock_freq_scaling_asap(struct cl_msg *msg);
+enum clock_ip {
+	RMGMT_CLOCK_WIZARD,
+	RMGMT_CLOCK_COUNTER,
+};
 
+int rmgmt_clock_freq_scaling(struct cl_msg *msg);
+uint32_t rmgmt_clock_get_freq(int req_id, enum clock_ip ip);
 #endif
