@@ -19,10 +19,17 @@
 #define MSG_DBG(fmt, arg...) \
 	CL_DBG(APP_MAIN, fmt, ##arg)
 
+#define XGQ_SQ_TAIL_POINTER     0x0
+#define XGQ_SQ_INTR_REG         0x4
+#define XGQ_SQ_INTR_CTRL        0xC
+#define XGQ_CQ_TAIL_POINTER     0x100
+#define XGQ_CQ_INTR_REG         0x104
+#define XGQ_CQ_INTR_CTRL        0x10C
+
 /* Note: eventually we should be driven by xparameter.h */
 #define RPU_RING_BASE (0x38000000)
-#define RPU_SQ_BASE XPAR_BLP_BLP_LOGIC_XGQ_M2R_BASEADDR
-#define RPU_CQ_BASE XPAR_BLP_BLP_LOGIC_XGQ_R2M_BASEADDR
+#define RPU_SQ_BASE (XPAR_BLP_BLP_LOGIC_XGQ_M2R_BASEADDR + XGQ_SQ_TAIL_POINTER)
+#define RPU_CQ_BASE (XPAR_BLP_BLP_LOGIC_XGQ_M2R_BASEADDR + XGQ_CQ_TAIL_POINTER)
 
 #define RPU_RING_LEN 0x1000
 #define RPU_SLOT_SIZE 512
