@@ -88,6 +88,7 @@ enum xgq_cmd_opcode {
 	XGQ_CMD_OP_DOWNLOAD_PDI		= 0xa,
 	XGQ_CMD_OP_CLOCK		= 0xb,
 	XGQ_CMD_OP_SENSOR		= 0xc,
+	XGQ_CMD_OP_LOAD_APUBIN		= 0xd,
 
 	/* User command type */
 	XGQ_CMD_OP_START_CUIDX	        = 0x100,
@@ -242,14 +243,14 @@ struct xgq_sub_queue_entry {
  * All completion queue entries have a same fixed size of 4 words.
  */
 struct xgq_com_queue_entry {
-	struct xgq_cmd_cq_hdr hdr;
 	union {
 		struct {
+			struct xgq_cmd_cq_hdr hdr;
 			uint32_t result;
 			uint32_t resvd;
 			uint32_t rcode;
 		};
-		uint32_t data[3]; // NOLINT
+		uint32_t data[4]; // NOLINT
 	};
 };
 XGQ_STATIC_ASSERT(sizeof(struct xgq_com_queue_entry) == 16, "xgq_com_queue_entry structure no longer is 16 bytes in size");

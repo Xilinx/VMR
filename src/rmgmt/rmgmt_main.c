@@ -18,11 +18,13 @@ msg_handle_t *pdi_hdl;
 msg_handle_t *xclbin_hdl;
 msg_handle_t *af_hdl;
 msg_handle_t *clock_hdl;
+msg_handle_t *apubin_hdl;
 int xgq_pdi_flag = 0;
 int xgq_xclbin_flag = 0;
 int xgq_af_flag = 0;
 int xgq_sensor_flag = 0;
 int xgq_clock_flag = 0;
+int xgq_apubin_flag = 0;
 
 static int xgq_clock_cb(cl_msg_t *msg, void *arg)
 {
@@ -55,7 +57,7 @@ static int xgq_clock_cb(cl_msg_t *msg, void *arg)
 	return 0;
 }
 
-static int xgq_pdi_cb(cl_msg_t *msg, void *arg)
+static int rmgmt_download_pdi(cl_msg_t *msg, bool is_rpu_pdi)
 {
 	int ret = 0;
 
@@ -68,16 +70,28 @@ static int xgq_pdi_cb(cl_msg_t *msg, void *arg)
 
 	/* prepare rmgmt handler */
 	rh.rh_data_size = size;
-	cl_memcpy_fromio(address, rh.rh_data, size);
+	cl_memcpy_fromio8(address, rh.rh_data, size);
 
-	ret = rmgmt_download_rpu_pdi(&rh);
-	//ret = rmgmt_download_apu_pdi(&rh);
+	if (is_rpu_pdi)
+		ret = rmgmt_download_rpu_pdi(&rh);
+	else
+		ret = rmgmt_download_apu_pdi(&rh);
 
 	msg->hdr.rcode = ret;
 
 	RMGMT_DBG("complete msg id%d, ret %d", msg->hdr.cid, ret);
 	cl_msg_handle_complete(msg);
 	return 0;
+}
+
+static int xgq_pdi_cb(cl_msg_t *msg, void *arg)
+{
+	return rmgmt_download_pdi(msg, true);
+}
+
+static int xgq_apubin_cb(cl_msg_t *msg, void *arg)
+{
+	return rmgmt_download_pdi(msg, false);
 }
 
 static int xgq_xclbin_cb(cl_msg_t *msg, void *arg)
@@ -93,7 +107,7 @@ static int xgq_xclbin_cb(cl_msg_t *msg, void *arg)
 
 	/* prepare rmgmt handler */
 	rh.rh_data_size = size;
-	cl_memcpy_fromio(address, rh.rh_data, size);
+	cl_memcpy_fromio8(address, rh.rh_data, size);
 
 	ret = rmgmt_download_xclbin(&rh);
 
@@ -169,6 +183,12 @@ static void pvXGQTask( void *pvParameters )
 		    cl_msg_handle_init(&clock_hdl, CL_MSG_CLOCK, xgq_clock_cb, NULL) == 0) {
 			RMGMT_LOG("init sensor handle done.");
 			xgq_clock_flag = 1;
+		}
+
+		if (xgq_apubin_flag == 0 &&
+		    cl_msg_handle_init(&clock_hdl, CL_MSG_APUBIN, xgq_apubin_cb, NULL) == 0) {
+			RMGMT_LOG("init apubin handle done.");
+			xgq_apubin_flag = 1;
 		}
 	}
 	RMGMT_DBG("<-");

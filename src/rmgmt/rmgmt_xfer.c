@@ -185,7 +185,7 @@ int rmgmt_init_handler(struct rmgmt_handler *rh)
 	return 0;
 }
 
-static int fpga_pl_pdi_download(UINTPTR data, UINTPTR size)
+static int fpga_pl_pdi_download_workaround(UINTPTR data, UINTPTR size)
 {
 	int ret;
 	XFpga XFpgaInstance = { 0U };
@@ -218,32 +218,55 @@ static int fpga_pl_pdi_download(UINTPTR data, UINTPTR size)
 	axigate_free();
 	//FreeRTOS_SetupTickInterrupt();
 
+	RMGMT_LOG("ret: %d \r\n", ret);
+	return ret;
+}
+
+
+static int fpga_pl_pdi_download(UINTPTR data, UINTPTR size)
+{
+	int ret;
+	XFpga XFpgaInstance = { 0U };
+	UINTPTR KeyAddr = (UINTPTR)NULL;
+
+	ret = XFpga_Initialize(&XFpgaInstance);
+	if (ret != XST_SUCCESS) {
+		RMGMT_DBG("FPGA init failed %d\r\n", ret);
+		return ret;
+	}
+
+	axigate_freeze();
+	ucs_stop();
+
+	ret = XFpga_BitStream_Load(&XFpgaInstance, data, KeyAddr, size, PDI_LOAD);
+
+	ucs_start();
+	MDELAY(10);
+	axigate_free();
+
+	RMGMT_LOG("ret: %d \r\n", ret);
 	return ret;
 }
 
 static int rmgmt_fpga_download(struct rmgmt_handler *rh, u32 len)
 {
-	int ret;
+	int ret = 0;
 	struct axlf *axlf = (struct axlf *)rh->rh_data;
 	uint64_t offset = 0;
 	uint64_t size = 0;
 
 	ret = rmgmt_xclbin_section_info(axlf, BITSTREAM_PARTIAL_PDI, &offset, &size);
 	if (ret) {
-		RMGMT_LOG("get PARTIAL PDI from xclbin failed %d\r\n", ret);
-		goto out;
+		RMGMT_LOG("get PARTIAL PDI from xclbin failed %d", ret);
+		return ret;
 	}
 	/* Sync data from cache to memory */
 	Xil_DCacheFlush();
 
-	ret = fpga_pl_pdi_download((UINTPTR)((const char *)axlf + offset),
+	ret = fpga_pl_pdi_download_workaround((UINTPTR)((const char *)axlf + offset),
 		(UINTPTR)size);
-	if (ret != XFPGA_SUCCESS) {
-		RMGMT_LOG("FPGA load pdi failed %d\r\n", ret);
-		goto out;
-	}
 
-out:
+	RMGMT_LOG("FPGA load pdi ret: %d", ret);
 	return ret;
 }
 
@@ -308,11 +331,29 @@ out:
 static int rmgmt_ospi_apu_download(struct rmgmt_handler *rh, u32 len)
 {
 	int ret = 0;
+	struct axlf *axlf = (struct axlf *)rh->rh_data;
+	uint64_t offset = 0;
+	uint64_t size = 0;
 
+	ret = rmgmt_xclbin_section_info(axlf, SYSTEM_METADATA, &offset, &size);
+	if (ret) {
+		RMGMT_LOG("get system.dtb failed %d", ret);
+		return ret;
+	}
+	cl_memcpy_toio8(0x40000, (void *)((char *)axlf + offset), size);
+
+	ret = rmgmt_xclbin_section_info(axlf, PDI, &offset, &size);
+	if (ret) {
+		RMGMT_LOG("get PDI failed %d", ret);
+		return ret;
+	}
 	Xil_DCacheFlush();
 
-	ret = fpga_pl_pdi_download((UINTPTR)rh->rh_data, (UINTPTR)len);
+	RMGMT_DBG("upload apu_bin");
+	ret = fpga_pl_pdi_download_workaround((UINTPTR)((const char *)axlf + offset),
+		(UINTPTR)size);
 
+	RMGMT_LOG("FPGA load pdi ret: %d", ret);
 	return ret;
 }
 
