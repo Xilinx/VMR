@@ -210,7 +210,7 @@ static int fpga_pl_pdi_download_workaround(UINTPTR data, UINTPTR size)
 	IO_SYNC_WRITE32(data, 0xff3f044c);
 	IO_SYNC_WRITE32(0x2, 0xff330000);
 	/* wait for async operation done in case of firewall trip */
-	MDELAY(1000);
+	MDELAY(2000);
 
 	ucs_start();
 	MDELAY(10);
@@ -335,12 +335,12 @@ static int rmgmt_ospi_apu_download(struct rmgmt_handler *rh, u32 len)
 	uint64_t offset = 0;
 	uint64_t size = 0;
 
-	ret = rmgmt_xclbin_section_info(axlf, SYSTEM_METADATA, &offset, &size);
-	if (ret) {
-		RMGMT_LOG("get system.dtb failed %d", ret);
-		return ret;
-	}
-	cl_memcpy_toio8(0x40000, (void *)((char *)axlf + offset), size);
+	/*
+	 *TODO: Once we enable the A/B boot, PLM will load system.dtb
+	 * onto DDR, then VMR should copy the data to correct location
+	 * before launching APU image.
+	 * cl_memcpy_toio8(0x40000, (void *)((char *)axlf + offset), size);
+	*/
 
 	ret = rmgmt_xclbin_section_info(axlf, PDI, &offset, &size);
 	if (ret) {
