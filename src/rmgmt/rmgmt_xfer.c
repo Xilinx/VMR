@@ -210,7 +210,7 @@ static int fpga_pl_pdi_download_workaround(UINTPTR data, UINTPTR size)
 	IO_SYNC_WRITE32(data, 0xff3f044c);
 	IO_SYNC_WRITE32(0x2, 0xff330000);
 	/* wait for async operation done in case of firewall trip */
-	MDELAY(2000);
+	MDELAY(1000);
 
 	ucs_start();
 	MDELAY(10);
@@ -221,7 +221,6 @@ static int fpga_pl_pdi_download_workaround(UINTPTR data, UINTPTR size)
 	RMGMT_LOG("ret: %d \r\n", ret);
 	return ret;
 }
-
 
 static int fpga_pl_pdi_download(UINTPTR data, UINTPTR size)
 {
@@ -236,12 +235,12 @@ static int fpga_pl_pdi_download(UINTPTR data, UINTPTR size)
 	}
 
 	axigate_freeze();
-	ucs_stop();
+	//ucs_stop();
 
 	ret = XFpga_BitStream_Load(&XFpgaInstance, data, KeyAddr, size, PDI_LOAD);
 
-	ucs_start();
-	MDELAY(10);
+	//ucs_start();
+	//MDELAY(10);
 	axigate_free();
 
 	RMGMT_LOG("ret: %d \r\n", ret);
@@ -349,8 +348,7 @@ static int rmgmt_ospi_apu_download(struct rmgmt_handler *rh, u32 len)
 	}
 	Xil_DCacheFlush();
 
-	RMGMT_DBG("upload apu_bin");
-	ret = fpga_pl_pdi_download_workaround((UINTPTR)((const char *)axlf + offset),
+	ret = fpga_pl_pdi_download((UINTPTR)((const char *)axlf + offset),
 		(UINTPTR)size);
 
 	RMGMT_LOG("FPGA load pdi ret: %d", ret);
