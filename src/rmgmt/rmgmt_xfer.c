@@ -339,7 +339,7 @@ static int rmgmt_ospi_apu_download(struct rmgmt_handler *rh, u32 len)
 	 *TODO: Once we enable the A/B boot, PLM will load system.dtb
 	 * onto DDR, then VMR should copy the data to correct location
 	 * before launching APU image.
-	 * cl_memcpy_toio8(0x40000, (void *)((char *)axlf + offset), size);
+	 * cl_memcpy_toio8(EP_SYSTEM_DTB, (void *)((char *)axlf + offset), size);
 	*/
 
 	ret = rmgmt_xclbin_section_info(axlf, PDI, &offset, &size);
