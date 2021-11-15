@@ -348,7 +348,7 @@ static int rmgmt_ospi_apu_download(struct rmgmt_handler *rh, u32 len)
 	}
 	Xil_DCacheFlush();
 
-	ret = fpga_pl_pdi_download((UINTPTR)((const char *)axlf + offset),
+	ret = fpga_pl_pdi_download_workaround((UINTPTR)((const char *)axlf + offset),
 		(UINTPTR)size);
 
 	RMGMT_LOG("FPGA load pdi ret: %d", ret);
