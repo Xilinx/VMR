@@ -52,7 +52,7 @@ static int xgq_sensor_cb(cl_msg_t *msg, void *arg)
 		}
 		else
 		{
-			cl_memcpy_toio(address, &respBuffer[0], respSize);
+			cl_memcpy_toio8(address, &respBuffer[0], respSize);
 		}
 	}
 

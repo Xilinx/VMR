@@ -33,7 +33,7 @@
 
 #define RPU_RING_LEN 0x1000
 #define RPU_SLOT_SIZE 512
-#define RPU_XGQ_DEV_STATE_OFFSET (RPU_RING_LEN)
+#define RPU_XGQ_DEV_STATE_OFFSET (RPU_RING_BASE + RPU_RING_LEN)
 
 static void receiveTask( void *pvParameters );
 static TaskHandle_t receiveTaskHandle = NULL;
@@ -59,6 +59,7 @@ static msg_handle_t handles[] = {
 	{ .type = CL_MSG_AF },
 	{ .type = CL_MSG_CLOCK },
 	{ .type = CL_MSG_SENSOR },
+	{ .type = CL_MSG_APUBIN },
 };
 
 int cl_msg_handle_init(msg_handle_t **hdl, cl_msg_type_t type,
@@ -109,7 +110,7 @@ int cl_msg_handle_complete(cl_msg_t *msg)
 		cmd_cq->clock_payload.ocl_freq = msg->clock_payload.ocl_req_freq[0];
 
 	xgq_produce(&rpu_xgq, &cq_slot_addr);
-	cl_memcpy_toio(cq_slot_addr, &cq_cmd, sizeof(struct xgq_com_queue_entry));
+	cl_memcpy_toio32(cq_slot_addr, &cq_cmd, sizeof(struct xgq_com_queue_entry));
 	xgq_notify_peer_produced(&rpu_xgq);
 
 	return 0;
@@ -219,6 +220,9 @@ static int submit_to_queue(u32 sq_addr)
 	case XGQ_CMD_OP_DOWNLOAD_PDI:
 		msg.hdr.type = CL_MSG_PDI;
 		break;
+	case XGQ_CMD_OP_LOAD_APUBIN:
+		msg.hdr.type = CL_MSG_APUBIN;
+		break;
 	case XGQ_CMD_OP_GET_LOG_PAGE:
 		msg.hdr.type = CL_MSG_AF;
 		break;
@@ -229,7 +233,7 @@ static int submit_to_queue(u32 sq_addr)
 		msg.hdr.type = CL_MSG_SENSOR;
 		break;
 	default:
-		MSG_LOG("Unhandled opcode:%d", cmd->hdr.opcode);
+		MSG_LOG("Unhandled opcode: 0x%x", cmd->hdr.opcode);
 		return -1;
 	}
 
@@ -246,6 +250,7 @@ static int submit_to_queue(u32 sq_addr)
 		ret = dispatch_to_queue(&msg, TASK_SLOW);
 		break;
 	case CL_MSG_PDI:
+	case CL_MSG_APUBIN:
 		msg.data_payload.address = (u32)sq->pdi_payload.address;
 		msg.data_payload.size = (u32)sq->pdi_payload.size;
 
@@ -412,17 +417,6 @@ static int init_xgq()
 	int ret = 0;
 	size_t ring_len = RPU_RING_LEN;
 
-#if 0
-	MSG_LOG("write range 0x%x to 0x%x all zero", RPU_RING_BASE, RPU_RING_BASE + 0xfff);
-	{
-		u32 i;
-		for (i = RPU_RING_BASE; i < RPU_RING_BASE + 0x1000; i += 4) {
-			//xil_printf("%x\r", i);
-			IO_SYNC_WRITE32(0x0, i);
-		}
-		//IO_SYNC_WRITE32(0x0, RPU_CQ_BASE);	
-	}
-#endif	
 	IO_SYNC_WRITE32(0x0, RPU_XGQ_DEV_STATE_OFFSET);	
         ret = xgq_alloc(&rpu_xgq, XGQ_SERVER, xgq_io_hdl, RPU_RING_BASE, &ring_len,
 		RPU_SLOT_SIZE, RPU_SQ_BASE, RPU_CQ_BASE);

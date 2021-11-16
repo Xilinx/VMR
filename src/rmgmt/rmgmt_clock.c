@@ -190,6 +190,8 @@ uint32_t rmgmt_clock_get_freq(int idx, enum clock_ip ip)
 
 	if (clock_counter_bases[idx]) {
 		u32 base = clock_counter_bases[idx];
+		/* start clock freq counter measurement */
+		//IO_SYNC_WRITE32(OCL_CLKWIZ_STATUS_MEASURE_START, base);
 
 		while (times != 0) {
 			status = IO_SYNC_READ32(base);
