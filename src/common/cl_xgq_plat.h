@@ -26,6 +26,8 @@ static inline u32 xgq_reg_read32(u64 io_hdl, u64 addr)
 }
 
 #define XGQ_IMPL
+#define XGQ_SERVER
+
 #include "xgq_impl.h"
 
 #endif

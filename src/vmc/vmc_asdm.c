@@ -6,6 +6,7 @@
 #include "vmc_sensors.h"
 #include "vmc_asdm.h"
 #include "cl_log.h"
+#include "vmc_api.h"
 #include <semphr.h>
 
 #define LENGTH_BITMASK   (0x3F)

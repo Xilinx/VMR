@@ -3,6 +3,9 @@
 * SPDX-License-Identifier: MIT
 *******************************************************************************/
 
+#include <stdbool.h>
+#include <stdint.h>
+
 #include "rmgmt_common.h"
 #include "rmgmt_xfer.h"
 #include "rmgmt_clock.h"
@@ -11,7 +14,6 @@
 #include "cl_flash.h"
 
 
-//static TaskHandle_t xR5Task;
 static TaskHandle_t xXGQTask;
 static struct rmgmt_handler rh = { 0 };
 msg_handle_t *pdi_hdl;
@@ -19,12 +21,14 @@ msg_handle_t *xclbin_hdl;
 msg_handle_t *af_hdl;
 msg_handle_t *clock_hdl;
 msg_handle_t *apubin_hdl;
+msg_handle_t *multiboot_hdl;
 int xgq_pdi_flag = 0;
 int xgq_xclbin_flag = 0;
 int xgq_af_flag = 0;
 int xgq_sensor_flag = 0;
 int xgq_clock_flag = 0;
 int xgq_apubin_flag = 0;
+int xgq_multiboot_flag = 0;
 
 static int xgq_clock_cb(cl_msg_t *msg, void *arg)
 {
@@ -118,13 +122,6 @@ static int xgq_xclbin_cb(cl_msg_t *msg, void *arg)
 	return 0;
 }
 
-#define FAULT_STATUS            0x0
-#define BIT(n) 			(1UL << (n))
-#define READ_RESPONSE_BUSY      BIT(0)
-#define WRITE_RESPONSE_BUSY     BIT(16)
-#define FIREWALL_STATUS_BUSY    (READ_RESPONSE_BUSY | WRITE_RESPONSE_BUSY)
-#define IS_FIRED(val) 		(val & ~FIREWALL_STATUS_BUSY)
-
 static int check_firewall()
 {
 	u32 firewall = EP_FIREWALL_USER_BASE;
@@ -145,6 +142,56 @@ static int xgq_af_cb(cl_msg_t *msg, void *arg)
 	msg->hdr.rcode = 0;
 
 	cl_msg_handle_complete(msg);
+	return 0;
+}
+
+static int rmgmt_enable_multiboot()
+{
+	u32 val = 0;
+	u32 pmc_intr = EP_PMC_REG;
+	u32 pmc_mux = EP_FORCE_RESET;
+
+	val = IO_SYNC_READ32(pmc_intr);
+	RMGMT_LOG("\tintr %x mux %x val %x", pmc_intr, pmc_mux, val);
+
+	if (val & PMC_ERR1_STATUS_MASK) {
+		val &= ~PMC_ERR1_STATUS_MASK;
+		IO_SYNC_WRITE32(val, pmc_intr); 
+	}
+
+	IO_SYNC_WRITE32(PMC_ERR_OUT1_EN_MASK, pmc_intr + PMC_REG_ERR_OUT1_EN);
+	val = IO_SYNC_READ32(pmc_intr + PMC_REG_ERR_OUT1_MASK);
+	if (val & PMC_ERR_OUT1_EN_MASK) {
+		RMGMT_LOG("mask 0x%x for PMC_REG_ERR_OUT1_MASK 0x%x "
+		    "should be 0.\n", PMC_ERR_OUT1_EN_MASK, val);
+		return -1;
+	}
+
+	IO_SYNC_WRITE32(PMC_POR1_EN_MASK, pmc_intr + PMC_REG_POR1_EN);
+	val = IO_SYNC_READ32(pmc_intr + PMC_REG_POR1_MASK);
+	if (val & PMC_POR1_EN_MASK) {
+		RMGMT_LOG("mask 0x%x for PMC_REG_POR1_MASK 0x%x "
+		    "should be 0.\n", PMC_POR1_EN_MASK, val);
+		return -1;
+	}
+
+	val = IO_SYNC_READ32(pmc_mux);
+	val |= PL_TO_PMC_ERROR_SIGNAL_PATH_MASK;
+	IO_SYNC_WRITE32(val, pmc_mux); 
+
+	RMGMT_LOG("done");
+	return 0;
+}
+
+static int xgq_multiboot_cb(cl_msg_t *msg, void *arg)
+{
+	int ret = 0;
+
+	ret = rmgmt_enable_multiboot();
+
+	msg->hdr.rcode = ret;
+	cl_msg_handle_complete(msg);
+	RMGMT_LOG("complete msg id %d, ret %d", msg->hdr.cid, ret);
 	return 0;
 }
 
@@ -190,75 +237,18 @@ static void pvXGQTask( void *pvParameters )
 			RMGMT_LOG("init apubin handle done.");
 			xgq_apubin_flag = 1;
 		}
+
+		if (xgq_multiboot_flag == 0 &&
+		    cl_msg_handle_init(&clock_hdl, CL_MSG_MULTIBOOT, xgq_multiboot_cb, NULL) == 0) {
+			RMGMT_LOG("init multiboot handle done.");
+			xgq_multiboot_flag = 1;
+		}
 	}
 	RMGMT_DBG("<-");
 }
 
-#if 0
-/*
- * Task on R5 (same as zocl_ov_thread)
- */
-static void pvR5Task( void *pvParameters )
-{
-	const TickType_t x1second = pdMS_TO_TICKS( 1000*1 );
-	u8 pkt_flags, pkt_type;
-	int cnt = 0;
-
-	for( ;; )
-	{
-		if (rmgmt_check_for_status(&rh, XRT_XFR_PKT_STATUS_IDLE)) {
-			/* increment count every tick */
-			//IO_SYNC_WRITE32(cnt++, RMGMT_HEARTBEAT_REG);
-			if (++cnt % 100 == 0)
-				RMGMT_DBG("heartbeat %d", cnt);
-			vTaskDelay( x1second );
-			continue;
-		}
-
-		CL_LOG(APP_RMGMT, "get new pkt, processing ... \r\n");
-		pkt_flags = rmgmt_get_pkt_flags(&rh);
-		pkt_type = pkt_flags >> XRT_XFR_PKT_TYPE_SHIFT & XRT_XFR_PKT_TYPE_MASK;
-
-		switch (pkt_type) {
-		case XRT_XFR_PKT_TYPE_PDI:
-			/* pass whole xsabin instead of pdi for authentication */
-			rmgmt_download_rpu_pdi(&rh);
-			break;
-		case XRT_XFR_PKT_TYPE_XCLBIN:
-			FreeRTOS_ClearTickInterrupt();
-			rmgmt_download_xclbin(&rh);
-			FreeRTOS_SetupTickInterrupt();
-			break;
-		case XRT_XFR_PKT_TYPE_APU_PDI:
-			rmgmt_download_apu_pdi(&rh);
-			break;
-		default:
-			CL_LOG(APP_RMGMT, "WARN: Unknown packet type: %d\r\n", pkt_type);
-			break;
-		}
-
-		RMGMT_LOG("Re-start for next pkt ...\r\n");
-	}
-
-	RMGMT_LOG("FATAL: should never be here!\r\n");
-}
-#endif
-
 static int rmgmt_create_tasks(void)
 {
-	/* Disabled xfer transfer thread
-	if (xTaskCreate( pvR5Task,
-		 ( const char * ) "R5-0-xfer",
-		 2048,
-		 NULL,
-		 tskIDLE_PRIORITY + 1,
-		 &xR5Task
-		 ) != pdPASS) {
-		RMGMT_LOG("FATAL: pvR5Task creation failed.\r\n");
-		return -1;
-	}
-	*/
-
 	if (xTaskCreate( pvXGQTask,
 		 ( const char * ) "R5-0-XGQ",
 		 configMINIMAL_STACK_SIZE,
@@ -285,12 +275,13 @@ int RMGMT_Launch( void )
 
 #if 0
 	rmgmt_load_apu(&rh);
+	rmgmt_dump_fpt(&rh);
 #endif
 
 	ret = rmgmt_create_tasks();
 	if (ret != 0)
 		return ret;
 
-	RMGMT_LOG("succeeded.\r\n");
+	RMGMT_LOG("succeeded.\n");
 	return 0;
 }

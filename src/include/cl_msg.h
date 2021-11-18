@@ -14,6 +14,7 @@ typedef enum cl_msg_type {
 	CL_MSG_CLOCK,
 	CL_MSG_SENSOR,
 	CL_MSG_APUBIN,
+	CL_MSG_MULTIBOOT,
 } cl_msg_type_t;
 
 typedef enum cl_sensor_type {

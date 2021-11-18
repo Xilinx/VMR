@@ -104,11 +104,12 @@ static void pVMCTask(void *params)
 	
     VMC_LOG("\n\r VMC launched \n\r");
 
-
     I2CInit();
 
+#ifdef VMC_DEBUG
     /* Demo menu log is enabled */    
     Enable_DemoMenu();
+#endif
 
     /* Read the EEPROM */
     Versal_EEPROM_ReadBoardIno();

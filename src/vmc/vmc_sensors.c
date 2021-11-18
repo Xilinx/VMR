@@ -7,8 +7,9 @@
 #include "task.h"
 
 #include "cl_uart_rtos.h"
-#include "cl_log.h"
 #include "cl_i2c.h"
+#include "cl_log.h"
+#include "vmc_api.h"
 #include "sensors/inc/se98a.h"
 #include "sensors/inc/max6639.h"
 #include "vmc_sensors.h"

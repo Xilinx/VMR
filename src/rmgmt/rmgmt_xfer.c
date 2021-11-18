@@ -181,7 +181,7 @@ int rmgmt_init_handler(struct rmgmt_handler *rh)
 	}
 
 	/* ospi flash should alreay be initialized */
-	RMGMT_LOG("done\r\n");
+	RMGMT_LOG("done");
 	return 0;
 }
 
@@ -269,6 +269,49 @@ static int rmgmt_fpga_download(struct rmgmt_handler *rh, u32 len)
 	return ret;
 }
 
+struct fpt_hdr {
+	uint32_t	fpt_magic;
+	uint8_t		fpt_version;
+	uint8_t		fpt_header_size;
+	uint8_t		fpt_entry_size;
+	uint8_t		fpt_num_entries;
+	uint32_t	fpt_checksum;
+};
+
+struct fpt_entry {
+	uint32_t	partition_type;
+	uint32_t	partition_sub_type;
+	uint32_t	partition_device_id;
+	uint32_t	partition_base_addr;
+	uint32_t	partition_size;
+	uint32_t	partition_flags;
+	uint8_t		rsvd[1];
+};
+int rmgmt_dump_fpt(struct rmgmt_handler *rh)
+{
+	struct fpt_hdr hdr;
+	int ret = 0;
+
+	ret = ospi_flash_read(CL_FLASH_BOOT, (u8 *)&hdr, 0, sizeof(hdr));
+
+	RMGMT_LOG("magic %x", hdr.fpt_magic);
+	RMGMT_LOG("version %x", hdr.fpt_version);
+	RMGMT_LOG("hdr size %x", hdr.fpt_header_size);
+	RMGMT_LOG("entry size %x", hdr.fpt_entry_size);
+	RMGMT_LOG("num entries %x", hdr.fpt_num_entries);
+
+	for (int i = 1; i <= hdr.fpt_num_entries; i++) {
+		struct fpt_entry entry;
+		ret = ospi_flash_read(CL_FLASH_BOOT, (u8 *)&entry,
+			hdr.fpt_entry_size * i, sizeof(entry));
+		RMGMT_LOG("type %x", entry.partition_type);
+		RMGMT_LOG("base %x", entry.partition_base_addr);
+		RMGMT_LOG("size %x", entry.partition_size);
+		RMGMT_LOG("flags %x", entry.partition_flags);
+	}
+	return ret;
+}
+
 int rmgmt_load_apu(struct rmgmt_handler *rh)
 {
 	int ret = 0;
@@ -304,19 +347,21 @@ int rmgmt_load_apu(struct rmgmt_handler *rh)
 static int rmgmt_ospi_rpu_download(struct rmgmt_handler *rh, u32 len)
 {
 	int ret;
+	/* The base will be based on FPT table */
+	u32 base = 0x0;
 
 	/* Sync data from cache to memory */
 	Xil_DCacheFlush();
 
 	/* erase */
-	ret = ospi_flash_erase(CL_FLASH_BOOT, 0, len);
+	ret = ospi_flash_erase(CL_FLASH_BOOT, base, len);
 	if (ret) {
 		RMGMT_LOG("OSPI fails to load pdi %d", ret);
 		goto out;
 	}
 
 	/* write */
-	ret = ospi_flash_write(CL_FLASH_BOOT, rh->rh_data, 0, len);
+	ret = ospi_flash_write(CL_FLASH_BOOT, rh->rh_data, base, len);
 	if (ret) {
 		RMGMT_LOG("OSPI fails to load pdi %d", ret);
 		goto out;

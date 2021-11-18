@@ -60,6 +60,17 @@ static msg_handle_t handles[] = {
 	{ .type = CL_MSG_CLOCK },
 	{ .type = CL_MSG_SENSOR },
 	{ .type = CL_MSG_APUBIN },
+	{ .type = CL_MSG_MULTIBOOT },
+};
+
+static const char *handle_name[] = {
+	"PDI",
+	"XCLBIN",
+	"FIREWALL",
+	"CLOCK",
+	"SENSOR",
+	"APUBIN",
+	"MULTI-BOOT",
 };
 
 int cl_msg_handle_init(msg_handle_t **hdl, cl_msg_type_t type,
@@ -79,7 +90,7 @@ int cl_msg_handle_init(msg_handle_t **hdl, cl_msg_type_t type,
 			handles[i].msg_cb = cb;
 			handles[i].arg = arg;
 			*hdl = &handles[i];
-			MSG_LOG("init type %d", type);
+			MSG_LOG("init handle %s type %d", handle_name[i], type);
 			return 0;
 		}
 	}
@@ -232,6 +243,9 @@ static int submit_to_queue(u32 sq_addr)
 	case XGQ_CMD_OP_SENSOR:
 		msg.hdr.type = CL_MSG_SENSOR;
 		break;
+	case XGQ_CMD_OP_MULTIPLE_BOOT:
+		msg.hdr.type = CL_MSG_MULTIBOOT;
+		break;
 	default:
 		MSG_LOG("Unhandled opcode: 0x%x", cmd->hdr.opcode);
 		return -1;
@@ -257,6 +271,7 @@ static int submit_to_queue(u32 sq_addr)
 		ret = dispatch_to_queue(&msg, TASK_SLOW);
 		break;
 	case CL_MSG_AF:
+	case CL_MSG_MULTIBOOT:
 		ret = dispatch_to_queue(&msg, TASK_QUICK);
 		break;
 	case CL_MSG_CLOCK:
@@ -387,6 +402,16 @@ static void slowTask (void *pvParameters )
 	}
 }
 
+static inline int service_can_start()
+{
+	for (int i = 0; i < ARRAY_SIZE(handles); i++) {
+		if (handles[i].msg_cb == NULL)
+			return 0;
+	}
+
+	return 1;
+}
+
 static void receiveTask(void *pvParameters)
 {
 	const TickType_t xBlockTime = pdMS_TO_TICKS(500);
@@ -399,6 +424,9 @@ static void receiveTask(void *pvParameters)
 
 		cnt++;
 		//xil_printf("%d receiveTask\r", cnt);
+
+		if (!service_can_start())
+			continue;
 
 		/* when cnt is not 0, xgq is healthy */
 		IO_SYNC_WRITE32(cnt, RPU_XGQ_DEV_STATE_OFFSET);	
@@ -416,9 +444,12 @@ static int init_xgq()
 {
 	int ret = 0;
 	size_t ring_len = RPU_RING_LEN;
+	uint64_t flags = 0;
 
+	/* re-init device stat to 0 */
 	IO_SYNC_WRITE32(0x0, RPU_XGQ_DEV_STATE_OFFSET);	
-        ret = xgq_alloc(&rpu_xgq, XGQ_SERVER, xgq_io_hdl, RPU_RING_BASE, &ring_len,
+
+        ret = xgq_alloc(&rpu_xgq, flags, xgq_io_hdl, RPU_RING_BASE, &ring_len,
 		RPU_SLOT_SIZE, RPU_SQ_BASE, RPU_CQ_BASE);
 	if (ret) {
 		MSG_LOG("xgq_alloc failed: %d", ret);
