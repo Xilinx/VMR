@@ -1,0 +1,14 @@
+# This file defines code ownership in VMR.
+# Each line is a file pattern followed by one or more owners.
+# Order is important. The last matching pattern has the most precedence.
+#
+# <path>/ matches files under <path> and any of its subdirectories unless later match
+# <path>/* matches files under <path> but *not* further nested files.
+
+src/common/	@krishna-xilinx @houlz0507 @xdavidz
+src/include/	@krishna-xilinx @houlz0507 @xdavidz
+src/lscript.ld	@xdavidz
+src/rmgmt/	@xdavidz
+src/vmc/	@krishna-xilinx
+
+build/ @xdavidz

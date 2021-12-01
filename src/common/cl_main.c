@@ -15,10 +15,13 @@
 #include "sysmon.h"
 
 int ospi_flash_init();
-
 int VMC_Launch(void);
 int RMGMT_Launch(void);
 int cl_msg_service_launch(void);
+
+uart_rtos_handle_t uart_log;
+XSysMonPsv InstancePtr;
+XScuGic IntcInst;
 
 static tasks_register_t handler[] = {
 	VMC_Launch,	
@@ -26,26 +29,26 @@ static tasks_register_t handler[] = {
 	cl_msg_service_launch,
 };
 
-uart_rtos_handle_t uart_log;
-
-XSysMonPsv InstancePtr;
-XScuGic IntcInst;
-
-
-int main( void )
+void cl_system_pre_init(void)
 {
-	CL_DBG(APP_MAIN, "->");
-
 	/* Init flash device */
 	ospi_flash_init();
 
+#ifdef VMC_DEBUG
 	/* Enable FreeRTOS Debug UART */
 	UART_RTOS_Debug_Enable(&uart_log);
+#endif
 
 	if (XSysMonPsv_Init(&InstancePtr, &IntcInst) != XST_SUCCESS)
 	{
 		CL_LOG(APP_VMC, "Failed to init sysmon \n\r");
 	}
+}
+
+int main( void )
+{
+
+	cl_system_pre_init();
 
 	for (int i = 0; i < ARRAY_SIZE(handler); i++) {
 		configASSERT(handler[i]() == 0);

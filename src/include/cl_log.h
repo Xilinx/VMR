@@ -6,17 +6,12 @@
 #ifndef COMMON_LOG_H
 #define COMMON_LOG_H
 
-/**
- * Comment VERBOSE out in production code
- */
-#define CL_VERBOSE
-
 /* C includes */
 #include "stdlib.h"
 #include "stdio.h"
 
-#include "../vmc/vmc_api.h"
-
+//#define CL_VERBOSE
+//#define VMC_DEBUG
 
 /**
  * Application type id for logging, mem signature etc.
@@ -37,30 +32,28 @@ static const char *app_type_name[] = {
 	"VMC",
 };
 
-/**
- * Note: preprocessors are complier related...
- */
+#define CL_ERR(app, fmt, arg...) 				\
+({ 								\
+	xil_printf("[ERROR]: %s:%s:" fmt "\r\n",		\
+		app_type_name[app], __FUNCTION__, ##arg);	\
+})
 
-#define CL_ERR(app, fmt, arg...) 		\
-	VMC_Printf(__FILENAME__, __LINE__, VMC_LOG_LEVEL_ERROR,"%s[ERROR]: %s" fmt "\r\n", 	\
-			app_type_name[app], __FUNCTION__, ##arg)
+#define CL_LOG(app, fmt, arg...) 				\
+({ 								\
+	xil_printf("%s:%s:" fmt "\r\n",				\
+		app_type_name[app], __FUNCTION__, ##arg);	\
+})
 
-#define CL_DMO(app, fmt, arg...) 		\
-	VMC_Printf(__FILENAME__, __LINE__, VMC_LOG_LEVEL_DEMO_MENU, fmt,##arg)
-
-#define CL_PRNT(app, fmt, arg...) 		\
-	VMC_Printf(__FILENAME__, __LINE__, VMC_LOG_LEVEL_INFO, fmt,##arg)
-
-#define CL_LOG(app, fmt, arg...) 		\
-	VMC_Printf(__FILENAME__, __LINE__, VMC_LOG_LEVEL_INFO, "%s: %s " fmt "\r\n", 	\
-			app_type_name[app], __FUNCTION__, ##arg)
+#define CL_DMO(app, fmt, arg...)
+#define CL_PRNT(app, fmt, arg...) 
 
 #ifdef CL_VERBOSE
-
-#define CL_DBG(app, fmt, arg...) 		\
-	VMC_Printf(__FILENAME__, __LINE__, VMC_LOG_LEVEL_DEBUG,"%s[DEBUG]: %s:%d %s " fmt "\r\n", 	\
-			app_type_name[app], __FILENAME__, __LINE__, __FUNCTION__, ##arg)
-
+#define CL_DBG(app, fmt, arg...) 				\
+({ 								\
+	xil_printf("%s:%s:%d:%s:" fmt "\r\n",			\
+		app_type_name[app], __FILE__, __LINE__,		\
+		__FUNCTION__, ##arg);				\
+})
 #else
 #define CL_DBG(app, fmt, arg...)
 #endif

@@ -21,4 +21,6 @@ typedef int (*tasks_register_t)(void);
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof (*(x)))
 
+void cl_system_pre_init(void);
+
 #endif
