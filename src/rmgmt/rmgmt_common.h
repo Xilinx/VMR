@@ -57,6 +57,7 @@
 #define EP_ACLK_FREQ_HBM	0
 #define EP_ACLK_FREQ_K1_K2	0
 
+#define EP_PLM_MULTIBOOT	0xF1110004
 #define EP_PMC_REG		0xF1130000
 #define EP_FORCE_RESET		XPAR_BLP_BLP_LOGIC_BASE_CLOCKING_FORCE_RESET_GPIO_BASEADDR
 /* === end define data-driven endpoints from xparameters.h */
@@ -71,13 +72,31 @@
 #define	PMC_ERR1_STATUS_MASK	(1 << 24)
 #define	PMC_ERR_OUT1_EN_MASK	(1 << 24)
 #define	PMC_POR1_EN_MASK	(1 << 24)
+#define	PMC_POR_ENABLE_BIT	(1 << 24)
 #define	PMC_REG_ERR_OUT1_MASK	0x20
 #define	PMC_REG_ERR_OUT1_EN	0x24
 #define	PMC_REG_POR1_MASK	0x40
 #define	PMC_REG_POR1_EN		0x44
+#define	PMC_REG_ACTION		0x48
+#define	PMC_REG_SRST		0x84
 #define	PL_TO_PMC_ERROR_SIGNAL_PATH_MASK	(1 << 0)
 
+#define FPT_MAGIC 		0x3A0BC563
+#define FPT_DEFAULT_OFFSET	0x0
+#define FPT_BACKUP_OFFSET	(0x20000 / 8) // in bytes
+#define FPT_DEFAULT_TYPE	0xB00
+#define FPT_BACKUP_TYPE		0xB01
+#define FPT_EXTEND_TYPE		0xFFFD
+#define FPT_RECOVERY_TYPE	0x400
+
 #define MDELAY(n) vTaskDelay( pdMS_TO_TICKS(n) )
+
+struct rmgmt_handler {
+	u32 rh_base;
+	u32 rh_max_size;
+	u32 rh_data_size;
+	u8  *rh_data; 	/* static malloc and never free */
+};
 
 static void inline axigate_freeze()
 {

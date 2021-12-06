@@ -14,6 +14,8 @@ typedef enum flash_area {
 
 int ospi_flash_read(flash_area_t area, u8 *buffer, u32 offset, u32 len);
 int ospi_flash_write(flash_area_t area, u8 *buffer, u32 offset, u32 len);
+int ospi_flash_copy(flash_area_t area, u32 src, u32 tgt, u32 len);
+int ospi_flash_erase(flash_area_t area, u32 offset, u32 len);
 
 /* default flash media page size */
 #define OSPI_VERSAL_PAGESIZE	256

@@ -9,9 +9,9 @@
 #include "rmgmt_xclbin.h"
 
 #include "cl_io.h"
+#include "cl_msg.h"
 #include "cl_flash.h"
 
-extern int ospi_flash_erase(flash_area_t area, u32 offset, u32 len);
 
 static inline u32 wait_for_status(struct rmgmt_handler *rh, u8 status)
 {
@@ -266,49 +266,6 @@ static int rmgmt_fpga_download(struct rmgmt_handler *rh, u32 len)
 		(UINTPTR)size);
 
 	RMGMT_LOG("FPGA load pdi ret: %d", ret);
-	return ret;
-}
-
-struct fpt_hdr {
-	uint32_t	fpt_magic;
-	uint8_t		fpt_version;
-	uint8_t		fpt_header_size;
-	uint8_t		fpt_entry_size;
-	uint8_t		fpt_num_entries;
-	uint32_t	fpt_checksum;
-};
-
-struct fpt_entry {
-	uint32_t	partition_type;
-	uint32_t	partition_sub_type;
-	uint32_t	partition_device_id;
-	uint32_t	partition_base_addr;
-	uint32_t	partition_size;
-	uint32_t	partition_flags;
-	uint8_t		rsvd[1];
-};
-int rmgmt_dump_fpt(struct rmgmt_handler *rh)
-{
-	struct fpt_hdr hdr;
-	int ret = 0;
-
-	ret = ospi_flash_read(CL_FLASH_BOOT, (u8 *)&hdr, 0, sizeof(hdr));
-
-	RMGMT_LOG("magic %x", hdr.fpt_magic);
-	RMGMT_LOG("version %x", hdr.fpt_version);
-	RMGMT_LOG("hdr size %x", hdr.fpt_header_size);
-	RMGMT_LOG("entry size %x", hdr.fpt_entry_size);
-	RMGMT_LOG("num entries %x", hdr.fpt_num_entries);
-
-	for (int i = 1; i <= hdr.fpt_num_entries; i++) {
-		struct fpt_entry entry;
-		ret = ospi_flash_read(CL_FLASH_BOOT, (u8 *)&entry,
-			hdr.fpt_entry_size * i, sizeof(entry));
-		RMGMT_LOG("type %x", entry.partition_type);
-		RMGMT_LOG("base %x", entry.partition_base_addr);
-		RMGMT_LOG("size %x", entry.partition_size);
-		RMGMT_LOG("flags %x", entry.partition_flags);
-	}
 	return ret;
 }
 

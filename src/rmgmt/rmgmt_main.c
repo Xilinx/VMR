@@ -9,6 +9,7 @@
 #include "rmgmt_common.h"
 #include "rmgmt_xfer.h"
 #include "rmgmt_clock.h"
+#include "rmgmt_fpt.h"
 
 #include "cl_msg.h"
 #include "cl_flash.h"
@@ -77,7 +78,7 @@ static int rmgmt_download_pdi(cl_msg_t *msg, bool is_rpu_pdi)
 	cl_memcpy_fromio8(address, rh.rh_data, size);
 
 	if (is_rpu_pdi)
-		ret = rmgmt_download_rpu_pdi(&rh);
+		ret = rmgmt_flush_rpu_pdi(&rh, msg, msg->data_payload.flush_default_only);
 	else
 		ret = rmgmt_download_apu_pdi(&rh);
 
@@ -145,14 +146,12 @@ static int xgq_af_cb(cl_msg_t *msg, void *arg)
 	return 0;
 }
 
-static int rmgmt_enable_multiboot()
+static int rmgmt_init_pmc()
 {
 	u32 val = 0;
 	u32 pmc_intr = EP_PMC_REG;
-	u32 pmc_mux = EP_FORCE_RESET;
 
 	val = IO_SYNC_READ32(pmc_intr);
-	RMGMT_LOG("\tintr %x mux %x val %x", pmc_intr, pmc_mux, val);
 
 	if (val & PMC_ERR1_STATUS_MASK) {
 		val &= ~PMC_ERR1_STATUS_MASK;
@@ -175,9 +174,53 @@ static int rmgmt_enable_multiboot()
 		return -1;
 	}
 
+	RMGMT_LOG("done");
+	return 0;
+}
+
+static void rmgmt_enable_pl_reset()
+{
+	int val = 0;
+	u32 pmc_mux = EP_FORCE_RESET;
+
 	val = IO_SYNC_READ32(pmc_mux);
 	val |= PL_TO_PMC_ERROR_SIGNAL_PATH_MASK;
 	IO_SYNC_WRITE32(val, pmc_mux); 
+}
+
+static int rmgmt_enable_boot_default()
+{
+	if (rmgmt_init_pmc())
+		return -1;
+
+	rmgmt_enable_pl_reset();
+
+	RMGMT_LOG("done");
+	return 0;
+}
+
+static void rmgmt_enable_srst_por()
+{
+	u32 pmc_intr = EP_PMC_REG;
+
+	IO_SYNC_WRITE32(PMC_POR_ENABLE_BIT, pmc_intr + PMC_REG_ACTION);
+	IO_SYNC_WRITE32(PMC_POR_ENABLE_BIT, pmc_intr + PMC_REG_SRST);
+}
+
+static void rmgmt_set_multiboot(u32 offset)
+{
+	IO_SYNC_WRITE32(offset, EP_PLM_MULTIBOOT);
+}
+
+static int rmgmt_enable_boot_backup()
+{
+	if (rmgmt_init_pmc())
+		return -1;
+	
+	rmgmt_enable_srst_por();
+	rmgmt_set_multiboot(0xC00);
+
+	rmgmt_enable_pl_reset();
 
 	RMGMT_LOG("done");
 	return 0;
@@ -187,7 +230,21 @@ static int xgq_multiboot_cb(cl_msg_t *msg, void *arg)
 {
 	int ret = 0;
 
-	ret = rmgmt_enable_multiboot();
+	switch (msg->multiboot_payload.req_type) {
+		case CL_MULTIBOOT_DEFAULT:
+			ret = rmgmt_enable_boot_default();
+			break;
+		case CL_MULTIBOOT_BACKUP:
+			ret = rmgmt_enable_boot_backup();
+			break;
+		case CL_MULTIBOOT_QUERY:
+			ret = rmgmt_boot_fpt_query(&rh, msg);
+			break;
+		default:
+			RMGMT_LOG("unknown type %d", msg->multiboot_payload.req_type);
+			ret = -1;
+			break;
+	}
 
 	msg->hdr.rcode = ret;
 	cl_msg_handle_complete(msg);
@@ -275,7 +332,6 @@ int RMGMT_Launch( void )
 
 #if 0
 	rmgmt_load_apu(&rh);
-	rmgmt_dump_fpt(&rh);
 #endif
 
 	ret = rmgmt_create_tasks();

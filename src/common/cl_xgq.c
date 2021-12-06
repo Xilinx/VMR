@@ -116,9 +116,23 @@ int cl_msg_handle_complete(cl_msg_t *msg)
 	struct xgq_cmd_cq *cmd_cq = (struct xgq_cmd_cq *)&cq_cmd;
 	u64 cq_slot_addr;
 
-	if (msg->hdr.type == CL_MSG_CLOCK)
+	if (msg->hdr.type == CL_MSG_CLOCK) {
 		/* only 1 place to hold ocl_freq, alway get from index 0 */
 		cmd_cq->clock_payload.ocl_freq = msg->clock_payload.ocl_req_freq[0];
+	} else if (msg->hdr.type == CL_MSG_MULTIBOOT) {
+		/* explicitly copy back fpt status from cl_msg to xgq completion cmd */
+		cmd_cq->multiboot_payload.has_fpt = msg->multiboot_payload.has_fpt;
+		cmd_cq->multiboot_payload.has_fpt_recovery =
+			msg->multiboot_payload.has_fpt_recovery;
+		cmd_cq->multiboot_payload.boot_on_default =
+			msg->multiboot_payload.boot_on_default;
+		cmd_cq->multiboot_payload.boot_on_backup =
+			msg->multiboot_payload.boot_on_backup;
+		cmd_cq->multiboot_payload.boot_on_recovery =
+			msg->multiboot_payload.boot_on_recovery;
+		cmd_cq->multiboot_payload.multi_boot_offset =
+			msg->multiboot_payload.multi_boot_offset;
+	}
 
 	xgq_produce(&rpu_xgq, &cq_slot_addr);
 	cl_memcpy_toio32(cq_slot_addr, &cq_cmd, sizeof(struct xgq_com_queue_entry));
@@ -200,6 +214,27 @@ static cl_sensor_type_t convert_pid(enum xgq_cmd_sensor_page_id xgq_id)
 	return sid;
 }
 
+static cl_multiboot_type_t convert_boot_type(enum xgq_cmd_multiboot_req_type req_type)
+{
+	cl_multiboot_type_t type = CL_MULTIBOOT_QUERY;
+
+	switch (req_type) {
+	case XGQ_CMD_BOOT_DEFAULT:
+		type = CL_MULTIBOOT_DEFAULT;
+		break;
+	case XGQ_CMD_BOOT_BACKUP:
+		type = CL_MULTIBOOT_BACKUP;
+		break;
+	case XGQ_CMD_BOOT_QUERY:
+	default:
+		type = CL_MULTIBOOT_QUERY;
+		break;
+	}
+
+
+	return type;
+}
+
 /*
  * submit dispatch msg to different software queues based on msg_type.
  * The quickTask only handles commands should be complished very fast.
@@ -267,11 +302,17 @@ static int submit_to_queue(u32 sq_addr)
 	case CL_MSG_APUBIN:
 		msg.data_payload.address = (u32)sq->pdi_payload.address;
 		msg.data_payload.size = (u32)sq->pdi_payload.size;
+		msg.data_payload.flush_default_only =
+			sq->pdi_payload.flush_default_only;
 
 		ret = dispatch_to_queue(&msg, TASK_SLOW);
 		break;
 	case CL_MSG_AF:
+		ret = dispatch_to_queue(&msg, TASK_QUICK);
+		break;
 	case CL_MSG_MULTIBOOT:
+		msg.multiboot_payload.req_type =
+			convert_boot_type(sq->multiboot_payload.req_type);
 		ret = dispatch_to_queue(&msg, TASK_QUICK);
 		break;
 	case CL_MSG_CLOCK:

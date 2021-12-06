@@ -33,11 +33,18 @@ typedef enum cl_clock_type {
 	CL_CLOCK_SCALE		= 0x3,
 } cl_clock_type_t;
 
+typedef enum cl_multiboot_type {
+	CL_MULTIBOOT_QUERY	= 0x0,
+	CL_MULTIBOOT_DEFAULT	= 0x1,
+	CL_MULTIBOOT_BACKUP	= 0x2,
+} cl_multiboot_type_t;
+
 struct xgq_vmr_data_payload {
 	uint32_t address;
 	uint32_t size;
 	uint32_t addr_type:4;
-	uint32_t rsvd1:28;
+	uint32_t flush_default_only:1;
+	uint32_t rsvd1:27;
 	uint32_t pad1;
 };
 
@@ -57,6 +64,21 @@ struct xgq_vmr_clock_payload {
 	uint32_t ocl_req_freq[4];
 };
 
+struct xgq_vmr_multiboot_payload {
+	uint32_t req_type;
+	uint16_t has_fpt:1;
+	uint16_t has_fpt_recovery:1;
+	uint16_t boot_on_default:1;
+	uint16_t boot_on_backup:1;
+	uint16_t boot_on_recovery:1;
+	uint16_t rsvd:11;
+	uint16_t multi_boot_offset;
+	uint32_t default_partition_offset;
+	uint32_t default_partition_size;
+	uint32_t backup_partition_offset;
+	uint32_t backup_partition_size;
+};
+
 struct xgq_vmr_head {
 	u16 version;
 	u16 type;
@@ -64,12 +86,16 @@ struct xgq_vmr_head {
 	u16 rcode;
 };
 
+/*TODO: rename request payload and result payload */
 typedef struct cl_msg {
 	struct xgq_vmr_head hdr;
 	union {
 		struct xgq_vmr_data_payload data_payload;
 		struct xgq_vmr_log_payload log_payload;
 		struct xgq_vmr_clock_payload clock_payload;
+	};
+	union {
+		struct xgq_vmr_multiboot_payload multiboot_payload;
 	};
 } cl_msg_t;
 
