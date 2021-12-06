@@ -1,17 +1,71 @@
 # VMR
 
 ## System Requirements
-    - Xlinx linux which can run 2021.2 Vitis software.
-    - do not support hw emulation, like qemu.
 
-## Build Instructions
-    To build entire platform and applications:
-      cd build
-      ./build.sh -xsa /public/bugcases/CR/1105000-1105999/1105240/2021_11_24_Drop_20/xilinx_vck5000_gen4x8_xdma_base_1.xsa
+	Xlinx linux which can run 2021.2 or 2022.1 Vitis software.
+	do not support hw emulation, like qemu.
 
-    To build entire application:
-      cd build:
-      ./build.sh -app
+## TA location 2022.1
 
-## TODO:
-    1. using xsa in TA.
+	XRT: /proj/xbuilds/2022.1_daily_latest/xbb/xrt/packages/
+	Shell: /proj/xbuilds/2022.1_daily_latest/xbb/packages/internal_platforms/vck5000/gen4x8_xdma/
+	XSA: /proj/xbuilds/2022.1_daily_latest/xbb/packages/internal_platforms/vck5000/gen4x8_xdma/1-202120-1-dev/
+
+## Build vmr.elf
+
+### 1. Preparation:
+
+#### get xsa from TA
+
+	rpm2cpio /proj/xbuilds/2022.1_daily_latest/xbb/packages/internal_platforms/vck5000/gen4x8_xdma/1-202120-1-dev/<xxx>.noarch.rpm |cpio -idmv
+	cp ./opt/xilinx/platforms/xilinx_vck5000_gen4x8_xdma_1_202120_1/hw/xilinx_vck5000_gen4x8_xdma_1_202120_1.xsa <your own dir>
+
+	Example:
+	rpm2cpio /proj/xbuilds/2022.1_daily_latest/xbb/packages/internal_platforms/vck5000/gen4x8_xdma/1-202120-1-dev/xilinx-vck5000-gen4x8-xdma-1-202120-1-dev-1-3394490.noarch.rpm |cpio -idmv
+	cp ./opt/xilinx/platforms/xilinx_vck5000_gen4x8_xdma_1_202120_1/hw/xilinx_vck5000_gen4x8_xdma_1_202120_1.xsa <your own dir>
+
+### 2. Build:
+
+#### build from xsa
+
+	cd build
+	export FORCE_MARK_AS_EDGE_XSA=1
+	./build.sh -xsa <your own dir>/xilinx_vck5000_gen4x8_xdma_1_202120_1.xsa
+
+ 	Example:
+ 	./build.sh -xsa /proj/rdi/staff/davidzha/share/xgq/xilinx_vck5000_gen4x8_xdma_1_202120_1.xsa
+
+#### build vmr.elf without rebuilding VITIS platform
+
+	cd build
+	./build.sh -app
+
+## Build shell PDI 
+
+### 1. Preparation:
+### collect partition.pdi
+
+	rpm2cpio /proj/xbuilds/2022.1_daily_latest/xbb/packages/internal_platforms/vck5000/gen4x8_xdma/base/<xxx>.noarch.rpm |cpio -idmv
+	cp ./lib/firmware/xilinx/419fb9abd2cba718577637c0a7aa857d/partition.pdi <your own dir>
+
+	Example:
+	rpm2cpio /proj/xbuilds/2022.1_daily_latest/xbb/packages/internal_platforms/vck5000/gen4x8_xdma/base/xilinx-vck5000-gen4x8-xdma-base-1-3394490.noarch.rpm |cpio -idmv
+	cp ./lib/firmware/xilinx/419fb9abd2cba718577637c0a7aa857d/partition.pdi <your own dir>
+
+### 2. Build:
+#### make rpu.bif
+
+	$ cat rpu.bif 
+	all:
+	{
+	    image {
+		{ type=bootimage, file=partition.pdi }
+	    }
+	    image {
+		id = 0x1c000000, name=rpu_subsystem
+		{ core=r5-0, file=vmr.elf }
+	    }
+	}
+
+#### generate rpu.pdi
+	bootgen -arch versal -padimageheader=0 -log trace -w -o rpu.pdi -image rpu.bif
