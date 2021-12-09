@@ -42,6 +42,8 @@ typedef enum Threshold_Support_Enum
     Lower_Warning_Threshold  = (0x01 << 3),
     Lower_Critical_Threshold = (0x01 << 4),
     Lower_Fatal_Threshold    = (0x01 << 5),
+    Sensor_Avg_Val_Support   = (0x01 << 6),
+    Sensor_Max_Val_Support   = (0x01 << 7),
 }SDR_Threshold_Support_Enum;
 
 typedef enum Asdm_Completion_Code_e
@@ -134,7 +136,6 @@ typedef struct __attribute__((packed)) Asdm_SensorRecord_s
     u8 * upper_critical_limit;
     u8 * upper_warning_limit;
     u8 sensor_status;
-    u8 snsr_val_avg_support;
     u8 * sensorAverageValue;
     u8 * sensorMaxValue;
     /* For Internal usage */
