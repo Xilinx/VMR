@@ -46,11 +46,13 @@
 ### collect partition.pdi
 
 	rpm2cpio /proj/xbuilds/2022.1_daily_latest/xbb/packages/internal_platforms/vck5000/gen4x8_xdma/base/<xxx>.noarch.rpm |cpio -idmv
-	cp ./lib/firmware/xilinx/419fb9abd2cba718577637c0a7aa857d/partition.pdi <your own dir>
+	xclbinutil -i ./lib/firmware/xilinx/<uuid>/partition.xsabin --dump-section PDI:RAW:partition.pdi
+	cp ./partition.pdi <your own dir>
 
 	Example:
 	rpm2cpio /proj/xbuilds/2022.1_daily_latest/xbb/packages/internal_platforms/vck5000/gen4x8_xdma/base/xilinx-vck5000-gen4x8-xdma-base-1-3394490.noarch.rpm |cpio -idmv
-	cp ./lib/firmware/xilinx/419fb9abd2cba718577637c0a7aa857d/partition.pdi <your own dir>
+	xclbinutil -i ./lib/firmware/xilinx/3bc1b9162e6d8c76849419b33c259de3/partition.xsabin --dump-section PDI:RAW:partition.pdi
+	cp ./partition.pdi <your own dir>
 
 ### 2. Build:
 #### make rpu.bif
