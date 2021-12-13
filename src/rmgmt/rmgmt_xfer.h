@@ -62,19 +62,14 @@ struct pdi_packet {
 	};
 };
 
-struct rmgmt_handler {
-	u32 rh_base;
-	u32 rh_max_size;
-	u32 rh_data_size;
-	u8  *rh_data; 	/* static malloc and never free */
-};
+int rmgmt_init_handler(struct rmgmt_handler *rh);
 
 int rmgmt_download_apu_pdi(struct rmgmt_handler *rh);
 int rmgmt_download_rpu_pdi(struct rmgmt_handler *rh);
 int rmgmt_download_xclbin(struct rmgmt_handler *rh);
 int rmgmt_load_apu(struct rmgmt_handler *rh);
 
-int rmgmt_init_handler(struct rmgmt_handler *rh);
+/* TODO: remove obsolated APIs when test is stable */
 int rmgmt_check_for_status(struct rmgmt_handler *rh, u8 status);
 u8 rmgmt_get_pkt_flags(struct rmgmt_handler *rh);
 

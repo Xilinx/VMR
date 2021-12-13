@@ -53,6 +53,8 @@
 
 #define OSPI_LOG(fmt, arg...) \
 	CL_LOG(APP_MAIN, fmt, ##arg)
+#define OSPI_DBG(fmt, arg...) \
+	CL_DBG(APP_MAIN, fmt, ##arg)
 
 /* default ospi device */
 #define OSPIPSV_DEVICE_ID		XPAR_XOSPIPSV_0_DEVICE_ID /* from xparameters.h */
@@ -113,7 +115,6 @@ u32 FCTIndex;	/* Flash configuration table index */
 static XOspiPsv OspiPsvInstance;
 static XOspiPsv_Msg FlashMsg;
 
-u8 ReadBuffer[OSPI_VERSAL_PAGESIZE] __attribute__ ((aligned(64)));
 u8 CmdBfr[8];
 
 /*****************************************************************************/
@@ -1310,7 +1311,7 @@ int ospi_flash_read(flash_area_t area, u8 *buffer, u32 offset, u32 len)
 	baseAddress += offset;
 	XOspiPsv *OspiPsvInstancePtr = &OspiPsvInstance;
 
-	OSPI_LOG("0x%x len %d\r\n", baseAddress, len);
+	OSPI_DBG("0x%x len %d", baseAddress, len);
 
 	bzero(buffer, len);
 	Status = FlashRead(OspiPsvInstancePtr, baseAddress, len, CmdBfr, buffer);
@@ -1319,7 +1320,7 @@ int ospi_flash_read(flash_area_t area, u8 *buffer, u32 offset, u32 len)
 		return XST_FAILURE;
 	}
 
-	OSPI_LOG("done");
+	OSPI_DBG("done");
 	return 0;
 }
 
@@ -1331,15 +1332,12 @@ int ospi_flash_write(flash_area_t area, u8 *WriteBuffer, u32 offset, u32 len)
 	u32 PAGE_COUNT = 0;
 	u32 PAGE_SIZE = OSPI_VERSAL_PAGESIZE;
 	u32 baseAddress = getBaseAddress(area);
+	u8 ReadBuffer[OSPI_VERSAL_PAGESIZE] __attribute__ ((aligned(64)));
 
 	baseAddress += offset;
 	XOspiPsv *OspiPsvInstancePtr = &OspiPsvInstance;
 
-	OSPI_LOG("0x%x, len %d", baseAddress, len);
-
-	if (baseAddress & OSPI_VERSAL_PAGESIZE) {
-		OSPI_LOG("base address is not %d aligned", OSPI_VERSAL_PAGESIZE); 
-	}
+	OSPI_DBG("0x%x, len %d", baseAddress, len);
 
 	PAGE_COUNT = len / PAGE_SIZE;
 	if (len % PAGE_SIZE) {
@@ -1347,17 +1345,17 @@ int ospi_flash_write(flash_area_t area, u8 *WriteBuffer, u32 offset, u32 len)
 		OSPI_LOG("WARN: len %d is not page %d aligned", len, PAGE_SIZE);
 
 	}
-	OSPI_LOG("Flashing... Page Count: %d, PageSize %d", PAGE_COUNT, PAGE_SIZE);
+	OSPI_DBG("Flashing... Page Count: %d, PageSize %d", PAGE_COUNT, PAGE_SIZE);
 
 	/* Write first, then read back and verify */
 	if (XOspiPsv_GetOptions(OspiPsvInstancePtr) == XOSPIPSV_DAC_EN_OPTION) {
-		xil_printf("WriteCmd: 0x%x \n\r", (u8)(Flash_Config_Table[FCTIndex].WriteCmd >> 8));
+		OSPI_DBG("WriteCmd: 0x%x \n\r", (u8)(Flash_Config_Table[FCTIndex].WriteCmd >> 8));
 		Status = FlashLinearWrite(OspiPsvInstancePtr, baseAddress,
 		(Flash_Config_Table[FCTIndex].PageSize * PAGE_COUNT), WriteBuffer);
 		if (Status != XST_SUCCESS)
 			return XST_FAILURE;
 	} else {
-		xil_printf("WriteCmd: 0x%x \n\r", (u8)Flash_Config_Table[FCTIndex].WriteCmd);
+		OSPI_DBG("WriteCmd: 0x%x \n\r", (u8)Flash_Config_Table[FCTIndex].WriteCmd);
 		for (Page = 0; Page < PAGE_COUNT; Page++) {
 			u32 offset = (Page * Flash_Config_Table[FCTIndex].PageSize);
 
@@ -1375,7 +1373,7 @@ int ospi_flash_write(flash_area_t area, u8 *WriteBuffer, u32 offset, u32 len)
 	}
 
 	/* read back: check some pages numbers */
-	OSPI_LOG("write done. read back to verify.");
+	OSPI_DBG("write done. read back to verify.");
 	bzero(ReadBuffer, sizeof (ReadBuffer));
 	for (Count = 0; Count < len; Count += PAGE_SIZE ) {
 		if (Count != 0 && (Count % (PAGE_COUNT / 10)))
@@ -1409,7 +1407,7 @@ int ospi_flash_write(flash_area_t area, u8 *WriteBuffer, u32 offset, u32 len)
 		}
 	}
 
-	OSPI_LOG("done.");
+	OSPI_DBG("done.");
 	return 0;
 }
 
@@ -1421,7 +1419,6 @@ int ospi_flash_erase(flash_area_t area, u32 offset, u32 len)
 	baseAddress += offset;
 	XOspiPsv *OspiPsvInstancePtr = &OspiPsvInstance;
 
-	OSPI_LOG("0x%x, len: %d", baseAddress, len);
 
 	if (baseAddress & OSPI_VERSAL_PAGESIZE) {
 		OSPI_LOG("base address is not %d aligned", OSPI_VERSAL_PAGESIZE); 
@@ -1429,6 +1426,30 @@ int ospi_flash_erase(flash_area_t area, u32 offset, u32 len)
 
 	Status = FlashErase(OspiPsvInstancePtr, baseAddress, len, CmdBfr);
 
-	OSPI_LOG("done %d", Status);
+	OSPI_LOG("0x%x, len: %d, ret: %d", baseAddress, len, Status);
 	return Status;
+}
+
+int ospi_flash_copy(flash_area_t area, u32 src, u32 tgt, u32 len)
+{
+	u8 ReadBuffer[OSPI_VERSAL_PAGESIZE] __attribute__ ((aligned(64)));
+	u32 page_size = OSPI_VERSAL_PAGESIZE;
+	u32 idx = 0;
+	int ret = 0;
+
+	OSPI_LOG("src 0x%x, tgt 0x%x. start", src, tgt);
+
+	/* copy enough (len + 1) page size from srouce to target */
+	for (idx = 0; idx <= len; idx += page_size) {
+		ret = ospi_flash_read(area, ReadBuffer, src + idx, page_size);
+		if (ret)
+			return ret;
+
+		ret = ospi_flash_write(area, ReadBuffer, tgt + idx, page_size);
+		if (ret)
+			return ret;
+	}
+
+	OSPI_LOG("src 0x%x, tgt 0x%x. done %d", src, tgt, ret);
+	return ret;
 }
