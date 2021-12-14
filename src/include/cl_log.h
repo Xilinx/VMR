@@ -10,6 +10,8 @@
 #include "stdlib.h"
 #include "stdio.h"
 
+#include "cl_version.h"
+
 //#define CL_VERBOSE
 //#define VMC_DEBUG
 

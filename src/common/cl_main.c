@@ -45,8 +45,16 @@ void cl_system_pre_init(void)
 	}
 }
 
+void cl_log_system_info()
+{
+	CL_LOG(APP_MAIN,
+		"\r\ngit hash: %s.\r\ngit branch: %s.\r\nbuild date: %s",
+		VMR_GIT_HASH, VMR_GIT_BRANCH, VMR_GIT_BUILD_DATE);
+}
+
 int main( void )
 {
+	cl_log_system_info();
 
 	cl_system_pre_init();
 
