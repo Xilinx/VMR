@@ -1,6 +1,6 @@
 #!/bin/bash
 
-TOOL_VERSION="2021.2"
+TOOL_VERSION="2022.1"
 STABLE_VITIS=/proj/xbuilds/${TOOL_VERSION}_daily_latest/installs/lin64/Vitis/HEAD/settings64.sh
 
 default_env() {
@@ -14,16 +14,33 @@ build_clean() {
 	rm -r xsa .metadata vmr_platform vmr_system vmr 
 }
 
+make_version_h()
+{
+	CL_VERSION_H="vmr/src/include/cl_version.h"
+	GIT_HASH=`git rev-parse --verify HEAD`
+	GIT_BRANCH=`git rev-parse --abbrev-ref HEAD`
+	GIT_BUILD_DATE=`git log -1 --pretty=format:%cD`
+
+	echo "#ifndef _VMR_GIT_HASH_" >> $CL_VERSION_H
+	echo "#define _VMR_GIT_HASH_" >> $CL_VERSION_H
+	echo "#define VMR_GIT_HASH "\""$GIT_HASH"\" >> $CL_VERSION_H
+	echo "#define VMR_GIT_BRANCH "\""$GIT_BRANCH"\" >> $CL_VERSION_H
+	echo "#define VMR_GIT_BUILD_DATE "\""$GIT_BUILD_DATE"\" >> $CL_VERSION_H
+	echo "#endif" >> $CL_VERSION_H
+}
+
 build_app_all() {
 	xsct ./create_app.tcl
 	rsync -av ../src vmr --exclude cmc
 	xsct ./config_app.tcl
+	make_version_h
 	xsct ./make_app.tcl
 }
 
 build_app_incremental() {
 	rm -r vmr/src
 	rsync -av ../src vmr --exclude cmc --exclude *.swp
+	make_version_h
 	xsct ./make_app.tcl
 }
 
