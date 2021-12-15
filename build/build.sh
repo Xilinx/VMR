@@ -21,11 +21,15 @@ make_version_h()
 	GIT_BRANCH=`git rev-parse --abbrev-ref HEAD`
 	GIT_BUILD_DATE=`git log -1 --pretty=format:%cD`
 
-	echo "#ifndef _VMR_GIT_HASH_" >> $CL_VERSION_H
-	echo "#define _VMR_GIT_HASH_" >> $CL_VERSION_H
+	echo "#ifndef _VMR_VERSION_" >> $CL_VERSION_H
+	echo "#define _VMR_VERSION_" >> $CL_VERSION_H
 	echo "#define VMR_GIT_HASH "\""$GIT_HASH"\" >> $CL_VERSION_H
 	echo "#define VMR_GIT_BRANCH "\""$GIT_BRANCH"\" >> $CL_VERSION_H
 	echo "#define VMR_GIT_BUILD_DATE "\""$GIT_BUILD_DATE"\" >> $CL_VERSION_H
+
+	if [[ $BUILD_XRT == 1 ]];then
+		echo "#define VMR_BUILD_XRT_ONLY" >> $CL_VERSION_H
+	fi
 	echo "#endif" >> $CL_VERSION_H
 }
 
@@ -51,6 +55,7 @@ usage() {
     echo "-xsa                       XSA file"  
     echo "-app                       Re-build Application only"  
     echo "-config_VMR                Update VMR project too edit in Vitis GUI"
+    echo "-XRT                       Build XRT only"
     echo "-help"
     exit $1
 }
@@ -78,6 +83,9 @@ do
 				exit 1
 			fi
 			./update_VMR_vitis_project.sh
+			;;
+		-XRT)
+			BUILD_XRT=1
 			;;
                 *)
                         echo "Invalid argument: $1"

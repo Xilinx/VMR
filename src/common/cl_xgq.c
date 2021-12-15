@@ -58,9 +58,11 @@ static msg_handle_t handles[] = {
 	{ .type = CL_MSG_XCLBIN },
 	{ .type = CL_MSG_AF },
 	{ .type = CL_MSG_CLOCK },
-	{ .type = CL_MSG_SENSOR },
 	{ .type = CL_MSG_APUBIN },
 	{ .type = CL_MSG_MULTIBOOT },
+#ifndef VMR_BUILD_XRT_ONLY
+	{ .type = CL_MSG_SENSOR },
+#endif
 };
 
 static const char *handle_name[] = {
@@ -497,18 +499,19 @@ static int init_xgq()
 		return ret;
 	}
 
-        MSG_LOG("================================================");
-        MSG_LOG("sq_slot_size 0x%lx", (u32)rpu_xgq.xq_sq.xr_slot_sz);
-        MSG_LOG("cq_slot_size 0x%lx", (u32)rpu_xgq.xq_cq.xr_slot_sz);
-        MSG_LOG("sq_num_slots %d", (u32)rpu_xgq.xq_sq.xr_slot_num);
-        MSG_LOG("cq_num_slots %d", (u32)rpu_xgq.xq_cq.xr_slot_num);
-        MSG_LOG("SQ slot addr offset 0x%lx", (u32)rpu_xgq.xq_sq.xr_slot_addr);
-        MSG_LOG("CQ slot addr offset 0x%lx", (u32)rpu_xgq.xq_cq.xr_slot_addr);
-        MSG_LOG("SQ xr_produced_addr 0x%lx", (u32)rpu_xgq.xq_sq.xr_produced_addr);
-        MSG_LOG("SQ xr_consumed_addr 0x%lx", (u32)rpu_xgq.xq_sq.xr_consumed_addr);
-        MSG_LOG("CQ xr_produced_addr 0x%lx", (u32)rpu_xgq.xq_cq.xr_produced_addr);
-        MSG_LOG("CQ xr_consumed_addr 0x%lx", (u32)rpu_xgq.xq_cq.xr_consumed_addr);
-        MSG_LOG("================================================");
+        MSG_DBG("================================================");
+        MSG_DBG("sq_slot_size 0x%lx", (u32)rpu_xgq.xq_sq.xr_slot_sz);
+        MSG_DBG("cq_slot_size 0x%lx", (u32)rpu_xgq.xq_cq.xr_slot_sz);
+        MSG_DBG("sq_num_slots %d", (u32)rpu_xgq.xq_sq.xr_slot_num);
+        MSG_DBG("cq_num_slots %d", (u32)rpu_xgq.xq_cq.xr_slot_num);
+        MSG_DBG("SQ slot addr offset 0x%lx", (u32)rpu_xgq.xq_sq.xr_slot_addr);
+        MSG_DBG("CQ slot addr offset 0x%lx", (u32)rpu_xgq.xq_cq.xr_slot_addr);
+        MSG_DBG("SQ xr_produced_addr 0x%lx", (u32)rpu_xgq.xq_sq.xr_produced_addr);
+        MSG_DBG("SQ xr_consumed_addr 0x%lx", (u32)rpu_xgq.xq_sq.xr_consumed_addr);
+        MSG_DBG("CQ xr_produced_addr 0x%lx", (u32)rpu_xgq.xq_cq.xr_produced_addr);
+        MSG_DBG("CQ xr_consumed_addr 0x%lx", (u32)rpu_xgq.xq_cq.xr_consumed_addr);
+        MSG_DBG("================================================");
+	MSG_LOG("done.");
 
 	return 0;
 }
@@ -595,9 +598,6 @@ static int init_queue()
 
 static int cl_msg_service_start(void)
 {
-
-	MSG_LOG("start");
-
 	if (init_xgq())
 		return -1;
 
@@ -608,6 +608,7 @@ static int cl_msg_service_start(void)
 		fini_task();
 	}
 
+	MSG_LOG("done.");
 	return 0;
 }
 

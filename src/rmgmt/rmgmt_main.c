@@ -338,6 +338,6 @@ int RMGMT_Launch( void )
 	if (ret != 0)
 		return ret;
 
-	RMGMT_LOG("succeeded.\n");
+	RMGMT_LOG("done.");
 	return 0;
 }
