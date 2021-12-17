@@ -24,7 +24,9 @@ XSysMonPsv InstancePtr;
 XScuGic IntcInst;
 
 static tasks_register_t handler[] = {
+#ifndef VMR_BUILD_XRT_ONLY
 	VMC_Launch,	
+#endif
 	RMGMT_Launch,
 	cl_msg_service_launch,
 };
@@ -34,6 +36,7 @@ void cl_system_pre_init(void)
 	/* Init flash device */
 	ospi_flash_init();
 
+#ifndef VMR_BUILD_XRT_ONLY
 #ifdef VMC_DEBUG
 	/* Enable FreeRTOS Debug UART */
 	UART_RTOS_Debug_Enable(&uart_log);
@@ -43,10 +46,17 @@ void cl_system_pre_init(void)
 	{
 		CL_LOG(APP_VMC, "Failed to init sysmon \n\r");
 	}
+#endif
+
 }
 
 void cl_log_system_info()
 {
+#ifdef VMR_BUILD_XRT_ONLY
+	CL_LOG(APP_MAIN, "XRT only build");
+#else
+	CL_LOG(APP_MAIN, "VMR full build");
+#endif
 	CL_LOG(APP_MAIN,
 		"\r\ngit hash: %s.\r\ngit branch: %s.\r\nbuild date: %s",
 		VMR_GIT_HASH, VMR_GIT_BRANCH, VMR_GIT_BUILD_DATE);
@@ -54,6 +64,8 @@ void cl_log_system_info()
 
 int main( void )
 {
+	CL_LOG(APP_MAIN, "\r\n=== VMR Starts  ===");
+
 	cl_log_system_info();
 
 	cl_system_pre_init();
@@ -62,7 +74,6 @@ int main( void )
 		configASSERT(handler[i]() == 0);
 	}
 
-	CL_LOG(APP_MAIN, "start scheduler");
 	vTaskStartScheduler();
 
 	/* Should never go here unless there is not enough memory */
