@@ -1,7 +1,7 @@
 #!/bin/bash
 
 TOOL_VERSION="2022.1"
-STABLE_VITIS=/proj/xbuilds/${TOOL_VERSION}_daily_latest/installs/lin64/Vitis/HEAD/settings64.sh
+STABLE_VITIS="/proj/xbuilds/${TOOL_VERSION}_daily_latest/installs/lin64/Vitis/HEAD/settings64.sh"
 
 default_env() {
 	echo -ne "no xsct, using default stable version: "
@@ -28,7 +28,10 @@ make_version_h()
 	echo "#define VMR_GIT_BUILD_DATE "\""$GIT_BUILD_DATE"\" >> $CL_VERSION_H
 
 	if [[ $BUILD_XRT == 1 ]];then
+		echo "=== XRT only build ==="
 		echo "#define VMR_BUILD_XRT_ONLY" >> $CL_VERSION_H
+	else
+		echo "=== Full build ==="
 	fi
 	echo "#endif" >> $CL_VERSION_H
 }

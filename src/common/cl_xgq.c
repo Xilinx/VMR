@@ -8,11 +8,14 @@
 #include "queue.h"
 #include "timers.h"
 
+#include <stdbool.h>
+
 #include "cl_log.h"
 #include "cl_msg.h"
 #include "cl_main.h"
 #include "xgq_cmd_vmr.h"
 #include "cl_xgq_plat.h"
+#include "vmr_common.h"
 
 #define MSG_LOG(fmt, arg...) \
 	CL_LOG(APP_MAIN, fmt, ##arg)
@@ -26,14 +29,8 @@
 #define XGQ_CQ_INTR_REG         0x104
 #define XGQ_CQ_INTR_CTRL        0x10C
 
-/* Note: eventually we should be driven by xparameter.h */
-#define RPU_RING_BASE (0x38000000)
-#define RPU_SQ_BASE (XPAR_BLP_BLP_LOGIC_XGQ_M2R_BASEADDR + XGQ_SQ_TAIL_POINTER)
-#define RPU_CQ_BASE (XPAR_BLP_BLP_LOGIC_XGQ_M2R_BASEADDR + XGQ_CQ_TAIL_POINTER)
-
-#define RPU_RING_LEN 0x1000
-#define RPU_SLOT_SIZE 512
-#define RPU_XGQ_DEV_STATE_OFFSET (RPU_RING_BASE + RPU_RING_LEN)
+#define RPU_XGQ_SLOT_SIZE 	512
+#define RPU_RING_BUFFER_LEN	0x1000
 
 static void receiveTask( void *pvParameters );
 static TaskHandle_t receiveTaskHandle = NULL;
@@ -48,31 +45,23 @@ static QueueHandle_t slowTaskQueue = NULL;
 static struct xgq rpu_xgq;
 static int xgq_io_hdl = 0;
 
+static bool service_is_started = false;
+
 enum task_level {
 	TASK_SLOW = 0,
 	TASK_QUICK,
 };
 
 static msg_handle_t handles[] = {
-	{ .type = CL_MSG_PDI },
-	{ .type = CL_MSG_XCLBIN },
-	{ .type = CL_MSG_AF },
-	{ .type = CL_MSG_CLOCK },
-	{ .type = CL_MSG_APUBIN },
-	{ .type = CL_MSG_MULTIBOOT },
+	{ .type = CL_MSG_PDI, .name = "PDI", },
+	{ .type = CL_MSG_XCLBIN, .name = "XCLBIN", },
+	{ .type = CL_MSG_AF, .name = "FIREWALL", },
+	{ .type = CL_MSG_CLOCK, .name = "CLOCK", },
+	{ .type = CL_MSG_APUBIN, .name = "API_BIN", },
+	{ .type = CL_MSG_VMR_CONTROL, .name = "VMR_CONTROL", },
 #ifndef VMR_BUILD_XRT_ONLY
-	{ .type = CL_MSG_SENSOR },
+	{ .type = CL_MSG_SENSOR, .name = "SENSOR", },
 #endif
-};
-
-static const char *handle_name[] = {
-	"PDI",
-	"XCLBIN",
-	"FIREWALL",
-	"CLOCK",
-	"SENSOR",
-	"APUBIN",
-	"MULTI-BOOT",
 };
 
 int cl_msg_handle_init(msg_handle_t **hdl, cl_msg_type_t type,
@@ -92,7 +81,7 @@ int cl_msg_handle_init(msg_handle_t **hdl, cl_msg_type_t type,
 			handles[i].msg_cb = cb;
 			handles[i].arg = arg;
 			*hdl = &handles[i];
-			MSG_LOG("init handle %s type %d", handle_name[i], type);
+			MSG_LOG("init handle %s type %d", handles[i].name, type);
 			return 0;
 		}
 	}
@@ -120,20 +109,22 @@ int cl_msg_handle_complete(cl_msg_t *msg)
 
 	if (msg->hdr.type == CL_MSG_CLOCK) {
 		/* only 1 place to hold ocl_freq, alway get from index 0 */
-		cmd_cq->clock_payload.ocl_freq = msg->clock_payload.ocl_req_freq[0];
-	} else if (msg->hdr.type == CL_MSG_MULTIBOOT) {
+		cmd_cq->cq_clock_payload.ocl_freq = msg->clock_payload.ocl_req_freq[0];
+	} else if (msg->hdr.type == CL_MSG_VMR_CONTROL) {
 		/* explicitly copy back fpt status from cl_msg to xgq completion cmd */
-		cmd_cq->multiboot_payload.has_fpt = msg->multiboot_payload.has_fpt;
-		cmd_cq->multiboot_payload.has_fpt_recovery =
+		cmd_cq->cq_vmr_payload.has_fpt = msg->multiboot_payload.has_fpt;
+		cmd_cq->cq_vmr_payload.has_fpt_recovery =
 			msg->multiboot_payload.has_fpt_recovery;
-		cmd_cq->multiboot_payload.boot_on_default =
+		cmd_cq->cq_vmr_payload.boot_on_default =
 			msg->multiboot_payload.boot_on_default;
-		cmd_cq->multiboot_payload.boot_on_backup =
+		cmd_cq->cq_vmr_payload.boot_on_backup =
 			msg->multiboot_payload.boot_on_backup;
-		cmd_cq->multiboot_payload.boot_on_recovery =
+		cmd_cq->cq_vmr_payload.boot_on_recovery =
 			msg->multiboot_payload.boot_on_recovery;
-		cmd_cq->multiboot_payload.multi_boot_offset =
+		cmd_cq->cq_vmr_payload.multi_boot_offset =
 			msg->multiboot_payload.multi_boot_offset;
+		cmd_cq->cq_vmr_payload.debug_level = cl_loglevel_get();
+		/*TODO get flush progress back too */
 	}
 
 	xgq_produce(&rpu_xgq, &cq_slot_addr);
@@ -216,9 +207,9 @@ static cl_sensor_type_t convert_pid(enum xgq_cmd_sensor_page_id xgq_id)
 	return sid;
 }
 
-static cl_multiboot_type_t convert_boot_type(enum xgq_cmd_multiboot_req_type req_type)
+static cl_vmr_control_type_t convert_control_type(enum xgq_cmd_vmr_control_type req_type)
 {
-	cl_multiboot_type_t type = CL_MULTIBOOT_QUERY;
+	cl_vmr_control_type_t type = CL_VMR_QUERY;
 
 	switch (req_type) {
 	case XGQ_CMD_BOOT_DEFAULT:
@@ -227,9 +218,9 @@ static cl_multiboot_type_t convert_boot_type(enum xgq_cmd_multiboot_req_type req
 	case XGQ_CMD_BOOT_BACKUP:
 		type = CL_MULTIBOOT_BACKUP;
 		break;
-	case XGQ_CMD_BOOT_QUERY:
+	case XGQ_CMD_VMR_QUERY:
 	default:
-		type = CL_MULTIBOOT_QUERY;
+		type = CL_VMR_QUERY;
 		break;
 	}
 
@@ -280,8 +271,8 @@ static int submit_to_queue(u32 sq_addr)
 	case XGQ_CMD_OP_SENSOR:
 		msg.hdr.type = CL_MSG_SENSOR;
 		break;
-	case XGQ_CMD_OP_MULTIPLE_BOOT:
-		msg.hdr.type = CL_MSG_MULTIBOOT;
+	case XGQ_CMD_OP_VMR_CONTROL:
+		msg.hdr.type = CL_MSG_VMR_CONTROL;
 		break;
 	default:
 		MSG_LOG("Unhandled opcode: 0x%x", cmd->hdr.opcode);
@@ -312,9 +303,11 @@ static int submit_to_queue(u32 sq_addr)
 	case CL_MSG_AF:
 		ret = dispatch_to_queue(&msg, TASK_QUICK);
 		break;
-	case CL_MSG_MULTIBOOT:
+	case CL_MSG_VMR_CONTROL:
 		msg.multiboot_payload.req_type =
-			convert_boot_type(sq->multiboot_payload.req_type);
+			convert_control_type(sq->vmr_control_payload.req_type);
+		/* we always set log level by this request */
+		cl_loglevel_set(sq->vmr_control_payload.debug_level);
 		ret = dispatch_to_queue(&msg, TASK_QUICK);
 		break;
 	case CL_MSG_CLOCK:
@@ -445,11 +438,50 @@ static void slowTask (void *pvParameters )
 	}
 }
 
+static inline bool read_vmr_shared_mem(struct vmr_shared_mem *mem)
+{
+	int ret = 0;
+
+	ret = cl_memcpy_fromio32(RPU_SHARED_MEMORY_START, mem, sizeof(*mem));
+	if (ret == -1 || mem->vmr_magic_no != VMR_MAGIC_NO) {
+		MSG_LOG("read shared memory partition table failed");
+		return false;
+	}
+
+	return true;
+}
+
+static void vmr_status_service_start()
+{
+	struct vmr_shared_mem mem = { 0 };
+
+	if (!read_vmr_shared_mem(&mem))
+		return;
+
+	IO_SYNC_WRITE32(1, RPU_SHARED_MEMORY_START + mem.vmr_status_off);
+
+	MSG_LOG("magic_no %x, ring %x, status off %x, value %x",
+		mem.vmr_magic_no,
+		mem.ring_buffer_off,
+		mem.vmr_status_off,
+		IO_SYNC_READ32(RPU_SHARED_MEMORY_START + mem.vmr_status_off));
+	MSG_LOG("log_idx %d, log off %x, data start %x, data end %x",
+		mem.log_msg_index,
+		mem.log_msg_buf_off,
+		mem.vmr_data_start,
+		mem.vmr_data_end);
+}
+
 static inline int service_can_start()
 {
 	for (int i = 0; i < ARRAY_SIZE(handles); i++) {
 		if (handles[i].msg_cb == NULL)
 			return 0;
+	}
+
+	if (!service_is_started) {
+		service_is_started = true;
+		vmr_status_service_start();
 	}
 
 	return 1;
@@ -458,21 +490,14 @@ static inline int service_can_start()
 static void receiveTask(void *pvParameters)
 {
 	const TickType_t xBlockTime = pdMS_TO_TICKS(500);
-	u32 cnt = 0;
 
 	for( ;; ) {
 		uint64_t sq_slot_addr;
 		
 		vTaskDelay(xBlockTime);
 
-		cnt++;
-		//xil_printf("%d receiveTask\r", cnt);
-
 		if (!service_can_start())
 			continue;
-
-		/* when cnt is not 0, xgq is healthy */
-		IO_SYNC_WRITE32(cnt, RPU_XGQ_DEV_STATE_OFFSET);	
 
 		if (xgq_consume(&rpu_xgq, &sq_slot_addr))
 			continue;
@@ -483,17 +508,39 @@ static void receiveTask(void *pvParameters)
 	}
 }
 
+/*
+ * Init shared memory partion table
+ */
+static void init_vmr_status(uint32_t ring_len)
+{
+	struct vmr_shared_mem mem = {
+		.vmr_magic_no = VMR_MAGIC_NO,
+		.ring_buffer_off = VMR_PARTITION_TABLE_SIZE,
+		.ring_buffer_len = ring_len,
+	};
+
+	mem.vmr_status_off = mem.ring_buffer_off + mem.ring_buffer_len;
+	mem.vmr_status_len = sizeof (uint32_t);
+	mem.log_msg_index = 0;
+	mem.log_msg_buf_off = mem.vmr_status_off + mem.vmr_status_len;
+	mem.log_msg_buf_len = LOG_BUF_LEN;
+	mem.vmr_data_start = mem.log_msg_buf_off + mem.log_msg_buf_len;
+	mem.vmr_data_end = RPU_SHARED_MEMORY_END - RPU_SHARED_MEMORY_START;
+
+	cl_memcpy_toio32(RPU_SHARED_MEMORY_START, &mem, sizeof(mem));
+
+	/* re-init device stat to 0 */
+	IO_SYNC_WRITE32(0x0, RPU_SHARED_MEMORY_START + mem.vmr_status_off);	
+}
+
 static int init_xgq()
 {
 	int ret = 0;
-	size_t ring_len = RPU_RING_LEN;
+	size_t ring_len = RPU_RING_BUFFER_LEN;
 	uint64_t flags = 0;
 
-	/* re-init device stat to 0 */
-	IO_SYNC_WRITE32(0x0, RPU_XGQ_DEV_STATE_OFFSET);	
-
-        ret = xgq_alloc(&rpu_xgq, flags, xgq_io_hdl, RPU_RING_BASE, &ring_len,
-		RPU_SLOT_SIZE, RPU_SQ_BASE, RPU_CQ_BASE);
+        ret = xgq_alloc(&rpu_xgq, flags, xgq_io_hdl, RPU_RING_BUFFER_OFFSET, &ring_len,
+		RPU_XGQ_SLOT_SIZE, RPU_SQ_BASE, RPU_CQ_BASE);
 	if (ret) {
 		MSG_LOG("xgq_alloc failed: %d", ret);
 		return ret;
@@ -511,8 +558,10 @@ static int init_xgq()
         MSG_DBG("CQ xr_produced_addr 0x%lx", (u32)rpu_xgq.xq_cq.xr_produced_addr);
         MSG_DBG("CQ xr_consumed_addr 0x%lx", (u32)rpu_xgq.xq_cq.xr_consumed_addr);
         MSG_DBG("================================================");
-	MSG_LOG("done.");
 
+	init_vmr_status(ring_len);
+
+	MSG_LOG("done.");
 	return 0;
 }
 
@@ -565,7 +614,7 @@ static int init_task()
 		return -1;
 	}
 
-	MSG_LOG("INFO: creation succeeded.");
+	MSG_LOG("done.");
 	return 0;
 }
 
@@ -592,7 +641,8 @@ static int init_queue()
 		fini_queue();
 		return -1;
 	}
-	MSG_LOG("INFO: quick|slow TaskQueue creation succeeded");
+
+	MSG_LOG("done.");
 	return 0;
 }
 
@@ -612,7 +662,7 @@ static int cl_msg_service_start(void)
 	return 0;
 }
 
-int cl_msg_service_launch(void)
+int CL_MSG_launch(void)
 {
 	if (cl_msg_service_start() != 0) {
 		MSG_LOG("failed");

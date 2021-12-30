@@ -235,12 +235,12 @@ static int fpga_pl_pdi_download(UINTPTR data, UINTPTR size)
 	}
 
 	axigate_freeze();
-	//ucs_stop();
+	ucs_stop();
 
 	ret = XFpga_BitStream_Load(&XFpgaInstance, data, KeyAddr, size, PDI_LOAD);
 
-	//ucs_start();
-	//MDELAY(10);
+	ucs_start();
+	MDELAY(10);
 	axigate_free();
 
 	RMGMT_LOG("ret: %d \r\n", ret);
@@ -262,7 +262,7 @@ static int rmgmt_fpga_download(struct rmgmt_handler *rh, u32 len)
 	/* Sync data from cache to memory */
 	Xil_DCacheFlush();
 
-	ret = fpga_pl_pdi_download_workaround((UINTPTR)((const char *)axlf + offset),
+	ret = fpga_pl_pdi_download((UINTPTR)((const char *)axlf + offset),
 		(UINTPTR)size);
 
 	RMGMT_LOG("FPGA load pdi ret: %d", ret);

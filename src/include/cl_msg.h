@@ -14,7 +14,7 @@ typedef enum cl_msg_type {
 	CL_MSG_CLOCK,
 	CL_MSG_SENSOR,
 	CL_MSG_APUBIN,
-	CL_MSG_MULTIBOOT,
+	CL_MSG_VMR_CONTROL,
 } cl_msg_type_t;
 
 typedef enum cl_sensor_type {
@@ -33,11 +33,11 @@ typedef enum cl_clock_type {
 	CL_CLOCK_SCALE		= 0x3,
 } cl_clock_type_t;
 
-typedef enum cl_multiboot_type {
-	CL_MULTIBOOT_QUERY	= 0x0,
+typedef enum cl_vmr_control_type {
+	CL_VMR_QUERY	= 0x0,
 	CL_MULTIBOOT_DEFAULT	= 0x1,
 	CL_MULTIBOOT_BACKUP	= 0x2,
-} cl_multiboot_type_t;
+} cl_vmr_control_type_t;
 
 struct xgq_vmr_data_payload {
 	uint32_t address;
@@ -102,9 +102,10 @@ typedef struct cl_msg {
 typedef int (*process_msg_cb)(cl_msg_t *msg, void *arg);
 
 typedef struct msg_handle {
-	cl_msg_type_t type;
-	process_msg_cb msg_cb;
-	void *arg;
+	cl_msg_type_t 	type;
+	process_msg_cb 	msg_cb;
+	void 		*arg;
+	const char	*name;
 } msg_handle_t;
 
 int cl_msg_handle_init(msg_handle_t **hdl, cl_msg_type_t type,

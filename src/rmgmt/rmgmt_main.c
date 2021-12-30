@@ -14,7 +14,6 @@
 #include "cl_msg.h"
 #include "cl_flash.h"
 
-
 static TaskHandle_t xXGQTask;
 static struct rmgmt_handler rh = { 0 };
 msg_handle_t *pdi_hdl;
@@ -22,14 +21,14 @@ msg_handle_t *xclbin_hdl;
 msg_handle_t *af_hdl;
 msg_handle_t *clock_hdl;
 msg_handle_t *apubin_hdl;
-msg_handle_t *multiboot_hdl;
+msg_handle_t *vmr_hdl;
 int xgq_pdi_flag = 0;
 int xgq_xclbin_flag = 0;
 int xgq_af_flag = 0;
 int xgq_sensor_flag = 0;
 int xgq_clock_flag = 0;
 int xgq_apubin_flag = 0;
-int xgq_multiboot_flag = 0;
+int xgq_vmr_control_flag = 0;
 
 static int xgq_clock_cb(cl_msg_t *msg, void *arg)
 {
@@ -226,7 +225,7 @@ static int rmgmt_enable_boot_backup()
 	return 0;
 }
 
-static int xgq_multiboot_cb(cl_msg_t *msg, void *arg)
+static int xgq_vmr_cb(cl_msg_t *msg, void *arg)
 {
 	int ret = 0;
 
@@ -237,7 +236,7 @@ static int xgq_multiboot_cb(cl_msg_t *msg, void *arg)
 		case CL_MULTIBOOT_BACKUP:
 			ret = rmgmt_enable_boot_backup();
 			break;
-		case CL_MULTIBOOT_QUERY:
+		case CL_VMR_QUERY:
 			ret = rmgmt_boot_fpt_query(&rh, msg);
 			break;
 		default:
@@ -257,7 +256,6 @@ static void pvXGQTask( void *pvParameters )
 	const TickType_t x1second = pdMS_TO_TICKS( 1000*1 );
 	int cnt = 0;
 
-	RMGMT_DBG("->");
 	for ( ;; )
 	{
 		vTaskDelay( x1second );
@@ -290,18 +288,18 @@ static void pvXGQTask( void *pvParameters )
 		}
 
 		if (xgq_apubin_flag == 0 &&
-		    cl_msg_handle_init(&clock_hdl, CL_MSG_APUBIN, xgq_apubin_cb, NULL) == 0) {
+		    cl_msg_handle_init(&apubin_hdl, CL_MSG_APUBIN, xgq_apubin_cb, NULL) == 0) {
 			RMGMT_LOG("init apubin handle done.");
 			xgq_apubin_flag = 1;
 		}
 
-		if (xgq_multiboot_flag == 0 &&
-		    cl_msg_handle_init(&clock_hdl, CL_MSG_MULTIBOOT, xgq_multiboot_cb, NULL) == 0) {
-			RMGMT_LOG("init multiboot handle done.");
-			xgq_multiboot_flag = 1;
+		if (xgq_vmr_control_flag == 0 &&
+		    cl_msg_handle_init(&vmr_hdl, CL_MSG_VMR_CONTROL, xgq_vmr_cb, NULL) == 0) {
+			RMGMT_LOG("init vmr control handle done.");
+			xgq_vmr_control_flag = 1;
 		}
 	}
-	RMGMT_DBG("<-");
+	RMGMT_LOG("done");
 }
 
 static int rmgmt_create_tasks(void)
