@@ -235,12 +235,12 @@ static int fpga_pl_pdi_download(UINTPTR data, UINTPTR size)
 	}
 
 	axigate_freeze();
-	//ucs_stop();
+	ucs_stop();
 
 	ret = XFpga_BitStream_Load(&XFpgaInstance, data, KeyAddr, size, PDI_LOAD);
 
-	//ucs_start();
-	//MDELAY(10);
+	ucs_start();
+	MDELAY(10);
 	axigate_free();
 
 	RMGMT_LOG("ret: %d \r\n", ret);

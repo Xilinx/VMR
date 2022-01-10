@@ -8,6 +8,8 @@
 #include "queue.h"
 #include "timers.h"
 
+#include <stdbool.h>
+
 #include "cl_main.h"
 #include "cl_log.h"
 #include "cl_uart_rtos.h"
@@ -17,18 +19,19 @@
 int ospi_flash_init();
 int VMC_Launch(void);
 int RMGMT_Launch(void);
-int cl_msg_service_launch(void);
+int CL_MSG_launch(void);
 
 uart_rtos_handle_t uart_log;
 XSysMonPsv InstancePtr;
 XScuGic IntcInst;
+SemaphoreHandle_t cl_logbuf_lock;
 
 static tasks_register_t handler[] = {
+	CL_MSG_launch, /* make sure CL MSG launched first */
+	RMGMT_Launch,
 #ifndef VMR_BUILD_XRT_ONLY
 	VMC_Launch,	
 #endif
-	RMGMT_Launch,
-	cl_msg_service_launch,
 };
 
 void cl_system_pre_init(void)
@@ -64,6 +67,9 @@ void cl_log_system_info()
 
 int main( void )
 {
+	cl_logbuf_lock = xSemaphoreCreateMutex();
+	configASSERT(cl_logbuf_lock != NULL);
+
 	CL_LOG(APP_MAIN, "\r\n=== VMR Starts  ===");
 
 	cl_log_system_info();

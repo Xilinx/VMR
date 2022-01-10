@@ -90,6 +90,11 @@ int rmgmt_boot_fpt_query(struct rmgmt_handler *rh, struct cl_msg *msg)
 	return ret;
 }
 
+static inline bool rmgmt_boot_has_fpt(struct cl_msg *msg)
+{
+	return msg->multiboot_payload.has_fpt;
+}
+
 static inline bool rmgmt_boot_from_default(struct cl_msg *msg)
 {
 	return msg->multiboot_payload.boot_on_default;
@@ -136,6 +141,10 @@ int rmgmt_flush_rpu_pdi(struct rmgmt_handler *rh, struct cl_msg *msg,
 
 	/* Always query latest boot status first */
 	ret = rmgmt_boot_fpt_query(rh, msg);
+	if (ret || !rmgmt_boot_has_fpt(msg)) {
+		RMGMT_LOG("cannot read fpt table");
+		return -1;
+	}
 
 	/* Sync data from cache to memory */
 	Xil_DCacheFlush();
