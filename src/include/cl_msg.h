@@ -37,7 +37,7 @@ typedef enum cl_vmr_control_type {
 	CL_VMR_QUERY		= 0x0,
 	CL_MULTIBOOT_DEFAULT	= 0x1,
 	CL_MULTIBOOT_BACKUP	= 0x2,
-	CL_PROGRAM_SC		= 0x3,
+	//CL_PROGRAM_SC		= 0x3,
 } cl_vmr_control_type_t;
 
 struct xgq_vmr_data_payload {

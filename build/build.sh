@@ -49,12 +49,23 @@ make_version_h()
 	echo "#endif" >> $CL_VERSION_H
 }
 
+check_vmr() {
+	if [[ ! -f "vmr/Debug/vmr.elf" ]];then
+		echo "build failed, cannot find vmr.elf"
+		exit 1
+	fi
+	echo "=== VMR github info ==="
+	arm-none-eabi-strings vmr/Debug/vmr.elf |grep VMR_GIT
+	echo "=== VMR github info ==="
+}
+
 build_app_all() {
 	xsct ./create_app.tcl
 	rsync -av ../src vmr --exclude cmc
 	xsct ./config_app.tcl
 	make_version_h
 	xsct ./make_app.tcl
+	check_vmr
 }
 
 build_app_incremental() {
@@ -62,6 +73,7 @@ build_app_incremental() {
 	rsync -av ../src vmr --exclude cmc --exclude *.swp
 	make_version_h
 	xsct ./make_app.tcl
+	check_vmr
 }
 
 usage() {
