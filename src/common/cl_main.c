@@ -60,9 +60,13 @@ void cl_log_system_info()
 #else
 	CL_LOG(APP_MAIN, "VMR full build");
 #endif
+
+#ifdef _VMR_VERSION_
 	CL_LOG(APP_MAIN,
 		"\r\ngit hash: %s.\r\ngit branch: %s.\r\nbuild date: %s",
 		VMR_GIT_HASH, VMR_GIT_BRANCH, VMR_GIT_BUILD_DATE);
+#endif
+
 }
 
 int main( void )
