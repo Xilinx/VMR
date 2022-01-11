@@ -117,6 +117,8 @@ static XOspiPsv_Msg FlashMsg;
 
 u8 CmdBfr[8];
 
+static int ospi_flash_percentage = 0;
+
 /*****************************************************************************/
 /**
 *
@@ -1333,6 +1335,8 @@ int ospi_flash_write(flash_area_t area, u8 *WriteBuffer, u32 offset, u32 len)
 	u32 PAGE_SIZE = OSPI_VERSAL_PAGESIZE;
 	u32 baseAddress = getBaseAddress(area);
 	u8 ReadBuffer[OSPI_VERSAL_PAGESIZE] __attribute__ ((aligned(64)));
+	
+	ospi_flash_percentage = 0;
 
 	baseAddress += offset;
 	XOspiPsv *OspiPsvInstancePtr = &OspiPsvInstance;
@@ -1359,7 +1363,9 @@ int ospi_flash_write(flash_area_t area, u8 *WriteBuffer, u32 offset, u32 len)
 		for (Page = 0; Page < PAGE_COUNT; Page++) {
 			u32 offset = (Page * Flash_Config_Table[FCTIndex].PageSize);
 
-			xil_printf("\r%d", Page*100/PAGE_COUNT);
+			ospi_flash_percentage = (Page*100/PAGE_COUNT);
+
+			xil_printf("\r%d", ospi_flash_percentage);
 			fflush(stdout);
 
 			Status = FlashIoWrite(OspiPsvInstancePtr,
@@ -1452,4 +1458,8 @@ int ospi_flash_copy(flash_area_t area, u32 src, u32 tgt, u32 len)
 
 	OSPI_LOG("src 0x%x, tgt 0x%x. done %d", src, tgt, ret);
 	return ret;
+}
+
+int ospi_flash_progress() {
+	return ospi_flash_percentage;
 }

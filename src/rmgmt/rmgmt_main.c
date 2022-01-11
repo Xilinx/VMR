@@ -239,6 +239,9 @@ static int xgq_vmr_cb(cl_msg_t *msg, void *arg)
 		case CL_VMR_QUERY:
 			ret = rmgmt_boot_fpt_query(&rh, msg);
 			break;
+		case CL_PROGRAM_SC:
+			/* place holder for starting SC download */
+			break;
 		default:
 			RMGMT_LOG("unknown type %d", msg->multiboot_payload.req_type);
 			ret = -1;

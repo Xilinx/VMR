@@ -13,6 +13,7 @@
 #include "cl_log.h"
 #include "cl_msg.h"
 #include "cl_main.h"
+#include "cl_flash.h"
 #include "xgq_cmd_vmr.h"
 #include "cl_xgq_plat.h"
 #include "vmr_common.h"
@@ -124,7 +125,7 @@ int cl_msg_handle_complete(cl_msg_t *msg)
 		cmd_cq->cq_vmr_payload.multi_boot_offset =
 			msg->multiboot_payload.multi_boot_offset;
 		cmd_cq->cq_vmr_payload.debug_level = cl_loglevel_get();
-		/*TODO get flush progress back too */
+		cmd_cq->cq_vmr_payload.flush_progress = ospi_flash_progress();
 	}
 
 	xgq_produce(&rpu_xgq, &cq_slot_addr);
@@ -217,6 +218,9 @@ static cl_vmr_control_type_t convert_control_type(enum xgq_cmd_vmr_control_type 
 		break;
 	case XGQ_CMD_BOOT_BACKUP:
 		type = CL_MULTIBOOT_BACKUP;
+		break;
+	case XGQ_CMD_PROGRAM_SC:
+		type = CL_PROGRAM_SC;
 		break;
 	case XGQ_CMD_VMR_QUERY:
 	default:
