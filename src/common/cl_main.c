@@ -13,7 +13,7 @@
 #include "cl_main.h"
 #include "cl_log.h"
 #include "cl_uart_rtos.h"
-
+#include "vmc_api.h"
 #include "sysmon.h"
 
 int ospi_flash_init();
@@ -27,8 +27,10 @@ XScuGic IntcInst;
 SemaphoreHandle_t cl_logbuf_lock;
 
 static tasks_register_t handler[] = {
+#ifndef VMR_BUILD_VMC_ONLY
 	CL_MSG_launch, /* make sure CL MSG launched first */
 	RMGMT_Launch,
+#endif
 #ifndef VMR_BUILD_XRT_ONLY
 	VMC_Launch,	
 #endif
