@@ -189,6 +189,8 @@ void SensorData_Display(void)
 	VMC_PRNT("remote temp or fpga temp(max6639) 	: %f \n\r ",sensor_readings.remote_temp);
 	VMC_PRNT("Fan RPM (max6639) 			: %d \n\r ",sensor_readings.fanRpm);
 	VMC_PRNT("Maximum SYSMON temp 			: %f \n\r ",sensor_readings.sysmon_max_temp);
+	VMC_PRNT("QSFP_0 temperature			: %f \n\r ",sensor_readings.qsfp_temp[0]);
+	VMC_PRNT("QSFP_1 temperature			: %f \n\r ",sensor_readings.qsfp_temp[1]);
 	VMC_PRNT("\n\r");
 
 

@@ -12,6 +12,7 @@
 #include "vmc_api.h"
 #include "sensors/inc/se98a.h"
 #include "sensors/inc/max6639.h"
+#include "sensors/inc/qsfp.h"
 #include "vmc_sensors.h"
 #include "vmc_asdm.h"
 #include "sysmon.h"
@@ -140,7 +141,32 @@ s8 Fan_RPM_Read(snsrRead_t *snsrData)
 
 	return status;
 }
+s8 Temperature_Read_QSFP(snsrRead_t *snsrData)
+{
+	u8 status = XST_FAILURE;
+	float TempReading = 0.0;
 
+	status = QSFP_ReadTemperature(&TempReading, snsrData->sensorInstance);
+
+	memcpy(&snsrData->snsrValue[0],&TempReading,sizeof(TempReading));
+	snsrData->sensorValueSize = sizeof(TempReading);
+
+	if (status == XST_SUCCESS)
+	{
+		snsrData->snsrSatus = Vmc_Snsr_State_Normal;
+	}
+	else if (status == XST_FAILURE)
+	{
+		snsrData->snsrSatus = Vmc_Snsr_State_Comms_failure;
+		VMC_PRNT("Failed to read slave : %d \n\r",QSFP_SLAVE_ADDRESS);
+	}
+	else
+	{
+		snsrData->snsrSatus = Vmc_Snsr_State_Unavailable;
+		VMC_PRNT("QSFP_%d module not present \n\r",(snsrData->sensorInstance-1));
+	}
+	return status;
+}
 void se98a_monitor(void)
 {
 	u8 i = 0;
@@ -209,5 +235,30 @@ void sysmon_monitor(void)
 	}
 
 	sensor_readings.sysmon_max_temp = TempReading;
+	return;
+}
+
+void qsfp_monitor(void)
+{
+	u8 snsrIndex = 0;
+	float TemperatureValue = 0;
+	u8 status = XST_FAILURE;
+
+	for (snsrIndex = 1 ; snsrIndex <= QSFP_TEMPERATURE_SENSOR_NUM ; snsrIndex++)
+	{
+		status = QSFP_ReadTemperature(&TemperatureValue,snsrIndex);
+
+		sensor_readings.qsfp_temp[snsrIndex-1] = TemperatureValue;
+
+		if (status == XST_FAILURE)
+		{
+			VMC_PRNT("\n\r Failed to read QSFP_%d temp \n\r",(snsrIndex-1));
+		}
+		if (status == XST_DEVICE_NOT_FOUND)
+		{
+			//VMC_PRNT("QSFP_%d module not present",(snsrIndex-1));
+		}
+
+	}
 	return;
 }

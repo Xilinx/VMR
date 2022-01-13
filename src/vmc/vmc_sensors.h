@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: MIT
  *******************************************************************************/
 #include "xil_types.h"
+#include "sensors/inc/qsfp.h"
 
 #define BOARD_TEMPERATURE_SENSOR_NUM 2
 
@@ -17,6 +18,7 @@ typedef struct
 	float local_temp;
 	float remote_temp;
 	float sysmon_max_temp;
+	float qsfp_temp[QSFP_TEMPERATURE_SENSOR_NUM];
 	u16 fanRpm;
 
 } Versal_sensor_readings;
@@ -24,3 +26,4 @@ typedef struct
 
 void se98a_monitor(void);
 void max6639_monitor(void);
+void qsfp_monitor(void);

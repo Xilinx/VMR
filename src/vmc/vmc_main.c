@@ -90,6 +90,7 @@ static void SensorMonitorTask(void *params)
 		se98a_monitor();
 		max6639_monitor();
 		sysmon_monitor();
+		qsfp_monitor ();
 		vTaskDelay(200);
 	}
 
