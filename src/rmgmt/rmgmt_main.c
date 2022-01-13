@@ -77,7 +77,7 @@ static int rmgmt_download_pdi(cl_msg_t *msg, bool is_rpu_pdi)
 	cl_memcpy_fromio8(address, rh.rh_data, size);
 
 	if (is_rpu_pdi)
-		ret = rmgmt_flush_rpu_pdi(&rh, msg, msg->data_payload.flush_default_only);
+		ret = rmgmt_flush_rpu_pdi(&rh, msg);
 	else
 		ret = rmgmt_download_apu_pdi(&rh);
 
@@ -237,7 +237,7 @@ static int xgq_vmr_cb(cl_msg_t *msg, void *arg)
 			ret = rmgmt_enable_boot_backup();
 			break;
 		case CL_VMR_QUERY:
-			ret = rmgmt_boot_fpt_query(&rh, msg);
+			ret = rmgmt_boot_fpt_query(msg);
 			break;
 		case CL_PROGRAM_SC:
 			/* place holder for starting SC download */

@@ -1413,6 +1413,7 @@ int ospi_flash_write(flash_area_t area, u8 *WriteBuffer, u32 offset, u32 len)
 		}
 	}
 
+	ospi_flash_percentage = 100;
 	OSPI_DBG("done.");
 	return 0;
 }

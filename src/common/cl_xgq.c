@@ -299,8 +299,18 @@ static int submit_to_queue(u32 sq_addr)
 	case CL_MSG_APUBIN:
 		msg.data_payload.address = (u32)sq->pdi_payload.address;
 		msg.data_payload.size = (u32)sq->pdi_payload.size;
-		msg.data_payload.flush_default_only =
-			sq->pdi_payload.flush_default_only;
+
+		switch (sq->pdi_payload.flush_type) {
+		case XGQ_CMD_FLUSH_NO_BACKUP:
+			msg.data_payload.flush_no_backup = 1;
+			break;
+		case XGQ_CMD_FLUSH_TO_LEGACY:
+			msg.data_payload.flush_to_legacy = 1;
+			break;
+		case XGQ_CMD_FLUSH_DEFAULT:
+		default:
+			break;
+		}
 
 		ret = dispatch_to_queue(&msg, TASK_SLOW);
 		break;
