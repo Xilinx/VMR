@@ -21,16 +21,41 @@
 #include "cl_main.h"
 #include "cl_io.h"
 
+/* Uncomment for enabling VMC debug. */
+//#define VMC_DEBUG
+
+#define	VMC_STRING	"VMC"
+
+#ifdef VMC_DEBUG
+#warning "When enabled RPU UART RX has conflic with APU UART so need to disable XRT code (RMGMT_Launch and cl_msg_service_launch)."
+#define VMR_BUILD_VMC_ONLY
+
+#define VMC_DMO(fmt, arg...) 		\
+	VMC_Printf(__FILENAME__, __LINE__, VMC_LOG_LEVEL_DEMO_MENU, fmt,##arg)
+#define VMC_PRNT(fmt, arg...) 		\
+	VMC_Printf(__FILENAME__, __LINE__, VMC_LOG_LEVEL_INFO, fmt,##arg)
+#define VMC_LOG(fmt, arg...) 		\
+	VMC_Printf(__FILENAME__, __LINE__, VMC_LOG_LEVEL_INFO, "%s: %s " fmt "\r\n", 	\
+			VMC_STRING, __FUNCTION__, ##arg)
+#define VMC_ERR(fmt, arg...) 		\
+	VMC_Printf(__FILENAME__, __LINE__, VMC_LOG_LEVEL_ERROR,"%s[ERROR]: %s" fmt "\r\n", 	\
+			VMC_STRING, __FUNCTION__, ##arg)
+#define VMC_DBG(fmt, arg...) 		\
+	VMC_Printf(__FILENAME__, __LINE__, VMC_LOG_LEVEL_DEBUG,"%s[DEBUG]: %s:%d %s " fmt "\r\n", 	\
+			VMC_STRING, __FILENAME__, __LINE__, __FUNCTION__, ##arg)
+#else
 #define VMC_DMO(fmt, arg...)	\
-	CL_DMO(APP_VMC, fmt, ##arg)
+	CL_UART_DMO(APP_VMC, fmt, ##arg)
 #define VMC_PRNT(fmt, arg...)	\
-	CL_PRNT(APP_VMC, fmt, ##arg)
+	CL_UART_PRNT(APP_VMC, fmt, ##arg)
 #define VMC_LOG(fmt, arg...)	\
-	CL_LOG(APP_VMC, fmt, ##arg)
+	CL_UART_LOG(APP_VMC, fmt, ##arg)
 #define VMC_ERR(fmt, arg...)	\
-	CL_ERR(APP_VMC, fmt, ##arg)
+	CL_UART_ERR(APP_VMC, fmt, ##arg)
 #define VMC_DBG(fmt, arg...)	\
-	CL_DBG(APP_VMC, fmt, ##arg)
+	CL_UART_DBG(APP_VMC, fmt, ##arg)
+
+#endif
 
 #include <string.h>
 
