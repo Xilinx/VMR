@@ -22,11 +22,12 @@ extern s8 Temperature_Read_Outlet(snsrRead_t *snsrData);
 extern s8 Temperature_Read_Board(snsrRead_t *snsrData);
 extern s8 Temperature_Read_ACAP_Device_Sysmon(snsrRead_t *snsrData);
 extern s8 Fan_RPM_Read(snsrRead_t *snsrData);
+extern s8 Temperature_Read_QSFP(snsrRead_t *snsrData);
 
 Asdm_Header_t asdmHeaderInfo[] = {
     /* Record Type	| Hdr Version | Record Count | NumBytes */
     {BoardInfoSDR ,  	 	0x1  ,		 0x2, 		0x7f},
-    {TemperatureSDR , 		0x1  ,		 0x4,		0x7f},
+    {TemperatureSDR , 		0x1  ,		 0x6,		0x7f},
 };
 
 #define MAX_SDR_REPO 	(sizeof(asdmHeaderInfo)/sizeof(asdmHeaderInfo[0]))
@@ -80,7 +81,7 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
 	    .upperCritLimit = 85,
 	    .upperFatalLimit = 95,
 	    .sampleCount = 0x1,
-	    .mointorFunc = &Temperature_Read_Inlet,
+	    .monitorFunc = &Temperature_Read_Inlet,
 
 	},
 	{
@@ -95,7 +96,7 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
 	    .upperCritLimit = 85,
 	    .upperFatalLimit = 95,
 	    .sampleCount = 0x1,
-	    .mointorFunc = &Temperature_Read_Outlet,
+	    .monitorFunc = &Temperature_Read_Outlet,
 	},
 	{
 	    .repoType = TemperatureSDR,
@@ -109,7 +110,7 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
 	    .upperCritLimit = 85,
 	    .upperFatalLimit = 95,
 	    .sampleCount = 0x1,
-	    .mointorFunc = &Temperature_Read_Board,
+	    .monitorFunc = &Temperature_Read_Board,
 	},
 	/*{
 	    .repoType = TemperatureSDR,
@@ -134,7 +135,37 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
 	    .upperCritLimit = 97,
 	    .upperFatalLimit = 107,
 	    .sampleCount = 0x1,
-	    .mointorFunc = &Temperature_Read_ACAP_Device_Sysmon,
+	    .monitorFunc = &Temperature_Read_ACAP_Device_Sysmon,
+	},
+	{
+	    .repoType = TemperatureSDR,
+	    .sensorName = "QSFP0 Temp\0",
+	    .snsrValTypeLength = 0x04,
+	    .snsrBaseUnitTypeLength = 0xC8,
+	    .snsrBaseUnit = "Celcius\0",
+	    .snsrUnitModifier = 0x0,
+	    .supportedThreshold = 0xC7,
+	    .upperWarnLimit = 80,
+	    .upperCritLimit = 85,
+	    .upperFatalLimit = 90,
+	    .sampleCount = 0x1,
+		.sensorInstance = 1,
+	    .monitorFunc = &Temperature_Read_QSFP,
+	},
+	{
+	    .repoType = TemperatureSDR,
+	    .sensorName = "QSFP1 Temp\0",
+	    .snsrValTypeLength = 0x04,
+	    .snsrBaseUnitTypeLength = 0xC8,
+	    .snsrBaseUnit = "Celcius\0",
+	    .snsrUnitModifier = 0x0,
+	    .supportedThreshold = 0xC7,
+	    .upperWarnLimit = 80,
+	    .upperCritLimit = 85,
+	    .upperFatalLimit = 90,
+	    .sampleCount = 0x1,
+		.sensorInstance = 2,
+	    .monitorFunc = &Temperature_Read_QSFP,
 	},
     };
 
@@ -510,8 +541,11 @@ s8 Init_Asdm()
 		    byteCount += snsrValueLen;
 		}
 
+		tmp[idx].sensorInstance = pSdrMetaData[totalRecords].sensorInstance;
+
 		/* Update the Monitor Function for the Sensor (Internal)*/
-		tmp[idx].snsrReadFunc = pSdrMetaData[totalRecords].mointorFunc;
+		tmp[idx].snsrReadFunc = pSdrMetaData[totalRecords].monitorFunc;
+
 
 		/* One Record is initialized, move to the Next SDRMetaData */
 		totalRecords++;
@@ -846,37 +880,35 @@ s8 Monitor_Sensors(void)
 
     if(asdmInitSuccess == true)
     {
-	for(sdrIndex = 0; sdrIndex < MAX_SDR_REPO ; sdrIndex++)
-	{
-	    Asdm_SensorRecord_t *sensorRecord = sdrInfo[sdrIndex].sensorRecord;
-
-	    if(NULL != sensorRecord)
-	    {
-		for(idx = 0; idx < sdrInfo[sdrIndex].header.no_of_records; idx++)
+		for(sdrIndex = 0; sdrIndex < MAX_SDR_REPO ; sdrIndex++)
 		{
-		    /* Check if a Monitor Function is registered for this sensor */
-		    if(NULL != sensorRecord[idx].snsrReadFunc)
-		    {
-			memset(&snsrData, 0x00, sizeof(snsrRead_t));
-			if(!sensorRecord[idx].snsrReadFunc(&snsrData))
-			{
-			    /* Update the Sensor Data in SDR records */
-			    Update_Sensor_Value(sdrInfo[sdrIndex].header.repository_type,
-				    sensorRecord[idx].sensor_id, &snsrData);
+			Asdm_SensorRecord_t *sensorRecord = sdrInfo[sdrIndex].sensorRecord;
 
+			if(NULL != sensorRecord)
+			{
+				for(idx = 0; idx < sdrInfo[sdrIndex].header.no_of_records; idx++)
+				{
+					/* Check if a Monitor Function is registered for this sensor */
+					if(NULL != sensorRecord[idx].snsrReadFunc)
+					{
+					memset(&snsrData, 0x00, sizeof(snsrRead_t));
+
+					snsrData.sensorInstance = sensorRecord[idx].sensorInstance;
+
+					sensorRecord[idx].snsrReadFunc(&snsrData);
+
+						/* Update the Sensor Data in SDR records */
+					Update_Sensor_Value(sdrInfo[sdrIndex].header.repository_type,
+							sensorRecord[idx].sensor_id, &snsrData);
+
+					}
+				}
 			}
 			else
 			{
-			    VMC_ERR("Failed to read : %s \n\r",sensorRecord[idx].sensor_name);
+				VMC_ERR("Invalid SDR Data \n\r");
 			}
-		    }
 		}
-	    }
-	    else
-	    {
-		VMC_ERR("Invalid SDR Data \n\r");
-	    }
-	}
     }
     else
     {

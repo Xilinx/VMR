@@ -72,6 +72,7 @@ typedef enum Asdm_Completion_Code_e
 
 typedef struct __attribute__((packed)) snsrRead_s
 {
+	u8 sensorInstance;
     u8 snsrValue[4];
     u8 sensorValueSize;
     u8 snsrSatus;
@@ -106,7 +107,8 @@ typedef struct __attribute__((packed)) Asdm_Sensor_MetaData_s
     u16 upperFatalLimit;
 
     u8 sampleCount;
-    sensorMonitorFunc mointorFunc;
+    u8 sensorInstance;
+    sensorMonitorFunc monitorFunc;
 
 }Asdm_Sensor_MetaData_t;
 
@@ -140,6 +142,7 @@ typedef struct __attribute__((packed)) Asdm_SensorRecord_s
     u8 * sensorMaxValue;
     /* For Internal usage */
     u32 sampleCount;
+    u8 sensorInstance;
     sensorMonitorFunc snsrReadFunc;
 }Asdm_SensorRecord_t;
 
