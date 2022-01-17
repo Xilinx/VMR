@@ -51,6 +51,8 @@
 #include "cl_flash.h"
 #include "xospipsv_flash_config.h"
 
+#define OSPI_ERR(fmt, arg...) \
+	CL_ERR(APP_MAIN, fmt, ##arg)
 #define OSPI_LOG(fmt, arg...) \
 	CL_LOG(APP_MAIN, fmt, ##arg)
 #define OSPI_DBG(fmt, arg...) \
@@ -1318,7 +1320,7 @@ int ospi_flash_read(flash_area_t area, u8 *buffer, u32 offset, u32 len)
 	bzero(buffer, len);
 	Status = FlashRead(OspiPsvInstancePtr, baseAddress, len, CmdBfr, buffer);
 	if (Status != XST_SUCCESS) {
-		OSPI_LOG("ERR: Read failed:%d\r\n", Status);
+		OSPI_ERR("ERR: Read failed:%d\r\n", Status);
 		return XST_FAILURE;
 	}
 
@@ -1372,7 +1374,7 @@ int ospi_flash_write(flash_area_t area, u8 *WriteBuffer, u32 offset, u32 len)
 			offset + baseAddress,
 			((Flash_Config_Table[FCTIndex].PageSize)), WriteBuffer + offset);
 			if (Status != XST_SUCCESS) {
-				OSPI_LOG("ERR: write failed: %d\r\n", Status);
+				OSPI_ERR("ERR: write failed: %d\r\n", Status);
 				return XST_FAILURE;
 			}
 		}
@@ -1388,7 +1390,7 @@ int ospi_flash_write(flash_area_t area, u8 *WriteBuffer, u32 offset, u32 len)
 		Status = FlashRead(OspiPsvInstancePtr, baseAddress + Count, PAGE_SIZE,
 			CmdBfr, ReadBuffer);
 		if (Status != XST_SUCCESS) {
-			OSPI_LOG("ERR: Read failed:%d", Status);
+			OSPI_ERR("ERR: Read failed:%d", Status);
 			return XST_FAILURE;
 		}
 		
@@ -1401,13 +1403,13 @@ int ospi_flash_write(flash_area_t area, u8 *WriteBuffer, u32 offset, u32 len)
 			for (int idx = 0; idx < 16; idx++) {
 				OSPI_LOG("%02x ", ReadBuffer[idx]);
 			}
-			OSPI_LOG(" <= data in ospi");
+			OSPI_ERR(" <= data in ospi");
 			for (int idx = 0; idx < 16; idx++) {
 				OSPI_LOG("%02x ", WriteBuffer[Count+idx]);
 			}
-			OSPI_LOG(" <= data from pdi");
+			OSPI_ERR(" <= data from pdi");
 
-			OSPI_LOG("mis-match offset: %d, read 0x%x: pdi 0x%x",
+			OSPI_ERR("mis-match offset: %d, read 0x%x: pdi 0x%x",
 				Count+i, ReadBuffer[i], WriteBuffer[Count+i]);
 			return XST_FAILURE;
 		}
@@ -1446,17 +1448,21 @@ int ospi_flash_copy(flash_area_t area, u32 src, u32 tgt, u32 len)
 
 	OSPI_LOG("src 0x%x, tgt 0x%x. start", src, tgt);
 
+	ospi_flash_percentage = 0;
 	/* copy enough (len + 1) page size from srouce to target */
 	for (idx = 0; idx <= len; idx += page_size) {
+		ospi_flash_percentage = (idx * 100 / len);
+
 		ret = ospi_flash_read(area, ReadBuffer, src + idx, page_size);
 		if (ret)
 			return ret;
-
+		
 		ret = ospi_flash_write(area, ReadBuffer, tgt + idx, page_size);
 		if (ret)
 			return ret;
 	}
 
+	ospi_flash_percentage = 100;
 	OSPI_LOG("src 0x%x, tgt 0x%x. done %d", src, tgt, ret);
 	return ret;
 }

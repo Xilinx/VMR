@@ -83,7 +83,7 @@ static int rmgmt_download_pdi(cl_msg_t *msg, bool is_rpu_pdi)
 
 	msg->hdr.rcode = ret;
 
-	RMGMT_DBG("complete msg id%d, ret %d", msg->hdr.cid, ret);
+	RMGMT_DBG("complete msg id %d, ret %d", msg->hdr.cid, ret);
 	cl_msg_handle_complete(msg);
 	return 0;
 }
@@ -237,7 +237,7 @@ static int xgq_vmr_cb(cl_msg_t *msg, void *arg)
 			ret = rmgmt_enable_boot_backup();
 			break;
 		case CL_VMR_QUERY:
-			ret = rmgmt_boot_fpt_query(msg);
+			rmgmt_fpt_query(msg);
 			break;
 		case CL_PROGRAM_SC:
 			/* place holder for starting SC download */
