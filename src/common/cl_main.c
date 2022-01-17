@@ -13,7 +13,7 @@
 #include "cl_main.h"
 #include "cl_log.h"
 #include "cl_uart_rtos.h"
-#include "vmc_api.h"
+#include "../vmc/vmc_api.h"
 #include "sysmon.h"
 
 int ospi_flash_init();
