@@ -22,6 +22,8 @@ int RMGMT_Launch(void);
 int CL_MSG_launch(void);
 
 uart_rtos_handle_t uart_log;
+uart_rtos_handle_t uart_vmcsc_log;
+
 XSysMonPsv InstancePtr;
 XScuGic IntcInst;
 SemaphoreHandle_t cl_logbuf_lock;
@@ -46,6 +48,8 @@ void cl_system_pre_init(void)
 	/* Enable FreeRTOS Debug UART */
 	UART_RTOS_Debug_Enable(&uart_log);
 #endif
+
+	UART_VMC_SC_Enable(&uart_vmcsc_log);
 
 	if (XSysMonPsv_Init(&InstancePtr, &IntcInst) != XST_SUCCESS)
 	{

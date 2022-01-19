@@ -17,9 +17,23 @@
 #include "vmc_asdm.h"
 
 #include "sysmon.h"
+#include "vmc_sc_comms.h"
 
 static TaskHandle_t xVMCTask;
 static TaskHandle_t xSensorMonTask;
+static TaskHandle_t xVMCSCTask;
+static TaskHandle_t xVMCUartpoll;
+
+extern uart_rtos_handle_t uart_vmcsc_log;
+extern SC_VMC_Data sc_vmc_data;
+extern SemaphoreHandle_t vmc_sc_lock;
+
+
+
+u8 g_scData[MAX_VMC_SC_UART_BUF_SIZE] = {0x00};
+u16 g_scDataCount = 0;
+bool isinterruptflag ;
+bool ispacketreceived ;
 
 /*Xgq Msg Handle */
 static u8 xgq_sensor_flag = 0;
@@ -63,7 +77,86 @@ static int xgq_sensor_cb(cl_msg_t *msg, void *arg)
 	cl_msg_handle_complete(msg);
 	return 0;
 }
+static void Vmc_uartpoll( void *pvParameters )
+{
+	u32 retval;
+	u8 Data[MAX_VMC_SC_UART_BUF_SIZE] = {0x00};
+	u32 receivedcount = 0 ;
+	for(;;)
+	{
+		if(isinterruptflag == true)
+		{
+			vPortEnableInterrupt(XPAR_XUARTPS_0_INTR);
+			retval = UART_RTOS_Receive(&uart_vmcsc_log, Data, MAX_VMC_SC_UART_COUNT_WITH_INTR ,&receivedcount);
+			if(retval)
+			{
+				memcpy(&g_scData[g_scDataCount],Data,retval);
+				g_scDataCount += retval;
+				retval = 0;
+				if ((g_scData[g_scDataCount-1] == ETX) && (g_scData[g_scDataCount-2] == ESCAPE_CHAR))
+				{
+					ispacketreceived = true;
+				}
+			}
+			if(receivedcount)
+			{
+				memcpy(&g_scData[g_scDataCount],Data,receivedcount);
+				g_scDataCount += receivedcount;
+				receivedcount = 0;
+				if ((g_scData[g_scDataCount-1] == ETX) && (g_scData[g_scDataCount-2] == ESCAPE_CHAR))
+				{
+					ispacketreceived = true;
+				}
+			}
+		}
+		else if(isinterruptflag == false)
+		{
+			vPortDisableInterrupt(XPAR_XUARTPS_0_INTR);
+			retval = UART_RTOS_Receive(&uart_vmcsc_log, Data, MAX_VMC_SC_UART_COUNT_WITHOUT_INTR ,&receivedcount);
+			if(retval)
+			{
+				memcpy(&g_scData[g_scDataCount],Data,retval);
+				g_scDataCount += retval;
+				retval = 0;
+				if ((g_scData[g_scDataCount-1] == ETX) && (g_scData[g_scDataCount-2] == ESCAPE_CHAR))
+				{
+					ispacketreceived = true;
+				}
+			}
+		}
+		vTaskDelay(20);
+	}
+	vTaskSuspend(NULL);
+}
 
+static void VMCSCMonitorTask(void *params)
+{
+
+	VMC_LOG("\n\r CMC Task Created !!!\n\r");
+
+
+
+	xTaskCreate( Vmc_uartpoll,
+						 ( const char * ) "UART_POLL",
+						 2048,
+						 NULL,
+						 tskIDLE_PRIORITY + 1,
+						 &xVMCUartpoll );
+
+    /* vmc_sc_lock */
+	vmc_sc_lock = xSemaphoreCreateMutex();
+    if(vmc_sc_lock == NULL){
+	VMC_ERR("vmc_sc_lock creation failed \n\r");
+    }
+
+	for(;;)
+	{
+		vmc_sc_monitor();
+		vTaskDelay(50);
+	}
+
+	vTaskSuspend(NULL);
+}
 
 static void SensorMonitorTask(void *params)
 {
@@ -131,6 +224,16 @@ static void pVMCTask(void *params)
 	return ;
     }
 
+    if (xTaskCreate( VMCSCMonitorTask,
+		( const char * ) "VMCSC_Monitor",
+		2048,
+		NULL,
+		tskIDLE_PRIORITY + 1,
+		&xVMCSCTask
+		) != pdPASS) {
+	CL_LOG(APP_VMC,"Failed to Create VMCSC Monitor Task \n\r");
+	return ;
+    }
     vTaskSuspend(NULL);
 }
 
