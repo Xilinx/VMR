@@ -138,9 +138,6 @@ static int xgq_af_cb(cl_msg_t *msg, void *arg)
 
 	RMGMT_DBG("complete msg id %d, ret 0x%x", msg->hdr.cid, msg->hdr.rcode);
 
-	/* workaround due to CU config will trigger this */
-	msg->hdr.rcode = 0;
-
 	cl_msg_handle_complete(msg);
 	return 0;
 }
