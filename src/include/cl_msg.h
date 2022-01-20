@@ -90,7 +90,9 @@ struct xgq_vmr_multiboot_payload {
 	uint32_t sysdtb_offset;
 	uint32_t sysdtb_size;
 	uint32_t pdimeta_offset;
+	uint32_t pdimeta_size;
 	uint32_t pdimeta_backup_offset;
+	uint32_t pdimeta_backup_size;
 };
 
 struct xgq_vmr_head {

@@ -14,145 +14,6 @@
 #include "cl_msg.h"
 #include "cl_flash.h"
 
-/*
- * Extension table is pre-loaded into DDR
- */
-void rmgmt_extension_fpt_query(struct cl_msg *msg)
-{
-	struct fpt_hdr hdr = { 0 };
-
-	cl_memcpy_fromio8(RPU_PRELOAD_FPT, &hdr, sizeof(hdr));
-
-	msg->multiboot_payload.has_extfpt = (hdr.fpt_magic == FPT_MAGIC) ? 1 : 0;
-
-	RMGMT_DBG("magic %x fpt_magic %x", hdr.fpt_magic, FPT_MAGIC);
-	RMGMT_DBG("version %x", hdr.fpt_version);
-	RMGMT_DBG("hdr size %x", hdr.fpt_header_size);
-	RMGMT_DBG("entry size %x", hdr.fpt_entry_size);
-	RMGMT_DBG("num entries %x", hdr.fpt_num_entries);
-
-	if (!msg->multiboot_payload.has_extfpt)
-		return;
-
-	for (int i = 1; i <= hdr.fpt_num_entries; i++) {
-		struct fpt_entry entry;
-		cl_memcpy_fromio8(RPU_PRELOAD_FPT + hdr.fpt_entry_size * i,
-			&entry, sizeof(entry));
-
-		if (entry.partition_type == FPT_TYPE_SC_FW) {
-			msg->multiboot_payload.scfw_offset = entry.partition_base_addr;
-			msg->multiboot_payload.scfw_size = entry.partition_size;
-			msg->multiboot_payload.has_ext_scfw = 1;
-		}
-		if (entry.partition_type == FPT_TYPE_XSABIN) {
-			msg->multiboot_payload.xsabin_offset = entry.partition_base_addr;
-			msg->multiboot_payload.xsabin_size = entry.partition_size;
-			msg->multiboot_payload.has_ext_xsabin = 1;
-		}
-		if (entry.partition_type == FPT_TYPE_SYSDTB) {
-			msg->multiboot_payload.sysdtb_offset = entry.partition_base_addr;
-			msg->multiboot_payload.sysdtb_size = entry.partition_size;
-			msg->multiboot_payload.has_ext_sysdtb = 1;
-
-		}
-		
-		RMGMT_DBG("type %x", entry.partition_type);
-		RMGMT_DBG("base %x", entry.partition_base_addr);
-		RMGMT_DBG("size %x", entry.partition_size);
-		RMGMT_DBG("flags %x", entry.partition_flags);
-	}
-}
-
-/*
- * Read fpt table and return status
- */
-void rmgmt_boot_fpt_query(struct cl_msg *msg)
-{
-	struct fpt_hdr hdr = { 0 };
-	int ret = 0;
-	u32 multi_boot_offset = 0;
-	
-	ret = ospi_flash_read(CL_FLASH_BOOT, (u8 *)&hdr, FPT_DEFAULT_OFFSET, sizeof(hdr));
-	if (ret)
-		return;
-
-	msg->multiboot_payload.has_fpt = (hdr.fpt_magic == FPT_MAGIC) ? 1 : 0;
-
-	RMGMT_DBG("magic %x fpt_magic %x", hdr.fpt_magic, FPT_MAGIC);
-	RMGMT_DBG("version %x", hdr.fpt_version);
-	RMGMT_DBG("hdr size %x", hdr.fpt_header_size);
-	RMGMT_DBG("entry size %x", hdr.fpt_entry_size);
-	RMGMT_DBG("num entries %x", hdr.fpt_num_entries);
-
-	if (!msg->multiboot_payload.has_fpt)
-		return;
-
-	for (int i = 1; i <= hdr.fpt_num_entries; i++) {
-		struct fpt_entry entry;
-		ret = ospi_flash_read(CL_FLASH_BOOT, (u8 *)&entry,
-			hdr.fpt_entry_size * i, sizeof(entry));
-
-		if (entry.partition_type == FPT_TYPE_BOOT) {
-			msg->multiboot_payload.default_partition_offset =
-				entry.partition_base_addr;
-			msg->multiboot_payload.default_partition_size =
-				entry.partition_size;
-		}
-
-		if (entry.partition_type == FPT_TYPE_BOOT_BACKUP) {
-			msg->multiboot_payload.backup_partition_offset =
-				entry.partition_base_addr;
-			msg->multiboot_payload.backup_partition_size =
-				entry.partition_size;
-		}
-
-		if (entry.partition_type == FPT_TYPE_PDIMETA) {
-			msg->multiboot_payload.pdimeta_offset =
-				entry.partition_base_addr;
-		}
-
-		if (entry.partition_type == FPT_TYPE_PDIMETA_BACKUP) {
-			msg->multiboot_payload.pdimeta_backup_offset =
-				entry.partition_base_addr;
-		}
-
-		RMGMT_DBG("type %x", entry.partition_type);
-		RMGMT_DBG("base %x", entry.partition_base_addr);
-		RMGMT_DBG("size %x", entry.partition_size);
-		RMGMT_DBG("flags %x", entry.partition_flags);
-	}
-
-	bzero(&hdr, sizeof(hdr));
-	ret = ospi_flash_read(CL_FLASH_BOOT, (u8 *)&hdr, FPT_BACKUP_OFFSET, sizeof(hdr));
-	if (ret) {
-		RMGMT_ERR("no backup fpt");
-		return;
-	}
-
-	RMGMT_DBG("hdr recovery magic %x", hdr.fpt_magic);
-	msg->multiboot_payload.has_fpt_recovery = (hdr.fpt_magic == FPT_MAGIC) ? 1 : 0;
-
-	multi_boot_offset = IO_SYNC_READ32(EP_PLM_MULTIBOOT);
-	msg->multiboot_payload.multi_boot_offset = multi_boot_offset;
-
-	RMGMT_LOG("A offset %x:%x, B offset %x:%x",
-		msg->multiboot_payload.default_partition_offset,
-		MULTIBOOT_OFF(msg->multiboot_payload.default_partition_offset),
-		msg->multiboot_payload.backup_partition_offset,
-		MULTIBOOT_OFF(msg->multiboot_payload.backup_partition_offset));
-
-	if (!multi_boot_offset)
-		return;
-
-	if (multi_boot_offset ==
-		MULTIBOOT_OFF(msg->multiboot_payload.default_partition_offset))
-		msg->multiboot_payload.boot_on_default = 1;
-
-	if (multi_boot_offset ==
-		MULTIBOOT_OFF(msg->multiboot_payload.backup_partition_offset))
-		msg->multiboot_payload.boot_on_backup = 1;
-}
-
 static inline bool rmgmt_boot_has_fpt(struct cl_msg *msg)
 {
 	return msg->multiboot_payload.has_fpt;
@@ -232,6 +93,167 @@ static int rmgmt_fpt_pdi_meta_set(struct cl_msg *msg, int fpt_type,
 		return ret;
 
 	return 0;
+}
+
+/*
+ * Extension table is pre-loaded into DDR
+ */
+void rmgmt_extension_fpt_query(struct cl_msg *msg)
+{
+	struct fpt_hdr hdr = { 0 };
+
+	cl_memcpy_fromio8(RPU_PRELOAD_FPT, &hdr, sizeof(hdr));
+
+	msg->multiboot_payload.has_extfpt = (hdr.fpt_magic == FPT_MAGIC) ? 1 : 0;
+
+	RMGMT_DBG("magic %x fpt_magic %x", hdr.fpt_magic, FPT_MAGIC);
+	RMGMT_DBG("version %x", hdr.fpt_version);
+	RMGMT_DBG("hdr size %x", hdr.fpt_header_size);
+	RMGMT_DBG("entry size %x", hdr.fpt_entry_size);
+	RMGMT_DBG("num entries %x", hdr.fpt_num_entries);
+
+	if (!msg->multiboot_payload.has_extfpt)
+		return;
+
+	for (int i = 1; i <= hdr.fpt_num_entries; i++) {
+		struct fpt_entry entry;
+		cl_memcpy_fromio8(RPU_PRELOAD_FPT + hdr.fpt_entry_size * i,
+			&entry, sizeof(entry));
+
+		if (entry.partition_type == FPT_TYPE_SC_FW) {
+			msg->multiboot_payload.scfw_offset = entry.partition_base_addr;
+			msg->multiboot_payload.scfw_size = entry.partition_size;
+			msg->multiboot_payload.has_ext_scfw = 1;
+		}
+		if (entry.partition_type == FPT_TYPE_XSABIN) {
+			msg->multiboot_payload.xsabin_offset = entry.partition_base_addr;
+			msg->multiboot_payload.xsabin_size = entry.partition_size;
+			msg->multiboot_payload.has_ext_xsabin = 1;
+		}
+		if (entry.partition_type == FPT_TYPE_SYSDTB) {
+			msg->multiboot_payload.sysdtb_offset = entry.partition_base_addr;
+			msg->multiboot_payload.sysdtb_size = entry.partition_size;
+			msg->multiboot_payload.has_ext_sysdtb = 1;
+
+		}
+		
+		RMGMT_DBG("type %x", entry.partition_type);
+		RMGMT_DBG("base %x", entry.partition_base_addr);
+		RMGMT_DBG("size %x", entry.partition_size);
+		RMGMT_DBG("flags %x", entry.partition_flags);
+	}
+}
+
+/*
+ * Read fpt table and return status
+ */
+void rmgmt_boot_fpt_query(struct cl_msg *msg)
+{
+	struct fpt_hdr hdr = { 0 };
+	struct fpt_pdi_meta meta = { 0 };
+	int ret = 0;
+	u32 multi_boot_offset = 0;
+	
+	ret = ospi_flash_read(CL_FLASH_BOOT, (u8 *)&hdr, FPT_DEFAULT_OFFSET, sizeof(hdr));
+	if (ret)
+		return;
+
+	msg->multiboot_payload.has_fpt = (hdr.fpt_magic == FPT_MAGIC) ? 1 : 0;
+
+	RMGMT_DBG("magic %x fpt_magic %x", hdr.fpt_magic, FPT_MAGIC);
+	RMGMT_DBG("version %x", hdr.fpt_version);
+	RMGMT_DBG("hdr size %x", hdr.fpt_header_size);
+	RMGMT_DBG("entry size %x", hdr.fpt_entry_size);
+	RMGMT_DBG("num entries %x", hdr.fpt_num_entries);
+
+	if (!msg->multiboot_payload.has_fpt) {
+		RMGMT_ERR("invalid fpt magic %x", hdr.fpt_magic);
+		return;
+	}
+
+	for (int i = 1; i <= hdr.fpt_num_entries; i++) {
+		struct fpt_entry entry;
+		ret = ospi_flash_read(CL_FLASH_BOOT, (u8 *)&entry,
+			hdr.fpt_entry_size * i, sizeof(entry));
+
+		if (entry.partition_type == FPT_TYPE_BOOT) {
+			msg->multiboot_payload.default_partition_offset =
+				entry.partition_base_addr;
+			msg->multiboot_payload.default_partition_size =
+				entry.partition_size;
+		}
+
+		if (entry.partition_type == FPT_TYPE_BOOT_BACKUP) {
+			msg->multiboot_payload.backup_partition_offset =
+				entry.partition_base_addr;
+			msg->multiboot_payload.backup_partition_size =
+				entry.partition_size;
+		}
+
+		if (entry.partition_type == FPT_TYPE_PDIMETA) {
+			msg->multiboot_payload.pdimeta_offset =
+				entry.partition_base_addr;
+		}
+
+		if (entry.partition_type == FPT_TYPE_PDIMETA_BACKUP) {
+			msg->multiboot_payload.pdimeta_backup_offset =
+				entry.partition_base_addr;
+		}
+
+		RMGMT_DBG("type %x", entry.partition_type);
+		RMGMT_DBG("base %x", entry.partition_base_addr);
+		RMGMT_DBG("size %x", entry.partition_size);
+		RMGMT_DBG("flags %x", entry.partition_flags);
+	}
+
+	bzero(&hdr, sizeof(hdr));
+	ret = ospi_flash_read(CL_FLASH_BOOT, (u8 *)&hdr, FPT_BACKUP_OFFSET, sizeof(hdr));
+	if (ret) {
+		RMGMT_ERR("no backup fpt");
+		return;
+	}
+
+	RMGMT_DBG("hdr recovery magic %x", hdr.fpt_magic);
+	msg->multiboot_payload.has_fpt_recovery = (hdr.fpt_magic == FPT_MAGIC) ? 1 : 0;
+
+	multi_boot_offset = IO_SYNC_READ32(EP_PLM_MULTIBOOT);
+	msg->multiboot_payload.multi_boot_offset = multi_boot_offset;
+
+	RMGMT_LOG("A offset %x:%x, B offset %x:%x",
+		msg->multiboot_payload.default_partition_offset,
+		MULTIBOOT_OFF(msg->multiboot_payload.default_partition_offset),
+		msg->multiboot_payload.backup_partition_offset,
+		MULTIBOOT_OFF(msg->multiboot_payload.backup_partition_offset));
+
+	if (!multi_boot_offset) {
+		RMGMT_LOG("multi_boot_offset is 0");
+		return;
+	}
+
+	if (multi_boot_offset ==
+		MULTIBOOT_OFF(msg->multiboot_payload.default_partition_offset))
+		msg->multiboot_payload.boot_on_default = 1;
+
+	if (multi_boot_offset ==
+		MULTIBOOT_OFF(msg->multiboot_payload.backup_partition_offset))
+		msg->multiboot_payload.boot_on_backup = 1;
+
+	ret = rmgmt_fpt_pdi_meta_get(msg, FPT_TYPE_PDIMETA, &meta);
+	if (ret)
+		return;
+	if (meta.fpt_pdi_magic == FPT_PDIMETA_MAGIC) {
+		msg->multiboot_payload.pdimeta_size = meta.fpt_pdi_size;
+	}
+
+	ret = rmgmt_fpt_pdi_meta_get(msg, FPT_TYPE_PDIMETA_BACKUP, &meta);
+	if (ret)
+		return;
+	if (meta.fpt_pdi_magic == FPT_PDIMETA_MAGIC) {
+		msg->multiboot_payload.pdimeta_backup_size = meta.fpt_pdi_size;
+	}
+
+	RMGMT_LOG("A size %x, B size %x", msg->multiboot_payload.pdimeta_size,
+		msg->multiboot_payload.pdimeta_backup_size);
 }
 
 static int rmgmt_copy_default_to_backup(struct cl_msg *msg)
