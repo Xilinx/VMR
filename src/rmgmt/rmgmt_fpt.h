@@ -6,6 +6,27 @@
 #ifndef RMGMT_FPT_H
 #define RMGMT_FPT_H
 
+#define FPT_MAGIC 		0x3A0BC563
+#define FPT_PDIMETA_MAGIC	0x4D494450 /* PDIM */
+#define FPT_DEFAULT_OFFSET	0x0
+#define FPT_BACKUP_OFFSET	0x20000
+#define FPT_TYPE_EXTENSION	0xFFFD
+#define FPT_TYPE_RECOVERY	0xFFFE
+#define FPT_TYPE_SC_FW		0x0C00
+#define FPT_TYPE_BOOT		0x0E00
+#define FPT_TYPE_BOOT_BACKUP	0x0E01
+#define FPT_TYPE_XSABIN		0x0E02
+#define FPT_TYPE_GOLDEN		0x0E03
+#define FPT_TYPE_SYSDTB		0x0E04
+#define FPT_TYPE_PDIMETA	0x0E05
+#define FPT_TYPE_PDIMETA_BACKUP	0x0E06
+
+#define MULTIBOOT_OFF(x) (x / 1024 / 32 ) // divided by 32k
+#define BOOT_TAG_OFFSET 0x14
+#define BOOT_TAG_MASK	0xFFFFFFFF
+
+#define PLM_BOOT_TAG(data) (*(u32 *)(data + BOOT_TAG_OFFSET))
+
 struct rmgmt_handler;
 struct cl_msg;
 
@@ -28,9 +49,21 @@ struct fpt_entry {
 	uint8_t		rsvd[1];
 };
 
-int rmgmt_boot_fpt_query(struct rmgmt_handler *rh, struct cl_msg *msg);
+struct fpt_pdi_meta {
+	uint32_t	fpt_pdi_magic;
+	uint32_t	fpt_pdi_version;
+	uint32_t	fpt_pdi_size;
+	uint32_t	fpt_pdi_checksum;
+};
 
-int rmgmt_flush_rpu_pdi(struct rmgmt_handler *rh, struct cl_msg *msg,
-	bool flush_default_only);
+void rmgmt_fpt_query(struct cl_msg *msg);
+void rmgmt_boot_fpt_query(struct cl_msg *msg);
+void rmgmt_extension_fpt_query(struct cl_msg *msg);
+
+int rmgmt_flush_rpu_pdi(struct rmgmt_handler *rh, struct cl_msg *msg);
+
+int rmgmt_fpt_get_xsabin(u32 *addr, u32 *size);
+int rmgmt_fpt_get_sc(u32 *addr, u32 *size);
+int rmgmt_fpt_get_systemdtb(u32 *addr, u32 *size);
 
 #endif

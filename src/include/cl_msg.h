@@ -44,8 +44,9 @@ struct xgq_vmr_data_payload {
 	uint32_t address;
 	uint32_t size;
 	uint32_t addr_type:4;
-	uint32_t flush_default_only:1;
-	uint32_t rsvd1:27;
+	uint32_t flush_no_backup:1;
+	uint32_t flush_to_legacy:1;
+	uint32_t rsvd1:26;
 	uint32_t pad1;
 };
 
@@ -72,12 +73,26 @@ struct xgq_vmr_multiboot_payload {
 	uint16_t boot_on_default:1;
 	uint16_t boot_on_backup:1;
 	uint16_t boot_on_recovery:1;
-	uint16_t rsvd:11;
+	uint16_t has_extfpt:1;
+	uint16_t has_ext_xsabin:1;
+	uint16_t has_ext_scfw:1;
+	uint16_t has_ext_sysdtb:1;
+	uint16_t rsvd:7;
 	uint16_t multi_boot_offset;
 	uint32_t default_partition_offset;
 	uint32_t default_partition_size;
 	uint32_t backup_partition_offset;
 	uint32_t backup_partition_size;
+	uint32_t scfw_offset;
+	uint32_t scfw_size;
+	uint32_t xsabin_offset;
+	uint32_t xsabin_size;
+	uint32_t sysdtb_offset;
+	uint32_t sysdtb_size;
+	uint32_t pdimeta_offset;
+	uint32_t pdimeta_size;
+	uint32_t pdimeta_backup_offset;
+	uint32_t pdimeta_backup_size;
 };
 
 struct xgq_vmr_head {

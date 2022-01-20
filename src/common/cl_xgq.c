@@ -113,7 +113,8 @@ int cl_msg_handle_complete(cl_msg_t *msg)
 		cmd_cq->cq_clock_payload.ocl_freq = msg->clock_payload.ocl_req_freq[0];
 	} else if (msg->hdr.type == CL_MSG_VMR_CONTROL) {
 		/* explicitly copy back fpt status from cl_msg to xgq completion cmd */
-		cmd_cq->cq_vmr_payload.has_fpt = msg->multiboot_payload.has_fpt;
+		cmd_cq->cq_vmr_payload.has_fpt =
+			msg->multiboot_payload.has_fpt;
 		cmd_cq->cq_vmr_payload.has_fpt_recovery =
 			msg->multiboot_payload.has_fpt_recovery;
 		cmd_cq->cq_vmr_payload.boot_on_default =
@@ -124,6 +125,17 @@ int cl_msg_handle_complete(cl_msg_t *msg)
 			msg->multiboot_payload.boot_on_recovery;
 		cmd_cq->cq_vmr_payload.multi_boot_offset =
 			msg->multiboot_payload.multi_boot_offset;
+
+		cmd_cq->cq_vmr_payload.has_extfpt =
+			msg->multiboot_payload.has_extfpt;
+		cmd_cq->cq_vmr_payload.has_ext_scfw =
+			msg->multiboot_payload.has_ext_scfw;
+		cmd_cq->cq_vmr_payload.has_ext_xsabin =
+			msg->multiboot_payload.has_ext_xsabin;
+		cmd_cq->cq_vmr_payload.has_ext_sysdtb =
+			msg->multiboot_payload.has_ext_sysdtb;
+
+		/* pass back log level and flush progress */
 		cmd_cq->cq_vmr_payload.debug_level = cl_loglevel_get();
 		cmd_cq->cq_vmr_payload.flush_progress = ospi_flash_progress();
 	}
@@ -299,8 +311,18 @@ static int submit_to_queue(u32 sq_addr)
 	case CL_MSG_APUBIN:
 		msg.data_payload.address = (u32)sq->pdi_payload.address;
 		msg.data_payload.size = (u32)sq->pdi_payload.size;
-		msg.data_payload.flush_default_only =
-			sq->pdi_payload.flush_default_only;
+
+		switch (sq->pdi_payload.flush_type) {
+		case XGQ_CMD_FLUSH_NO_BACKUP:
+			msg.data_payload.flush_no_backup = 1;
+			break;
+		case XGQ_CMD_FLUSH_TO_LEGACY:
+			msg.data_payload.flush_to_legacy = 1;
+			break;
+		case XGQ_CMD_FLUSH_DEFAULT:
+		default:
+			break;
+		}
 
 		ret = dispatch_to_queue(&msg, TASK_SLOW);
 		break;

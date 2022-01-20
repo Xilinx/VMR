@@ -70,6 +70,7 @@ build_app_all() {
 
 build_app_incremental() {
 	rm -r vmr/src
+	rm -r vmr/Debug/vmr.elf
 	rsync -av ../src vmr --exclude cmc --exclude *.swp
 	make_version_h
 	xsct ./make_app.tcl
