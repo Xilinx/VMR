@@ -27,18 +27,39 @@ build_clean() {
 	rm -r xsa .metadata vmr_platform vmr_system vmr 
 }
 
+grep_file()
+{
+	typeset name="$1"
+	grep -w "$name" ${BUILD_VERSION_FILE} |grep -oP '".*?"'|tail -1|tr -d '"'
+}
+
 make_version_h()
 {
+	if [ -z $BUILD_VERSION_FILE ];then
+		echo "=== WARN: No build version is specified, trying to load local git version."
+		VMR_VERSION_HASH=`git rev-parse --verify HEAD`
+		VMR_VERSION_HASH_DATE=`git log -1 --pretty=format:%cD`
+		VMR_BUILD_VERSION="1.0.0"
+		VMR_BUILD_VERSION_DATE=`date`
+		VMR_BUILD_BRANCH=`git rev-parse --abbrev-ref HEAD`
+	else
+		echo "=== Loading version from ${BUILD_VERSION_FILE}"
+		VMR_VERSION_HASH=`grep_file "VERSION_HASH"` 
+		VMR_VERSION_HASH_DATE=`grep_file "VERSION_HASH_DATE"`
+		VMR_BUILD_VERSION=`grep_file "BUILD_VERSION"`
+		VMR_BUILD_VERSION_DATE=`grep_file "BUILD_VERSION_DATE"`
+		VMR_BUILD_BRANCH=`grep_file "BUILD_BRANCH"`
+	fi
+
+	# NOTE: we only take git version, version date and branch for now
+
 	CL_VERSION_H="vmr/src/include/cl_version.h"
-	GIT_HASH=`git rev-parse --verify HEAD`
-	GIT_BRANCH=`git rev-parse --abbrev-ref HEAD`
-	GIT_BUILD_DATE=`git log -1 --pretty=format:%cD`
 
 	echo "#ifndef _VMR_VERSION_" >> $CL_VERSION_H
 	echo "#define _VMR_VERSION_" >> $CL_VERSION_H
-	echo "#define VMR_GIT_HASH "\""$GIT_HASH"\" >> $CL_VERSION_H
-	echo "#define VMR_GIT_BRANCH "\""$GIT_BRANCH"\" >> $CL_VERSION_H
-	echo "#define VMR_GIT_BUILD_DATE "\""$GIT_BUILD_DATE"\" >> $CL_VERSION_H
+	echo "#define VMR_GIT_HASH "\""$VMR_VERSION_HASH"\" >> $CL_VERSION_H
+	echo "#define VMR_GIT_BRANCH "\""$VMR_BUILD_BRANCH"\" >> $CL_VERSION_H
+	echo "#define VMR_GIT_HASH_DATE "\""$VMR_VERSION_HASH_DATE"\" >> $CL_VERSION_H
 
 	if [[ $BUILD_XRT == 1 ]];then
 		echo "=== XRT only build ==="
@@ -86,6 +107,7 @@ usage() {
     echo "-config_VMR                Update VMR project too edit in Vitis GUI"
     echo "-XRT                       Build XRT only"
     echo "-TA                        TA exact version, default is [${TOOL_VERSION}_daily_latest]"
+    echo "-version                   version.json file"
     echo "-help"
     exit $1
 }
@@ -120,6 +142,10 @@ do
 			shift
 			TA=$1
 			;;
+		-version)
+			shift
+			BUILD_VERSION_FILE=$1
+			;;
                 * | --* | -*)
                         echo "Invalid argument: $1"
                         usage 1
@@ -128,17 +154,18 @@ do
 	shift
 done
 
+## Build code starts here ###
+if [[ $BUILD_CLEAN == 1 ]];then
+	build_clean
+	exit 0;
+fi
+
 which xsct
 if [ $? -ne 0 ];then
 	default_env
 else
 	version=$(xsct -eval "puts [version]" | awk 'NR==1{print $2}')
 	echo "using current ${version} from env to build VMR"
-fi
-
-if [[ $BUILD_CLEAN == 1 ]];then
-	build_clean
-	exit 0;
 fi
 
 if [[ $BUILD_APP == 1 ]];then
@@ -164,11 +191,17 @@ build_clean
 mkdir xsa
 cp $BUILD_XSA xsa/gen3x16.xsa
 if [ $? -ne 0 ];then
-	echo "cannot copy ${BUILD_XSA}"
+	echo "cannot copy ${BUILD_XSA} exit."
 	exit 1;
 fi
 
+echo "=== Create BSP Project ==="
 xsct ./create_bsp.tcl
+if [ $? -ne 0 ];then
+	echo "cannot create project from xsa: $BUILD_XSA"
+	echo "xsct: " `which xsct` " exit."
+	exit 1;
+fi
 
 echo "=== Build APP ==="
 build_app_all
