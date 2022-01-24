@@ -144,6 +144,20 @@ void rmgmt_extension_fpt_query(struct cl_msg *msg)
 	}
 }
 
+int rmgmt_fpt_get_xsabin(struct cl_msg *msg, u32 *offset, u32 *size)
+{
+	rmgmt_extension_fpt_query(msg);
+
+	if (!msg->multiboot_payload.has_ext_xsabin) {
+		RMGMT_ERR("no xsabin metadata");
+		return -1;
+	}
+
+	*offset = msg->multiboot_payload.xsabin_offset;
+	*size = msg->multiboot_payload.xsabin_size;
+	return 0;
+}
+
 /*
  * Read fpt table and return status
  */

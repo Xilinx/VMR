@@ -10,7 +10,7 @@ typedef enum cl_msg_type {
 	CL_MSG_UNKNOWN = 0,
 	CL_MSG_PDI,
 	CL_MSG_XCLBIN,
-	CL_MSG_AF,
+	CL_MSG_LOG_PAGE,
 	CL_MSG_CLOCK,
 	CL_MSG_SENSOR,
 	CL_MSG_APUBIN,
@@ -25,6 +25,13 @@ typedef enum cl_sensor_type {
 	CL_SENSOR_POWER 	= 0xC3,
 	CL_SENSOR_QSFP 		= 0xC4,
 } cl_sensor_type_t;
+
+typedef enum cl_log_type {
+	CL_LOG_UNKNOWN		= 0x0,
+	CL_LOG_AF		= 0x1,
+	CL_LOG_FW		= 0x2,
+	CL_LOG_DBG		= 0x3,
+} cl_log_type_t;
 
 typedef enum cl_clock_type {
 	CL_CLOCK_UNKNOWN 	= 0x0,
@@ -53,6 +60,7 @@ struct xgq_vmr_data_payload {
 struct xgq_vmr_log_payload {
 	uint32_t address;
 	uint32_t size;
+	uint32_t offset;
 	uint32_t pid:16;
 	uint32_t addr_type:3;
 	uint32_t rsvd1:13;

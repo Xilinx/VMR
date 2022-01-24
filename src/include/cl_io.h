@@ -120,4 +120,14 @@ static inline int cl_memcpy_fromio8(u32 src, void *buf, size_t len)
 	return len;
 }
 
+/* safe memcpy */
+static inline int cl_memcpy(u32 dst_addr, u32 src_addr, size_t n)
+{
+	size_t i;
+	for (i = 0; i < n; i++, src_addr++, dst_addr++) {
+		IO_SYNC_WRITE8(IO_SYNC_READ8(src_addr), dst_addr);
+	}
+
+	return n;
+}
 #endif

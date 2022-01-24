@@ -56,7 +56,7 @@ enum task_level {
 static msg_handle_t handles[] = {
 	{ .type = CL_MSG_PDI, .name = "PDI", },
 	{ .type = CL_MSG_XCLBIN, .name = "XCLBIN", },
-	{ .type = CL_MSG_AF, .name = "FIREWALL", },
+	{ .type = CL_MSG_LOG_PAGE, .name = "LOG_PAGE", },
 	{ .type = CL_MSG_CLOCK, .name = "CLOCK", },
 	{ .type = CL_MSG_APUBIN, .name = "API_BIN", },
 	{ .type = CL_MSG_VMR_CONTROL, .name = "VMR_CONTROL", },
@@ -108,6 +108,10 @@ int cl_msg_handle_complete(cl_msg_t *msg)
 	struct xgq_cmd_cq *cmd_cq = (struct xgq_cmd_cq *)&cq_cmd;
 	u64 cq_slot_addr;
 
+	/*TODO:
+	 * cleanup this code, should not mix request and result within same payload.
+	 * separate request and results
+	 */
 	if (msg->hdr.type == CL_MSG_CLOCK) {
 		/* only 1 place to hold ocl_freq, alway get from index 0 */
 		cmd_cq->cq_clock_payload.ocl_freq = msg->clock_payload.ocl_req_freq[0];
@@ -137,7 +141,9 @@ int cl_msg_handle_complete(cl_msg_t *msg)
 
 		/* pass back log level and flush progress */
 		cmd_cq->cq_vmr_payload.debug_level = cl_loglevel_get();
-		cmd_cq->cq_vmr_payload.flush_progress = ospi_flash_progress();
+		cmd_cq->cq_vmr_payload.program_progress = ospi_flash_progress();
+	} else if (msg->hdr.type == CL_MSG_LOG_PAGE) {
+		cmd_cq->cq_log_payload.count = msg->log_payload.size;
 	}
 
 	xgq_produce(&rpu_xgq, &cq_slot_addr);
@@ -195,7 +201,26 @@ static cl_clock_type_t convert_ctype(enum xgq_cmd_clock_req_type req_type)
 	return cid;
 }
 
-static cl_sensor_type_t convert_pid(enum xgq_cmd_sensor_page_id xgq_id)
+static cl_log_type_t convert_log_pid(enum xgq_cmd_log_page_type type)
+{
+	cl_log_type_t ltype = CL_LOG_UNKNOWN;
+
+	switch (type) {
+	case XGQ_CMD_LOG_AF:
+		ltype = CL_LOG_AF;
+		break;
+	case XGQ_CMD_LOG_FW:
+		ltype = CL_LOG_FW;
+		break;
+	default:
+		ltype = CL_LOG_UNKNOWN;
+		break;
+	}
+
+	return ltype;
+}
+
+static cl_sensor_type_t convert_sensor_pid(enum xgq_cmd_sensor_page_id xgq_id)
 {
 	cl_sensor_type_t sid = CL_SENSOR_ALL;
 
@@ -279,7 +304,7 @@ static int submit_to_queue(u32 sq_addr)
 		msg.hdr.type = CL_MSG_APUBIN;
 		break;
 	case XGQ_CMD_OP_GET_LOG_PAGE:
-		msg.hdr.type = CL_MSG_AF;
+		msg.hdr.type = CL_MSG_LOG_PAGE;
 		break;
 	case XGQ_CMD_OP_CLOCK:
 		msg.hdr.type = CL_MSG_CLOCK;
@@ -326,9 +351,6 @@ static int submit_to_queue(u32 sq_addr)
 
 		ret = dispatch_to_queue(&msg, TASK_SLOW);
 		break;
-	case CL_MSG_AF:
-		ret = dispatch_to_queue(&msg, TASK_QUICK);
-		break;
 	case CL_MSG_VMR_CONTROL:
 		msg.multiboot_payload.req_type =
 			convert_control_type(sq->vmr_control_payload.req_type);
@@ -361,12 +383,19 @@ static int submit_to_queue(u32 sq_addr)
 		}
 		ret = dispatch_to_queue(&msg, TASK_QUICK);
 		break;
+	case CL_MSG_LOG_PAGE:
+		msg.log_payload.address = (u32)sq->log_payload.address;
+		msg.log_payload.size = (u32)sq->log_payload.size;
+		msg.log_payload.pid = convert_log_pid(sq->log_payload.pid);
+
+		ret = dispatch_to_queue(&msg, TASK_QUICK);
+		break;
 	case CL_MSG_SENSOR:
 		msg.log_payload.address = (u32)sq->sensor_payload.address;
 		msg.log_payload.size = (u32)sq->sensor_payload.size;
-		msg.log_payload.pid = convert_pid(sq->sensor_payload.pid);
+		msg.log_payload.pid = convert_sensor_pid(sq->sensor_payload.pid);
 
-		ret = dispatch_to_queue(&msg, TASK_SLOW);
+		ret = dispatch_to_queue(&msg, TASK_QUICK);
 		break;
 	default:
 		MSG_LOG("Unknown msg type:%d", msg.hdr.type);
@@ -413,7 +442,7 @@ static void process_from_queue(cl_msg_t *msg)
 		if (hdl->type == msg->hdr.type) {
 			if (hdl->msg_cb == NULL) {
 				MSG_LOG("no handle for msg type %d", msg->hdr.type);
-				return;
+				break;
 			}
 			hdl->msg_cb(msg, hdl->arg);
 			return;
