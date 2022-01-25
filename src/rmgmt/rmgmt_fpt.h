@@ -62,8 +62,8 @@ void rmgmt_extension_fpt_query(struct cl_msg *msg);
 
 int rmgmt_flush_rpu_pdi(struct rmgmt_handler *rh, struct cl_msg *msg);
 
-int rmgmt_fpt_get_xsabin(u32 *addr, u32 *size);
-int rmgmt_fpt_get_sc(u32 *addr, u32 *size);
-int rmgmt_fpt_get_systemdtb(u32 *addr, u32 *size);
+int rmgmt_fpt_get_xsabin(struct cl_msg *msg, u32 *addr, u32 *size);
+int rmgmt_fpt_get_scfw(struct cl_msg *msg, u32 *addr, u32 *size);
+int rmgmt_fpt_get_systemdtb(struct cl_msg *msg, u32 *addr, u32 *size);
 
 #endif

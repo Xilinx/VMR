@@ -24,7 +24,7 @@ msg_handle_t *apubin_hdl;
 msg_handle_t *vmr_hdl;
 int xgq_pdi_flag = 0;
 int xgq_xclbin_flag = 0;
-int xgq_af_flag = 0;
+int xgq_log_page_flag = 0;
 int xgq_sensor_flag = 0;
 int xgq_clock_flag = 0;
 int xgq_apubin_flag = 0;
@@ -132,13 +132,54 @@ static int check_firewall()
 	return IS_FIRED(val);
 }
 
-static int xgq_af_cb(cl_msg_t *msg, void *arg)
+static int load_firmware(cl_msg_t *msg)
 {
-	msg->hdr.rcode = check_firewall();
+	u32 dst_addr = 0;
+	u32 src_addr = 0;
+	u32 offset = 0;
+	u32 size = 0;
 
-	RMGMT_DBG("complete msg id %d, ret 0x%x", msg->hdr.cid, msg->hdr.rcode);
+	if (rmgmt_fpt_get_xsabin(msg, &offset, &size)) {
+		RMGMT_ERR("get xsabin firmware failed");
+		return -1;
+	}
 
+	dst_addr = EP_RING_BUFFER_BASE + (u32)msg->log_payload.address;
+	src_addr = offset;
+
+	/*
+	 * TODO: the dst size can be small, check size <= dst size and
+	 * copy small truck back based on offset + dst size in the future */
+	cl_memcpy(dst_addr, src_addr, size);
+
+	/* remaining cound is actually size for now,
+	 * it can be entire size - offset in the future*/
+	msg->log_payload.size = size;
+
+	return 0;
+}
+
+static int xgq_log_page_cb(cl_msg_t *msg, void *arg)
+{
+	int ret = 0;
+
+	switch (msg->log_payload.pid) {
+	case CL_LOG_AF:
+		ret = check_firewall();
+		break;
+	case CL_LOG_FW:
+		ret = load_firmware(msg);
+		break;
+	case CL_LOG_DBG:
+	default:
+		RMGMT_LOG("unsupported type %d", msg->log_payload.pid);
+		ret = -1;
+		break;
+	}
+
+	msg->hdr.rcode = ret;
 	cl_msg_handle_complete(msg);
+	RMGMT_DBG("complete msg id %d, ret %d", msg->hdr.cid, ret);
 	return 0;
 }
 
@@ -227,27 +268,27 @@ static int xgq_vmr_cb(cl_msg_t *msg, void *arg)
 	int ret = 0;
 
 	switch (msg->multiboot_payload.req_type) {
-		case CL_MULTIBOOT_DEFAULT:
-			ret = rmgmt_enable_boot_default();
-			break;
-		case CL_MULTIBOOT_BACKUP:
-			ret = rmgmt_enable_boot_backup();
-			break;
-		case CL_VMR_QUERY:
-			rmgmt_fpt_query(msg);
-			break;
-		case CL_PROGRAM_SC:
-			/* place holder for starting SC download */
-			break;
-		default:
-			RMGMT_LOG("unknown type %d", msg->multiboot_payload.req_type);
-			ret = -1;
-			break;
+	case CL_MULTIBOOT_DEFAULT:
+		ret = rmgmt_enable_boot_default();
+		break;
+	case CL_MULTIBOOT_BACKUP:
+		ret = rmgmt_enable_boot_backup();
+		break;
+	case CL_VMR_QUERY:
+		rmgmt_fpt_query(msg);
+		break;
+	case CL_PROGRAM_SC:
+		/* place holder for starting SC download */
+		break;
+	default:
+		RMGMT_LOG("unknown type %d", msg->multiboot_payload.req_type);
+		ret = -1;
+		break;
 	}
 
 	msg->hdr.rcode = ret;
 	cl_msg_handle_complete(msg);
-	RMGMT_LOG("complete msg id %d, ret %d", msg->hdr.cid, ret);
+	RMGMT_DBG("complete msg id %d, ret %d", msg->hdr.cid, ret);
 	return 0;
 }
 
@@ -275,10 +316,10 @@ static void pvXGQTask( void *pvParameters )
 			xgq_xclbin_flag = 1;
 		}
 
-		if (xgq_af_flag == 0 &&
-		    cl_msg_handle_init(&af_hdl, CL_MSG_AF, xgq_af_cb, NULL) == 0) {
-			RMGMT_LOG("init firewall handle done.");
-			xgq_af_flag = 1;
+		if (xgq_log_page_flag == 0 &&
+		    cl_msg_handle_init(&af_hdl, CL_MSG_LOG_PAGE, xgq_log_page_cb, NULL) == 0) {
+			RMGMT_LOG("init log page handle done.");
+			xgq_log_page_flag = 1;
 		}
 
 		if (xgq_clock_flag == 0 &&
