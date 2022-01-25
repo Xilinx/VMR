@@ -18,17 +18,15 @@
 #include "xil_types.h"
 
 #include "cl_log.h"
-#include "cl_main.h"
+#include "cl_config.h"
 #include "cl_io.h"
-
-/* Uncomment for enabling VMC debug. */
-//#define VMC_DEBUG
 
 #define	VMC_STRING	"VMC"
 
 #ifdef VMC_DEBUG
 #warning "When enabled RPU UART RX has conflic with APU UART so need to disable XRT code (RMGMT_Launch and cl_msg_service_launch)."
-#define VMR_BUILD_VMC_ONLY
+
+#define VMC_DEMO
 
 #define VMC_DMO(fmt, arg...) 		\
 	VMC_Printf(__FILENAME__, __LINE__, VMC_LOG_LEVEL_DEMO_MENU, fmt,##arg)
@@ -198,5 +196,14 @@ void EepromDump(void);
 **
 ******************************************************************************/
 u8 Versal_EEPROM_ReadBoardIno(void);
+
+#ifdef PLATFORM_CS2200
+
+void Temp_LM75_Display(void);
+void INA3221_Display(void);
+void ISL68220_Display(void);
+void VPD_EEPROM_ReadBoardIno(void);
+#endif
+
 
 #endif /* INC_VMC_API_H_ */

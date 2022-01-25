@@ -12,8 +12,6 @@
 
 #include "cl_version.h"
 
-//#define VMC_DEBUG
-
 /*
  * The pdMS_TO_TICKS is defined as (xTimeInMs * configTICKRATEHZ) / 1000
  * so the pdTICKS_TO_MS can be the opposite way

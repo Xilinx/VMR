@@ -10,30 +10,41 @@
 #include "cl_log.h"
 #include "cl_i2c.h"
 #include "cl_uart_rtos.h"
+#include "cl_i2c.h"
+#include "cl_config.h"
 #include "vmc_api.h"
 #include "vmc_sensors.h"
-#include "sensors/inc/m24c128.h"
-#include "sensors/inc/max6639.h"
 #include "vmc_asdm.h"
-
 #include "sysmon.h"
 #include "vmc_sc_comms.h"
 
+#ifdef PLATFORM_CS2200
+#include "sensors/inc/isl68220.h"
+#else
+#include "sensors/inc/m24128.h"
+#include "sensors/inc/max6639.h"
+#endif
+
 static TaskHandle_t xVMCTask;
 static TaskHandle_t xSensorMonTask;
+
+#ifndef PLATFORM_CS2200
+
 static TaskHandle_t xVMCSCTask;
 static TaskHandle_t xVMCUartpoll;
-
-extern uart_rtos_handle_t uart_vmcsc_log;
+uart_rtos_handle_t uart_vmcsc_log;
 extern SC_VMC_Data sc_vmc_data;
 extern SemaphoreHandle_t vmc_sc_lock;
-
-
 
 u8 g_scData[MAX_VMC_SC_UART_BUF_SIZE] = {0x00};
 u16 g_scDataCount = 0;
 bool isinterruptflag ;
 bool ispacketreceived ;
+
+#endif
+
+
+
 
 /*Xgq Msg Handle */
 static u8 xgq_sensor_flag = 0;
@@ -77,6 +88,9 @@ static int xgq_sensor_cb(cl_msg_t *msg, void *arg)
 	cl_msg_handle_complete(msg);
 	return 0;
 }
+
+#ifndef PLATFORM_CS2200
+
 static void Vmc_uartpoll( void *pvParameters )
 {
 	u32 retval;
@@ -129,6 +143,7 @@ static void Vmc_uartpoll( void *pvParameters )
 	vTaskSuspend(NULL);
 }
 
+
 static void VMCSCMonitorTask(void *params)
 {
 
@@ -157,6 +172,7 @@ static void VMCSCMonitorTask(void *params)
 
 	vTaskSuspend(NULL);
 }
+#endif
 
 static void SensorMonitorTask(void *params)
 {
@@ -180,10 +196,14 @@ static void SensorMonitorTask(void *params)
 		Monitor_Sensors();
 
 		/* Todo: Replace once ASDM is stable */
+#ifndef PLATFORM_CS2200
 		se98a_monitor();
 		max6639_monitor();
-		sysmon_monitor();
 		qsfp_monitor ();
+#else
+		lm75_monitor();
+#endif
+		sysmon_monitor();
 		vTaskDelay(200);
 	}
 
@@ -195,22 +215,38 @@ static void SensorMonitorTask(void *params)
 static void pVMCTask(void *params)
 {
     /* Platform Init will Initialise I2C, GPIO, SPI, etc */
-	
     VMC_LOG(" VMC launched \n\r");
 
     I2CInit();
 
-#ifdef VMC_DEBUG
+#if defined(VMC_DEBUG) && defined(VMC_DEMO)
     /* Demo menu log is enabled */    
     Enable_DemoMenu();
 #endif
 
+
     /* Read the EEPROM */
     Versal_EEPROM_ReadBoardIno();
 
+#ifdef PLATFORM_CS2200
+
+    GPIOInit();
+
+
+    SPI_Flash_Config();
+
+	//NVMe_MI_BC_Task();
+
+	ISL68220_set_vccint_config(LPD_I2C_1, ISL68220_SLV_ADDR, CONFIG_R_0);
+
+
+#else
+
+	UART_VMC_SC_Enable(&uart_vmcsc_log);
     /* Retry till fan controller is programmed */
     while (max6639_init(1, 0x2E));  // only for vck5000
     
+#endif
     /* Start Sensor Monitor task */
 
     if (xTaskCreate( SensorMonitorTask,
@@ -224,6 +260,9 @@ static void pVMCTask(void *params)
 	return ;
     }
 
+
+#ifndef PLATFORM_CS2200
+
     if (xTaskCreate( VMCSCMonitorTask,
 		( const char * ) "VMCSC_Monitor",
 		2048,
@@ -234,6 +273,8 @@ static void pVMCTask(void *params)
 	CL_LOG(APP_VMC,"Failed to Create VMCSC Monitor Task \n\r");
 	return ;
     }
+#endif
+
     vTaskSuspend(NULL);
 }
 

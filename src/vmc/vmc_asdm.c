@@ -3,6 +3,7 @@
 * SPDX-License-Identifier: MIT
 *******************************************************************************/
 
+#include "cl_config.h"
 #include "vmc_sensors.h"
 #include "vmc_asdm.h"
 #include "cl_log.h"
@@ -27,7 +28,12 @@ extern s8 Temperature_Read_QSFP(snsrRead_t *snsrData);
 Asdm_Header_t asdmHeaderInfo[] = {
     /* Record Type	| Hdr Version | Record Count | NumBytes */
     {BoardInfoSDR ,  	 	0x1  ,		 0x2, 		0x7f},
+#ifdef PLATFORM_CS2200
+	{TemperatureSDR , 		0x1  ,		 0x3,		0x7f},
+#else
     {TemperatureSDR , 		0x1  ,		 0x6,		0x7f},
+#endif
+
 };
 
 #define MAX_SDR_REPO 	(sizeof(asdmHeaderInfo)/sizeof(asdmHeaderInfo[0]))
@@ -98,6 +104,7 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
 	    .sampleCount = 0x1,
 	    .monitorFunc = &Temperature_Read_Outlet,
 	},
+#ifndef PLATFORM_CS2200
 	{
 	    .repoType = TemperatureSDR,
 	    .sensorName = "Board Temp\0",
@@ -112,6 +119,7 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
 	    .sampleCount = 0x1,
 	    .monitorFunc = &Temperature_Read_Board,
 	},
+#endif
 	/*{
 	    .repoType = TemperatureSDR,
 	    .sensorName = "Fan RPM\0",
@@ -137,6 +145,8 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
 	    .sampleCount = 0x1,
 	    .monitorFunc = &Temperature_Read_ACAP_Device_Sysmon,
 	},
+
+#ifndef PLATFORM_CS2200
 	{
 	    .repoType = TemperatureSDR,
 	    .sensorName = "QSFP0 Temp\0",
@@ -167,6 +177,7 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
 		.sensorInstance = 2,
 	    .monitorFunc = &Temperature_Read_QSFP,
 	},
+#endif
     };
 
     /* Get Record Count */
@@ -912,7 +923,7 @@ s8 Monitor_Sensors(void)
     }
     else
     {
-	VMC_ERR("ASDM not yet Initialized \n\r");
+    	VMC_ERR("ASDM not yet Initialized \n\r");
     }
 }
 

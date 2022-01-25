@@ -4,7 +4,9 @@
 
 
 #include "vmc_sc_comms.h"
+#include "vmc_api.h"
 
+#ifndef PLATFORM_CS2200
 
 SC_VMC_Data sc_vmc_data;
 
@@ -186,7 +188,7 @@ bool Parse_SCData(u8 *Payload)
 			VMC_LOG("received error message  \r\n");
 			break;
 		default :
-			VMC_LOG("Unknown messageID : 0x%x\r\n",Payload[Rsp_MessageID])
+			VMC_LOG("Unknown messageID : 0x%x\r\n",Payload[Rsp_MessageID]);
 			break;
 		}
 	}
@@ -418,3 +420,5 @@ void vmc_sc_monitor()
 	}
 
 }
+
+#endif

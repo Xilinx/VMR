@@ -10,3 +10,15 @@
  * 	VMR_GIT_BRANCH
  * 	VMR_GIT_BUILD_DATE
  */
+#ifndef _VMR_VERSION_
+#define _VMR_VERSION_
+#define VMR_GIT_HASH "30667820db9fa8e72482e7bc51d3bc02de94c17c"
+#define VMR_GIT_BRANCH "main"
+#define VMR_GIT_HASH_DATE "Mon, 24 Jan 2022 11:33:13 -0500"
+#endif
+#ifndef _VMR_VERSION_
+#define _VMR_VERSION_
+#define VMR_GIT_HASH "30667820db9fa8e72482e7bc51d3bc02de94c17c"
+#define VMR_GIT_BRANCH "main"
+#define VMR_GIT_HASH_DATE "Mon, 24 Jan 2022 11:33:13 -0500"
+#endif

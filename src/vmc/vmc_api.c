@@ -4,28 +4,44 @@
 * SPDX-License-Identifier: MIT
 *******************************************************************************/
 
+#include <stdio.h>
+
+#include "cl_config.h"
 #include "vmc_api.h"
 #include "vmc_sensors.h"
-
 #include "cl_uart_rtos.h"
-#include "cl_log.h"
 #include "cl_i2c.h"
-#include "sensors/inc/m24c128.h"
-#include <stdio.h>
+#include "sensors/inc/m24128.h"
 
 /* FreeRTOS includes */
 #include <FreeRTOS.h>
 #include <task.h>
 #include <semphr.h>
 
+#ifdef PLATFORM_CS2200
+
+#include "sensors/inc/isl68220.h"
+#include "sensors/inc/ina3221.h"
+#include "sensors/inc/lm75.h"
+
+char ch_str[6][30] = {
+		"INA3221_CH1_SHUNT_VOLTAGE\0",
+		"INA3221_CH1_BUS_VOLTAGE\0",
+		"INA3221_CH2_SHUNT_VOLTAGE\0",
+		"INA3221_CH2_BUS_VOLTAGE\0",
+		"INA3221_CH3_SHUNT_VOLTAGE\0",
+		"INA3221_CH3_BUS_VOLTAGE\0",
+};
+
+#endif
 
 #define MAX_FILE_NAME_SIZE 25
 
 extern uart_rtos_handle_t uart_log;
 extern Versal_sensor_readings sensor_readings;
-static uint8_t    logging_level = VMC_LOG_LEVEL_NONE;
+static uint8_t    logging_level = VMC_LOG_LEVEL_INFO;
 static char LogBuf[MAX_LOG_SIZE];
-SemaphoreHandle_t logbuf_lock; /* used to block until LogBuf is in use */
+SemaphoreHandle_t vmc_debug_logbuf_lock; /* used to block until LogBuf is in use */
 Versal_BoardInfo board_info;
 
 
@@ -74,12 +90,13 @@ void Debug_Printf(char *filename, uint32_t line, uint8_t log_level, const char *
 {
     uint8_t msg_idx = 0;
     uint16_t max_msg_size = MAX_LOG_SIZE;
+
     if (log_level < logging_level)
     {
         return;
     }
 
-    if (xSemaphoreTake(logbuf_lock, portMAX_DELAY))
+    if (xSemaphoreTake(vmc_debug_logbuf_lock, portMAX_DELAY))
     {
         if (logging_level == VMC_LOG_LEVEL_VERBOSE && log_level != VMC_LOG_LEVEL_DEMO_MENU)
 		{
@@ -96,11 +113,11 @@ void Debug_Printf(char *filename, uint32_t line, uint8_t log_level, const char *
 		vsnprintf(&LogBuf[msg_idx], max_msg_size, fmt, *argp);
 		UART_RTOS_Send(&uart_log, (uint8_t *)LogBuf, MAX_LOG_SIZE);
 		memset(LogBuf , '\0' , MAX_LOG_SIZE);
-		xSemaphoreGive(logbuf_lock);
+		xSemaphoreGive(vmc_debug_logbuf_lock);
     }
     else
     {
-        xil_printf("Failed to get lock for logbuf_lock \n\r");
+        xil_printf("Failed to get lock for vmc_debug_logbuf_lock \n\r");
     }
 
 }
@@ -179,18 +196,19 @@ void SensorData_Display(void)
 {
 	VMC_PRNT("\n\r");
 
-
-	//VMC_PRNT("====================================================================\n\r");
-	//VMC_PRNT("TBD: Sensor Data to be printed!\n\r");
-	//VMC_PRNT("====================================================================\n\r");
+#ifndef PLATFORM_CS2200
 	VMC_PRNT("SE98A_0 temperature 			: %d \n\r",sensor_readings.board_temp[0]);
 	VMC_PRNT("SE98A_1 temperature 			: %d \n\r",sensor_readings.board_temp[1]);
 	VMC_PRNT("local temperature(max6639) 		: %f \n\r",sensor_readings.local_temp);
 	VMC_PRNT("remote temp or fpga temp(max6639) 	: %f \n\r ",sensor_readings.remote_temp);
 	VMC_PRNT("Fan RPM (max6639) 			: %d \n\r ",sensor_readings.fanRpm);
-	VMC_PRNT("Maximum SYSMON temp 			: %f \n\r ",sensor_readings.sysmon_max_temp);
 	VMC_PRNT("QSFP_0 temperature			: %f \n\r ",sensor_readings.qsfp_temp[0]);
 	VMC_PRNT("QSFP_1 temperature			: %f \n\r ",sensor_readings.qsfp_temp[1]);
+#else
+	VMC_PRNT("LM75_0x48 temperature 			: %d \n\r",sensor_readings.board_temp[0]);
+	VMC_PRNT("LM75_0x4A temperature 			: %d \n\r",sensor_readings.board_temp[1]);
+#endif
+	VMC_PRNT("Maximum SYSMON temp 			: %f \n\r ",sensor_readings.sysmon_max_temp);
 	VMC_PRNT("\n\r");
 
 
@@ -210,12 +228,16 @@ u8 Versal_EEPROM_ReadBoardIno(void)
 {
 	u8 i			= 0;
 	u16 offset		= 0x00;
-	u8  status              = 0;
-	u8  MAC_ID[6] 	        = {0};
+	u8  status      = 0;
+	u8  MAC_ID[6] 	= {0};
 	u16 Value 		= 0;
 	u8  carry 		= 0;
-	u16 mac_num             = 0;
-	u8 i2c_num 		= 1;
+	u16 mac_num     = 0;
+	u8 i2c_num 		= LPD_I2C_0;
+
+#ifdef PLATFORM_CS2200
+	i2c_num = LPD_I2C_1;
+#endif
 
 	unsigned char *data_ptr = NULL;
 	data_ptr = board_info.eeprom_version;
@@ -223,7 +245,7 @@ u8 Versal_EEPROM_ReadBoardIno(void)
 
 	for (i = 0 ; i < EEPROM_VERSION_SIZE ; i++)
 	{
-		status = M24C128_ReadByte(i2c_num, SLAVE_ADDRESS_M24C128, &offset, &data_ptr[i]);
+		status = M24128_ReadByte(i2c_num, SLAVE_ADDRESS_M24C128, &offset, &data_ptr[i]);
 
         	if (data_ptr[i] == EEPROM_DEFAULT_VAL)
         	{
@@ -239,7 +261,7 @@ u8 Versal_EEPROM_ReadBoardIno(void)
 	offset   = EEPROM_PRODUCT_NAME_OFFSET;
 	for (i = 0 ; i < EEPROM_PRODUCT_NAME_SIZE ; i++)
 	{
-		status = M24C128_ReadByte(i2c_num, SLAVE_ADDRESS_M24C128, &offset, &data_ptr[i]);
+		status = M24128_ReadByte(i2c_num, SLAVE_ADDRESS_M24C128, &offset, &data_ptr[i]);
 
         	if (data_ptr[i] == EEPROM_DEFAULT_VAL)
         	{
@@ -254,7 +276,7 @@ u8 Versal_EEPROM_ReadBoardIno(void)
 	offset   = EEPROM_BOARD_REV_OFFSET;
 	for (i = 0 ; i < EEPROM_BOARD_REV_SIZE ; i++)
 	{
-		status = M24C128_ReadByte(i2c_num, SLAVE_ADDRESS_M24C128, &offset, &data_ptr[i]);
+		status = M24128_ReadByte(i2c_num, SLAVE_ADDRESS_M24C128, &offset, &data_ptr[i]);
 
 		if (data_ptr[i] == EEPROM_DEFAULT_VAL)
 		{
@@ -269,7 +291,7 @@ u8 Versal_EEPROM_ReadBoardIno(void)
 	offset   = EEPROM_BOARD_SERIAL_OFFSET;
 	for (i = 0 ; i < EEPROM_BOARD_SERIAL_SIZE ; i++)
 	{
-		status = M24C128_ReadByte(i2c_num, SLAVE_ADDRESS_M24C128, &offset, &data_ptr[i]);
+		status = M24128_ReadByte(i2c_num, SLAVE_ADDRESS_M24C128, &offset, &data_ptr[i]);
 
 		if (data_ptr[i] == EEPROM_DEFAULT_VAL)
 		{
@@ -286,7 +308,7 @@ u8 Versal_EEPROM_ReadBoardIno(void)
 	offset = EEPROM_BOARD_MAC_OFFSET;
 	for (i = 0 ; i < EEPROM_BOARD_MAC_SIZE ; i++)
 	{
-		status = M24C128_ReadByte(i2c_num, SLAVE_ADDRESS_M24C128, &offset, &data_ptr[i]);
+		status = M24128_ReadByte(i2c_num, SLAVE_ADDRESS_M24C128, &offset, &data_ptr[i]);
 		offset = offset + 0x0100;
 
 	}
@@ -327,7 +349,7 @@ u8 Versal_EEPROM_ReadBoardIno(void)
 	offset   = EEPROM_BOARD_ACT_PAS_OFFSET;
 	for (i = 0 ; i < EEPROM_BOARD_ACT_PAS_SIZE ; i++)
 	{
-		status = M24C128_ReadByte(i2c_num, SLAVE_ADDRESS_M24C128, &offset, &data_ptr[i]);
+		status = M24128_ReadByte(i2c_num, SLAVE_ADDRESS_M24C128, &offset, &data_ptr[i]);
 
 		if (data_ptr[i] == EEPROM_DEFAULT_VAL)
 		{
@@ -342,7 +364,7 @@ u8 Versal_EEPROM_ReadBoardIno(void)
 	offset   = EEPROM_BOARD_CONFIG_MODE_OFFSET;
 	for (i = 0 ; i < EEPROM_BOARD_CONFIG_MODE_SIZE ; i++)
 	{
-		status = M24C128_ReadByte(i2c_num, SLAVE_ADDRESS_M24C128, &offset, &data_ptr[i]);
+		status = M24128_ReadByte(i2c_num, SLAVE_ADDRESS_M24C128, &offset, &data_ptr[i]);
 		if (data_ptr[i] == EEPROM_DEFAULT_VAL)
 		{
 			data_ptr[i] = '\0';
@@ -356,7 +378,7 @@ u8 Versal_EEPROM_ReadBoardIno(void)
 	offset   = EEPROM_MFG_DATE_OFFSET;
 	for (i = 0 ; i < EEPROM_MFG_DATE_SIZE ; i++)
 	{
-		status = M24C128_ReadByte(i2c_num, SLAVE_ADDRESS_M24C128, &offset, &data_ptr[i]);
+		status = M24128_ReadByte(i2c_num, SLAVE_ADDRESS_M24C128, &offset, &data_ptr[i]);
 
 		if (data_ptr[i] == EEPROM_DEFAULT_VAL)
 		{
@@ -371,7 +393,7 @@ u8 Versal_EEPROM_ReadBoardIno(void)
 	offset   = EEPROM_PART_NUM_OFFSET;
 	for (i = 0 ; i < EEPROM_PART_NUM_SIZE ; i++)
 	{
-		status = M24C128_ReadByte(i2c_num, SLAVE_ADDRESS_M24C128, &offset, &data_ptr[i]);
+		status = M24128_ReadByte(i2c_num, SLAVE_ADDRESS_M24C128, &offset, &data_ptr[i]);
 		if (data_ptr[i] == EEPROM_DEFAULT_VAL)
 		{
 			data_ptr[i] = '\0';
@@ -385,7 +407,7 @@ u8 Versal_EEPROM_ReadBoardIno(void)
 	offset   = EEPROM_UUID_OFFSET;
 	for (i = 0 ; i < EEPROM_UUID_SIZE ; i++)
 	{
-		status = M24C128_ReadByte(i2c_num, SLAVE_ADDRESS_M24C128, &offset, &data_ptr[i]);
+		status = M24128_ReadByte(i2c_num, SLAVE_ADDRESS_M24C128, &offset, &data_ptr[i]);
 
 		if (data_ptr[i] == EEPROM_DEFAULT_VAL)
 		{
@@ -400,7 +422,7 @@ u8 Versal_EEPROM_ReadBoardIno(void)
 	offset   = EEPROM_PCIE_INFO_OFFSET;
 	for (i = 0 ; i < EEPROM_PCIE_INFO_SIZE ; i++)
 	{
-		status = M24C128_ReadByte(i2c_num, SLAVE_ADDRESS_M24C128, &offset, &data_ptr[i]);
+		status = M24128_ReadByte(i2c_num, SLAVE_ADDRESS_M24C128, &offset, &data_ptr[i]);
 
 		if (data_ptr[i] == EEPROM_DEFAULT_VAL)
 		{
@@ -415,7 +437,7 @@ u8 Versal_EEPROM_ReadBoardIno(void)
 	offset   = EEPROM_MAX_POWER_MODE_OFFSET;
 	for (i = 0 ; i < EEPROM_MAX_POWER_MODE_SIZE ; i++)
 	{
-		status = M24C128_ReadByte(i2c_num, SLAVE_ADDRESS_M24C128, &offset, &data_ptr[i]);
+		status = M24128_ReadByte(i2c_num, SLAVE_ADDRESS_M24C128, &offset, &data_ptr[i]);
 		if (data_ptr[i] == EEPROM_DEFAULT_VAL)
 		{
 			data_ptr[i] = '\0';
@@ -429,7 +451,7 @@ u8 Versal_EEPROM_ReadBoardIno(void)
 	offset   = EEPROM_DIMM_SIZE_OFFSET;
 	for (i = 0 ; i < EEPROM_DIMM_SIZE_SIZE ; i++)
 	{
-		status = M24C128_ReadByte(i2c_num, SLAVE_ADDRESS_M24C128, &offset, &data_ptr[i]);
+		status = M24128_ReadByte(i2c_num, SLAVE_ADDRESS_M24C128, &offset, &data_ptr[i]);
 
 		if (data_ptr[i] == EEPROM_DEFAULT_VAL)
 		{
@@ -444,7 +466,7 @@ u8 Versal_EEPROM_ReadBoardIno(void)
 	offset   = EEPROM_OEMID_SIZE_OFFSET;
 	for (i = 0 ; i < EEPROM_OEMID_SIZE ; i++)
 	{
-		status = M24C128_ReadByte(i2c_num, SLAVE_ADDRESS_M24C128, &offset, &data_ptr[i]);
+		status = M24128_ReadByte(i2c_num, SLAVE_ADDRESS_M24C128, &offset, &data_ptr[i]);
 
 		if (data_ptr[i] == EEPROM_DEFAULT_VAL)
 		{
@@ -458,4 +480,94 @@ u8 Versal_EEPROM_ReadBoardIno(void)
 return status;
 }
 
+#ifdef PLATFORM_CS2200
+
+
+void Temp_LM75_Display(void)
+{
+	s32 tempVal = 0;
+	u8 i2c_num = LPD_I2C_1;
+	u8 slave_addr = TEMP_LM75_0x48;
+	LM75_ReadTemperature(i2c_num,slave_addr,&tempVal);
+	VMC_PRNT("LM75 temperature 0x%02x 			: %d \n\r",TEMP_LM75_0x48,tempVal);
+
+	tempVal = 0;
+	slave_addr = TEMP_LM75_0x4A;
+	LM75_ReadTemperature(i2c_num,slave_addr,&tempVal);
+	VMC_PRNT("LM75 temperature 0x%02x 			: %d \n\r",TEMP_LM75_0x4A,tempVal);
+
+}
+
+void INA3221_Display(void)
+{
+
+    u8 status;
+    float currentInMA;
+    float voltageInMV;
+    u8 busnum = LPD_I2C_1;
+    u8 slaveAddr = INNA3221_ADDR;
+    u8 channelNum = 0;
+    float powerInmW = 0;
+
+	VMC_PRNT("INA3221------------- \n\r");
+
+	for(int i = 0; i < INA3221_CH3_BUS_VOLTAGE; i++)
+	{
+		VMC_PRNT("\n\r");
+		VMC_PRNT("-------- %s: ------------- \n\r",ch_str[i]);
+		channelNum = i + 1;
+		if ( (status = INA3221_ReadCurrent(busnum,slaveAddr,channelNum,&currentInMA)) == 0)
+		{
+			VMC_PRNT("Current			: %.2f \n\r",currentInMA);
+			if ( (status = INA3221_ReadVoltage(busnum,slaveAddr,channelNum,&voltageInMV)) == 0)
+			 {
+
+				VMC_PRNT("Voltage			: %.2f \n\r",voltageInMV);
+				powerInmW = (float) (((double)voltageInMV * (double)currentInMA) / 1000);
+				VMC_PRNT("Power			: %.2f \n\r",powerInmW);
+			 }
+		}
+	}
+
+    return;
+}
+
+
+void ISL68220_Display(void)
+{
+
+    u8 status;
+    float currentInMA;
+    float voltageInMV;
+    u8 busnum = LPD_I2C_1;
+    u8 slaveAddr = ISL68220_SLV_ADDR;
+    u8 channelNum = 0;
+    float powerInmW = 0;
+    float tempVal = 0;
+
+	VMC_PRNT("-----------------ISL68220----------------- \n\r");
+	ISL68220_Read_Temperature(busnum,slaveAddr,ISL68220_READ_POWERSTAGE_TEMPERATURE,&tempVal);
+	VMC_PRNT("Temp Power Stage		: %.2f \n\r",tempVal);
+
+	tempVal = 0;
+	ISL68220_Read_Temperature(busnum,slaveAddr,ISL68220_READ_INTERNAL_TEMPERATURE,&tempVal);
+	VMC_PRNT("Temp Internal			: %.2f \n\r",tempVal);
+
+	tempVal = 0;
+	ISL68220_Read_Temperature(busnum,slaveAddr,ISL68220_READ_PIN_TEMPERATURE,&tempVal);
+	VMC_PRNT("Temp Pin			: %.2f \n\r",tempVal);
+
+	status = ISL68220_Read_VCCINT_Voltage(busnum,slaveAddr,&voltageInMV);
+	VMC_PRNT("Voltage				: %.2f \n\r",voltageInMV);
+
+	return;
+}
+
+void VPD_EEPROM_ReadBoardIno(void)
+{
+	VMC_PRNT("\n\r-----------------VPD EEPROM----------------- \n\r");
+
+}
+
+#endif
 

@@ -27,3 +27,4 @@ typedef struct
 void se98a_monitor(void);
 void max6639_monitor(void);
 void qsfp_monitor(void);
+void lm75_monitor(void);

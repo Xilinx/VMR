@@ -13,8 +13,7 @@
 #include "portmacro.h"
 
 #include "cl_uart_rtos.h"
-
-
+#include "cl_config.h"
 
 
 /**************************** Type Definitions ******************************/
@@ -23,12 +22,23 @@
 #define UART_RTOS_TASK_STACK_SIZE	(configMINIMAL_STACK_SIZE + 100)
 #define UART_RTOS_TASK_PRIORITY		(5)
 
-#define WELCOME_MSG							"\n\rHello from UART_RTOS to you!\n\r"
+#define WELCOME_MSG							"\n\rUART_RTOS enabled!\n\r"
 #define UART_TX_FIFO_THRESHOLD				(XUARTPSV_UARTIFLS_TXIFLSEL_1_8)
 
 /* The FIFO triggers at 2 bytes larger than FIFO trigger level */
 #define UART_TX_FIFO_THRESHOLD_TRIGGER		(UART_TX_FIFO_THRESHOLD + 2)
 
+#ifdef PLATFORM_CS2200
+
+#define VMC_DEBUG_UART_DEVICE_ID 	XPAR_XUARTPSV_0_DEVICE_ID
+#define VMC_DEBUG_UART_IRQ_ID		XPAR_XUARTPS_0_INTR
+
+#else
+
+#define VMC_DEBUG_UART_DEVICE_ID 	XPAR_XUARTPSV_1_DEVICE_ID
+#define VMC_DEBUG_UART_IRQ_ID		XPAR_XUARTPS_1_INTR
+
+#endif
 /************************** Function Prototypes *****************************/
 
 static void 	UART_Task(void* pvParameters);
@@ -37,6 +47,7 @@ static int32_t 	UART_Config(uart_rtos_handle_t *handle, XUartPsv *UartInstPtr, u
 
 /************************** Variable Definitions ***************************/
 
+extern SemaphoreHandle_t vmc_debug_logbuf_lock; /* used to block until LogBuf is in use */
 
 /************************** Code ******************************************/
 
@@ -228,8 +239,10 @@ static int32_t UART_Config(uart_rtos_handle_t *handle, XUartPsv *UartInstPtr, ui
 	int32_t Status;
 	XUartPsv_Config *Config;
 	uint32_t IntrMask;
-    uint32_t LineCtrlRegister;
 
+#ifndef VMC_DEBUG
+    uint32_t LineCtrlRegister;
+#endif
 
 
 	/*
@@ -253,16 +266,19 @@ static int32_t UART_Config(uart_rtos_handle_t *handle, XUartPsv *UartInstPtr, ui
 	LineCtrlRegister |= XUARTPSV_UARTLCR_PARITY_EVEN;               // Set Even parity
 	LineCtrlRegister |= XUARTPSV_UARTLCR_PARITY_MASK;               // Enable parity
 
-#endif
 	/* Write the line controller register out */
 	XUartPsv_WriteReg(Config->BaseAddress,
 			XUARTPSV_UARTLCR_OFFSET, LineCtrlRegister);
+
 
 	/* Check hardware build. */
 	Status = XUartPsv_SelfTest(UartInstPtr);
 	if (Status != XST_SUCCESS) {
 		xil_printf("XUartPs_SelfTest FAILED with %d\n",Status );
 	}
+
+#endif
+
 	/*
 	 * Setup the handlers for the UART that will be called from the
 	 * interrupt context when data has been sent and received, specify
@@ -356,6 +372,7 @@ int32_t UART_RTOS_Send(uart_rtos_handle_t *handle, uint8_t *buf, uint32_t size)
 
 	EventBits_t ev;
 	UART_STATUS retVal = UART_SUCCESS;
+	u32 rxWaitTime = portMAX_DELAY;
 	//uint32_t byteSent = 0;
 
 	if(handle == NULL)
@@ -386,7 +403,10 @@ int32_t UART_RTOS_Send(uart_rtos_handle_t *handle, uint8_t *buf, uint32_t size)
 	if(size >= UART_TX_FIFO_THRESHOLD_TRIGGER)
 	{
 
-		ev = xEventGroupWaitBits(handle->txEvent, UART_RTOS_COMPLETE, pdTRUE, pdFALSE, 0xff);
+#ifndef VMC_DEBUG
+		rxWaitTime = 0xFF;
+#endif
+		ev = xEventGroupWaitBits(handle->txEvent, UART_RTOS_COMPLETE, pdTRUE, pdFALSE, rxWaitTime);
 		if(!(ev & UART_RTOS_COMPLETE))
 		{
 			retVal = UART_ERROR_EVENT;
@@ -429,6 +449,7 @@ int32_t UART_RTOS_Receive(uart_rtos_handle_t *handle, uint8_t *buf, uint32_t siz
 	EventBits_t ev;
 	UART_STATUS retVal = UART_SUCCESS;
 	u32 ret;
+	u32 txWaitTime = portMAX_DELAY;
 
 	if(received == NULL)
 	{
@@ -456,7 +477,10 @@ int32_t UART_RTOS_Receive(uart_rtos_handle_t *handle, uint8_t *buf, uint32_t siz
 
 	ret = XUartPsv_Recv(&handle->uartPsv, buf, size);
 
-	ev = xEventGroupWaitBits(handle->rxEvent, UART_RTOS_COMPLETE, pdTRUE, pdFALSE, 0xff);
+#ifndef VMC_DEBUG
+	txWaitTime = 0xFF;
+#endif
+	ev = xEventGroupWaitBits(handle->rxEvent, UART_RTOS_COMPLETE, pdTRUE, pdFALSE, txWaitTime);
 	if((ev & UART_RTOS_COMPLETE))
 	{
 		*received = handle->cb_msg.receivedBytes;
@@ -471,8 +495,13 @@ int32_t UART_RTOS_Receive(uart_rtos_handle_t *handle, uint8_t *buf, uint32_t siz
 	{
 		retVal = UART_ERROR_SEMAPHORE;
 	}
+#ifndef VMC_DEBUG
 	vPortDisableInterrupt(XPAR_XUARTPS_0_INTR);
 	return ret;
+#else
+	return retVal;
+#endif
+
 }
 
 
@@ -504,7 +533,7 @@ static void UART_Task(void* pvParameters)
 		xil_printf("Uart RTOS Initialization Failed\r\n");
 	}
 
-	//UART_RTOS_Send(uartConf->uartHandler, (u8 *)WELCOME_MSG, strlen(WELCOME_MSG));
+	UART_RTOS_Send(uartConf->uartHandler, (u8 *)WELCOME_MSG, strlen(WELCOME_MSG));
 
 	vTaskSuspend(NULL);
 }
@@ -576,14 +605,24 @@ s32 UART_RTOS_Debug_Enable(uart_rtos_handle_t *handle)
 
 	static uart_rtos_config_t debugUartConig = {
 			.INTC_ID = XPAR_SCUGIC_SINGLE_DEVICE_ID,
-			.uart_ID = XPAR_XUARTPSV_1_DEVICE_ID,
-			.uart_IRQ_ID = XPAR_XUARTPS_1_INTR
+			.uart_ID = VMC_DEBUG_UART_DEVICE_ID,
+			.uart_IRQ_ID = VMC_DEBUG_UART_IRQ_ID
 	};
 
 	debugUartConig.uartHandler = handle;
 
+
+	vmc_debug_logbuf_lock = xSemaphoreCreateMutex();
+	if(vmc_debug_logbuf_lock == NULL)
+	{
+		xil_printf("\n\r logbuf_lock creation failed \n\r");
+	}
+
 	return UART_RTOS_Enable(&debugUartConig);
 }
+
+
+#ifndef PLATFORM_CS2200
 
 s32 UART_VMC_SC_Enable(uart_rtos_handle_t *handle)
 {
@@ -598,3 +637,5 @@ s32 UART_VMC_SC_Enable(uart_rtos_handle_t *handle)
 
 	return UART_RTOS_Enable(&vmcscUartConfig);
 }
+
+#endif

@@ -9,8 +9,9 @@
 
 #include "sysmon.h"
 #include "cl_uart_rtos.h"
-#include "vmc_api.h"
+#include "cl_config.h"
 
+#ifndef PLATFORM_CS2200
 
 extern uart_rtos_handle_t uart_vmcsc_log;
 
@@ -204,3 +205,5 @@ void vmc_Update_Sensors(u16 length,u8 *payload);
 void Update_SNSR_Data(u8 PayloadLength , u8 * payload);
 bool Parse_SCData(u8 *Payload);
 bool Vmc_Send_Packet(u8 Message_id , u8 Flags,u8 Payloadlength, u8 *Payload);
+
+#endif

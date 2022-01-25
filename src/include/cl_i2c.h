@@ -9,6 +9,11 @@
 #define IIC_SCLK_RATE		100000
 
 #include "xil_types.h"
+#include "xstatus.h"
+
+#define PMC_I2C				(0u)
+#define LPD_I2C_0			(1u)
+#define LPD_I2C_1			(2u)
 
 u8 I2CInit(void);
 u8 i2c_send(u8 i2c_num, unsigned char i2c_addr, unsigned char * i2c_data, long int data_length);

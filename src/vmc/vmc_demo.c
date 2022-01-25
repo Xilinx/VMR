@@ -11,6 +11,7 @@
 #include "task.h"
 
 #include "cl_uart_rtos.h"
+#include "cl_config.h"
 
 /* VMC Header files */
 #include "vmc_api.h"
@@ -73,11 +74,18 @@ TestMenu TestsMenu[] =
     {"Get Board Info", NULL, BoardInfoTest},
     {"Sensor Data Read", NULL, SensorData_Display},
 
+#ifdef PLATFORM_CS2200
+
+    {"Temp LM75 Read", NULL, Temp_LM75_Display},
+    {"INA3221 Read", NULL, INA3221_Display},
+    {"ISL68220 Read", NULL, ISL68220_Display},
+
+#endif
+
     {NULL, NULL, NULL}
 };
 
 static bool isDemoMenuEnabled = false;
-extern SemaphoreHandle_t logbuf_lock; /* used to block until LogBuf is in use */
 
 static void App_SetLogLevel(void)
 {
@@ -266,14 +274,6 @@ int32_t Enable_DemoMenu(void)
     {
         return 0;
     }
-
-
-	/* logbuf is making log messages thread safe.*/
-	logbuf_lock = xSemaphoreCreateMutex();
-	if(logbuf_lock == NULL){
-		xil_printf("\n\r logbuf_lock creation failed \n\r");
-		return XST_FAILURE;
-	}
 
 
     if ( (retc = xTaskCreate(DemoMenuTask, "DemoMenu_Task", MENU_THREADSTACKSIZE, NULL, demoMenu_task_PRIORITY, NULL)) != pdPASS)

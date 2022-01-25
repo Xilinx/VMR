@@ -6,16 +6,22 @@
 #include "FreeRTOS.h"
 #include "task.h"
 
+#include "cl_config.h"
 #include "cl_uart_rtos.h"
 #include "cl_i2c.h"
 #include "cl_log.h"
 #include "vmc_api.h"
-#include "sensors/inc/se98a.h"
-#include "sensors/inc/max6639.h"
-#include "sensors/inc/qsfp.h"
 #include "vmc_sensors.h"
 #include "vmc_asdm.h"
 #include "sysmon.h"
+
+#ifdef PLATFORM_CS2200
+#include "sensors/inc/lm75.h"
+#else
+#include "sensors/inc/se98a.h"
+#include "sensors/inc/max6639.h"
+#include "sensors/inc/qsfp.h"
+#endif
 
 extern XSysMonPsv InstancePtr;
 extern XScuGic IntcInst;
@@ -24,14 +30,17 @@ extern XScuGic IntcInst;
 
 Versal_sensor_readings sensor_readings;
 u8 i2c_num = 1;  // LPD_I2C0
-#define LPD_I2C_0	0x1
 
 s8 Temperature_Read_Inlet(snsrRead_t *snsrData)
 {
 	s8 status = XST_FAILURE;
 	s32 tempValue = 0;
 
+#ifdef PLATFORM_CS2200
+	status = LM75_ReadTemperature(LPD_I2C_1, TEMP_LM75_0x48, &tempValue);
+#else
 	status = SE98A_ReadTemperature(LPD_I2C_0, SLAVE_ADDRESS_SE98A_0, &tempValue);
+#endif
 	if (status == XST_SUCCESS)
 	{
 		memcpy(snsrData->snsrValue,&tempValue,sizeof(tempValue));
@@ -52,7 +61,11 @@ s8 Temperature_Read_Outlet(snsrRead_t *snsrData)
 	s8 status = XST_FAILURE;
 	s32 tempValue = 0;
 
+#ifdef PLATFORM_CS2200
+	status = LM75_ReadTemperature(LPD_I2C_1, TEMP_LM75_0x4A, &tempValue);
+#else
 	status = SE98A_ReadTemperature(LPD_I2C_0, SLAVE_ADDRESS_SE98A_1, &tempValue);
+#endif
 	if (status == XST_SUCCESS)
 	{
 		memcpy(snsrData->snsrValue,&tempValue,sizeof(tempValue));
@@ -63,27 +76,6 @@ s8 Temperature_Read_Outlet(snsrRead_t *snsrData)
 	{
 		snsrData->snsrSatus = Vmc_Snsr_State_Comms_failure;
 		VMC_DBG("Failed to read slave : %d \n\r",SLAVE_ADDRESS_SE98A_1);
-	}
-
-	return status;
-}
-
-s8 Temperature_Read_Board(snsrRead_t *snsrData)
-{
-	s8 status = XST_FAILURE;
-	float TempReading = 0;
-
-	status = max6639_ReadDDRTemperature(i2c_num, SLAVE_ADDRESS_MAX6639, &TempReading);
-	if (status == XST_SUCCESS)
-	{
-		memcpy(&snsrData->snsrValue[0],&TempReading,sizeof(TempReading));
-		snsrData->sensorValueSize = sizeof(TempReading);
-		snsrData->snsrSatus = Vmc_Snsr_State_Normal;
-	}
-	else
-	{
-		snsrData->snsrSatus = Vmc_Snsr_State_Comms_failure;
-		VMC_DBG("Failed to read slave : %d \n\r",SLAVE_ADDRESS_MAX6639);
 	}
 
 	return status;
@@ -105,6 +97,29 @@ s8 Temperature_Read_ACAP_Device_Sysmon(snsrRead_t *snsrData)
 	{
 		snsrData->snsrSatus = Vmc_Snsr_State_Comms_failure;
 		VMC_DBG("Failed to read Sysmon : %d \n\r",SYSMONPSV_TEMP_MAX);
+	}
+
+	return status;
+}
+
+#ifndef PLATFORM_CS2200
+
+s8 Temperature_Read_Board(snsrRead_t *snsrData)
+{
+	s8 status = XST_FAILURE;
+	float TempReading = 0;
+
+	status = max6639_ReadDDRTemperature(i2c_num, SLAVE_ADDRESS_MAX6639, &TempReading);
+	if (status == XST_SUCCESS)
+	{
+		memcpy(&snsrData->snsrValue[0],&TempReading,sizeof(TempReading));
+		snsrData->sensorValueSize = sizeof(TempReading);
+		snsrData->snsrSatus = Vmc_Snsr_State_Normal;
+	}
+	else
+	{
+		snsrData->snsrSatus = Vmc_Snsr_State_Comms_failure;
+		VMC_DBG("Failed to read slave : %d \n\r",SLAVE_ADDRESS_MAX6639);
 	}
 
 	return status;
@@ -222,6 +237,32 @@ void max6639_monitor(void)
 	return;
 
 }
+
+#else
+void lm75_monitor(void)
+{
+	u8 status = XST_FAILURE;
+	s32 tempVal = 0;
+	u8 i2c_num = LPD_I2C_1;
+	u8 slave_addr = 0;
+
+	slave_addr = TEMP_LM75_0x48;
+	status = LM75_ReadTemperature(i2c_num,slave_addr,&sensor_readings.board_temp[0]);
+	if (status == XST_FAILURE)
+	{
+		VMC_DBG("Failed to read LM75_0x%0X \n\r",slave_addr);
+	}
+
+	slave_addr = TEMP_LM75_0x4A;
+	status = LM75_ReadTemperature(i2c_num,slave_addr,&sensor_readings.board_temp[1]);
+	if (status == XST_FAILURE)
+	{
+		VMC_DBG("Failed to read LM75_0x%0X \n\r",slave_addr);
+	}
+
+	return;
+}
+#endif
 
 void sysmon_monitor(void)
 {

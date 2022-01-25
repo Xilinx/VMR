@@ -54,4 +54,4 @@
 #define EEPROM_OEMID_SIZE_OFFSET         0x6C00
 #define EEPROM_OEMID_SIZE                4
 
-u8 M24C128_ReadByte(u8 i2c_num, u8 slaveAddr, u16 *AddressOffset,u8 *RegisterValue);
+u8 M24128_ReadByte(u8 i2c_num, u8 slaveAddr, u16 *AddressOffset,u8 *RegisterValue);

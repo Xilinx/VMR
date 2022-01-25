@@ -9,6 +9,8 @@
 
 #include "xil_types.h"
 
+#define INNA3221_ADDR 	(0x40)
+
 #define INA3221_CH1_SHUNT_VOLTAGE               0x01 
 #define INA3221_CH1_BUS_VOLTAGE                 0x02 
 
