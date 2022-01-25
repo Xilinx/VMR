@@ -3,6 +3,8 @@
 * SPDX-License-Identifier: MIT
 *******************************************************************************/
 
+#include <stdbool.h>
+
 #include "xilfpga.h"
 #include "rmgmt_common.h"
 #include "rmgmt_xfer.h"
@@ -185,11 +187,10 @@ int rmgmt_init_handler(struct rmgmt_handler *rh)
 	return 0;
 }
 
-static int fpga_pl_pdi_download_workaround(UINTPTR data, UINTPTR size)
+static int fpga_pdi_download_workaround(UINTPTR data, UINTPTR size, bool has_pl)
 {
 	int ret;
 	XFpga XFpgaInstance = { 0U };
-	UINTPTR KeyAddr = (UINTPTR)NULL;
 
 	ret = XFpga_Initialize(&XFpgaInstance);
 	if (ret != XST_SUCCESS) {
@@ -197,12 +198,10 @@ static int fpga_pl_pdi_download_workaround(UINTPTR data, UINTPTR size)
 		return ret;
 	}
 
-	//FreeRTOS_ClearTickInterrupt();
-
-	axigate_freeze();
-	ucs_stop();
-
-	//ret = XFpga_BitStream_Load(&XFpgaInstance, data, KeyAddr, size, PDI_LOAD);
+	if (has_pl) {
+		axigate_freeze();
+		ucs_stop();
+	}
 
 	IO_SYNC_WRITE32(0x30701, 0xff3f0440);
 	IO_SYNC_WRITE32(0xf, 0xff3f0444);
@@ -212,11 +211,11 @@ static int fpga_pl_pdi_download_workaround(UINTPTR data, UINTPTR size)
 	/* wait for async operation done in case of firewall trip */
 	MDELAY(1000);
 
-	ucs_start();
-	MDELAY(10);
-
-	axigate_free();
-	//FreeRTOS_SetupTickInterrupt();
+	if (has_pl) {
+		ucs_start();
+		MDELAY(10);
+		axigate_free();
+	}
 
 	RMGMT_LOG("ret: %d \r\n", ret);
 	return ret;
@@ -262,8 +261,8 @@ static int rmgmt_fpga_download(struct rmgmt_handler *rh, u32 len)
 	/* Sync data from cache to memory */
 	Xil_DCacheFlush();
 
-	ret = fpga_pl_pdi_download_workaround((UINTPTR)((const char *)axlf + offset),
-		(UINTPTR)size);
+	ret = fpga_pdi_download_workaround((UINTPTR)((const char *)axlf + offset),
+		(UINTPTR)size, true);
 
 	RMGMT_LOG("FPGA load pdi ret: %d", ret);
 	return ret;
@@ -350,8 +349,12 @@ static int rmgmt_ospi_apu_download(struct rmgmt_handler *rh, u32 len)
 	}
 	Xil_DCacheFlush();
 
-	ret = fpga_pl_pdi_download_workaround((UINTPTR)((const char *)axlf + offset),
-		(UINTPTR)size);
+	/*
+	 * when loading an APU or any other PDI type which does not change the ULP.
+	 * set ulp_changed to false.
+	 */
+	ret = fpga_pdi_download_workaround((UINTPTR)((const char *)axlf + offset),
+		(UINTPTR)size, false);
 
 	RMGMT_LOG("FPGA load pdi ret: %d", ret);
 	return ret;
