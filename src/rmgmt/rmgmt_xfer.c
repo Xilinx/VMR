@@ -187,7 +187,7 @@ int rmgmt_init_handler(struct rmgmt_handler *rh)
 	return 0;
 }
 
-static int fpga_pl_pdi_download_workaround(UINTPTR data, UINTPTR size, bool ulp_changed)
+static int fpga_pl_pdi_download_workaround(UINTPTR data, UINTPTR size, bool has_pl)
 {
 	int ret;
 	XFpga XFpgaInstance = { 0U };
@@ -198,7 +198,7 @@ static int fpga_pl_pdi_download_workaround(UINTPTR data, UINTPTR size, bool ulp_
 		return ret;
 	}
 
-	if (ulp_changed) {
+	if (has_pl) {
 		axigate_freeze();
 		ucs_stop();
 	}
@@ -211,7 +211,7 @@ static int fpga_pl_pdi_download_workaround(UINTPTR data, UINTPTR size, bool ulp_
 	/* wait for async operation done in case of firewall trip */
 	MDELAY(1000);
 
-	if (ulp_changed) {
+	if (has_pl) {
 		ucs_start();
 		MDELAY(10);
 		axigate_free();
