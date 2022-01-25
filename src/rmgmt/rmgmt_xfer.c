@@ -187,7 +187,7 @@ int rmgmt_init_handler(struct rmgmt_handler *rh)
 	return 0;
 }
 
-static int fpga_pl_pdi_download_workaround(UINTPTR data, UINTPTR size, bool has_pl)
+static int fpga_pdi_download_workaround(UINTPTR data, UINTPTR size, bool has_pl)
 {
 	int ret;
 	XFpga XFpgaInstance = { 0U };
@@ -261,7 +261,7 @@ static int rmgmt_fpga_download(struct rmgmt_handler *rh, u32 len)
 	/* Sync data from cache to memory */
 	Xil_DCacheFlush();
 
-	ret = fpga_pl_pdi_download_workaround((UINTPTR)((const char *)axlf + offset),
+	ret = fpga_pdi_download_workaround((UINTPTR)((const char *)axlf + offset),
 		(UINTPTR)size, true);
 
 	RMGMT_LOG("FPGA load pdi ret: %d", ret);
@@ -353,7 +353,7 @@ static int rmgmt_ospi_apu_download(struct rmgmt_handler *rh, u32 len)
 	 * when loading an APU or any other PDI type which does not change the ULP.
 	 * set ulp_changed to false.
 	 */
-	ret = fpga_pl_pdi_download_workaround((UINTPTR)((const char *)axlf + offset),
+	ret = fpga_pdi_download_workaround((UINTPTR)((const char *)axlf + offset),
 		(UINTPTR)size, false);
 
 	RMGMT_LOG("FPGA load pdi ret: %d", ret);
