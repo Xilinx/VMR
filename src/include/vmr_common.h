@@ -32,8 +32,6 @@
 
 #define EP_PLM_MULTIBOOT	0xF1110004
 #define EP_PMC_REG		0xF1130000
-#define EP_FORCE_RESET		XPAR_BLP_BLP_LOGIC_BASE_CLOCKING_FORCE_RESET_GPIO_BASEADDR
-/* === end define data-driven endpoints from xparameters.h */
 
 #define FAULT_STATUS            0x0
 #define BIT(n) 			(1UL << (n))
@@ -65,4 +63,19 @@
 #define VMR_PARTITION_TABLE_SIZE	0x1000
 #define RPU_RING_BUFFER_OFFSET (RPU_SHARED_MEMORY_START + VMR_PARTITION_TABLE_SIZE)
 
+
+#if defined(CONFIG_FORCE_RESET)
+#define EP_FORCE_RESET		XPAR_BLP_BLP_LOGIC_BASE_CLOCKING_FORCE_RESET_GPIO_BASEADDR
+static inline void rmgmt_enable_pl_reset()
+{
+	int val = 0;
+	u32 pmc_mux = EP_FORCE_RESET;
+
+	val = IO_SYNC_READ32(pmc_mux);
+	val |= PL_TO_PMC_ERROR_SIGNAL_PATH_MASK;
+	IO_SYNC_WRITE32(val, pmc_mux); 
+}
+#else
+static inline void rmgmt_enable_pl_reset() {}
+#endif
 #endif

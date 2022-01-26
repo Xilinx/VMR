@@ -33,6 +33,11 @@ grep_file()
 	grep -w "$name" ${BUILD_VERSION_FILE} |grep -oP '".*?"'|tail -1|tr -d '"'
 }
 
+grep_yes()
+{
+	grep -w "yes" ${PLATFORM_FILE} |grep -oP '".*"'|cut -d ":" -f1|tr -d '"'
+}
+
 make_version_h()
 {
 	if [ -z $BUILD_VERSION_FILE ];then
@@ -66,6 +71,20 @@ make_version_h()
 		echo "#define VMR_BUILD_XRT_ONLY" >> $CL_VERSION_H
 	else
 		echo "=== Full build ==="
+	fi
+
+	echo "" >> $CL_VERSION_H
+
+	# set platform specific config macros
+	if [ -z $PLATFORM_FILE ];then
+		echo "=== NOTE: No platform specific resources."
+	else
+		echo "=== NOTE: enable $PLATFORM_FILE specific resources."
+		for MACRO in `grep_yes`
+		do
+			echo "===    enable: $MACRO"
+			echo "#define $MACRO" >> $CL_VERSION_H
+		done
 	fi
 	echo "#endif" >> $CL_VERSION_H
 }
@@ -108,6 +127,7 @@ usage() {
     echo "-XRT                       Build XRT only"
     echo "-TA                        TA exact version, default is [${TOOL_VERSION}_daily_latest]"
     echo "-version                   version.json file"
+    echo "-platform                  platform.json file for enable platform specific resources"
     echo "-help"
     exit $1
 }
@@ -145,6 +165,10 @@ do
 		-version)
 			shift
 			BUILD_VERSION_FILE=$1
+			;;
+		-platform)
+			shift
+			PLATFORM_FILE=$1
 			;;
                 * | --* | -*)
                         echo "Invalid argument: $1"

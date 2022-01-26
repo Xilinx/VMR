@@ -215,16 +215,6 @@ static int rmgmt_init_pmc()
 	return 0;
 }
 
-static void rmgmt_enable_pl_reset()
-{
-	int val = 0;
-	u32 pmc_mux = EP_FORCE_RESET;
-
-	val = IO_SYNC_READ32(pmc_mux);
-	val |= PL_TO_PMC_ERROR_SIGNAL_PATH_MASK;
-	IO_SYNC_WRITE32(val, pmc_mux); 
-}
-
 static int rmgmt_enable_boot_default()
 {
 	if (rmgmt_init_pmc())
