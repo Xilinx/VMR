@@ -57,8 +57,7 @@ extern uart_rtos_handle_t uart_vmcsc_log;
 #define MSP432_COMMS_POWER_SNSR_RESP    (0x87)
 #define MSP432_COMMS_TEMP_SNSR_RESP     (0x88)
 #define MSP432_COMMS_EN_DEMO_RESP       (0x89)
-#define MSP432_COMMS_SENSOR_STATE_RESP  (0X90)
-#define MSP432_COMMS_SENSOR_POLL_FREQ_RES  (0x93)
+
 #define MSP432_COMMS_MSG_GOOD           (0xFE)
 #define MSP432_COMMS_MSG_ERR            (0xFF)
 
@@ -76,14 +75,16 @@ extern uart_rtos_handle_t uart_vmcsc_log;
 #define MSP432_COMMS_POWER_SNSR_REQ     (0x07)
 #define MSP432_COMMS_TEMP_SNSR_REQ      (0x08)
 #define MSP432_COMMS_EN_DEMO_MENU       (0x09)
-#define MSP432_COMMS_FPGA_I2C_BUS_ARB   (0x0A)
-#define MSP432_COMMS_CAGE_IO_EVENT      (0x0B)
-#define MSP432_COMMS_SNSR_PUSH          (0x0D)
-#define MSP432_COMMS_SENSOR_STATE_REQ   (0X14)
-#define MSP432_COMMS_SENSOR_POLL_FREQ_REQ  (0x15)
 
 #define MSP432_COMMS_NO_FLAG             (0x00)
 #define MSP432_COMMS_VMC_VERSION             (0x50)
+#define MSP432_COMMS_VMC_ACTIVE_REQ 	(0xF0)
+
+#define MSP432_COMMS_VMC_VERSION_POWERMODE_REQ (0xF1)
+#define MSP432_COMMS_VMC_VERSION_POWERMODE_RESP (0xF2)
+
+#define MSP432_COMMS_VMC_SEND_I2C_SNSR_REQ (0xF3)
+#define MSP432_COMMS_VMC_SEND_I2C_SNSR_RESP (0xF4)
 
 typedef enum return_error_codes {
     FIELD_PARSE_SUCCESSFUL,                 /* The current field was parsed successfully */
@@ -178,18 +179,90 @@ typedef enum // satellite controller sensor and info ids
     SNSR_ID_VCCINT_BRAM,
     SNSR_ID_HBM_TEMP2 = 0x37,
     CMC_MAX_NUM_SNSRS,
-	NEW_MAC_SCHEME_ID = 0x4B
 }Sensor_id;
 
+/* List sensor ids used for communicating between MB and MSP */
+typedef enum
+{
+    PEX_12V = 0,
+    PEX_3V3,
+    AUX_3V3,
+    AUX_12V,
+    DDR4_VPP_BTM,
+    SYS_5V5,
+    VCC1V2_TOP,
+    VCC1V8,
+    VCC0V85,
+    DDR4_VPP_TOP,
+    MGT0V9AVCC,
+    SW_12V,
+    MGTAVTT,
+    VCC1V2_BTM,
+    PEX_12V_I_IN,
+    AUX_12V_I_IN,
+    VCCINT,
+    VCCINT_I,
+    FPGA_TEMP,
+    FAN_TEMP,
+    DIMM_TEMP0,
+    DIMM_TEMP1,
+    DIMM_TEMP2,
+    DIMM_TEMP3,
+    SE98_TEMP0,
+    SE98_TEMP1,
+    SE98_TEMP2,
+    FAN_SPEED,
+    CAGE_TEMP0,
+    CAGE_TEMP1,
+    CAGE_TEMP2,
+    CAGE_TEMP3,
+    RESERVED5,
+    BOARD_SN,
+    MAC_ADDRESS0,
+    MAC_ADDRESS1,
+    MAC_ADDRESS2,
+    MAC_ADDRESS3,
+    BOARD_REV,
+    BOARD_NAME,
+    BMC_VERSION,
+    TOTAL_POWER_AVAIL,
+    FAN_PRESENCE,
+    CONFIGURATION_MODE,
+    HBM_TEMP1 = 0x30,
+    VCC_3V3,
+    PEX3V3_I_IN,
+    VCC0V85_I,
+    HBM_1V2,
+    VPP2V5,
+    VCCINT_BRAM,
+    HBM_TEMP2,
+    AUX1_12V,
+    VCCINT_TEMP = 0x39,
+    PEX_12V_POWER,
+    PEX_3V3_POWER,
+    AUX_3V3_I,
+    VCC1V2_I = 0x3F,
+    V12_IN_I,
+    V12_IN_AUX0_I,
+    V12_IN_AUX1_I,
+    VCCAUX,
+    VCCAUX_PMC,
+    VCCRAM,
+    POWER_GOOD = 0x46,
+    NEW_MAC_SCHEME_ID = 0x4B,
+    HBM_T_1V2 = 0x4C,
+    HBM_B_1V2,
+    VPP_T_2V5,
+    VPP_B_2V5,
+    SENSOR_ID_MAX
+}sensor_id_list;
 
 typedef struct SC_VMC_Data{
-	bool boardInfoStatus;
-	u8   availpower;
-	u8   configmode;
-	u8   fanpresence;
-    u8   modulePresent[CMC_NUM_QSFP_CAGES];
-    u32  modulePresentCount[CMC_NUM_QSFP_CAGES];
-    u16  sensor_values[80];
+    bool boardInfoStatus;
+    u8   availpower;
+    u8   configmode;
+    u8   scVersion[4];
+    u16  sensor_values[SENSOR_ID_MAX];
 }SC_VMC_Data;
 
 

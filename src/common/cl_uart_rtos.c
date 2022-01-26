@@ -253,10 +253,11 @@ static int32_t UART_Config(uart_rtos_handle_t *handle, XUartPsv *UartInstPtr, ui
 	LineCtrlRegister |= XUARTPSV_UARTLCR_PARITY_EVEN;               // Set Even parity
 	LineCtrlRegister |= XUARTPSV_UARTLCR_PARITY_MASK;               // Enable parity
 
-#endif
 	/* Write the line controller register out */
 	XUartPsv_WriteReg(Config->BaseAddress,
-			XUARTPSV_UARTLCR_OFFSET, LineCtrlRegister);
+	             XUARTPSV_UARTLCR_OFFSET, LineCtrlRegister);
+#endif
+
 
 	/* Check hardware build. */
 	Status = XUartPsv_SelfTest(UartInstPtr);
@@ -471,8 +472,12 @@ int32_t UART_RTOS_Receive(uart_rtos_handle_t *handle, uint8_t *buf, uint32_t siz
 	{
 		retVal = UART_ERROR_SEMAPHORE;
 	}
+#ifndef VMC_DEBUG
 	vPortDisableInterrupt(XPAR_XUARTPS_0_INTR);
 	return ret;
+#else
+	return retVal;
+#endif
 }
 
 
@@ -504,7 +509,7 @@ static void UART_Task(void* pvParameters)
 		xil_printf("Uart RTOS Initialization Failed\r\n");
 	}
 
-	//UART_RTOS_Send(uartConf->uartHandler, (u8 *)WELCOME_MSG, strlen(WELCOME_MSG));
+	UART_RTOS_Send(uartConf->uartHandler, (u8 *)WELCOME_MSG, strlen(WELCOME_MSG));
 
 	vTaskSuspend(NULL);
 }

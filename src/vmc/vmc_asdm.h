@@ -68,11 +68,30 @@ typedef enum Asdm_Completion_Code_e
 
   }Asdm_ApiHandle_t;
   */
+typedef struct __attribute__((packed)) Asdm_Sensor_Unit_s
+{
+    u8 sensorUnitTypeLen;
+    char8 *baseUnit;
+}Asdm_Sensor_Unit_t;
+
+typedef struct __attribute__((packed)) Asdm_Sensor_Thresholds_s
+{
+    char8 *sensorName;
+
+    u16 lowerWarnLimit;
+    u16 lowerCritLimit;
+    u16 lowerFatalLimit;
+    u16 upperWarnLimit;
+    u16 upperCritLimit;
+    u16 upperFatalLimit;
+
+}Asdm_Sensor_Thresholds_t;
 
 
 typedef struct __attribute__((packed)) snsrRead_s
 {
-	u8 sensorInstance;
+    u8 sensorInstance;
+    u8 mspSensorIndex;
     u8 snsrValue[4];
     u8 sensorValueSize;
     u8 snsrSatus;
@@ -80,6 +99,7 @@ typedef struct __attribute__((packed)) snsrRead_s
 }snsrRead_t;
 
 typedef s8 (*sensorMonitorFunc)(snsrRead_t *snsrData);
+typedef void (*snsrNameFunc)(u8 index, char8* snsrName, u8* snsrId);
 
 typedef struct __attribute__((packed)) Asdm_SDRCount_s
 {
@@ -94,20 +114,15 @@ typedef struct __attribute__((packed)) Asdm_Sensor_MetaData_s
     char8 sensorName[20];
     u8 snsrValTypeLength;
     u8 *defaultValue;
-    u8 snsrBaseUnitTypeLength;
-    u8 snsrBaseUnit[10];
     s8 snsrUnitModifier;
     u8 supportedThreshold;
 
-    u16 lowerWarnLimit;
-    u16 lowerCritLimit;
-    u16 lowerFatalLimit;
-    u16 upperWarnLimit;
-    u16 upperCritLimit;
-    u16 upperFatalLimit;
-
-    u8 sampleCount;
+    /*Multiple Instance of Similar Sensors */
     u8 sensorInstance;
+    snsrNameFunc getSensorName;
+
+    u8 *sesnorListTbl;
+    u8 sampleCount;
     sensorMonitorFunc monitorFunc;
 
 }Asdm_Sensor_MetaData_t;
@@ -140,7 +155,9 @@ typedef struct __attribute__((packed)) Asdm_SensorRecord_s
     u8 sensor_status;
     u8 * sensorAverageValue;
     u8 * sensorMaxValue;
+
     /* For Internal usage */
+    u8 mspSensorId;
     u32 sampleCount;
     u8 sensorInstance;
     sensorMonitorFunc snsrReadFunc;
@@ -169,6 +186,6 @@ typedef enum Sensor_Status_Enum_e
 }SDR_Sensor_Status_Enum_t;
 
 s8 Init_Asdm();
-s8 Monitor_Sensors(void);
+void Monitor_Sensors(void);
 
 
