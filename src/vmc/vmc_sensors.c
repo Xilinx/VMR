@@ -9,6 +9,7 @@
 #include "cl_uart_rtos.h"
 #include "cl_i2c.h"
 #include "cl_log.h"
+#include "cl_msg.h"
 #include "vmc_api.h"
 #include "sensors/inc/se98a.h"
 #include "sensors/inc/max6639.h"
@@ -16,9 +17,19 @@
 #include "vmc_sensors.h"
 #include "vmc_asdm.h"
 #include "sysmon.h"
+#include "vmc_sc_comms.h"
 
+extern TaskHandle_t xSensorMonTask;
 extern XSysMonPsv InstancePtr;
 extern XScuGic IntcInst;
+
+extern SC_VMC_Data sc_vmc_data;
+
+/*Xgq Msg Handle */
+static u8 xgq_sensor_flag = 0;
+msg_handle_t *sensor_hdl;
+#define EP_RING_BUFFER_BASE     0x38000000
+extern s8 Asdm_Process_Sensor_Request(u8 *req, u8 *resp, u16 *respSize);
 
 #define MAX6639_FAN_TACHO_TO_RPM(x) (8000*60)/(x*2)
 
@@ -167,6 +178,51 @@ s8 Temperature_Read_QSFP(snsrRead_t *snsrData)
 	}
 	return status;
 }
+
+s8 PMBUS_SC_Sensor_Read(snsrRead_t *snsrData)
+{
+    s8 status = XST_FAILURE;
+    u16 sensorReading = 0;
+
+    sensorReading = sc_vmc_data.sensor_values[snsrData->mspSensorIndex];
+    if(sensorReading != 0)
+    {
+        memcpy(&snsrData->snsrValue[0],&sensorReading,sizeof(sensorReading));
+        snsrData->sensorValueSize = sizeof(sensorReading);
+        snsrData->snsrSatus = Vmc_Snsr_State_Normal;
+    }
+    else
+    {
+        memcpy(&snsrData->snsrValue[0],&sensorReading,sizeof(sensorReading));
+        snsrData->snsrSatus = Vmc_Snsr_State_Comms_failure;
+        VMC_DBG("MSP Sensor Id : %d Data read failed \n\r",snsrData->mspSensorIndex);
+    }
+    return status;
+}
+
+s8 Power_Monitor(snsrRead_t *snsrData)
+{
+    s8 status = XST_FAILURE;
+    float totalPower = 0;
+
+    totalPower = (sc_vmc_data.sensor_values[PEX_12V] *
+                        (sc_vmc_data.sensor_values[V12_IN_AUX0_I] +
+                              sc_vmc_data.sensor_values[V12_IN_AUX0_I]));
+    if(totalPower != 0)
+    {
+        memcpy(&snsrData->snsrValue[0],&totalPower,sizeof(totalPower));
+        snsrData->sensorValueSize = sizeof(totalPower);
+        snsrData->snsrSatus = Vmc_Snsr_State_Normal;
+    }
+    else
+    {
+        memcpy(&snsrData->snsrValue[0],&totalPower,sizeof(totalPower));
+        snsrData->snsrSatus = Vmc_Snsr_State_Comms_failure;
+    }
+
+    return status;
+}
+
 void se98a_monitor(void)
 {
 	u8 i = 0;
@@ -261,4 +317,72 @@ void qsfp_monitor(void)
 
 	}
 	return;
+}
+
+static int xgq_sensor_cb(cl_msg_t *msg, void *arg)
+{
+    u32 address = EP_RING_BUFFER_BASE + (u32)msg->data_payload.address;
+    u32 size = msg->data_payload.size;
+    u8 reqBuffer[2] = {0};
+    u8 respBuffer[512] = {0};
+    u16 respSize = 0;
+    s32 ret = 0;
+
+    reqBuffer[0] = msg->log_payload.pid;
+    if(Asdm_Process_Sensor_Request(&reqBuffer[0], &respBuffer[0], &respSize))
+    {
+        VMC_LOG("ERROR: Failed to Process Sensor Request %d", msg->log_payload.pid);
+        ret = -1;
+    }
+    else
+    {
+        if(size < respSize)
+        {
+            VMC_LOG("ERROR: Expected Size %d Actual Size: %d", size, respSize);
+            ret = -1;
+        }
+        else
+        {
+            cl_memcpy_toio8(address, &respBuffer[0], respSize);
+        }
+    }
+
+
+    msg->hdr.rcode = ret;
+    VMC_DBG("complete msg id%d, ret %d", msg->hdr.cid, ret);
+    cl_msg_handle_complete(msg);
+    return 0;
+}
+
+void SensorMonitorTask(void *params)
+{
+    VMC_LOG(" Sensor Monitor Task Created !!!\n\r");
+
+    if (xgq_sensor_flag == 0 &&
+        cl_msg_handle_init(&sensor_hdl, CL_MSG_SENSOR, xgq_sensor_cb, NULL) == 0) {
+        VMC_LOG("init sensor handle done.");
+        xgq_sensor_flag = 1;
+    }
+
+    if(Init_Asdm())
+    {
+         VMC_ERR(" ASDM Init Failed \n\r");
+    }
+
+    for(;;)
+    {
+        /* Read All Sensors */
+        Monitor_Sensors();
+
+#ifdef VMC_TEST
+        se98a_monitor();
+        max6639_monitor();
+        sysmon_monitor();
+        qsfp_monitor ();
+#endif
+        vTaskDelay(200);
+
+    }
+
+    vTaskSuspend(NULL);
 }

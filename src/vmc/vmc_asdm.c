@@ -7,10 +7,37 @@
 #include "vmc_asdm.h"
 #include "cl_log.h"
 #include "vmc_api.h"
+#include "vmc_sc_comms.h"
 #include <semphr.h>
+
+#define ASDM_GET_SDR_SIZE_REQ (0x00)
+
+#define SENSOR_NAME_MAX (30)
+#define SENSOR_TYPE_NUM	(0x0)
+#define SENSOR_TYPE_ASCII	(0xC << 4)
+
+#define SENSOR_SIZE_1B	(0x1)
+#define SENSOR_SIZE_2B	(0x2)
+#define SENSOR_SIZE_4B	(0x4)
+
+#define NO_THRESHOLDS	(0x0)
+#define SNSR_MAX_VAL	(0x1 << 7)
+#define SNSR_AVG_VAL	(0x1 << 6)
+#define HAS_LOWER_THRESHOLDS	(0x7 << 3)
+#define HAS_UPPER_THRESHOLDS	(0x7)
 
 #define LENGTH_BITMASK   (0x3F)
 #define SENSOR_REPOSITORY_REQUEST	(0xF1)
+#define THRESHOLDS_UNSUPPORTED	(0x00)
+
+#define QSFP_MAX_NUM    (2)
+
+#define ASDM_HEADER_VER     (0x1)
+#define NUM_BOARD_INFO_SENSORS  (11)
+#define NUM_TEMPERATURE_SENSORS  (7)
+#define NUM_SC_VOLTAGE_SENSORS  (16)
+#define NUM_SC_CURRENT_SENSORS  (5)
+#define NUM_POWER_SENSORS       (1)
 
 SDR_t *sdrInfo;
 SemaphoreHandle_t sdr_lock;
@@ -23,11 +50,125 @@ extern s8 Temperature_Read_Board(snsrRead_t *snsrData);
 extern s8 Temperature_Read_ACAP_Device_Sysmon(snsrRead_t *snsrData);
 extern s8 Fan_RPM_Read(snsrRead_t *snsrData);
 extern s8 Temperature_Read_QSFP(snsrRead_t *snsrData);
+extern s8 PMBUS_SC_Sensor_Read(snsrRead_t *snsrData);
+extern s8 Power_Monitor(snsrRead_t *snsrData);
+
+Asdm_Sensor_Thresholds_t thresholds_limit_tbl[]= {
+    /*  Name           LW   LC   LF    UW   UC  UF  */
+    { "Inlet Temp",	0,   0,  0,     80,  85, 95 },
+    { "Outlet Temp",	0,   0,  0,     80,  85, 95 },
+    { "Board Temp",	0,   0,  0,     80,  85, 95 },
+    { "Sysmon Temp",	0,   0,  0,     88,  97, 107 },
+    { "QSFP0 Temp",     0,   0,  0,     80,  85, 90 },
+    { "QSFP1 Temp",     0,   0,  0,     80,  85, 90 },
+
+};
+
+Asdm_Sensor_Unit_t sensor_unit_tbl[] = {
+	[BoardInfoSDR]   = { 0x0 , "NA" },
+	[TemperatureSDR] = { 0xC8, "Celsius\0" },
+	[VoltageSDR]     = { 0xC6, "Volts\0" },
+	[CurrentSDR]     = { 0xC5, "Amps\0" },
+	[PowerSDR]       = { 0xC6, "Watts\0" },
+};
+#define THRESHOLD_TBL_SIZE 	(sizeof(thresholds_limit_tbl)/sizeof(thresholds_limit_tbl[0]))
+
+
+void getCurrentNames(u8 index, char8* snsrName, u8 *sensorId)
+{
+    struct sensorData
+    {
+        u8 sensorId;
+        char8 sensorName[SENSOR_NAME_MAX];
+    };
+
+    struct sensorData snsrData[] =    {
+        { VCCINT_I,       "VCCINT_Current\0"   },
+        { VCC1V2_I,       "VCC_1V2_Current\0"  },
+        { PEX_12V_I_IN,   "12V_PEX_Current\0"  },
+        { V12_IN_AUX0_I,  "12V_AUX0_Current\0" },
+        { V12_IN_AUX1_I,  "12V_AUX1_Current\0" },
+    };
+
+    if(NULL != snsrName)
+    {
+        memcpy(snsrName,&snsrData[index].sensorName[0],SENSOR_NAME_MAX);
+    }
+    if(NULL != sensorId)
+    {
+        *sensorId = snsrData[index].sensorId;
+    }
+}
+
+void getVoltagesName(u8 index, char8* snsrName, u8 *sensorId)
+{
+    struct sensorData
+    {
+        u8 sensorId;
+        char8 sensorName[SENSOR_NAME_MAX];
+    };
+
+    struct sensorData voltageData[] =
+    {
+        { PEX_12V,    "PEX_12V\0" },
+        { PEX_3V3,    "PEX_3V3\0" },
+        { AUX_3V3,     "AUX_3V3\0" },
+        { AUX_12V,     "AUX_12V\0" },
+        { AUX1_12V,    "AUX1_12V\0" },
+        { SYS_5V5,     "SYS_5V5\0" },
+        { VCC1V2_TOP,  "VCC1V2_TOP\0" },
+        { VCC1V8,      "VCC1V8\0" },
+        { VCCAUX,      "VCCAUX\0" },
+        { DDR4_VPP_TOP,"DDR4_VPP_TOP\0" },
+        { MGT0V9AVCC,  "MGT0V9AVCC\0" },
+        { VCCAUX_PMC,  "VCCAUX_PMC\0" },
+        { MGTAVTT,     "MGTAVTT\0" },
+        { VCC_3V3,     "VCC_3V3\0" },
+        { VCCINT,      "VCCINT\0" },
+        { VCCRAM,      "VCCRAM\0" },
+    };
+
+    if(NULL != snsrName)
+    {
+        memcpy(snsrName,&voltageData[index].sensorName[0],SENSOR_NAME_MAX);
+    }
+    if(NULL != sensorId)
+    {
+        *sensorId = voltageData[index].sensorId;
+    }
+}
+
+void getQSFPName(u8 index, char8* snsrName, u8 *sensorId)
+{
+    struct sensorData
+    {
+        u8 sensorId;
+        char8 sensorName[SENSOR_NAME_MAX];
+    };
+
+    struct sensorData qsfpData[] =
+    {
+        { CAGE_TEMP0,  "QSFP_TEMP0\0" },
+        { CAGE_TEMP1,  "QSFP_TEMP1\0" }
+    };
+
+    if(NULL != snsrName)
+    {
+        memcpy(snsrName,&qsfpData[index].sensorName[0],SENSOR_NAME_MAX);
+    }
+    if(NULL != sensorId)
+    {
+        *sensorId = qsfpData[index].sensorId;
+    }
+}
 
 Asdm_Header_t asdmHeaderInfo[] = {
     /* Record Type	| Hdr Version | Record Count | NumBytes */
-    {BoardInfoSDR ,  	 	0x1  ,		 0x2, 		0x7f},
-    {TemperatureSDR , 		0x1  ,		 0x6,		0x7f},
+    {BoardInfoSDR ,  	ASDM_HEADER_VER  ,  NUM_BOARD_INFO_SENSORS, 	0x7f},
+    {TemperatureSDR, 	ASDM_HEADER_VER  ,  NUM_TEMPERATURE_SENSORS,	0x7f},
+    {VoltageSDR,  	ASDM_HEADER_VER  ,  NUM_SC_VOLTAGE_SENSORS, 	0x7f},
+    {CurrentSDR, 	ASDM_HEADER_VER  ,  NUM_SC_CURRENT_SENSORS,    0x7f},
+    {PowerSDR, 		ASDM_HEADER_VER  ,  NUM_POWER_SENSORS,	        0x7f},
 };
 
 #define MAX_SDR_REPO 	(sizeof(asdmHeaderInfo)/sizeof(asdmHeaderInfo[0]))
@@ -39,47 +180,85 @@ Asdm_Header_t asdmHeaderInfo[] = {
  * structure.
  * 
  * New sensor to be added based on Repo type sequence i.e, if its a
- * new BoardInfo(0xc0) sensor, that has to be appened before the next
+ * new BoardInfo(0xc0) sensor, that has to be append before the next
  * TemperatureSDR(0xc1) starts.
  *****************************************************************/
 void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
 {
-    u32 snsrDefaultVal = 0x0;
-
-    Asdm_Sensor_MetaData_t snsrMetaData [] = {
+    Asdm_Sensor_MetaData_t snsrMetaData[] = {
 	{
 	    .repoType = BoardInfoSDR,
 	    .sensorName = "Product Name\0",
-	    .snsrValTypeLength = (0xC << 0x4) | sizeof(board_info.product_name),
+	    .snsrValTypeLength = SENSOR_TYPE_ASCII | sizeof(board_info.product_name),
 	    .defaultValue = &board_info.product_name[0],
-	    .snsrBaseUnitTypeLength = 00,
-	    .snsrUnitModifier = 0x0,
-	    .supportedThreshold = 0,
-	    .snsrBaseUnit = "NA",
-	    .supportedThreshold = 0x0,
-	    .sampleCount = 0x0,
 	},
 	{
 	    .repoType = BoardInfoSDR,
 	    .sensorName = "Board Serial\0",
-	    .snsrValTypeLength = (0xC << 0x4) | sizeof(board_info.board_serial),
+	    .snsrValTypeLength = SENSOR_TYPE_ASCII | sizeof(board_info.board_serial),
 	    .defaultValue = &board_info.board_serial[0],
-	    .snsrBaseUnitTypeLength = 0x00,
-	    .snsrUnitModifier = 0x0,
-	    .supportedThreshold = 0,
-	    .sampleCount = 0x0,
+	},
+	{
+	    .repoType = BoardInfoSDR,
+	    .sensorName = "Board Part Num\0",
+	    .snsrValTypeLength = SENSOR_TYPE_ASCII | sizeof(board_info.board_part_num),
+	    .defaultValue = &board_info.board_part_num[0],
+	},
+	{
+	    .repoType = BoardInfoSDR,
+	    .sensorName = "Board Revision\0",
+	    .snsrValTypeLength = SENSOR_TYPE_ASCII | sizeof(board_info.board_rev),
+	    .defaultValue = &board_info.board_rev[0],
+	},
+	{
+	    .repoType = BoardInfoSDR,
+	    .sensorName = "Board MFG Date\0",
+	    .snsrValTypeLength = SENSOR_TYPE_NUM | sizeof(board_info.board_mfg_date),
+	    .defaultValue = &board_info.board_mfg_date[0],
+	},
+	{
+	    .repoType = BoardInfoSDR,
+	    .sensorName = "PCIE Info\0",
+	    .snsrValTypeLength = SENSOR_TYPE_NUM | sizeof(board_info.board_pcie_info),
+	    .defaultValue = &board_info.board_pcie_info[0],
+	},
+	{
+	    .repoType = BoardInfoSDR,
+	    .sensorName = "UUID\0",
+	    .snsrValTypeLength = SENSOR_TYPE_NUM | sizeof(board_info.board_uuid),
+	    .defaultValue = &board_info.board_uuid[0],
+	},
+	{
+	    .repoType = BoardInfoSDR,
+	    .sensorName = "MAC 0\0",
+	    .snsrValTypeLength = SENSOR_TYPE_NUM | sizeof(board_info.board_mac[0]),
+	    .defaultValue = board_info.board_mac[0],
+	},
+	{
+        .repoType = BoardInfoSDR,
+        .sensorName = "MAC 1\0",
+        .snsrValTypeLength = SENSOR_TYPE_NUM | sizeof(board_info.board_mac[1]),
+        .defaultValue = board_info.board_mac[1],
+    },
+    {
+        .repoType = BoardInfoSDR,
+        .sensorName = "Fan Presence\0",
+        .snsrValTypeLength = SENSOR_TYPE_ASCII | sizeof(board_info.board_act_pas),
+        .defaultValue = &board_info.board_act_pas[0],
+    },
+	{
+	    .repoType = BoardInfoSDR,
+	    .sensorName = "OEM ID\0",
+	    .snsrValTypeLength = SENSOR_TYPE_NUM | sizeof(board_info.OEM_ID),
+	    .defaultValue = &board_info.OEM_ID[0],
 	},
 	{
 	    .repoType = TemperatureSDR,
 	    .sensorName = "Inlet Temp\0",
-	    .snsrValTypeLength = 0x01,
-	    .snsrBaseUnitTypeLength = 0xC8,
-	    .snsrBaseUnit = "Celcius\0",
+	    .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_2B,
 	    .snsrUnitModifier = 0x0,
-	    .supportedThreshold = 0xC7,
-	    .upperWarnLimit = 80,
-	    .upperCritLimit = 85,
-	    .upperFatalLimit = 95,
+	    .supportedThreshold = SNSR_MAX_VAL | SNSR_MAX_VAL | HAS_UPPER_THRESHOLDS,
+	    .sesnorListTbl = (u8 *) SE98_TEMP0,
 	    .sampleCount = 0x1,
 	    .monitorFunc = &Temperature_Read_Inlet,
 
@@ -87,92 +266,87 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
 	{
 	    .repoType = TemperatureSDR,
 	    .sensorName = "Outlet Temp\0",
-	    .snsrValTypeLength = 0x01,
-	    .snsrBaseUnitTypeLength = 0xC8,
-	    .snsrBaseUnit = "Celcius\0",
+	    .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_2B,
 	    .snsrUnitModifier = 0x0,
-	    .supportedThreshold = 0xC7,
-	    .upperWarnLimit = 80,
-	    .upperCritLimit = 85,
-	    .upperFatalLimit = 95,
+	    .supportedThreshold = SNSR_MAX_VAL | SNSR_MAX_VAL | HAS_UPPER_THRESHOLDS,
 	    .sampleCount = 0x1,
+	    .sesnorListTbl = (u8 *) SE98_TEMP1,
 	    .monitorFunc = &Temperature_Read_Outlet,
 	},
 	{
 	    .repoType = TemperatureSDR,
 	    .sensorName = "Board Temp\0",
-	    .snsrValTypeLength = 0x04,
-	    .snsrBaseUnitTypeLength = 0xC8,
-	    .snsrBaseUnit = "Celcius\0",
+	    .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_4B,
 	    .snsrUnitModifier = 0x0,
-	    .supportedThreshold = 0xC7,
-	    .upperWarnLimit = 80,
-	    .upperCritLimit = 85,
-	    .upperFatalLimit = 95,
+	    .supportedThreshold = SNSR_MAX_VAL | SNSR_MAX_VAL | HAS_UPPER_THRESHOLDS,
 	    .sampleCount = 0x1,
+	    .sesnorListTbl = (u8 *) FAN_TEMP,
 	    .monitorFunc = &Temperature_Read_Board,
 	},
-	/*{
-	    .repoType = TemperatureSDR,
-	    .sensorName = "Fan RPM\0",
-	    .snsrValTypeLength = 0x02,
-	    .snsrBaseUnitTypeLength = 0xC4,
-	    .snsrBaseUnit = "RPM\0",
-	    .snsrUnitModifier = 0x0,
-	    .supportedThreshold = 0x00,
-	    .sampleCount = 0x1,
-	    .mointorFunc = &Fan_RPM_Read,
-	},*/
 	{
 	    .repoType = TemperatureSDR,
 	    .sensorName = "Sysmon Temp\0",
-	    .snsrValTypeLength = 0x04,
-	    .snsrBaseUnitTypeLength = 0xC8,
-	    .snsrBaseUnit = "Celcius\0",
+	    .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_4B,
 	    .snsrUnitModifier = 0x0,
-	    .supportedThreshold = 0xC7,
-	    .upperWarnLimit = 88,
-	    .upperCritLimit = 97,
-	    .upperFatalLimit = 107,
+	    .supportedThreshold = SNSR_MAX_VAL | SNSR_MAX_VAL | HAS_UPPER_THRESHOLDS,
 	    .sampleCount = 0x1,
+	    .sesnorListTbl = (u8 *) FPGA_TEMP,
 	    .monitorFunc = &Temperature_Read_ACAP_Device_Sysmon,
 	},
 	{
 	    .repoType = TemperatureSDR,
-	    .sensorName = "QSFP0 Temp\0",
-	    .snsrValTypeLength = 0x04,
-	    .snsrBaseUnitTypeLength = 0xC8,
-	    .snsrBaseUnit = "Celcius\0",
+	    .getSensorName = &getQSFPName,
+	    .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_4B,
 	    .snsrUnitModifier = 0x0,
-	    .supportedThreshold = 0xC7,
-	    .upperWarnLimit = 80,
-	    .upperCritLimit = 85,
-	    .upperFatalLimit = 90,
+	    .supportedThreshold = SNSR_MAX_VAL | SNSR_MAX_VAL | HAS_UPPER_THRESHOLDS,
 	    .sampleCount = 0x1,
-		.sensorInstance = 1,
+	    .sensorInstance = QSFP_MAX_NUM,
+            .sesnorListTbl = (u8 *) CAGE_TEMP0,
 	    .monitorFunc = &Temperature_Read_QSFP,
 	},
 	{
 	    .repoType = TemperatureSDR,
-	    .sensorName = "QSFP1 Temp\0",
-	    .snsrValTypeLength = 0x04,
-	    .snsrBaseUnitTypeLength = 0xC8,
-	    .snsrBaseUnit = "Celcius\0",
-	    .snsrUnitModifier = 0x0,
-	    .supportedThreshold = 0xC7,
-	    .upperWarnLimit = 80,
-	    .upperCritLimit = 85,
-	    .upperFatalLimit = 90,
+	    .sensorName = "Fan RPM\0",
+	    .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_2B,
+	    .supportedThreshold = SNSR_MAX_VAL | SNSR_MAX_VAL,
 	    .sampleCount = 0x1,
-		.sensorInstance = 2,
-	    .monitorFunc = &Temperature_Read_QSFP,
+	    .monitorFunc = &Fan_RPM_Read,
+        },
+	{
+	    .repoType = VoltageSDR,
+	    .getSensorName = &getVoltagesName,
+	    .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_2B,
+	    .snsrUnitModifier = -3,
+	    .supportedThreshold = SNSR_MAX_VAL | SNSR_MAX_VAL ,
+	    .sampleCount = 0x1,
+	    .sensorInstance = NUM_SC_VOLTAGE_SENSORS,
+	    .monitorFunc = &PMBUS_SC_Sensor_Read,
+	},
+	{
+	    .repoType = CurrentSDR,
+	    .getSensorName = &getCurrentNames,
+	    .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_2B,
+	    .snsrUnitModifier = -3,
+	    .supportedThreshold = SNSR_MAX_VAL | SNSR_MAX_VAL ,
+	    .sampleCount = 0x1,
+	    .sensorInstance = NUM_SC_CURRENT_SENSORS,
+	    .monitorFunc = &PMBUS_SC_Sensor_Read,
+	},
+	{
+	    .repoType = PowerSDR,
+	    .sensorName = "Total Power\0",
+	    .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_4B,
+	    .snsrUnitModifier = 0,
+	    .supportedThreshold = SNSR_MAX_VAL | SNSR_MAX_VAL ,
+	    .sampleCount = 0x1,
+	    .monitorFunc = &Power_Monitor,
 	},
     };
 
     /* Get Record Count */
     *sdrMetaDataCount = (sizeof(snsrMetaData) / sizeof(snsrMetaData[0]));
 
-    *pMetaData = (Asdm_Sensor_MetaData_t *) pvPortMalloc( sizeof(Asdm_Sensor_MetaData_t) * (*sdrMetaDataCount));
+    *pMetaData = (Asdm_Sensor_MetaData_t *) malloc( sizeof(Asdm_Sensor_MetaData_t) * (*sdrMetaDataCount));
 
     if(*pMetaData != NULL)
     {
@@ -181,9 +355,23 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
     }
     else
     {
-	VMC_ERR(" pvPortMalloc Failed\n\r");
+	VMC_ERR(" malloc Failed\n\r");
 	return;
     }
+}
+
+u8 getThresholdIdx(u8 *threshIdx,char8 *snsrName,u8 snsrNameLen)
+{
+	u8 i=0;
+	for(i=0; i<THRESHOLD_TBL_SIZE; i++)
+	{
+		if(!strncmp(snsrName,thresholds_limit_tbl[i].sensorName,snsrNameLen-2))
+		{
+			*threshIdx = i;
+			break;
+		}
+	}
+	return 0;
 }
 
 u8 isRepoTypeSupported(u32 sensorType)
@@ -281,6 +469,7 @@ s8 Init_Asdm()
     u8 sdrCount = 0;
     u16 allocateSize = 0;
     u8 snsrNameLen = 0;
+    char8 snsrName[SENSOR_NAME_MAX] = {0};
     u8 snsrValueLen = 0;
     u8 baseUnitLen = 0;
     u16 sdrMetaDataCount = 0;
@@ -288,6 +477,10 @@ s8 Init_Asdm()
     Asdm_Sensor_MetaData_t *pSdrMetaData = NULL;
     u16 idx = 0;
     u8 byteCount = 0;
+    u8 threshIdx = 0;
+    u8 currentRepoType = 0;
+    u8 totalSensorInstances = 0;
+    u8 sensorInstance = 0;
 
     /* Fetch the ASDM SDR Repository */
     getSDRMetaData(&pSdrMetaData, &sdrMetaDataCount);
@@ -303,7 +496,7 @@ s8 Init_Asdm()
     {
 	/* LoG Error, don't proceed for Init */
 	VMC_ERR("Records Count Mismatch  !!!\n\r");
-	return -1;
+	//return -1;
     }
 
     /* for future use */
@@ -312,7 +505,7 @@ s8 Init_Asdm()
     if(pSdrMetaData != NULL)
     {
 	/* Allocate Memory for Number of Repo Type */
-	sdrInfo = (SDR_t *) pvPortMalloc(MAX_SDR_REPO * sizeof(SDR_t));
+	sdrInfo = (SDR_t *) malloc(MAX_SDR_REPO * sizeof(SDR_t));
 	if(sdrInfo == NULL)
 	{
 	    VMC_ERR("Failed to allocate Memory for SDR !!!\n\r");
@@ -330,7 +523,7 @@ s8 Init_Asdm()
 
 	    /* Based on Number of Records allocate memory of Sensor Records*/
 	    allocateSize = sizeof(Asdm_SensorRecord_t) * asdmHeaderInfo[sdrCount].no_of_records;
-	    sdrInfo[sdrCount].sensorRecord = (Asdm_SensorRecord_t *)pvPortMalloc(allocateSize);
+	    sdrInfo[sdrCount].sensorRecord = (Asdm_SensorRecord_t *)malloc(allocateSize);
 	    if(NULL == sdrInfo[sdrCount].sensorRecord)
 	    {
 		VMC_ERR("Failed to allocate Memory for SDR Record !!!\n\r");
@@ -340,11 +533,21 @@ s8 Init_Asdm()
 	    memset(sdrInfo[sdrCount].sensorRecord,0x00,allocateSize);
 
 	    Asdm_SensorRecord_t *tmp = sdrInfo[sdrCount].sensorRecord;
+	    currentRepoType = asdmHeaderInfo[sdrCount].repository_type;
 
 	    byteCount = 0;
-	    /* Initialize each Sensor Info */
-	    for(idx = 0; idx < asdmHeaderInfo[sdrCount].no_of_records; idx++)
+	    /* Initialize each Sensor Info, idx incremented below */
+	    for(idx = 0; idx < asdmHeaderInfo[sdrCount].no_of_records; )
 	    {
+		totalSensorInstances = pSdrMetaData[totalRecords].sensorInstance;
+		/* By default totalSensorInstance is considered as 1,
+		 * even if its uninitialized
+		 */
+		totalSensorInstances = (totalSensorInstances <= 1) ? 1 : totalSensorInstances;
+		/* If Sensor Instance > 1, initialize it in loop */
+		sensorInstance = 0;
+		while(sensorInstance < totalSensorInstances)
+		{
 		/* Assign  the Sensor Id Count for this RepoType  */
 		tmp[idx].sensor_id = idx + 1;
 		byteCount += sizeof(tmp[idx].sensor_id);
@@ -352,17 +555,32 @@ s8 Init_Asdm()
 		/* Sensor Name
 		 * Based on Name Type and Length allocate Memory for Sensor Name
 		 */
-
-		snsrNameLen = strlen(pSdrMetaData[totalRecords].sensorName) + 1;
-		tmp[idx].sensor_name_type_length = (0xC << 4) | (snsrNameLen & LENGTH_BITMASK);
+		if(totalSensorInstances > 1)
+		{
+		    memset(snsrName,0x00,SENSOR_NAME_MAX);
+		    pSdrMetaData[totalRecords].getSensorName(sensorInstance,snsrName, &tmp[sensorInstance].mspSensorId);
+		    snsrNameLen = strlen(snsrName) + 1;
+		}
+		else
+		{
+		    snsrNameLen = strlen(pSdrMetaData[totalRecords].sensorName) + 1;
+		}
+		tmp[idx].sensor_name_type_length = SENSOR_TYPE_ASCII | (snsrNameLen & LENGTH_BITMASK);
 		byteCount += sizeof(tmp[idx].sensor_name_type_length);
 
-		tmp[idx].sensor_name = (char8 *) pvPortMalloc(snsrNameLen);
+		tmp[idx].sensor_name = (char8 *) malloc(snsrNameLen);
 		if(NULL != tmp[idx].sensor_name)
 		{
 		    memset(tmp[idx].sensor_name, 0x00, snsrNameLen);
-		    memcpy(tmp[idx].sensor_name,
-			    pSdrMetaData[totalRecords].sensorName, snsrNameLen);
+		    if(totalSensorInstances > 1)
+		    {
+		       memcpy(tmp[idx].sensor_name,snsrName,snsrNameLen);
+		    }
+		    else
+		    {
+		        memcpy(tmp[idx].sensor_name,
+		            pSdrMetaData[totalRecords].sensorName, snsrNameLen);
+		    }
 		}
 		else
 		{
@@ -380,7 +598,7 @@ s8 Init_Asdm()
 
 
 		/* Only allocate the Memory, Value will be updated while Monitoring */
-		tmp[idx].sensor_value = (u8 *) pvPortMalloc(snsrValueLen);
+		tmp[idx].sensor_value = (u8 *) malloc(snsrValueLen);
 		if(NULL != tmp[idx].sensor_value)
 		{
 		    memset(tmp[idx].sensor_value, 0x00, snsrValueLen);
@@ -395,19 +613,19 @@ s8 Init_Asdm()
 		byteCount += snsrValueLen;
 
 		/* Sensor Units */
-		tmp[idx].sensor_base_unit_type_length = pSdrMetaData[totalRecords].snsrBaseUnitTypeLength;
+		tmp[idx].sensor_base_unit_type_length = sensor_unit_tbl[currentRepoType].sensorUnitTypeLen;
 		byteCount += sizeof(tmp[idx].sensor_base_unit_type_length);
 
-		if(pSdrMetaData[totalRecords].snsrBaseUnitTypeLength != 0)
+		if(tmp[idx].sensor_base_unit_type_length != 0)
 		{
-		    baseUnitLen = (pSdrMetaData[totalRecords].snsrBaseUnitTypeLength & LENGTH_BITMASK);
+		    baseUnitLen = (tmp[idx].sensor_base_unit_type_length & LENGTH_BITMASK);
 
-		    tmp[idx].sensor_base_unit = (u8 *) pvPortMalloc(baseUnitLen);
+		    tmp[idx].sensor_base_unit = (u8 *) malloc(baseUnitLen);
 		    if(NULL != tmp[idx].sensor_base_unit)
 		    {
 			memset(tmp[idx].sensor_base_unit, 0x00, baseUnitLen);
 			memcpy(tmp[idx].sensor_base_unit,
-				pSdrMetaData[totalRecords].snsrBaseUnit, baseUnitLen);
+					sensor_unit_tbl[currentRepoType].baseUnit, baseUnitLen);
 		    }
 		    else
 		    {
@@ -423,91 +641,97 @@ s8 Init_Asdm()
 
 		/* Sensor Threshold support byte */
 		tmp[idx].threshold_support_byte = pSdrMetaData[totalRecords].supportedThreshold;
-		byteCount += sizeof(tmp[idx].threshold_support_byte) ;
+		byteCount += sizeof(tmp[idx].threshold_support_byte);
 
-		/* Allocate the Supported Thresholds */
-		if(tmp[idx].threshold_support_byte & Lower_Fatal_Threshold)
+		/* Do not bother to check for BOARD INFO Sensor */
+		if(sdrInfo[sdrCount].header.repository_type != BoardInfoSDR)
 		{
-		    tmp[idx].lower_fatal_limit = (u8 *) pvPortMalloc(snsrValueLen);
-		    if(NULL == tmp[idx].lower_fatal_limit)
-		    {
-			/* LOG Error and return */
-			VMC_ERR("Failed to allocate Memory for lower_fatal_limit !!!\n\r");
-			return -1;
-		    }
-		    memset(tmp[idx].lower_fatal_limit,0x00, snsrValueLen);
-		    memcpy(tmp[idx].lower_fatal_limit,&pSdrMetaData[totalRecords].lowerFatalLimit,snsrValueLen);
-		    byteCount += snsrValueLen;
-		}
+			getThresholdIdx(&threshIdx, tmp[idx].sensor_name, snsrNameLen);
 
-		if(tmp[idx].threshold_support_byte & Lower_Critical_Threshold)
-		{
-		    tmp[idx].lower_critical_limit = (u8 *) pvPortMalloc(snsrValueLen);
-		    if(NULL == tmp[idx].lower_critical_limit)
-		    {
-			/* LOG Error and return */
-			VMC_ERR("Failed to allocate Memory for lower_critical_limit !!!\n\r");
-			return -1;
-		    }
-		    memset(tmp[idx].lower_critical_limit,0x00, snsrValueLen);
-		    memcpy(tmp[idx].lower_critical_limit,&pSdrMetaData[totalRecords].lowerCritLimit,snsrValueLen);
-		    byteCount += snsrValueLen;
-		}
+			/* Allocate the Supported Thresholds */
+			if(tmp[idx].threshold_support_byte & Lower_Fatal_Threshold)
+			{
+				tmp[idx].lower_fatal_limit = (u8 *) malloc(snsrValueLen);
+				if(NULL == tmp[idx].lower_fatal_limit)
+				{
+					/* LOG Error and return */
+					VMC_ERR("Failed to allocate Memory for lower_fatal_limit !!!\n\r");
+					return -1;
+				}
+				memset(tmp[idx].lower_fatal_limit,0x00, snsrValueLen);
+				memcpy(tmp[idx].lower_fatal_limit,&thresholds_limit_tbl[threshIdx].lowerFatalLimit,snsrValueLen);
+				byteCount += snsrValueLen;
+			}
 
-		if(tmp[idx].threshold_support_byte & Lower_Warning_Threshold)
-		{
-		    tmp[idx].lower_warning_limit = (u8 *) pvPortMalloc(snsrValueLen);
-		    if(NULL == tmp[idx].lower_warning_limit)
-		    {
-			/* LOG Error and return */
-			VMC_ERR("Failed to allocate Memory for lower_warning_limit !!!\n\r");
-			return -1;
-		    }
-		    memset(tmp[idx].lower_warning_limit,0x00, snsrValueLen);
-		    memcpy(tmp[idx].lower_warning_limit,&pSdrMetaData[totalRecords].lowerWarnLimit,snsrValueLen);
-		    byteCount += snsrValueLen;
-		}
+			if(tmp[idx].threshold_support_byte & Lower_Critical_Threshold)
+			{
+				tmp[idx].lower_critical_limit = (u8 *) malloc(snsrValueLen);
+				if(NULL == tmp[idx].lower_critical_limit)
+				{
+					/* LOG Error and return */
+					VMC_ERR("Failed to allocate Memory for lower_critical_limit !!!\n\r");
+					return -1;
+				}
+				memset(tmp[idx].lower_critical_limit,0x00, snsrValueLen);
+				memcpy(tmp[idx].lower_critical_limit,&thresholds_limit_tbl[threshIdx].lowerCritLimit,snsrValueLen);
+				byteCount += snsrValueLen;
+			}
 
-		if(tmp[idx].threshold_support_byte & Upper_Fatal_Threshold)
-		{
-		    tmp[idx].upper_fatal_limit = (u8 *) pvPortMalloc(snsrValueLen);
-		    if(NULL == tmp[idx].upper_fatal_limit)
-		    {
-			/* LOG Error and return */
-			VMC_ERR("Failed to allocate Memory for upper_fatal_limit !!!\n\r");
-			return -1;
-		    }
-		    memset(tmp[idx].upper_fatal_limit,0x00, snsrValueLen);
-		    memcpy(tmp[idx].upper_fatal_limit, &pSdrMetaData[totalRecords].upperFatalLimit, snsrValueLen);
-		    byteCount += snsrValueLen;
-		}
+			if(tmp[idx].threshold_support_byte & Lower_Warning_Threshold)
+			{
+				tmp[idx].lower_warning_limit = (u8 *) malloc(snsrValueLen);
+				if(NULL == tmp[idx].lower_warning_limit)
+				{
+					/* LOG Error and return */
+					VMC_ERR("Failed to allocate Memory for lower_warning_limit !!!\n\r");
+					return -1;
+				}
+				memset(tmp[idx].lower_warning_limit,0x00, snsrValueLen);
+				memcpy(tmp[idx].lower_warning_limit,&thresholds_limit_tbl[threshIdx].lowerWarnLimit,snsrValueLen);
+				byteCount += snsrValueLen;
+			}
 
-		if(tmp[idx].threshold_support_byte & Upper_Critical_Threshold)
-		{
-		    tmp[idx].upper_critical_limit = (u8 *) pvPortMalloc(snsrValueLen);
-		    if(NULL == tmp[idx].upper_critical_limit)
-		    {
-			/* LOG Error and return */
-			VMC_ERR("Failed to allocate Memory for upper_critical_limit !!!\n\r");
-			return -1;
-		    }
-		    memset(tmp[idx].upper_critical_limit,0x00, snsrValueLen);
-		    memcpy(tmp[idx].upper_critical_limit, &pSdrMetaData[totalRecords].upperCritLimit, snsrValueLen);
-		    byteCount += snsrValueLen;
-		}
+			if(tmp[idx].threshold_support_byte & Upper_Fatal_Threshold)
+			{
+				tmp[idx].upper_fatal_limit = (u8 *) malloc(snsrValueLen);
+				if(NULL == tmp[idx].upper_fatal_limit)
+				{
+					/* LOG Error and return */
+					VMC_ERR("Failed to allocate Memory for upper_fatal_limit !!!\n\r");
+					return -1;
+				}
+				memset(tmp[idx].upper_fatal_limit,0x00, snsrValueLen);
+				memcpy(tmp[idx].upper_fatal_limit, &thresholds_limit_tbl[threshIdx].upperFatalLimit, snsrValueLen);
+				byteCount += snsrValueLen;
+			}
 
-		if(tmp[idx].threshold_support_byte & Upper_Warning_Threshold)
-		{
-		    tmp[idx].upper_warning_limit = (u8 *) pvPortMalloc(snsrValueLen);
-		    if(NULL == tmp[idx].upper_warning_limit)
-		    {
-			/* LOG Error and return */
-			VMC_ERR("Failed to allocate Memory for upper_warning_limit !!!\n\r");
-			return -1;
-		    }
-		    memset(tmp[idx].upper_warning_limit,0x00, snsrValueLen);
-		    memcpy(tmp[idx].upper_warning_limit, &pSdrMetaData[totalRecords].upperWarnLimit, snsrValueLen);
-		    byteCount += snsrValueLen;
+			if(tmp[idx].threshold_support_byte & Upper_Critical_Threshold)
+			{
+				tmp[idx].upper_critical_limit = (u8 *) malloc(snsrValueLen);
+				if(NULL == tmp[idx].upper_critical_limit)
+				{
+					/* LOG Error and return */
+					VMC_ERR("Failed to allocate Memory for upper_critical_limit !!!\n\r");
+					return -1;
+				}
+				memset(tmp[idx].upper_critical_limit,0x00, snsrValueLen);
+				memcpy(tmp[idx].upper_critical_limit, &thresholds_limit_tbl[threshIdx].upperCritLimit, snsrValueLen);
+				byteCount += snsrValueLen;
+			}
+
+			if(tmp[idx].threshold_support_byte & Upper_Warning_Threshold)
+			{
+				tmp[idx].upper_warning_limit = (u8 *) malloc(snsrValueLen);
+				if(NULL == tmp[idx].upper_warning_limit)
+				{
+					/* LOG Error and return */
+					VMC_ERR("Failed to allocate Memory for upper_warning_limit !!!\n\r");
+					return -1;
+				}
+				memset(tmp[idx].upper_warning_limit,0x00, snsrValueLen);
+				memcpy(tmp[idx].upper_warning_limit, &thresholds_limit_tbl[threshIdx].upperWarnLimit, snsrValueLen);
+				byteCount += snsrValueLen;
+			}
 		}
 
 		/* Sensor Status */
@@ -520,7 +744,7 @@ s8 Init_Asdm()
 		/* Sample Count > 0, for only for Dynamic sensors */
 		if( pSdrMetaData[totalRecords].sampleCount > 0)
 		{
-		    tmp[idx].sensorMaxValue = (u8 *) pvPortMalloc(snsrValueLen);
+		    tmp[idx].sensorMaxValue = (u8 *) malloc(snsrValueLen);
 		    if(NULL == tmp[idx].sensorMaxValue)
 		    {
 			/* LOG Error and return */
@@ -530,7 +754,7 @@ s8 Init_Asdm()
 		    memset(tmp[idx].sensorMaxValue,0x00, snsrValueLen);
 		    byteCount += snsrValueLen;
 
-		    tmp[idx].sensorAverageValue = (u8 *) pvPortMalloc(snsrValueLen);
+		    tmp[idx].sensorAverageValue = (u8 *) malloc(snsrValueLen);
 		    if(NULL == tmp[idx].sensorAverageValue)
 		    {
 			/* LOG Error and return */
@@ -542,11 +766,22 @@ s8 Init_Asdm()
 		}
 
 		tmp[idx].sensorInstance = pSdrMetaData[totalRecords].sensorInstance;
+		/* Assign the Sensor ID Mapped to external  MSP (Internal)*/
+		if(totalSensorInstances > 1)
+		{
+		    /* Gets updated during Sensor Name initialization */
+		}
+		else
+		{
+		    tmp[idx].mspSensorId = (u8) pSdrMetaData[totalRecords].sesnorListTbl;
+		}
 
 		/* Update the Monitor Function for the Sensor (Internal)*/
 		tmp[idx].snsrReadFunc = pSdrMetaData[totalRecords].monitorFunc;
 
-
+		idx++;
+		sensorInstance++;
+		}
 		/* One Record is initialized, move to the Next SDRMetaData */
 		totalRecords++;
 
@@ -565,7 +800,7 @@ s8 Init_Asdm()
 	    sdrInfo[sdrCount].header.no_of_bytes = (byteCount/8);
 	}
 
-	vPortFree(pSdrMetaData);
+	free(pSdrMetaData);
     }
     else
     {
@@ -611,12 +846,12 @@ s8 Asdm_Get_SDR_Size(u8 *req, u8 *resp, u16 *respSize)
     sdrIndex = getSDRIndex(req[1]);
 
     /*Fill the Completion Code */
-    resp[0] = 0x00;
-    *respSize++;
+    resp[0] = Asdm_CC_Operation_Success;
+    *respSize += sizeof(u8);
 
     /*Fill the Repo Type */
     resp[1] = req[1];
-    *respSize++;
+    *respSize += sizeof(u8);
 
     /* Fill the Size of the SDR */
     sdrSize = sizeof(Asdm_Header_t) + (sdrInfo[sdrIndex].header.no_of_bytes * 8)
@@ -766,7 +1001,6 @@ s8 Asdm_Get_Sensor_Repository(u8 *req, u8 *resp, u16 *respSize)
 
 s8 Asdm_Get_Sensor_Value(u8 *req, u8 *resp, u16 *respSize)
 {
-    s8 retStatus = -1;
     u8 sdrIndex = 0;
     u8 snsrIndex = 0;
     u8 snsrValueLen = 0;
@@ -836,7 +1070,12 @@ s8 Asdm_Process_Sensor_Request(u8 *req, u8 *resp, u16 *respSize)
         return -1;
     }
 
-    if(!isRepoTypeSupported((u32) req[0]))
+    if(req[0] == ASDM_GET_SDR_SIZE_REQ)
+    {
+        return Asdm_Get_SDR_Size(req, resp, respSize);
+    }
+
+    else if(!isRepoTypeSupported((u32) req[0]))
     {
         resp[0] = Asdm_CC_Not_Available;
         resp[1] = req[0];
@@ -845,20 +1084,13 @@ s8 Asdm_Process_Sensor_Request(u8 *req, u8 *resp, u16 *respSize)
     }
     else
     {
-        if(req[0] == 0x00)
+        if(req[1] == SENSOR_REPOSITORY_REQUEST)
         {
-            return Asdm_Get_SDR_Size(req, resp, respSize);
+            return Asdm_Get_Sensor_Repository(req, resp, respSize);
         }
         else
         {
-            if(req[1] == SENSOR_REPOSITORY_REQUEST)
-            {
-                return Asdm_Get_Sensor_Repository(req, resp, respSize);
-            }
-            else
-            {
-                return Asdm_Get_Sensor_Value(req, resp, respSize);
-            }
+            return Asdm_Get_Sensor_Value(req, resp, respSize);
         }
     }
 }
@@ -872,7 +1104,7 @@ s8 Asdm_Process_Sensor_Request(u8 *req, u8 *resp, u16 *respSize)
  * global SDR record for external consumption
  *******************************************************************/
 
-s8 Monitor_Sensors(void)
+void Monitor_Sensors(void)
 {
     snsrRead_t snsrData = {0};
     u8 idx = 0;
@@ -894,6 +1126,7 @@ s8 Monitor_Sensors(void)
 					memset(&snsrData, 0x00, sizeof(snsrRead_t));
 
 					snsrData.sensorInstance = sensorRecord[idx].sensorInstance;
+					snsrData.mspSensorIndex = sensorRecord[idx].mspSensorId;
 
 					sensorRecord[idx].snsrReadFunc(&snsrData);
 
@@ -929,6 +1162,7 @@ void AsdmSensor_Display(void)
     VMC_PRNT("------------------------------------------------------------------\n\r");
     u8 idx = 0;
     u8 sdrIndex = 0;
+    u8 stringCount = 0;
 
     VMC_PRNT("|   Sensor Name    |   Value     | Status |    Max    |   Average | \n\r");
     for(sdrIndex = 0; sdrIndex < MAX_SDR_REPO ; sdrIndex++)
@@ -943,12 +1177,28 @@ void AsdmSensor_Display(void)
 	    {
 		if(sensorRecord[idx].sampleCount < 1)
 		{
-			VMC_PRNT(" %s		%s	%s	NA	NA \n\r",(sensorRecord[idx].sensor_name),
-				(sensorRecord[idx].sensor_value),
-				((sensorRecord[idx].sensor_status == Vmc_Snsr_State_Normal)
-				 ? "Ok":"Error"));
+			if(sensorRecord[idx].sensor_value_type_length & SENSOR_TYPE_ASCII)
+			{
+				VMC_PRNT(" %s		%s	%s	NA	NA \n\r",(sensorRecord[idx].sensor_name),
+					(sensorRecord[idx].sensor_value),
+					((sensorRecord[idx].sensor_status == Vmc_Snsr_State_Normal)
+					 ? "Ok":"Error"));
+			}
+			else
+			{
+				u8 stringLen = (sensorRecord[idx].sensor_value_type_length & LENGTH_BITMASK);
+				VMC_PRNT(" %s		",(sensorRecord[idx].sensor_name),
+					((sensorRecord[idx].sensor_status == Vmc_Snsr_State_Normal)
+					? "Ok":"Error"));
+				for(stringCount = 0; stringCount< stringLen ; stringCount++)
+				{
+					VMC_PRNT("%x",sensorRecord[idx].sensor_value[stringCount]);
+				}
+				VMC_PRNT("	%s	NA	NA \n\r",					((sensorRecord[idx].sensor_status == Vmc_Snsr_State_Normal)
+					? "Ok":"Error"));
+			}
 		}
-		else if((sensorRecord[idx].sensor_value_type_length & 0x3F) < 4)
+		else if((sensorRecord[idx].sensor_value_type_length & LENGTH_BITMASK) < 4)
 		{
 			VMC_PRNT(" %s		%d		%s	%d	%d \n\r",(sensorRecord[idx].sensor_name),
 				*((u16 *)sensorRecord[idx].sensor_value),
@@ -956,7 +1206,7 @@ void AsdmSensor_Display(void)
 				*((u16 *)(sensorRecord[idx].sensorMaxValue)),
 				*((u16 *)(sensorRecord[idx].sensorAverageValue)));
 		}
-		else if((sensorRecord[idx].sensor_value_type_length & 0x3F) == sizeof(float))
+		else if((sensorRecord[idx].sensor_value_type_length & LENGTH_BITMASK) == sizeof(float))
 		{
 
 			VMC_PRNT(" %s		%0.3f		%2s	%0.3f	%0.3f \n\r",(sensorRecord[idx].sensor_name),
@@ -971,5 +1221,35 @@ void AsdmSensor_Display(void)
 
     VMC_PRNT("\n\r");
 
+}
 
+u8 Asdm_Send_I2C_Sensors_SC(u8 *scPayload)
+{
+	u8 i = 0;
+	u8 dataIndex = 0;
+	u8 sensorSize = 0;
+	s8 tempSensorIdx = getSDRIndex(TemperatureSDR);
+	if(tempSensorIdx < 0)
+	{
+	    VMC_ERR("Failed to Get TemperatureSDR Index\n\r");
+	    return 0;
+	}
+
+	 Asdm_SensorRecord_t *sensorRecord = sdrInfo[tempSensorIdx].sensorRecord;
+	/* We need to Send all the Temperature sensors to SC for OOB */
+	for(i = 0 ; i< sdrInfo[tempSensorIdx].header.no_of_records; i++)
+	{
+	    //Add SC sensor Index for the Sensor
+	    scPayload[dataIndex++] = sensorRecord[i].mspSensorId;
+
+	    //Add Size of the Sensor
+	    sensorSize = (sensorRecord[i].sensor_value_type_length & LENGTH_BITMASK);
+	    scPayload[dataIndex++] = sensorSize;
+
+	    // Add Sensor Value
+	    memcpy(&scPayload[dataIndex],sensorRecord[i].sensor_value,sensorSize);
+	    dataIndex += sensorSize;
+
+	}
+	return dataIndex;
 }
