@@ -6,6 +6,8 @@
 #ifndef VMR_COMMON_H
 #define VMR_COMMON_H
 
+#define ENODEV	19
+
 /* === start define data-driven endpoints from xparameters.h */
 #define EP_RING_BUFFER_BASE 	0x38000000
 #define EP_SYSTEM_DTB		0x40000
@@ -32,8 +34,6 @@
 
 #define EP_PLM_MULTIBOOT	0xF1110004
 #define EP_PMC_REG		0xF1130000
-#define EP_FORCE_RESET		XPAR_BLP_BLP_LOGIC_BASE_CLOCKING_FORCE_RESET_GPIO_BASEADDR
-/* === end define data-driven endpoints from xparameters.h */
 
 #define FAULT_STATUS            0x0
 #define BIT(n) 			(1UL << (n))
@@ -65,4 +65,21 @@
 #define VMR_PARTITION_TABLE_SIZE	0x1000
 #define RPU_RING_BUFFER_OFFSET (RPU_SHARED_MEMORY_START + VMR_PARTITION_TABLE_SIZE)
 
+
+#if defined(CONFIG_FORCE_RESET)
+#define EP_FORCE_RESET		XPAR_BLP_BLP_LOGIC_BASE_CLOCKING_FORCE_RESET_GPIO_BASEADDR
+static inline int rmgmt_enable_pl_reset()
+{
+	int val = 0;
+	u32 pmc_mux = EP_FORCE_RESET;
+
+	val = IO_SYNC_READ32(pmc_mux);
+	val |= PL_TO_PMC_ERROR_SIGNAL_PATH_MASK;
+	IO_SYNC_WRITE32(val, pmc_mux); 
+	
+	return 0;
+}
+#else
+static inline int rmgmt_enable_pl_reset() { return -ENODEV; }
+#endif
 #endif
