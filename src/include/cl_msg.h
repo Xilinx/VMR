@@ -18,12 +18,14 @@ typedef enum cl_msg_type {
 } cl_msg_type_t;
 
 typedef enum cl_sensor_type {
-	CL_SENSOR_ALL 		= 0x0,
+	CL_SENSOR_GET_SIZE	= 0x0,
 	CL_SENSOR_BDINFO 	= 0xC0,
 	CL_SENSOR_TEMP 		= 0xC1,
 	CL_SENSOR_VOLTAGE	= 0xC2,
-	CL_SENSOR_POWER 	= 0xC3,
-	CL_SENSOR_QSFP 		= 0xC4,
+	CL_SENSOR_CURRENT	= 0xC3,
+	CL_SENSOR_POWER 	= 0xC4,
+	CL_SENSOR_QSFP 		= 0xC5,
+	CL_SENSOR_ALL 		= 0xFF,
 } cl_sensor_type_t;
 
 typedef enum cl_log_type {

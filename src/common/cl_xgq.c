@@ -225,6 +225,9 @@ static cl_sensor_type_t convert_sensor_pid(enum xgq_cmd_sensor_page_id xgq_id)
 	cl_sensor_type_t sid = CL_SENSOR_ALL;
 
 	switch (xgq_id) {
+	case XGQ_CMD_SENSOR_PID_GET_SIZE:
+		sid = CL_SENSOR_GET_SIZE;
+		break;
 	case XGQ_CMD_SENSOR_PID_BDINFO:
 		sid = CL_SENSOR_BDINFO;
 		break;	
@@ -234,8 +237,14 @@ static cl_sensor_type_t convert_sensor_pid(enum xgq_cmd_sensor_page_id xgq_id)
 	case XGQ_CMD_SENSOR_PID_VOLTAGE:
 		sid = CL_SENSOR_VOLTAGE;
 		break;	
+	case XGQ_CMD_SENSOR_PID_CURRENT:
+		sid = CL_SENSOR_CURRENT;
+		break;	
 	case XGQ_CMD_SENSOR_PID_POWER:
 		sid = CL_SENSOR_POWER;
+		break;	
+	case XGQ_CMD_SENSOR_PID_QSFP:
+		sid = CL_SENSOR_QSFP;
 		break;	
 	default:
 		sid = CL_SENSOR_ALL;
