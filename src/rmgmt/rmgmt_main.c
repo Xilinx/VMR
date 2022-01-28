@@ -281,6 +281,7 @@ static int xgq_vmr_cb(cl_msg_t *msg, void *arg)
 		break;
 	case CL_PROGRAM_SC:
 		/* place holder for starting SC download */
+		VMC_Start_SC_Update();
 		break;
 	default:
 		RMGMT_LOG("unknown type %d", msg->multiboot_payload.req_type);

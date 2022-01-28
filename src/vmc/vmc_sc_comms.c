@@ -11,7 +11,7 @@ extern TaskHandle_t xVMCUartpoll;
 SC_VMC_Data sc_vmc_data;
 
 SemaphoreHandle_t vmc_sc_lock;
-
+extern uint8_t sc_update_flag;
 /* VMC SC Comms handles and flags */
 extern uart_rtos_handle_t uart_vmcsc_log;
 
@@ -554,8 +554,15 @@ void VMC_SC_CommsTask(void *params)
 
     for(;;)
     {
-        VMC_Mointor_SC_Sensors();
-        vTaskDelay(100);
+	if(!sc_update_flag)
+	{	
+        	VMC_Mointor_SC_Sensors();
+        	vTaskDelay(100);
+	}
+	else
+	{
+		vTaskDelay(2000);
+	}
     }
 
     vTaskSuspend(NULL);

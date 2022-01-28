@@ -33,6 +33,8 @@ extern s8 Asdm_Process_Sensor_Request(u8 *req, u8 *resp, u16 *respSize);
 
 #define MAX6639_FAN_TACHO_TO_RPM(x) (8000*60)/(x*2)
 
+extern uint8_t sc_update_flag;
+
 Versal_sensor_readings sensor_readings;
 u8 i2c_num = 1;  // LPD_I2C0
 #define LPD_I2C_0	0x1
@@ -371,17 +373,23 @@ void SensorMonitorTask(void *params)
 
     for(;;)
     {
-        /* Read All Sensors */
-        Monitor_Sensors();
+	if(!sc_update_flag)
+	{
+        	/* Read All Sensors */
+        	Monitor_Sensors();
 
 #ifdef VMC_TEST
-        se98a_monitor();
-        max6639_monitor();
-        sysmon_monitor();
-        qsfp_monitor ();
+        	se98a_monitor();
+        	max6639_monitor();
+        	sysmon_monitor();
+        	qsfp_monitor ();
 #endif
-        vTaskDelay(200);
-
+        	vTaskDelay(200);
+	}
+	else
+	{
+		vTaskDelay(2000);
+	}
     }
 
     vTaskSuspend(NULL);
