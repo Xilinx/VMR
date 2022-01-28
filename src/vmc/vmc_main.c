@@ -25,6 +25,8 @@ TaskHandle_t xVMCSCTask;
 TaskHandle_t xVMCUartpoll;
 TaskHandle_t xVMCTaskMonitor;
 
+SemaphoreHandle_t vmc_sc_lock;
+
 int Enable_DemoMenu(void);
 
 extern void VMC_SC_CommsTask(void *params);
@@ -62,6 +64,12 @@ static void pVMCTask(void *params)
 	return ;
     }
 
+    /* vmc_sc_lock */
+    vmc_sc_lock = xSemaphoreCreateMutex();
+    if(vmc_sc_lock == NULL){
+    VMC_ERR("vmc_sc_lock creation failed \n\r");
+    }
+    xSemaphoreGive(vmc_sc_lock);
 
     if (xTaskCreate( VMC_SC_CommsTask,
 		( const char * ) "VMC_SC_Comms",
