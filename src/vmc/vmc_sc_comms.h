@@ -42,6 +42,7 @@ extern uart_rtos_handle_t uart_vmcsc_log;
 
 
 #define COMMS_PAYLOAD_START_INDEX    5
+#define RAW_PAYLOAD_LENTGH           9
 
 #define MAX_VMC_SC_UART_BUF_SIZE            255
 #define MAX_VMC_SC_UART_COUNT_WITH_INTR     60
@@ -85,6 +86,10 @@ extern uart_rtos_handle_t uart_vmcsc_log;
 
 #define MSP432_COMMS_VMC_SEND_I2C_SNSR_REQ (0xF3)
 #define MSP432_COMMS_VMC_SEND_I2C_SNSR_RESP (0xF4)
+
+#define MSP432_COMMS_VMC_GET_RESP_SIZE_REQ (0xF5)
+#define MSP432_COMMS_VMC_GET_RESP_SIZE_RESP (0xF6)
+
 
 typedef enum return_error_codes {
     FIELD_PARSE_SUCCESSFUL,                 /* The current field was parsed successfully */
@@ -259,6 +264,8 @@ typedef enum
 
 typedef struct SC_VMC_Data{
     bool boardInfoStatus;
+    u8   voltsensorlength;
+    u8   powersensorlength;
     u8   availpower;
     u8   configmode;
     u8   scVersion[4];

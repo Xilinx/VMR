@@ -202,12 +202,18 @@ s8 PMBUS_SC_Sensor_Read(snsrRead_t *snsrData)
 
 s8 Power_Monitor(snsrRead_t *snsrData)
 {
-    s8 status = XST_FAILURE;
-    float totalPower = 0;
+    s8 status = XST_SUCCESS;
 
-    totalPower = (sc_vmc_data.sensor_values[PEX_12V] *
-                        (sc_vmc_data.sensor_values[V12_IN_AUX0_I] +
-                              sc_vmc_data.sensor_values[V12_IN_AUX0_I]));
+    float totalPower = 0;
+    float pexPower = 0;
+    float aux0Power = 0;
+    float aux1Power = 0;
+
+    pexPower = ((sc_vmc_data.sensor_values[PEX_12V]/1000) * (sc_vmc_data.sensor_values[PEX_12V_I_IN])/1000);
+    aux0Power = ((sc_vmc_data.sensor_values[AUX_12V]/1000) * (sc_vmc_data.sensor_values[V12_IN_AUX0_I])/1000); //2x4 AUX
+    aux1Power = ((sc_vmc_data.sensor_values[AUX1_12V]/1000) * (sc_vmc_data.sensor_values[V12_IN_AUX1_I])/1000); //2x3 AUX
+    totalPower = (pexPower + aux0Power +aux1Power);
+
     if(totalPower != 0)
     {
         memcpy(&snsrData->snsrValue[0],&totalPower,sizeof(totalPower));
