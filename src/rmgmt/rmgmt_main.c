@@ -30,6 +30,7 @@ int xgq_sensor_flag = 0;
 int xgq_clock_flag = 0;
 int xgq_apubin_flag = 0;
 int xgq_vmr_control_flag = 0;
+int xgq_apu_control_flag = 0;
 
 static int xgq_clock_cb(cl_msg_t *msg, void *arg)
 {
@@ -66,7 +67,7 @@ static int rmgmt_download_pdi(cl_msg_t *msg, bool is_rpu_pdi)
 {
 	int ret = 0;
 
-	u32 address = EP_RING_BUFFER_BASE + (u32)msg->data_payload.address;
+	u32 address = RPU_SHARED_MEMORY_ADDR(msg->data_payload.address);
 	u32 size = msg->data_payload.size;
 	if (size > rh.rh_max_size) {
 		RMGMT_LOG("ERROR: size %d is too big", size);
@@ -103,7 +104,7 @@ static int xgq_xclbin_cb(cl_msg_t *msg, void *arg)
 {
 	int ret = 0;
 
-	u32 address = EP_RING_BUFFER_BASE + (u32)msg->data_payload.address;
+	u32 address = RPU_SHARED_MEMORY_ADDR(msg->data_payload.address);
 	u32 size = msg->data_payload.size;
 	if (size > rh.rh_max_size) {
 		RMGMT_LOG("ERROR: size %d is too big", size);
@@ -117,7 +118,6 @@ static int xgq_xclbin_cb(cl_msg_t *msg, void *arg)
 	ret = rmgmt_download_xclbin(&rh);
 
 	msg->hdr.rcode = ret;
-
 	RMGMT_DBG("complete msg id%d, ret %d", msg->hdr.cid, ret);
 	cl_msg_handle_complete(msg);
 	return 0;
@@ -145,7 +145,7 @@ static int load_firmware(cl_msg_t *msg)
 		return -1;
 	}
 
-	dst_addr = EP_RING_BUFFER_BASE + (u32)msg->log_payload.address;
+	dst_addr = RPU_SHARED_MEMORY_ADDR(msg->log_payload.address);
 	src_addr = offset;
 
 	/*
@@ -298,6 +298,15 @@ static int xgq_vmr_cb(cl_msg_t *msg, void *arg)
 	return 0;
 }
 
+static int xgq_apu_channel_probe()
+{
+	if (cl_xgq_client_probe() != 0) {
+		return -1;
+	}
+
+	return 0;
+}
+
 static void pvXGQTask( void *pvParameters )
 {
 	const TickType_t x1second = pdMS_TO_TICKS( 1000*1 );
@@ -308,7 +317,7 @@ static void pvXGQTask( void *pvParameters )
 		vTaskDelay( x1second );
 
 		cnt++;
-		//xil_printf("%d  xgqTask\r", cnt);
+		//xil_printf("%d  pvXGQTask in main \r", cnt);
 
 		if (xgq_pdi_flag == 0 &&
 		    cl_msg_handle_init(&pdi_hdl, CL_MSG_PDI, xgq_pdi_cb, NULL) == 0) {
@@ -345,6 +354,11 @@ static void pvXGQTask( void *pvParameters )
 			RMGMT_LOG("init vmr control handle done.");
 			xgq_vmr_control_flag = 1;
 		}
+
+		if (xgq_apu_control_flag == 0 && xgq_apu_channel_probe() == 0) {
+			RMGMT_LOG("apu is ready.");
+			xgq_apu_control_flag = 1;
+		}
 	}
 	RMGMT_LOG("done");
 }
@@ -353,7 +367,7 @@ static int rmgmt_create_tasks(void)
 {
 	if (xTaskCreate( pvXGQTask,
 		 ( const char * ) "R5-0-XGQ",
-		 configMINIMAL_STACK_SIZE,
+		 2048,
 		 NULL,
 		 tskIDLE_PRIORITY + 1,
 		 &xXGQTask) != pdPASS) {

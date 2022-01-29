@@ -15,23 +15,15 @@
 #include "cl_main.h"
 #include "cl_flash.h"
 #include "xgq_cmd_vmr.h"
-#include "cl_xgq_plat.h"
+#include "cl_xgq_server_plat.h"
 #include "vmr_common.h"
 
+#define MSG_ERR(fmt, arg...) \
+	CL_ERR(APP_XGQ, fmt, ##arg)
 #define MSG_LOG(fmt, arg...) \
-	CL_LOG(APP_MAIN, fmt, ##arg)
+	CL_LOG(APP_XGQ, fmt, ##arg)
 #define MSG_DBG(fmt, arg...) \
-	CL_DBG(APP_MAIN, fmt, ##arg)
-
-#define XGQ_SQ_TAIL_POINTER     0x0
-#define XGQ_SQ_INTR_REG         0x4
-#define XGQ_SQ_INTR_CTRL        0xC
-#define XGQ_CQ_TAIL_POINTER     0x100
-#define XGQ_CQ_INTR_REG         0x104
-#define XGQ_CQ_INTR_CTRL        0x10C
-
-#define RPU_XGQ_SLOT_SIZE 	512
-#define RPU_RING_BUFFER_LEN	0x1000
+	CL_DBG(APP_XGQ, fmt, ##arg)
 
 static void receiveTask( void *pvParameters );
 static TaskHandle_t receiveTaskHandle = NULL;
@@ -76,7 +68,7 @@ int cl_msg_handle_init(msg_handle_t **hdl, cl_msg_type_t type,
 	for (int i = 0; i < ARRAY_SIZE(handles); i++) {
 		if (handles[i].type == type) {
 			if (handles[i].msg_cb != NULL) {
-				MSG_LOG("FATAL: dup init with same type %d", type);
+				MSG_ERR("FATAL: dup init with same type %d", type);
 				return -1;
 			}
 			handles[i].msg_cb = cb;
@@ -142,6 +134,8 @@ int cl_msg_handle_complete(cl_msg_t *msg)
 		/* pass back log level and flush progress */
 		cmd_cq->cq_vmr_payload.debug_level = cl_loglevel_get();
 		cmd_cq->cq_vmr_payload.program_progress = ospi_flash_progress();
+
+		MSG_LOG("apu is ready %d", cl_xgq_apu_is_ready());
 	} else if (msg->hdr.type == CL_MSG_LOG_PAGE) {
 		cmd_cq->cq_log_payload.count = msg->log_payload.size;
 	}
@@ -159,20 +153,20 @@ static int dispatch_to_queue(cl_msg_t *msg, int task_level)
 	case TASK_SLOW:
 		/* send will do deep copy of msg, so that we preserved data */
 		if (xQueueSend(slowTaskQueue, msg, (TickType_t) 0) != pdPASS) {
-			MSG_LOG("FATAL: failed to send msg");
+			MSG_ERR("FATAL: failed to send msg");
 			return -1;
 		};
 		xTaskNotifyGive( slowTaskHandle );
 		break;
 	case TASK_QUICK:
 		if (xQueueSend(quickTaskQueue, msg, (TickType_t) 0) != pdPASS) {
-			MSG_LOG("FATAL: failed to send msg");
+			MSG_ERR("FATAL: failed to send msg");
 			return -1;
 		};
 		xTaskNotifyGive( quickTaskHandle );
 		break;
 	default:
-		MSG_LOG("FATAL: unhandled task_level %d", task_level);
+		MSG_ERR("FATAL: unhandled task_level %d", task_level);
 		return -1;
 	}
 
@@ -325,7 +319,7 @@ static int submit_to_queue(u32 sq_addr)
 		msg.hdr.type = CL_MSG_VMR_CONTROL;
 		break;
 	default:
-		MSG_LOG("Unhandled opcode: 0x%x", cmd->hdr.opcode);
+		MSG_ERR("Unhandled opcode: 0x%x", cmd->hdr.opcode);
 		return -1;
 	}
 
@@ -380,7 +374,7 @@ static int submit_to_queue(u32 sq_addr)
 			sq->clock_payload.ocl_req_num);
 
 		if (num_clock > ARRAY_SIZE(msg.clock_payload.ocl_req_freq)) {
-			MSG_LOG("num_clock out of range", num_clock);
+			MSG_ERR("num_clock out of range", num_clock);
 			ret = -1;
 			break;
 		}
@@ -407,7 +401,7 @@ static int submit_to_queue(u32 sq_addr)
 		ret = dispatch_to_queue(&msg, TASK_QUICK);
 		break;
 	default:
-		MSG_LOG("Unknown msg type:%d", msg.hdr.type);
+		MSG_ERR("Unknown msg type:%d", msg.hdr.type);
 		ret = -1;
 		break;
 	}
@@ -450,7 +444,7 @@ static void process_from_queue(cl_msg_t *msg)
 		hdl = &handles[i];
 		if (hdl->type == msg->hdr.type) {
 			if (hdl->msg_cb == NULL) {
-				MSG_LOG("no handle for msg type %d", msg->hdr.type);
+				MSG_ERR("no handle for msg type %d", msg->hdr.type);
 				break;
 			}
 			hdl->msg_cb(msg, hdl->arg);
@@ -459,7 +453,7 @@ static void process_from_queue(cl_msg_t *msg)
 	}
 
 	/* complete unhandled msg too */
-	MSG_LOG("unhandled msg type %d", msg->hdr.type);
+	MSG_ERR("unhandled msg type %d", msg->hdr.type);
 	msg->hdr.rcode = -EINVAL;
 	cl_msg_handle_complete(msg);
 }
@@ -478,7 +472,7 @@ static void quickTask (void *pvParameters )
 			/* now we can use recvMsg */
 			process_from_queue(&msg);
 		} else {
-			MSG_LOG("value %d", ulNotifiedValue);
+			MSG_DBG("value %d", ulNotifiedValue);
 		}
 	}
 }
@@ -497,7 +491,7 @@ static void slowTask (void *pvParameters )
 			/* now we can use recvMsg */
 			process_from_queue(&msg);
 		} else {
-			MSG_LOG("value %d", ulNotifiedValue);
+			MSG_DBG("value %d", ulNotifiedValue);
 		}
 	}
 }
@@ -508,7 +502,7 @@ static inline bool read_vmr_shared_mem(struct vmr_shared_mem *mem)
 
 	ret = cl_memcpy_fromio32(RPU_SHARED_MEMORY_START, mem, sizeof(*mem));
 	if (ret == -1 || mem->vmr_magic_no != VMR_MAGIC_NO) {
-		MSG_LOG("read shared memory partition table failed");
+		MSG_ERR("read shared memory partition table failed");
 		return false;
 	}
 
@@ -522,13 +516,13 @@ static void vmr_status_service_start()
 	if (!read_vmr_shared_mem(&mem))
 		return;
 
-	IO_SYNC_WRITE32(1, RPU_SHARED_MEMORY_START + mem.vmr_status_off);
+	IO_SYNC_WRITE32(1, RPU_SHARED_MEMORY_ADDR(mem.vmr_status_off));
 
 	MSG_LOG("magic_no %x, ring %x, status off %x, value %x",
 		mem.vmr_magic_no,
 		mem.ring_buffer_off,
 		mem.vmr_status_off,
-		IO_SYNC_READ32(RPU_SHARED_MEMORY_START + mem.vmr_status_off));
+		IO_SYNC_READ32(RPU_SHARED_MEMORY_ADDR(mem.vmr_status_off)));
 	MSG_LOG("log_idx %d, log off %x, data start %x, data end %x",
 		mem.log_msg_index,
 		mem.log_msg_buf_off,
@@ -574,6 +568,17 @@ static void receiveTask(void *pvParameters)
 
 /*
  * Init shared memory partion table
+ * === the partition metadata layout ===
+ * u32: magic no. 			(offset@ 0)
+ * u32: xgq ring buffer offset start 	(offset@ right after metadata buffer)
+ * u32: xgq ring buffer size
+ * u32: vmr_status_off			(offset@ right after xgq_ring_buffer)
+ * u32: vmr_status_size
+ * u32: log_msg_index
+ * u32: log_msg_buf_off			(offset@ right after vmr_status buffer)
+ * u32: log_msg_buf_len
+ * u32: vmr_data_start			(offset@ right after log_msg buffer)
+ * u32: vmr_data_end			(offset@ end of shared memory)
  */
 static void init_vmr_status(uint32_t ring_len)
 {
@@ -594,7 +599,16 @@ static void init_vmr_status(uint32_t ring_len)
 	cl_memcpy_toio32(RPU_SHARED_MEMORY_START, &mem, sizeof(mem));
 
 	/* re-init device stat to 0 */
-	IO_SYNC_WRITE32(0x0, RPU_SHARED_MEMORY_START + mem.vmr_status_off);	
+	IO_SYNC_WRITE32(0x0, RPU_SHARED_MEMORY_ADDR(mem.vmr_status_off));	
+}
+
+static inline void xgq_print_info()
+{
+#ifdef XGQ_SERVER
+	MSG_LOG("xgq server");
+#else
+	MSG_LOG("xgq client");
+#endif
 }
 
 static int init_xgq()
@@ -603,10 +617,12 @@ static int init_xgq()
 	size_t ring_len = RPU_RING_BUFFER_LEN;
 	uint64_t flags = 0;
 
+	xgq_print_info();
+
         ret = xgq_alloc(&rpu_xgq, flags, xgq_io_hdl, RPU_RING_BUFFER_OFFSET, &ring_len,
 		RPU_XGQ_SLOT_SIZE, RPU_SQ_BASE, RPU_CQ_BASE);
 	if (ret) {
-		MSG_LOG("xgq_alloc failed: %d", ret);
+		MSG_ERR("xgq_alloc failed: %d", ret);
 		return ret;
 	}
 
@@ -624,7 +640,6 @@ static int init_xgq()
         MSG_DBG("================================================");
 
 	init_vmr_status(ring_len);
-
 	MSG_LOG("done.");
 	return 0;
 }
@@ -650,7 +665,7 @@ static int init_task()
 		tskIDLE_PRIORITY + 1,
 		&receiveTaskHandle) != pdPASS) {
 
-		MSG_LOG("FATAL: receiveTask creation failed");
+		MSG_ERR("FATAL: receiveTask creation failed");
 		return -1;
 	}
 
@@ -661,7 +676,7 @@ static int init_task()
 		tskIDLE_PRIORITY + 1,
 		&quickTaskHandle) != pdPASS) {
 
-		MSG_LOG("FATAL: quickTask creation failed");
+		MSG_ERR("FATAL: quickTask creation failed");
 		fini_task();
 		return -1;
 	}
@@ -673,7 +688,7 @@ static int init_task()
 		tskIDLE_PRIORITY + 1,
 		&slowTaskHandle) != pdPASS) {
 
-		MSG_LOG("FATAL: slowTask creation failed");
+		MSG_ERR("FATAL: slowTask creation failed");
 		fini_task();
 		return -1;
 	}
@@ -695,13 +710,13 @@ static int init_queue()
 {
 	quickTaskQueue = xQueueCreate(32, sizeof (cl_msg_t));
 	if (quickTaskQueue == NULL) {
-		MSG_LOG("FATAL: quickTaskQueue creation failed");
+		MSG_ERR("FATAL: quickTaskQueue creation failed");
 		return -1;
 	}
 
 	slowTaskQueue = xQueueCreate(32, sizeof (cl_msg_t));
 	if (slowTaskQueue == NULL) {
-		MSG_LOG("FATAL: slowTaskQueue creation failed");
+		MSG_ERR("FATAL: slowTaskQueue creation failed");
 		fini_queue();
 		return -1;
 	}
@@ -729,7 +744,7 @@ static int cl_msg_service_start(void)
 int CL_MSG_launch(void)
 {
 	if (cl_msg_service_start() != 0) {
-		MSG_LOG("failed");
+		MSG_ERR("failed");
 		return -1;
 	}
 

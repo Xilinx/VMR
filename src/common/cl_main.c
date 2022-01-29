@@ -63,6 +63,7 @@ void cl_rpu_status_query(struct cl_msg *msg)
 #endif
 
 #ifdef _VMR_VERSION_
+	CL_LOG(APP_MAIN, "tool version: %s", VMR_TOOL_VERSION);
 	CL_LOG(APP_MAIN, "git hash: %s", VMR_GIT_HASH);
 	CL_LOG(APP_MAIN, "git branch: %s", VMR_GIT_BRANCH);
 	CL_LOG(APP_MAIN, "build date: %s", VMR_GIT_HASH_DATE);
@@ -70,9 +71,10 @@ void cl_rpu_status_query(struct cl_msg *msg)
 
 }
 
-/*TODO: for apu status */
 void cl_apu_status_query(struct cl_msg *msg)
 {
+	/*TODO: should not put long time blocking function here */
+	cl_xgq_apu_identify(msg);
 }
 
 int main( void )

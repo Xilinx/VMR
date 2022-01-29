@@ -28,6 +28,7 @@ typedef enum app_type {
 	APP_MAIN = 0,
 	APP_RMGMT,
 	APP_VMC,
+	APP_XGQ,
 } app_type_t;
 
 /**
@@ -37,6 +38,7 @@ static const char *app_type_name[] = {
 	"MAIN",
 	"RMGMT",
 	"VMC",
+	"XGQ",
 };
 
 typedef enum cl_log_level {

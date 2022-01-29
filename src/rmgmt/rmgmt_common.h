@@ -17,6 +17,7 @@
 /* C includes */
 #include "stdlib.h"
 #include "stdio.h"
+#include "stdbool.h"
 
 /* Xilinx includes */
 #include "xil_printf.h"
@@ -44,6 +45,7 @@ struct rmgmt_handler {
 	u32 rh_max_size;
 	u32 rh_data_size;
 	u8  *rh_data; 	/* static malloc and never free */
+	bool rh_apu_is_ready;
 };
 
 static void inline axigate_freeze()

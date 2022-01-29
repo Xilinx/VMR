@@ -1467,6 +1467,7 @@ int ospi_flash_copy(flash_area_t area, u32 src, u32 tgt, u32 len)
 	return ret;
 }
 
-int ospi_flash_progress() {
+int ospi_flash_progress()
+{
 	return ospi_flash_percentage;
 }

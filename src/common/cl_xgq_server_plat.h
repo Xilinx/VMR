@@ -1,5 +1,5 @@
-#ifndef __CL_XGQ_PLAT_H_
-#define __CL_XGQ_PLAT_H_
+#ifndef __CL_XGQ_SERVER_PLAT_H_
+#define __CL_XGQ_SERVER_PLAT_H_
 
 #include "cl_io.h"
 #include "cl_log.h"
