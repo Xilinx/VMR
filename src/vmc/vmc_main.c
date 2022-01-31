@@ -17,12 +17,12 @@
 
 #include "sysmon.h"
 #include "vmc_sc_comms.h"
+#include "vmc_update_sc.h"
 
 /* Task Handles */
 static TaskHandle_t xVMCTask;
 TaskHandle_t xSensorMonTask;
 TaskHandle_t xVMCSCTask;
-TaskHandle_t xVMCUartpoll;
 TaskHandle_t xVMCTaskMonitor;
 
 SemaphoreHandle_t vmc_sc_lock;
@@ -81,6 +81,10 @@ static void pVMCTask(void *params)
 	CL_LOG(APP_VMC,"Failed to Create VMCSC Monitor Task \n\r");
 	return ;
     }
+
+    /* Create the SC update task */
+    SC_Update_Task_Create();
+
     vTaskSuspend(NULL);
 }
 

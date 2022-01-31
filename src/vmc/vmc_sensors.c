@@ -18,17 +18,22 @@
 #include "vmc_asdm.h"
 #include "sysmon.h"
 #include "vmc_sc_comms.h"
+#include "vmc_update_sc.h"
+#include "vmr_common.h"
 
 extern TaskHandle_t xSensorMonTask;
 extern XSysMonPsv InstancePtr;
 extern XScuGic IntcInst;
+extern SemaphoreHandle_t vmc_sc_lock;
 
 extern SC_VMC_Data sc_vmc_data;
+
+extern uint8_t sc_update_flag;
 
 /*Xgq Msg Handle */
 static u8 xgq_sensor_flag = 0;
 msg_handle_t *sensor_hdl;
-#define EP_RING_BUFFER_BASE     0x38000000
+
 extern s8 Asdm_Process_Sensor_Request(u8 *req, u8 *resp, u16 *respSize);
 
 #define MAX6639_FAN_TACHO_TO_RPM(x) (8000*60)/(x*2)
@@ -184,7 +189,16 @@ s8 PMBUS_SC_Sensor_Read(snsrRead_t *snsrData)
     s8 status = XST_FAILURE;
     u16 sensorReading = 0;
 
-    sensorReading = sc_vmc_data.sensor_values[snsrData->mspSensorIndex];
+    if (xSemaphoreTake(vmc_sc_lock, portMAX_DELAY))
+    {
+    	sensorReading = sc_vmc_data.sensor_values[snsrData->mspSensorIndex];
+    	xSemaphoreGive(vmc_sc_lock);
+    }
+    else
+    {
+    	VMC_ERR("vmc_sc_lock lock failed \r\n");
+    }
+
     if(sensorReading != 0)
     {
         memcpy(&snsrData->snsrValue[0],&sensorReading,sizeof(sensorReading));
@@ -209,10 +223,18 @@ s8 Power_Monitor(snsrRead_t *snsrData)
     float aux0Power = 0;
     float aux1Power = 0;
 
-    pexPower = ((sc_vmc_data.sensor_values[PEX_12V]/1000) * (sc_vmc_data.sensor_values[PEX_12V_I_IN])/1000);
-    aux0Power = ((sc_vmc_data.sensor_values[AUX_12V]/1000) * (sc_vmc_data.sensor_values[V12_IN_AUX0_I])/1000); //2x4 AUX
-    aux1Power = ((sc_vmc_data.sensor_values[AUX1_12V]/1000) * (sc_vmc_data.sensor_values[V12_IN_AUX1_I])/1000); //2x3 AUX
-    totalPower = (pexPower + aux0Power +aux1Power);
+    if (xSemaphoreTake(vmc_sc_lock, portMAX_DELAY))
+    {
+    	pexPower = ((sc_vmc_data.sensor_values[PEX_12V]/1000) * (sc_vmc_data.sensor_values[PEX_12V_I_IN])/1000);
+    	aux0Power = ((sc_vmc_data.sensor_values[AUX_12V]/1000) * (sc_vmc_data.sensor_values[V12_IN_AUX0_I])/1000); //2x4 AUX
+    	aux1Power = ((sc_vmc_data.sensor_values[AUX1_12V]/1000) * (sc_vmc_data.sensor_values[V12_IN_AUX1_I])/1000); //2x3 AUX
+    	totalPower = (pexPower + aux0Power +aux1Power);
+    	xSemaphoreGive(vmc_sc_lock);
+    }
+    else
+    {
+    	VMC_ERR("vmc_sc_lock lock failed \r\n");
+    }
 
     if(totalPower != 0)
     {
@@ -378,15 +400,23 @@ void SensorMonitorTask(void *params)
     for(;;)
     {
         /* Read All Sensors */
-        Monitor_Sensors();
+    	if(!sc_update_flag)
+    	{
+    		Monitor_Sensors();
 
 #ifdef VMC_TEST
-        se98a_monitor();
-        max6639_monitor();
-        sysmon_monitor();
-        qsfp_monitor ();
+    		se98a_monitor();
+    		max6639_monitor();
+    		sysmon_monitor();
+    		qsfp_monitor ();
 #endif
-        vTaskDelay(200);
+    		vTaskDelay(200);
+    	}
+    	else
+    	{
+    		/* Wait for SC update complete */
+    		vTaskDelay(2000);
+    	}
 
     }
 
