@@ -54,6 +54,23 @@ static u32 rmgmt_fpt_pdi_get_base(struct cl_msg *msg, int fpt_type)
 	return 0;
 }
 
+static int rmgmt_fpt_pdi_meta_erase(struct cl_msg *msg, int fpt_type)
+{
+	u32 base_addr = rmgmt_fpt_pdi_get_base(msg, fpt_type);
+	int ret = 0;
+
+	if (base_addr == 0) {
+		RMGMT_ERR("base addr of fpt_type %d cannot be 0", fpt_type);
+		return -1;
+	}
+
+	RMGMT_LOG("reseting %d metdata", fpt_type); 
+
+	ret = ospi_flash_erase(CL_FLASH_BOOT, base_addr, OSPI_VERSAL_PAGESIZE);
+
+	return ret;
+}
+
 static int rmgmt_fpt_pdi_meta_get(struct cl_msg *msg, int fpt_type,
 	struct fpt_pdi_meta *meta)
 {
@@ -65,6 +82,8 @@ static int rmgmt_fpt_pdi_meta_get(struct cl_msg *msg, int fpt_type,
 		RMGMT_ERR("base addr of fpt_type %d cannot be 0", fpt_type);
 		return -1;
 	}
+
+	RMGMT_LOG("fpt_type %d", fpt_type);
 
 	ret = ospi_flash_read(CL_FLASH_BOOT, (u8 *)buf, base_addr, sizeof(buf));
 	if (ret)
@@ -85,6 +104,8 @@ static int rmgmt_fpt_pdi_meta_set(struct cl_msg *msg, int fpt_type,
 		RMGMT_ERR("base addr of fpt_type %d cannot be 0", fpt_type);
 		return -1;
 	}
+
+	RMGMT_LOG("fpt_type %d", fpt_type);
 
 	memcpy(buf, meta, sizeof(*meta));
 
@@ -437,8 +458,17 @@ int rmgmt_flush_rpu_pdi(struct rmgmt_handler *rh, struct cl_msg *msg)
 		return ret;
 
 	if (meta.fpt_pdi_magic != FPT_PDIMETA_MAGIC) {
-		RMGMT_ERR("invalid magic: %x", meta.fpt_pdi_magic);
-		return -1;
+		RMGMT_ERR("Invalid PDIMETA magic: %x", meta.fpt_pdi_magic);
+
+		if (!rmgmt_flush_no_backup(msg)) {
+			RMGMT_ERR("ERROR: not an enforced operation, rejected.");
+			return -1;
+		} else {
+			RMGMT_ERR("WARN: enforce to flash pdi onto default partition");
+
+			/* reset to valide magic number */
+			meta.fpt_pdi_magic = FPT_PDIMETA_MAGIC;
+		}
 	}
 
 	/* TODO: check not same checksum, avoid dup flush */
@@ -464,7 +494,13 @@ int rmgmt_flush_rpu_pdi(struct rmgmt_handler *rh, struct cl_msg *msg)
 
 	/* finaly step, update metadata */
 	meta.fpt_pdi_size = len;
+	ret = rmgmt_fpt_pdi_meta_erase(msg, FPT_TYPE_PDIMETA);
+	if (ret)
+		return ret;
+
 	ret = rmgmt_fpt_pdi_meta_set(msg, FPT_TYPE_PDIMETA, &meta);
+	if (ret)
+		return ret;
 
 	return ret;
 }
