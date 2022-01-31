@@ -158,6 +158,20 @@ int rmgmt_fpt_get_xsabin(struct cl_msg *msg, u32 *offset, u32 *size)
 	return 0;
 }
 
+int rmgmt_fpt_get_systemdtb(struct cl_msg *msg, u32 *offset, u32 *size)
+{
+	rmgmt_extension_fpt_query(msg);
+
+	if (!msg->multiboot_payload.has_ext_sysdtb) {
+		RMGMT_ERR("no system.dtb metadata");
+		return -1;
+	}
+
+	*offset = msg->multiboot_payload.sysdtb_offset;
+	*size = msg->multiboot_payload.sysdtb_size;
+	return 0;
+}
+
 /*
  * Read fpt table and return status
  */

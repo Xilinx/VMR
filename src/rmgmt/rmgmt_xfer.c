@@ -9,6 +9,7 @@
 #include "rmgmt_common.h"
 #include "rmgmt_xfer.h"
 #include "rmgmt_xclbin.h"
+#include "rmgmt_fpt.h"
 
 #include "cl_io.h"
 #include "cl_msg.h"
@@ -334,13 +335,15 @@ static int rmgmt_ospi_apu_download(struct rmgmt_handler *rh, u32 len)
 	struct axlf *axlf = (struct axlf *)rh->rh_data;
 	uint64_t offset = 0;
 	uint64_t size = 0;
+	cl_msg_t msg = { 0 };
+	u32 dtb_offset = 0;
+	u32 dtb_size = 0;
 
-	/*
-	 *TODO: Once we enable the A/B boot, PLM will load system.dtb
-	 * onto DDR, then VMR should copy the data to correct location
-	 * before launching APU image.
-	 * cl_memcpy_toio8(EP_SYSTEM_DTB, (void *)((char *)axlf + offset), size);
-	*/
+	if (rmgmt_fpt_get_systemdtb(&msg, &dtb_offset, &dtb_size)) {
+		RMGMT_ERR("get system.dtb failed");
+		return -1;
+	}
+	cl_memcpy(EP_SYSTEM_DTB, dtb_offset, dtb_size);
 
 	ret = rmgmt_xclbin_section_info(axlf, PDI, &offset, &size);
 	if (ret) {
