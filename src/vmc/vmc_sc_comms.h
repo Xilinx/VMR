@@ -283,4 +283,4 @@ void vmc_StoreSensor_Value(u8 id, u32 value);
 void vmc_Update_Sensors(u16 length,u8 *payload);
 void Update_SNSR_Data(u8 PayloadLength , u8 * payload);
 bool Parse_SCData(u8 *Payload);
-bool Vmc_Send_Packet(u8 Message_id , u8 Flags,u8 Payloadlength, u8 *Payload);
+bool Vmc_send_packet(u8 Message_id , u8 Flags,u8 Payloadlength, u8 *Payload);

@@ -301,7 +301,6 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
 	    .supportedThreshold = SNSR_MAX_VAL | SNSR_MAX_VAL | HAS_UPPER_THRESHOLDS,
 	    .sampleCount = 0x1,
 	    .sensorInstance = QSFP_MAX_NUM,
-            .sesnorListTbl = (u8 *) CAGE_TEMP0,
 	    .monitorFunc = &Temperature_Read_QSFP,
 	},
 	{
@@ -310,6 +309,7 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
 	    .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_2B,
 	    .supportedThreshold = SNSR_MAX_VAL | SNSR_MAX_VAL,
 	    .sampleCount = 0x1,
+	    .sesnorListTbl = (u8 *) FAN_SPEED,
 	    .monitorFunc = &Fan_RPM_Read,
         },
 	{
@@ -476,7 +476,7 @@ s8 Init_Asdm()
     u16 totalRecords = 0;
     Asdm_Sensor_MetaData_t *pSdrMetaData = NULL;
     u16 idx = 0;
-    u8 byteCount = 0;
+    u16 byteCount = 0;
     u8 threshIdx = 0;
     u8 currentRepoType = 0;
     u8 totalSensorInstances = 0;
@@ -558,7 +558,7 @@ s8 Init_Asdm()
 		if(totalSensorInstances > 1)
 		{
 		    memset(snsrName,0x00,SENSOR_NAME_MAX);
-		    pSdrMetaData[totalRecords].getSensorName(sensorInstance,snsrName, &tmp[sensorInstance].mspSensorId);
+		    pSdrMetaData[totalRecords].getSensorName(sensorInstance,snsrName, &tmp[idx].mspSensorId);
 		    snsrNameLen = strlen(snsrName) + 1;
 		}
 		else

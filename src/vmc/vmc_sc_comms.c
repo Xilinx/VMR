@@ -24,11 +24,12 @@ volatile bool isVMCActive ;
 volatile bool isPowerModeActive ;
 volatile bool getSensorRespLen ;
 
+extern uint8_t sc_update_flag;
 
 u8 VMC_SC_Comms_Msg[] = {
        MSP432_COMMS_VOLT_SNSR_REQ,
        MSP432_COMMS_POWER_SNSR_REQ,
-      // MSP432_COMMS_VMC_SEND_I2C_SNSR_REQ,
+       MSP432_COMMS_VMC_SEND_I2C_SNSR_REQ,
 };
 
 #define MAX_MSGID_COUNT     (sizeof(VMC_SC_Comms_Msg)/sizeof(VMC_SC_Comms_Msg[0]))
@@ -320,11 +321,13 @@ void VMC_Fetch_SC_SensorData(u8 messageID)
 
         case MSP432_COMMS_VMC_SEND_I2C_SNSR_REQ:
         {
+        	u8 Expected_Msg_Length = 10;
             u8 payloadLength = 0;
             memset(scPayload ,0x00,128);
             payloadLength = Asdm_Send_I2C_Sensors_SC(scPayload);
             Vmc_send_packet(MSP432_COMMS_VMC_SEND_I2C_SNSR_REQ,
                             MSP432_COMMS_NO_FLAG,payloadLength,scPayload);
+            vmc_uart_receive(Expected_Msg_Length);
             if(isPacketReceived)
             {
                 Parse_SCData(g_scData);
@@ -402,26 +405,33 @@ void VMC_SC_CommsTask(void *params)
     for(;;)
     {
     	/* Notify SC of VMC Presence */
-
-    	if(!isVMCActive)
+    	if(!sc_update_flag)
     	{
-    		VMC_Fetch_SC_SensorData(MSP432_COMMS_VMC_ACTIVE_REQ);
+    		if(!isVMCActive)
+    		{
+    			VMC_Fetch_SC_SensorData(MSP432_COMMS_VMC_ACTIVE_REQ);
+    		}
+    		/* Fetch the SC Version and Power Config  */
+    		if(!isPowerModeActive)
+    		{
+    			VMC_Fetch_SC_SensorData(MSP432_COMMS_VMC_VERSION_POWERMODE_REQ);
+    		}
+    		/* Fetch the Volt & power Sensor length  */
+    		if( isVMCActive &&  (!getSensorRespLen))
+    		{
+    			VMC_Fetch_SC_SensorData(MSP432_COMMS_VMC_GET_RESP_SIZE_REQ);
+    		}
+    		/*
+    		 *  Fetching Sensor values from SC
+    		 */
+    		VMC_Mointor_SC_Sensors();
+    		vTaskDelay(100);
     	}
-    	  /* Fetch the SC Version and Power Config  */
-    	if(!isPowerModeActive)
+    	else
     	{
-    		VMC_Fetch_SC_SensorData(MSP432_COMMS_VMC_VERSION_POWERMODE_REQ);
+    		/* Wait for SC update complete */
+    		vTaskDelay(2000);
     	}
-    	/* Fetch the Volt & power Sensor length  */
-        if( isVMCActive &&  (!getSensorRespLen))
-        {
-            VMC_Fetch_SC_SensorData(MSP432_COMMS_VMC_GET_RESP_SIZE_REQ);
-        }
-        /*
-         *  Fetching Sensor values from SC
-         */
-        VMC_Mointor_SC_Sensors();
-        vTaskDelay(100);
     }
 
     vTaskSuspend(NULL);
