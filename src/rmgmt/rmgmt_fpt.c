@@ -47,7 +47,7 @@ static u32 rmgmt_fpt_pdi_get_base(struct cl_msg *msg, int fpt_type)
 	case FPT_TYPE_PDIMETA_BACKUP:
 		return msg->multiboot_payload.pdimeta_backup_offset;
 	default:
-		RMGMT_ERR("Warn: unhandled fpt_type %d", fpt_type);
+		RMGMT_ERR("Warn: unhandled fpt_type 0x%x", fpt_type);
 		break;
 	}
 
@@ -60,11 +60,11 @@ static int rmgmt_fpt_pdi_meta_erase(struct cl_msg *msg, int fpt_type)
 	int ret = 0;
 
 	if (base_addr == 0) {
-		RMGMT_ERR("base addr of fpt_type %d cannot be 0", fpt_type);
+		RMGMT_ERR("base addr of fpt_type 0x%x cannot be 0", fpt_type);
 		return -1;
 	}
 
-	RMGMT_LOG("reseting %d metdata", fpt_type); 
+	RMGMT_LOG("reseting 0x%x metdata", fpt_type); 
 
 	ret = ospi_flash_erase(CL_FLASH_BOOT, base_addr, OSPI_VERSAL_PAGESIZE);
 
@@ -79,11 +79,11 @@ static int rmgmt_fpt_pdi_meta_get(struct cl_msg *msg, int fpt_type,
 	int ret = 0;
 
 	if (base_addr == 0) {
-		RMGMT_ERR("base addr of fpt_type %d cannot be 0", fpt_type);
+		RMGMT_ERR("base addr of fpt_type 0x%x cannot be 0", fpt_type);
 		return -1;
 	}
 
-	RMGMT_LOG("fpt_type %d", fpt_type);
+	RMGMT_LOG("fpt_type 0x%x", fpt_type);
 
 	ret = ospi_flash_read(CL_FLASH_BOOT, (u8 *)buf, base_addr, sizeof(buf));
 	if (ret)
@@ -101,11 +101,11 @@ static int rmgmt_fpt_pdi_meta_set(struct cl_msg *msg, int fpt_type,
 	int ret = 0;
 
 	if (base_addr == 0) {
-		RMGMT_ERR("base addr of fpt_type %d cannot be 0", fpt_type);
+		RMGMT_ERR("base addr of fpt_type 0x%x cannot be 0", fpt_type);
 		return -1;
 	}
 
-	RMGMT_LOG("fpt_type %d", fpt_type);
+	RMGMT_LOG("fpt_type 0x%x", fpt_type);
 
 	memcpy(buf, meta, sizeof(*meta));
 
@@ -466,6 +466,11 @@ int rmgmt_flush_rpu_pdi(struct rmgmt_handler *rh, struct cl_msg *msg)
 		} else {
 			RMGMT_ERR("WARN: enforce to flash pdi onto default partition");
 
+			/* Note: always erase before write and no erase after write */
+			ret = rmgmt_fpt_pdi_meta_erase(msg, FPT_TYPE_PDIMETA);
+			if (ret)
+				return ret;
+
 			/* reset to valide magic number */
 			meta.fpt_pdi_magic = FPT_PDIMETA_MAGIC;
 		}
@@ -494,10 +499,6 @@ int rmgmt_flush_rpu_pdi(struct rmgmt_handler *rh, struct cl_msg *msg)
 
 	/* finaly step, update metadata */
 	meta.fpt_pdi_size = len;
-	ret = rmgmt_fpt_pdi_meta_erase(msg, FPT_TYPE_PDIMETA);
-	if (ret)
-		return ret;
-
 	ret = rmgmt_fpt_pdi_meta_set(msg, FPT_TYPE_PDIMETA, &meta);
 	if (ret)
 		return ret;
