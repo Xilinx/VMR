@@ -18,6 +18,7 @@
 #include "sysmon.h"
 #include "vmc_sc_comms.h"
 #include "vmc_update_sc.h"
+#include "xgpio.h"
 
 /* Task Handles */
 static TaskHandle_t xVMCTask;
@@ -39,6 +40,16 @@ static void pVMCTask(void *params)
     VMC_LOG(" VMC launched \n\r");
 
     I2CInit();
+
+    s8 Status;
+
+    XGpio Gpio;
+
+    /* Initialize the GPIO driver */
+    Status = XGpio_Initialize(&Gpio, XPAR_BLP_BLP_LOGIC_ULP_CLOCKING_UCS_CONTROL_STATUS_GPIO_UCS_CONTROL_STATUS_DEVICE_ID);
+    if (Status == XST_SUCCESS) {
+        xil_printf("\n\r Gpio Initialized \r\n");
+    }
 
 #ifdef VMC_DEBUG
     /* Demo menu log is enabled */    

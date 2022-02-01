@@ -207,24 +207,74 @@ s8 PMBUS_SC_Sensor_Read(snsrRead_t *snsrData)
     }
     else
     {
-        memcpy(&snsrData->snsrValue[0],&sensorReading,sizeof(sensorReading));
+	 memcpy(&snsrData->snsrValue[0],&sensorReading,sizeof(sensorReading));
         snsrData->snsrSatus = Vmc_Snsr_State_Comms_failure;
         VMC_DBG("MSP Sensor Id : %d Data read failed \n\r",snsrData->mspSensorIndex);
     }
     return status;
 }
+void clear_clock_shutdown_status()
+{
+    //shutdown state can be cleared by writing a ‘1’ followed by a ‘0’ to bit 16
+    //But this requires a hardware change which hasn't been applied to the hardware yet
+    //The only way to clear shutdown state bit is by reloading the FPGA (Hot reset or cold reset)
 
+    u32 shutdownSatus = IO_SYNC_READ32(XPAR_BLP_BLP_LOGIC_ULP_CLOCKING_GAPPING_DEMAND_GPIO_GAPPING_DEMAND_BASEADDR);
+    shutdownSatus = (shutdownSatus | (1 << 0xF));
+    IO_SYNC_WRITE32(shutdownSatus, XPAR_BLP_BLP_LOGIC_ULP_CLOCKING_GAPPING_DEMAND_GPIO_GAPPING_DEMAND_BASEADDR);
+    shutdownSatus = (shutdownSatus &(~ (1 << 0xF)));
+    IO_SYNC_WRITE32(shutdownSatus, XPAR_BLP_BLP_LOGIC_ULP_CLOCKING_GAPPING_DEMAND_GPIO_GAPPING_DEMAND_BASEADDR);
+    return;
+}
+
+void ucs_clock_shutdown()
+{
+    u32 shutdownSatus = 0 ;
+
+    // offset for clock shutdown
+    u32 originalValue = IO_SYNC_READ32(EP_UCS_CONTROL);
+	
+    // clear 23:4 bits
+    u32 triggerValue = originalValue & 0xFF00000F;
+
+    //to trigger clock shutdown write 0x1B632 at [23:4] bits
+    triggerValue = triggerValue | 0x001B6320;
+	
+     //the bits can be immediately cleared back to 0, as the shutdown state is latched by the hardware
+    IO_SYNC_WRITE32(triggerValue, EP_UCS_CONTROL) ;
+    IO_SYNC_WRITE32(originalValue, EP_UCS_CONTROL) ;
+
+    //offset to read shutdown status
+    shutdownSatus = IO_SYNC_READ32(XPAR_BLP_BLP_LOGIC_ULP_CLOCKING_UCS_CONTROL_STATUS_GPIO_UCS_CONTROL_STATUS_BASEADDR);
+	
+    if(shutdownSatus & 0x01)
+    	xil_printf("\n\r clock shutdown due to power value reached to critical threshold \n\r");
+	
+    /*
+     * To-DO : Log clock shutdown event to dmesg
+     */
+   return;
+}
 s8 Power_Monitor(snsrRead_t *snsrData)
 {
     s8 status = XST_SUCCESS;
-
+    u8 power_mode = 0;
     float totalPower = 0;
     float pexPower = 0;
     float aux0Power = 0;
     float aux1Power = 0;
 
+    static u8 count_12vpex = 1;
+    static u8 count_12vaux_2x4_2x3 = 1;
+    static u8 count_12vaux_2x4 = 1;
+
+    static bool is_12vpex_critical_threshold_reached = false;
+    static bool is_12v_aux_2x3_2x4_critical_threshold_reached = false;
+    static bool is_12v_aux_2x4_critical_threshold_reached = false;
+
     if (xSemaphoreTake(vmc_sc_lock, portMAX_DELAY))
     {
+    	power_mode =  sc_vmc_data.availpower;
     	pexPower = ((sc_vmc_data.sensor_values[PEX_12V]/1000) * (sc_vmc_data.sensor_values[PEX_12V_I_IN])/1000);
     	aux0Power = ((sc_vmc_data.sensor_values[AUX_12V]/1000) * (sc_vmc_data.sensor_values[V12_IN_AUX0_I])/1000); //2x4 AUX
     	aux1Power = ((sc_vmc_data.sensor_values[AUX1_12V]/1000) * (sc_vmc_data.sensor_values[V12_IN_AUX1_I])/1000); //2x3 AUX
@@ -246,6 +296,76 @@ s8 Power_Monitor(snsrRead_t *snsrData)
     {
         memcpy(&snsrData->snsrValue[0],&totalPower,sizeof(totalPower));
         snsrData->snsrSatus = Vmc_Snsr_State_Comms_failure;
+    }
+
+    // shutdown clock only if power reached critical threshold continuously for 1sec (100ms*10)
+    if (pexPower >= POWER_12VPEX_CRITICAL_THRESHOLD)
+    {
+    	if (count_12vpex == 10)
+    	{
+    		ucs_clock_shutdown();
+    		is_12vpex_critical_threshold_reached = true;
+    		count_12vpex = 0;
+    	}
+    	count_12vpex = count_12vpex + 1;
+    }
+
+    if (power_mode == POWER_MODE_300W) // Both 2x3 and 2x4 AUX connected
+    {
+    	if ((aux0Power >= POWER_12VAUX_2X4_CRITICAL_THRESHOLD) || (aux1Power >= POWER_12VAUX_2X3_CRITICAL_THRESHOLD))
+    	{
+    		if (count_12vaux_2x4_2x3 == 10)
+    		{
+    			ucs_clock_shutdown();
+    			is_12v_aux_2x3_2x4_critical_threshold_reached = true;
+    			count_12vaux_2x4_2x3 = 0;
+    		}
+    		count_12vaux_2x4_2x3 = count_12vaux_2x4_2x3 + 1;
+    	}
+    }
+    else // only 2x4 connected
+    {
+    	if (aux0Power >= POWER_12VAUX_2X4_CRITICAL_THRESHOLD)
+    	{
+    		if (count_12vaux_2x4 == 10)
+    		{
+    			ucs_clock_shutdown();
+    			is_12v_aux_2x4_critical_threshold_reached = true;
+    			count_12vaux_2x4 = 0;
+    		}
+    		count_12vaux_2x4 = count_12vaux_2x4 + 1;
+    	}
+    }
+
+    /* clear shutdown status flag if asserted before and less than critical value */
+
+    if (pexPower < POWER_12VPEX_CRITICAL_THRESHOLD)
+    {
+    	if (is_12vpex_critical_threshold_reached == true)
+    	{
+    		clear_clock_shutdown_status();
+    		is_12vpex_critical_threshold_reached = false;
+    	}
+    	count_12vpex = 1;
+    }
+
+    if (power_mode == POWER_MODE_300W)
+    {
+    	if(is_12v_aux_2x3_2x4_critical_threshold_reached == true)
+    	{
+    		clear_clock_shutdown_status();
+    		is_12v_aux_2x3_2x4_critical_threshold_reached = false;
+    	}
+    	count_12vaux_2x4_2x3 = 1;
+    }
+    else
+    {
+    	if (is_12v_aux_2x4_critical_threshold_reached == true)
+    	{
+    		clear_clock_shutdown_status();
+    		is_12v_aux_2x4_critical_threshold_reached = false;
+    	}
+    	count_12vaux_2x4 = 1;
     }
 
     return status;
