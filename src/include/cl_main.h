@@ -23,4 +23,14 @@ typedef int (*tasks_register_t)(void);
 
 void cl_system_pre_init(void);
 
+struct cl_msg;
+
+void cl_rpu_status_query(struct cl_msg *msg);
+void cl_apu_status_query(struct cl_msg *msg);
+
+int ospi_flash_init(void);
+int VMC_Launch(void);
+int RMGMT_Launch(void);
+int CL_MSG_launch(void);
+
 #endif
