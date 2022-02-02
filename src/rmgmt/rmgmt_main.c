@@ -13,6 +13,7 @@
 
 #include "cl_msg.h"
 #include "cl_flash.h"
+#include "cl_main.h"
 
 static TaskHandle_t xXGQTask;
 static struct rmgmt_handler rh = { 0 };
@@ -278,6 +279,8 @@ static int xgq_vmr_cb(cl_msg_t *msg, void *arg)
 		break;
 	case CL_VMR_QUERY:
 		rmgmt_fpt_query(msg);
+		cl_rpu_status_query(msg);
+		cl_apu_status_query(msg);
 		break;
 	case CL_PROGRAM_SC:
 		/* place holder for starting SC download */

@@ -16,11 +16,6 @@
 #include "../vmc/vmc_api.h"
 #include "sysmon.h"
 
-int ospi_flash_init();
-int VMC_Launch(void);
-int RMGMT_Launch(void);
-int CL_MSG_launch(void);
-
 uart_rtos_handle_t uart_log;
 uart_rtos_handle_t uart_vmcsc_log;
 
@@ -59,7 +54,7 @@ void cl_system_pre_init(void)
 
 }
 
-void cl_log_system_info()
+void cl_rpu_status_query(struct cl_msg *msg)
 {
 #ifdef VMR_BUILD_XRT_ONLY
 	CL_LOG(APP_MAIN, "XRT only build");
@@ -75,14 +70,17 @@ void cl_log_system_info()
 
 }
 
+/*TODO: for apu status */
+void cl_apu_status_query(struct cl_msg *msg)
+{
+}
+
 int main( void )
 {
 	cl_logbuf_lock = xSemaphoreCreateMutex();
 	configASSERT(cl_logbuf_lock != NULL);
 
 	CL_LOG(APP_MAIN, "\r\n=== VMR Starts  ===");
-
-	cl_log_system_info();
 
 	cl_system_pre_init();
 
