@@ -359,7 +359,7 @@ static int submit_to_queue(u32 sq_addr)
 			convert_control_type(sq->vmr_control_payload.req_type);
 		/* we always set log level by this request */
 		cl_loglevel_set(sq->vmr_control_payload.debug_level);
-		ret = dispatch_to_queue(&msg, TASK_QUICK);
+		ret = dispatch_to_queue(&msg, TASK_SLOW);
 		break;
 	case CL_MSG_CLOCK:
 		msg.clock_payload.ocl_region = sq->clock_payload.ocl_region;
