@@ -63,9 +63,9 @@ void cl_rpu_status_query(struct cl_msg *msg)
 #endif
 
 #ifdef _VMR_VERSION_
-	CL_LOG(APP_MAIN,
-		"\r\ngit hash: %s.\r\ngit branch: %s.\r\nbuild date: %s",
-		VMR_GIT_HASH, VMR_GIT_BRANCH, VMR_GIT_HASH_DATE);
+	CL_LOG(APP_MAIN, "git hash: %s", VMR_GIT_HASH);
+	CL_LOG(APP_MAIN, "git branch: %s", VMR_GIT_BRANCH);
+	CL_LOG(APP_MAIN, "build date: %s", VMR_GIT_HASH_DATE);
 #endif
 
 }
