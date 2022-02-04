@@ -188,7 +188,7 @@ int rmgmt_init_handler(struct rmgmt_handler *rh)
 	return 0;
 }
 
-static int fpga_pdi_download_workaround(UINTPTR data, UINTPTR size, bool has_pl)
+static int fpga_pdi_download_workaround(UINTPTR data, UINTPTR size, bool has_pl, int delay)
 {
 	int ret;
 	XFpga XFpgaInstance = { 0U };
@@ -210,7 +210,7 @@ static int fpga_pdi_download_workaround(UINTPTR data, UINTPTR size, bool has_pl)
 	IO_SYNC_WRITE32(data, 0xff3f044c);
 	IO_SYNC_WRITE32(0x2, 0xff330000);
 	/* wait for async operation done in case of firewall trip */
-	MDELAY(1000);
+	MDELAY(delay * 1000);
 
 	if (has_pl) {
 		ucs_start();
@@ -263,7 +263,7 @@ static int rmgmt_fpga_download(struct rmgmt_handler *rh, u32 len)
 	Xil_DCacheFlush();
 
 	ret = fpga_pdi_download_workaround((UINTPTR)((const char *)axlf + offset),
-		(UINTPTR)size, true);
+		(UINTPTR)size, true, 1);
 
 	RMGMT_LOG("FPGA load pdi ret: %d", ret);
 	return ret;
@@ -357,7 +357,7 @@ static int rmgmt_ospi_apu_download(struct rmgmt_handler *rh, u32 len)
 	 * set ulp_changed to false.
 	 */
 	ret = fpga_pdi_download_workaround((UINTPTR)((const char *)axlf + offset),
-		(UINTPTR)size, false);
+		(UINTPTR)size, false, 5);
 
 	RMGMT_LOG("FPGA load pdi ret: %d", ret);
 	return ret;
