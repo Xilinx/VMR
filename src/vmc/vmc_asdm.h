@@ -56,6 +56,14 @@ typedef enum Asdm_Completion_Code_e
     Asdm_CC_Invalid_Sensor_ID 		= 0x05,
 }Asdm_Completion_Code_t;
 
+typedef enum Asdm_CMD_Id_e 
+{
+	ASDM_CMD_GET_SIZE		= 0x1,
+	ASDM_CMD_GET_SDR		= 0x2,
+	ASDM_CMD_GET_SINGLE_SENSOR_DATA	= 0x3,
+	ASDM_CMD_GET_ALL_SENSOR_DATA	= 0x4,
+}Asdm_CMD_Id_t;
+
 /*typedef s8 (*Asdm_GetRepository_func)(u8 *respData, u16 respSize);
   typedef s8 (*Asdm_GetSensorData_func)(u8 snsrIndex, u8 *respData, u16 respSize);
 

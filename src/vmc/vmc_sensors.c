@@ -469,24 +469,25 @@ void qsfp_monitor(void)
 
 static int xgq_sensor_cb(cl_msg_t *msg, void *arg)
 {
-    u32 address = EP_RING_BUFFER_BASE + (u32)msg->data_payload.address;
-    u32 size = msg->data_payload.size;
-    u8 reqBuffer[2] = {0};
+    u32 address = EP_RING_BUFFER_BASE + (u32)msg->sensor_payload.address;
+    u32 size = msg->sensor_payload.size;
+    u8 reqBuffer[3] = {0};
     u8 respBuffer[512] = {0};
     u16 respSize = 0;
     s32 ret = 0;
 
-    reqBuffer[0] = msg->log_payload.pid;
+    reqBuffer[0] = (u8) msg->sensor_payload.aid;
+    reqBuffer[1] = (u8) msg->sensor_payload.sid;
     if(Asdm_Process_Sensor_Request(&reqBuffer[0], &respBuffer[0], &respSize))
     {
-        VMC_LOG("ERROR: Failed to Process Sensor Request %d", msg->log_payload.pid);
+        VMC_LOG("ERROR: Failed to Process Sensor Request %d", msg->sensor_payload.pid);
         ret = -1;
     }
     else
     {
         if(size < respSize)
         {
-            VMC_LOG("ERROR: Expected Size %d Actual Size: %d", size, respSize);
+            VMC_ERR("ERROR: Expected Size %d Actual Size: %d", size, respSize);
             ret = -1;
         }
         else

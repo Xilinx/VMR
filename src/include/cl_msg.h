@@ -68,6 +68,16 @@ struct xgq_vmr_log_payload {
 	uint32_t rsvd1:13;
 };
 
+struct xgq_vmr_sensor_payload {
+	uint32_t address;
+	uint32_t size;
+	uint32_t offset;
+	uint32_t aid:8;
+	uint32_t sid:8;
+	uint32_t addr_type:3;
+	uint32_t rsvd1:13;
+};
+
 struct xgq_vmr_clock_payload {
 	uint32_t ocl_region;
 	uint32_t ocl_req_type;
@@ -119,6 +129,7 @@ typedef struct cl_msg {
 		struct xgq_vmr_data_payload data_payload;
 		struct xgq_vmr_log_payload log_payload;
 		struct xgq_vmr_clock_payload clock_payload;
+		struct xgq_vmr_sensor_payload sensor_payload;
 	};
 	union {
 		struct xgq_vmr_multiboot_payload multiboot_payload;
