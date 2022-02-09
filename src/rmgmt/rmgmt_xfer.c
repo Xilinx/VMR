@@ -14,6 +14,7 @@
 #include "cl_io.h"
 #include "cl_msg.h"
 #include "cl_flash.h"
+#include "cl_main.h"
 
 
 static inline u32 wait_for_status(struct rmgmt_handler *rh, u8 status)
@@ -254,17 +255,40 @@ static int rmgmt_fpga_download(struct rmgmt_handler *rh, u32 len)
 	uint64_t offset = 0;
 	uint64_t size = 0;
 
-	ret = rmgmt_xclbin_section_info(axlf, BITSTREAM_PARTIAL_PDI, &offset, &size);
-	if (ret) {
-		RMGMT_LOG("get PARTIAL PDI from xclbin failed %d", ret);
-		return ret;
-	}
 	/* Sync data from cache to memory */
 	Xil_DCacheFlush();
 
-	ret = fpga_pdi_download_workaround((UINTPTR)((const char *)axlf + offset),
-		(UINTPTR)size, true);
+	ret = rmgmt_xclbin_section_info(axlf, BITSTREAM_PARTIAL_PDI, &offset, &size);
+	if (ret || size == 0) {
+		RMGMT_LOG("no PARTIAL PDI from xclbin: %d", ret);
+	} else {
+		ret = fpga_pdi_download_workaround(
+			(UINTPTR)((const char *)axlf + offset),
+			(UINTPTR)size, true);
+		if (ret)
+			goto done;
+	}
 
+	ret = rmgmt_xclbin_section_info(axlf, PDI, &offset, &size);
+	if (ret || size == 0) {
+		RMGMT_LOG("no PDI from xclbin: %d", ret);
+	} else {
+		ret = fpga_pdi_download_workaround(
+			(UINTPTR)((const char *)axlf + offset),
+			(UINTPTR)size, true);
+		if (ret)
+			goto done;
+	}
+
+	ret = cl_xgq_apu_download_xclbin((char *)rh->rh_data, rh->rh_data_size);
+	if (ret == -ENODEV) {
+		RMGMT_LOG("skip apu download xclbin ret: %d", ret);
+		ret = 0;
+	} else if (ret) {
+		RMGMT_LOG("failed apu download xclbin ret: %d", ret);
+	}
+
+done:
 	RMGMT_LOG("FPGA load pdi ret: %d", ret);
 	return ret;
 }

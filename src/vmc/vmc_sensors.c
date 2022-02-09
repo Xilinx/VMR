@@ -33,7 +33,6 @@ extern uint8_t sc_update_flag;
 /*Xgq Msg Handle */
 static u8 xgq_sensor_flag = 0;
 msg_handle_t *sensor_hdl;
-
 extern s8 Asdm_Process_Sensor_Request(u8 *req, u8 *resp, u16 *respSize);
 
 #define MAX6639_FAN_TACHO_TO_RPM(x) (8000*60)/(x*2)
@@ -469,7 +468,7 @@ void qsfp_monitor(void)
 
 static int xgq_sensor_cb(cl_msg_t *msg, void *arg)
 {
-    u32 address = EP_RING_BUFFER_BASE + (u32)msg->data_payload.address;
+    u32 address = RPU_SHARED_MEMORY_ADDR(msg->data_payload.address);
     u32 size = msg->data_payload.size;
     u8 reqBuffer[2] = {0};
     u8 respBuffer[512] = {0};

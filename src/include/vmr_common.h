@@ -8,8 +8,17 @@
 
 #define ENODEV	19
 
+#define XGQ_SQ_TAIL_POINTER     0x0
+#define XGQ_SQ_INTR_REG         0x4
+#define XGQ_SQ_INTR_CTRL        0xC
+#define XGQ_CQ_TAIL_POINTER     0x100
+#define XGQ_CQ_INTR_REG         0x104
+#define XGQ_CQ_INTR_CTRL        0x10C
+
+#define RPU_XGQ_SLOT_SIZE 	512
+#define RPU_RING_BUFFER_LEN	0x1000
+
 /* === start define data-driven endpoints from xparameters.h */
-#define EP_RING_BUFFER_BASE 	0x38000000
 #define EP_SYSTEM_DTB		0x40000
 #define EP_PR_ISOLATION 	XPAR_BLP_BLP_LOGIC_BASE_CLOCKING_PR_RESET_GPIO_BASEADDR
 
@@ -61,9 +70,21 @@
 #define RPU_SQ_BASE (XPAR_BLP_BLP_LOGIC_XGQ_M2R_BASEADDR + XGQ_SQ_TAIL_POINTER)
 #define RPU_CQ_BASE (XPAR_BLP_BLP_LOGIC_XGQ_M2R_BASEADDR + XGQ_CQ_TAIL_POINTER)
 
+#define APU_SHARED_MEMORY_START (0x37000000)
+#define APU_SHARED_MEMORY_END 	(0x37FF0000)
+#define APU_SQ_BASE (XPAR_BLP_BLP_LOGIC_XGQ_A2R_BASEADDR + XGQ_SQ_TAIL_POINTER)
+#define APU_CQ_BASE (XPAR_BLP_BLP_LOGIC_XGQ_A2R_BASEADDR + XGQ_CQ_TAIL_POINTER)
+
 /* Reserve 4K for partition table */
 #define VMR_PARTITION_TABLE_SIZE	0x1000
+/* note: this should be set by APU, hardcode for now */
+#define APU_RING_BUFFER_SIZE		0x1000 
+
+/* xgq ring buffer is right after the partition table */
 #define RPU_RING_BUFFER_OFFSET (RPU_SHARED_MEMORY_START + VMR_PARTITION_TABLE_SIZE)
+
+#define RPU_SHARED_MEMORY_ADDR(offset) (RPU_SHARED_MEMORY_START + (u32)offset)
+#define APU_SHARED_MEMORY_ADDR(offset) (APU_SHARED_MEMORY_START + (u32)offset)
 
 
 #if defined(CONFIG_FORCE_RESET)

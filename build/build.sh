@@ -62,6 +62,7 @@ make_version_h()
 
 	echo "#ifndef _VMR_VERSION_" >> $CL_VERSION_H
 	echo "#define _VMR_VERSION_" >> $CL_VERSION_H
+	echo "#define VMR_TOOL_VERSION "\""$XSCT_VERSION"\" >> $CL_VERSION_H
 	echo "#define VMR_GIT_HASH "\""$VMR_VERSION_HASH"\" >> $CL_VERSION_H
 	echo "#define VMR_GIT_BRANCH "\""$VMR_BUILD_BRANCH"\" >> $CL_VERSION_H
 	echo "#define VMR_GIT_HASH_DATE "\""$VMR_VERSION_HASH_DATE"\" >> $CL_VERSION_H
@@ -95,7 +96,7 @@ check_vmr() {
 		exit 1
 	fi
 	echo "=== VMR github info ==="
-	arm-none-eabi-strings vmr/Debug/vmr.elf |grep VMR_GIT
+	arm-none-eabi-strings vmr/Debug/vmr.elf |grep -E "VMR_GIT|VMR_TOOL"
 	echo "=== VMR github info ==="
 }
 
@@ -187,10 +188,9 @@ fi
 which xsct
 if [ $? -ne 0 ];then
 	default_env
-else
-	version=$(xsct -eval "puts [version]" | awk 'NR==1{print $2}')
-	echo "using current ${version} from env to build VMR"
 fi
+XSCT_VERSION=`which xsct|rev|cut -f3 -d"/"|rev`
+echo "using xsct: ${XSCT_VERSION} from env to build VMR"
 
 if [[ $BUILD_APP == 1 ]];then
 	build_app_incremental

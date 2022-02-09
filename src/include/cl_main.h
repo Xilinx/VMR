@@ -21,16 +21,19 @@ typedef int (*tasks_register_t)(void);
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof (*(x)))
 
+int ospi_flash_init(void);
+int VMC_Launch(void);
+int RMGMT_Launch(void);
+int CL_MSG_launch(void);
 void cl_system_pre_init(void);
 
 struct cl_msg;
 
 void cl_rpu_status_query(struct cl_msg *msg);
 void cl_apu_status_query(struct cl_msg *msg);
-
-int ospi_flash_init(void);
-int VMC_Launch(void);
-int RMGMT_Launch(void);
-int CL_MSG_launch(void);
+int cl_xgq_client_probe(void);
+int cl_xgq_apu_is_ready(void);
+int cl_xgq_apu_identify(struct cl_msg *msg);
+int cl_xgq_apu_download_xclbin(char *data, u32 size);
 
 #endif
