@@ -189,7 +189,7 @@ int rmgmt_init_handler(struct rmgmt_handler *rh)
 	return 0;
 }
 
-static int fpga_pdi_download_workaround(UINTPTR data, UINTPTR size, bool has_pl)
+int fpga_pdi_download_workaround(UINTPTR data, UINTPTR size, int has_pl)
 {
 	int ret;
 	XFpga XFpgaInstance = { 0U };
@@ -223,7 +223,7 @@ static int fpga_pdi_download_workaround(UINTPTR data, UINTPTR size, bool has_pl)
 	return ret;
 }
 
-static int fpga_pl_pdi_download(UINTPTR data, UINTPTR size)
+int fpga_pdi_download(UINTPTR data, UINTPTR size, int has_pl)
 {
 	int ret;
 	XFpga XFpgaInstance = { 0U };
@@ -235,14 +235,18 @@ static int fpga_pl_pdi_download(UINTPTR data, UINTPTR size)
 		return ret;
 	}
 
-	axigate_freeze();
-	ucs_stop();
+	if (has_pl) {
+		axigate_freeze();
+		ucs_stop();
+	}
 
 	ret = XFpga_BitStream_Load(&XFpgaInstance, data, KeyAddr, size, PDI_LOAD);
 
-	ucs_start();
-	MDELAY(10);
-	axigate_free();
+	if (has_pl) {
+		ucs_start();
+		MDELAY(10);
+		axigate_free();
+	}
 
 	RMGMT_LOG("ret: %d \r\n", ret);
 	return ret;
@@ -262,9 +266,8 @@ static int rmgmt_fpga_download(struct rmgmt_handler *rh, u32 len)
 	if (ret || size == 0) {
 		RMGMT_LOG("no PARTIAL PDI from xclbin: %d", ret);
 	} else {
-		ret = fpga_pdi_download_workaround(
-			(UINTPTR)((const char *)axlf + offset),
-			(UINTPTR)size, true);
+		ret = pdi_download((UINTPTR)((const char *)axlf + offset),
+			(UINTPTR)size, 1);
 		if (ret)
 			goto done;
 	}
@@ -273,9 +276,8 @@ static int rmgmt_fpga_download(struct rmgmt_handler *rh, u32 len)
 	if (ret || size == 0) {
 		RMGMT_LOG("no PDI from xclbin: %d", ret);
 	} else {
-		ret = fpga_pdi_download_workaround(
-			(UINTPTR)((const char *)axlf + offset),
-			(UINTPTR)size, true);
+		ret = pdi_download((UINTPTR)((const char *)axlf + offset),
+			(UINTPTR)size, 1);
 		if (ret)
 			goto done;
 	}
@@ -320,7 +322,7 @@ int rmgmt_load_apu(struct rmgmt_handler *rh)
 	/* Sync data from cache to memory */
 	Xil_DCacheFlush();
 
-	ret = fpga_pl_pdi_download((UINTPTR)rh->rh_data, (UINTPTR)size);
+	ret = pdi_download((UINTPTR)rh->rh_data, (UINTPTR)size, 0);
 
 	return ret;
 }
@@ -380,8 +382,8 @@ static int rmgmt_ospi_apu_download(struct rmgmt_handler *rh, u32 len)
 	 * when loading an APU or any other PDI type which does not change the ULP.
 	 * set ulp_changed to false.
 	 */
-	ret = fpga_pdi_download_workaround((UINTPTR)((const char *)axlf + offset),
-		(UINTPTR)size, false);
+	ret = pdi_download((UINTPTR)((const char *)axlf + offset),
+		(UINTPTR)size, 0);
 
 	RMGMT_LOG("FPGA load pdi ret: %d", ret);
 	return ret;
