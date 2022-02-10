@@ -72,8 +72,14 @@
 
 #define APU_SHARED_MEMORY_START (0x37000000)
 #define APU_SHARED_MEMORY_END 	(0x37FF0000)
-#define APU_SQ_BASE (XPAR_BLP_BLP_LOGIC_XGQ_A2R_BASEADDR + XGQ_SQ_TAIL_POINTER)
-#define APU_CQ_BASE (XPAR_BLP_BLP_LOGIC_XGQ_A2R_BASEADDR + XGQ_CQ_TAIL_POINTER)
+
+/* tempory set this until TA xsa is changed to correct one */
+#ifndef XPAR_BLP_BLP_LOGIC_XGQ_R2A_BASEADDR
+#define XPAR_BLP_BLP_LOGIC_XGQ_R2A_BASEADDR XPAR_BLP_BLP_LOGIC_XGQ_A2R_BASEADDR
+#endif
+
+#define APU_SQ_BASE (XPAR_BLP_BLP_LOGIC_XGQ_R2A_BASEADDR + XGQ_SQ_TAIL_POINTER)
+#define APU_CQ_BASE (XPAR_BLP_BLP_LOGIC_XGQ_R2A_BASEADDR + XGQ_CQ_TAIL_POINTER)
 
 /* Reserve 4K for partition table */
 #define VMR_PARTITION_TABLE_SIZE	0x1000
@@ -106,3 +112,40 @@ static inline int rmgmt_enable_pl_reset() { return -ENODEV; }
 int32_t VMC_SCFW_Program_Progress(void);
 #endif
 
+
+int fpga_pdi_download(UINTPTR data, UINTPTR size, int has_pl);
+int fpga_pdi_download_workaround(UINTPTR data, UINTPTR size, int has_pl);
+#if defined(CONFIG_2022_1_VITIS)
+#ifdef STDIN_BASEADDRESS
+#undef STDIN_BASEADDRESS
+#endif
+#define STDIN_BASEADDRESS 0xFF010000
+
+#undef STDOUT_BASEADDRESS
+#define STDOUT_BASEADDRESS 0xFF01000
+
+#undef XPAR_BLP_BLP_LOGIC_XGQ_A2R_BASEADDR
+#define XPAR_BLP_BLP_LOGIC_XGQ_A2R_BASEADDR 0x80011000
+
+#undef XPAR_BLP_BLP_LOGIC_XGQ_A2R_BASEADDR
+#define XPAR_BLP_BLP_LOGIC_XGQ_A2R_HIGHADDR 0x80011FFF
+
+#undef XPAR_BLP_BLP_LOGIC_XGQ_M2R_BASEADDR
+#define XPAR_BLP_BLP_LOGIC_XGQ_M2R_BASEADDR 0x80010000
+
+#undef XPAR_BLP_BLP_LOGIC_XGQ_M2R_HIGHADDR
+#define XPAR_BLP_BLP_LOGIC_XGQ_M2R_HIGHADDR 0x80010FFF
+
+static inline int pdi_download(UINTPTR data, UINTPTR size, int has_pl)
+{
+	//still has issues with 2022.1, :-(
+	//return fpga_pdi_download(data, size, has_pl);
+	return fpga_pdi_download_workaround(data, size, has_pl);
+}
+#else
+static inline int pdi_download(UINTPTR data, UINTPTR size, int has_pl)
+{
+	/* 2021.2 vitis has bugs, apply workaround */
+	return fpga_pdi_download_workaround(data, size, has_pl);
+}
+#endif
