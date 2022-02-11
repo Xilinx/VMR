@@ -214,30 +214,30 @@ static cl_log_type_t convert_log_pid(enum xgq_cmd_log_page_type type)
 	return ltype;
 }
 
-static cl_sensor_type_t convert_sensor_pid(enum xgq_cmd_sensor_page_id xgq_id)
+static cl_sensor_type_t convert_sensor_sid(enum xgq_cmd_sensor_page_id xgq_id)
 {
 	cl_sensor_type_t sid = CL_SENSOR_ALL;
 
 	switch (xgq_id) {
-	case XGQ_CMD_SENSOR_PID_GET_SIZE:
+	case XGQ_CMD_SENSOR_SID_GET_SIZE:
 		sid = CL_SENSOR_GET_SIZE;
 		break;
-	case XGQ_CMD_SENSOR_PID_BDINFO:
+	case XGQ_CMD_SENSOR_SID_BDINFO:
 		sid = CL_SENSOR_BDINFO;
 		break;	
-	case XGQ_CMD_SENSOR_PID_TEMP:
+	case XGQ_CMD_SENSOR_SID_TEMP:
 		sid = CL_SENSOR_TEMP;
 		break;	
-	case XGQ_CMD_SENSOR_PID_VOLTAGE:
+	case XGQ_CMD_SENSOR_SID_VOLTAGE:
 		sid = CL_SENSOR_VOLTAGE;
 		break;	
-	case XGQ_CMD_SENSOR_PID_CURRENT:
+	case XGQ_CMD_SENSOR_SID_CURRENT:
 		sid = CL_SENSOR_CURRENT;
 		break;	
-	case XGQ_CMD_SENSOR_PID_POWER:
+	case XGQ_CMD_SENSOR_SID_POWER:
 		sid = CL_SENSOR_POWER;
 		break;	
-	case XGQ_CMD_SENSOR_PID_QSFP:
+	case XGQ_CMD_SENSOR_SID_QSFP:
 		sid = CL_SENSOR_QSFP;
 		break;	
 	default:
@@ -394,9 +394,10 @@ static int submit_to_queue(u32 sq_addr)
 		ret = dispatch_to_queue(&msg, TASK_QUICK);
 		break;
 	case CL_MSG_SENSOR:
-		msg.log_payload.address = (u32)sq->sensor_payload.address;
-		msg.log_payload.size = (u32)sq->sensor_payload.size;
-		msg.log_payload.pid = convert_sensor_pid(sq->sensor_payload.pid);
+		msg.sensor_payload.address = (u32)sq->sensor_payload.address;
+		msg.sensor_payload.size = (u32)sq->sensor_payload.size;
+		msg.sensor_payload.aid = (u8) sq->sensor_payload.aid;
+		msg.sensor_payload.sid = (u8) convert_sensor_sid(sq->sensor_payload.sid);
 
 		ret = dispatch_to_queue(&msg, TASK_QUICK);
 		break;

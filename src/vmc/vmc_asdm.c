@@ -789,6 +789,7 @@ s8 Init_Asdm()
 
 	    /* Fill the EOR */
 	    memcpy(sdrInfo[sdrCount].asdmEOR,"END",sizeof(u8) * strlen("END"));
+	    byteCount += (sizeof(u8) * strlen("END"));
 
 	    /* Update the Byte Count for this record in Multiple of 8
 	     * if not an exact multiple, add pad bytes to round it off */
@@ -882,7 +883,7 @@ s8 Asdm_Get_Sensor_Repository(u8 *req, u8 *resp, u16 *respSize)
 	return -1;
     }
 
-    sdrIndex = getSDRIndex(req[0]);
+    sdrIndex = getSDRIndex(req[1]);
 
     if (xSemaphoreTake(sdr_lock, portMAX_DELAY))
     {
@@ -1021,7 +1022,7 @@ s8 Asdm_Get_Sensor_Value(u8 *req, u8 *resp, u16 *respSize)
 	return -1;
     }
 
-    sdrIndex = getSDRIndex(req[0]);
+    sdrIndex = getSDRIndex(req[1]);
     /* Sensor Id are 1 indexed, but we have 0 indexed */
     snsrIndex = req[1] - 1;
     *respSize = 0;
@@ -1070,12 +1071,12 @@ s8 Asdm_Process_Sensor_Request(u8 *req, u8 *resp, u16 *respSize)
         return -1;
     }
 
-    if(req[0] == ASDM_GET_SDR_SIZE_REQ)
+    if(req[0] == ASDM_CMD_GET_SIZE)
     {
         return Asdm_Get_SDR_Size(req, resp, respSize);
     }
 
-    else if(!isRepoTypeSupported((u32) req[0]))
+    if(!isRepoTypeSupported(req[1]))
     {
         resp[0] = Asdm_CC_Not_Available;
         resp[1] = req[0];
@@ -1084,11 +1085,11 @@ s8 Asdm_Process_Sensor_Request(u8 *req, u8 *resp, u16 *respSize)
     }
     else
     {
-        if(req[1] == SENSOR_REPOSITORY_REQUEST)
+        if(req[0] == ASDM_CMD_GET_SDR)
         {
             return Asdm_Get_Sensor_Repository(req, resp, respSize);
         }
-        else
+        else if(req[0] == ASDM_CMD_GET_ALL_SENSOR_DATA)
         {
             return Asdm_Get_Sensor_Value(req, resp, respSize);
         }
