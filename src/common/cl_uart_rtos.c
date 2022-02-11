@@ -13,6 +13,7 @@
 #include "portmacro.h"
 
 #include "cl_uart_rtos.h"
+#include "cl_log.h"
 
 
 
@@ -246,24 +247,18 @@ static int32_t UART_Config(uart_rtos_handle_t *handle, XUartPsv *UartInstPtr, ui
 		return XST_FAILURE;
 	}
 
-#ifndef VMC_DEBUG
-
-	LineCtrlRegister = XUartPsv_ReadReg(Config->BaseAddress, XUARTPSV_UARTLCR_OFFSET);
-
-	LineCtrlRegister |= XUARTPSV_UARTLCR_PARITY_EVEN;               // Set Even parity
-	LineCtrlRegister |= XUARTPSV_UARTLCR_PARITY_MASK;               // Enable parity
-
-	/* Write the line controller register out */
-	XUartPsv_WriteReg(Config->BaseAddress,
-	             XUARTPSV_UARTLCR_OFFSET, LineCtrlRegister);
-#endif
 
 
-	/* Check hardware build. */
-	Status = XUartPsv_SelfTest(UartInstPtr);
-	if (Status != XST_SUCCESS) {
-		xil_printf("XUartPs_SelfTest FAILED with %d\n",Status );
+	if (DeviceId == XPAR_XUARTPSV_0_DEVICE_ID)
+	{
+		LineCtrlRegister = XUartPsv_ReadReg(Config->BaseAddress, XUARTPSV_UARTLCR_OFFSET);
+
+		LineCtrlRegister |= XUARTPSV_UARTLCR_PARITY_EVEN;
+		LineCtrlRegister |= XUARTPSV_UARTLCR_PARITY_MASK;
+		XUartPsv_WriteReg(Config->BaseAddress,
+				        XUARTPSV_UARTLCR_OFFSET, LineCtrlRegister);
 	}
+
 	/*
 	 * Setup the handlers for the UART that will be called from the
 	 * interrupt context when data has been sent and received, specify
@@ -424,12 +419,11 @@ int32_t UART_RTOS_Send(uart_rtos_handle_t *handle, uint8_t *buf, uint32_t size)
 * @note
 *
 **************************************************************************/
-int32_t UART_RTOS_Receive(uart_rtos_handle_t *handle, uint8_t *buf, uint32_t size, uint32_t *received){
+int32_t UART_RTOS_Receive(uart_rtos_handle_t *handle, uint8_t *buf, uint32_t size, uint32_t *received,uint32_t timeout){
 
 
 	EventBits_t ev;
 	UART_STATUS retVal = UART_SUCCESS;
-	u32 ret;
 
 	if(received == NULL)
 	{
@@ -455,9 +449,8 @@ int32_t UART_RTOS_Receive(uart_rtos_handle_t *handle, uint8_t *buf, uint32_t siz
 	}
 
 
-	ret = XUartPsv_Recv(&handle->uartPsv, buf, size);
-
-	ev = xEventGroupWaitBits(handle->rxEvent, UART_RTOS_COMPLETE, pdTRUE, pdFALSE, 0xff);
+	XUartPsv_Recv(&handle->uartPsv, buf, size);
+	ev = xEventGroupWaitBits(handle->rxEvent, UART_RTOS_COMPLETE | UART_RTOS_RX_ERROR, pdTRUE, pdFALSE,(const TickType_t)timeout);
 	if((ev & UART_RTOS_COMPLETE))
 	{
 		*received = handle->cb_msg.receivedBytes;

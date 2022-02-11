@@ -41,10 +41,54 @@ Versal_sensor_readings sensor_readings;
 u8 i2c_num = 1;  // LPD_I2C0
 #define LPD_I2C_0	0x1
 
+void clear_clock_shutdown_status()
+{
+    /* shutdown state can be cleared by writing a ‘1’ followed by a ‘0’ to bit 16
+     * But this requires a hardware change which hasn't been applied to the hardware yet
+     * The only way to clear shutdown state bit is by reloading the FPGA (Hot reset or cold reset)
+     */
+
+    u32 shutdownSatus = IO_SYNC_READ32(XPAR_BLP_BLP_LOGIC_ULP_CLOCKING_GAPPING_DEMAND_GPIO_GAPPING_DEMAND_BASEADDR);
+    shutdownSatus = (shutdownSatus | (1 << 0xF));
+    IO_SYNC_WRITE32(shutdownSatus, XPAR_BLP_BLP_LOGIC_ULP_CLOCKING_GAPPING_DEMAND_GPIO_GAPPING_DEMAND_BASEADDR);
+    shutdownSatus = (shutdownSatus &(~ (1 << 0xF)));
+    IO_SYNC_WRITE32(shutdownSatus, XPAR_BLP_BLP_LOGIC_ULP_CLOCKING_GAPPING_DEMAND_GPIO_GAPPING_DEMAND_BASEADDR);
+    return;
+}
+
+void ucs_clock_shutdown()
+{
+    u32 shutdownSatus = 0 ;
+
+    // offset for clock shutdown
+    u32 originalValue = IO_SYNC_READ32(EP_UCS_CONTROL);
+
+    // clear 23:4 bits
+    u32 triggerValue = originalValue & 0xFF00000F;
+
+    //to trigger clock shutdown write 0x1B632 at [23:4] bits
+    triggerValue = triggerValue | 0x001B6320;
+
+     //the bits can be immediately cleared back to 0, as the shutdown state is latched by the hardware
+    IO_SYNC_WRITE32(triggerValue, EP_UCS_CONTROL) ;
+    IO_SYNC_WRITE32(originalValue, EP_UCS_CONTROL) ;
+
+    //offset to read shutdown status
+    shutdownSatus = IO_SYNC_READ32(XPAR_BLP_BLP_LOGIC_ULP_CLOCKING_UCS_CONTROL_STATUS_GPIO_UCS_CONTROL_STATUS_BASEADDR);
+
+    if(shutdownSatus & 0x01)
+    	VMC_ERR("Clock shutdown due to power value reached to critical threshold \n\r");
+
+    /*
+     * To-DO : Log clock shutdown event to dmesg
+     */
+   return;
+}
+
 s8 Temperature_Read_Inlet(snsrRead_t *snsrData)
 {
 	s8 status = XST_FAILURE;
-	s32 tempValue = 0;
+	s16 tempValue = 0;
 
 	status = SE98A_ReadTemperature(LPD_I2C_0, SLAVE_ADDRESS_SE98A_0, &tempValue);
 	if (status == XST_SUCCESS)
@@ -65,7 +109,7 @@ s8 Temperature_Read_Inlet(snsrRead_t *snsrData)
 s8 Temperature_Read_Outlet(snsrRead_t *snsrData)
 {
 	s8 status = XST_FAILURE;
-	s32 tempValue = 0;
+	s16 tempValue = 0;
 
 	status = SE98A_ReadTemperature(LPD_I2C_0, SLAVE_ADDRESS_SE98A_1, &tempValue);
 	if (status == XST_SUCCESS)
@@ -109,6 +153,8 @@ s8 Temperature_Read_ACAP_Device_Sysmon(snsrRead_t *snsrData)
 	s8 status = XST_FAILURE;
 	float TempReading = 0.0;
 
+	static bool is_sysmon_critical_threshold_reached = false;
+
 	status = XSysMonPsv_ReadTempProcessed(&InstancePtr, SYSMONPSV_TEMP_MAX, &TempReading);
 	if (status == XST_SUCCESS)
 	{
@@ -120,6 +166,19 @@ s8 Temperature_Read_ACAP_Device_Sysmon(snsrRead_t *snsrData)
 	{
 		snsrData->snsrSatus = Vmc_Snsr_State_Comms_failure;
 		VMC_DBG("Failed to read Sysmon : %d \n\r",SYSMONPSV_TEMP_MAX);
+	}
+
+	if (TempReading >= TEMP_FPGA_CRITICAL_THRESHOLD)
+	{
+		ucs_clock_shutdown();
+		is_sysmon_critical_threshold_reached = true;
+
+	}
+	if((is_sysmon_critical_threshold_reached == true) && 
+                    (TempReading <  TEMP_FPGA_CRITICAL_THRESHOLD ))
+	{
+		clear_clock_shutdown_status();
+		is_sysmon_critical_threshold_reached = false;
 	}
 
 	return status;
@@ -161,6 +220,7 @@ s8 Temperature_Read_QSFP(snsrRead_t *snsrData)
 	u8 status = XST_FAILURE;
 	float TempReading = 0.0;
 
+	static bool is_qsfp_critical_threshold_reached = false;
 	status = QSFP_ReadTemperature(&TempReading, snsrData->sensorInstance);
 
 	memcpy(&snsrData->snsrValue[0],&TempReading,sizeof(TempReading));
@@ -173,12 +233,25 @@ s8 Temperature_Read_QSFP(snsrRead_t *snsrData)
 	else if (status == XST_FAILURE)
 	{
 		snsrData->snsrSatus = Vmc_Snsr_State_Comms_failure;
-		VMC_PRNT("Failed to read slave : %d \n\r",QSFP_SLAVE_ADDRESS);
+		VMC_ERR("Failed to read slave : %d \n\r",QSFP_SLAVE_ADDRESS);
 	}
 	else
 	{
 		snsrData->snsrSatus = Vmc_Snsr_State_Unavailable;
-		VMC_PRNT("QSFP_%d module not present \n\r",(snsrData->sensorInstance-1));
+		VMC_DBG("QSFP_%d module not present \n\r",(snsrData->sensorInstance-1));
+	}
+
+	if (TempReading >= TEMP_QSFP_CRITICAL_THRESHOLD)
+	{
+		ucs_clock_shutdown();
+		is_qsfp_critical_threshold_reached = true;
+
+	}
+	if((is_qsfp_critical_threshold_reached == true) && 
+		(TempReading <  TEMP_QSFP_CRITICAL_THRESHOLD ))
+	{
+		clear_clock_shutdown_status();
+		is_qsfp_critical_threshold_reached = false;
 	}
 	return status;
 }
@@ -206,54 +279,14 @@ s8 PMBUS_SC_Sensor_Read(snsrRead_t *snsrData)
     }
     else
     {
-	 memcpy(&snsrData->snsrValue[0],&sensorReading,sizeof(sensorReading));
+    	memcpy(&snsrData->snsrValue[0],&sensorReading,sizeof(sensorReading));
         snsrData->snsrSatus = Vmc_Snsr_State_Comms_failure;
         VMC_DBG("MSP Sensor Id : %d Data read failed \n\r",snsrData->mspSensorIndex);
     }
+
     return status;
 }
-void clear_clock_shutdown_status()
-{
-    //shutdown state can be cleared by writing a ‘1’ followed by a ‘0’ to bit 16
-    //But this requires a hardware change which hasn't been applied to the hardware yet
-    //The only way to clear shutdown state bit is by reloading the FPGA (Hot reset or cold reset)
 
-    u32 shutdownSatus = IO_SYNC_READ32(XPAR_BLP_BLP_LOGIC_ULP_CLOCKING_GAPPING_DEMAND_GPIO_GAPPING_DEMAND_BASEADDR);
-    shutdownSatus = (shutdownSatus | (1 << 0xF));
-    IO_SYNC_WRITE32(shutdownSatus, XPAR_BLP_BLP_LOGIC_ULP_CLOCKING_GAPPING_DEMAND_GPIO_GAPPING_DEMAND_BASEADDR);
-    shutdownSatus = (shutdownSatus &(~ (1 << 0xF)));
-    IO_SYNC_WRITE32(shutdownSatus, XPAR_BLP_BLP_LOGIC_ULP_CLOCKING_GAPPING_DEMAND_GPIO_GAPPING_DEMAND_BASEADDR);
-    return;
-}
-
-void ucs_clock_shutdown()
-{
-    u32 shutdownSatus = 0 ;
-
-    // offset for clock shutdown
-    u32 originalValue = IO_SYNC_READ32(EP_UCS_CONTROL);
-	
-    // clear 23:4 bits
-    u32 triggerValue = originalValue & 0xFF00000F;
-
-    //to trigger clock shutdown write 0x1B632 at [23:4] bits
-    triggerValue = triggerValue | 0x001B6320;
-	
-     //the bits can be immediately cleared back to 0, as the shutdown state is latched by the hardware
-    IO_SYNC_WRITE32(triggerValue, EP_UCS_CONTROL) ;
-    IO_SYNC_WRITE32(originalValue, EP_UCS_CONTROL) ;
-
-    //offset to read shutdown status
-    shutdownSatus = IO_SYNC_READ32(XPAR_BLP_BLP_LOGIC_ULP_CLOCKING_UCS_CONTROL_STATUS_GPIO_UCS_CONTROL_STATUS_BASEADDR);
-	
-    if(shutdownSatus & 0x01)
-    	xil_printf("\n\r clock shutdown due to power value reached to critical threshold \n\r");
-	
-    /*
-     * To-DO : Log clock shutdown event to dmesg
-     */
-   return;
-}
 s8 Power_Monitor(snsrRead_t *snsrData)
 {
     s8 status = XST_SUCCESS;
@@ -466,6 +499,24 @@ void qsfp_monitor(void)
 	return;
 }
 
+void Monitor_Thresholds()
+{
+	static bool is_vccint_temp_critical_threshold_reached = false;
+	u16 sensorReading = sc_vmc_data.sensor_values[VCCINT_TEMP];
+
+	if (sensorReading >= TEMP_VCCINT_CRITICAL_THRESHOLD)
+	{
+	    ucs_clock_shutdown();
+	    is_vccint_temp_critical_threshold_reached = true;
+	}
+	if((is_vccint_temp_critical_threshold_reached == true) &&
+		(sensorReading <  TEMP_VCCINT_CRITICAL_THRESHOLD ))
+	{
+	    clear_clock_shutdown_status();
+	    is_vccint_temp_critical_threshold_reached = false;
+	}
+}
+
 static int xgq_sensor_cb(cl_msg_t *msg, void *arg)
 {
     u32 address = RPU_SHARED_MEMORY_ADDR(msg->sensor_payload.address);
@@ -524,6 +575,7 @@ void SensorMonitorTask(void *params)
     	if(!sc_update_flag)
     	{
     		Monitor_Sensors();
+    		Monitor_Thresholds();
 
 #ifdef VMC_TEST
     		se98a_monitor();

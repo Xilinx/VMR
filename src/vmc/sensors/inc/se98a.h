@@ -8,6 +8,6 @@
 
 #include "xil_types.h"
 
-u8 SE98A_ReadTemperature(u8 i2c_num, u8 slaveAddr, s32 *temperatureValue);
+u8 SE98A_ReadTemperature(u8 i2c_num, u8 slaveAddr, s16 *temperatureValue);
 
 #endif

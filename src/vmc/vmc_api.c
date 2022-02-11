@@ -55,7 +55,7 @@ int32_t VMC_User_Input_Read(char *ReadChar, uint32_t *receivedBytes)
 {
     if (VMC_GetLogLevel() != VMC_LOG_LEVEL_NONE)
     {
-    	if(UART_RTOS_Receive(&uart_log, (uint8_t *)ReadChar, 1, receivedBytes) ==  UART_SUCCESS)
+    	if(UART_RTOS_Receive(&uart_log, (uint8_t *)ReadChar, 1, receivedBytes,portMAX_DELAY) ==  UART_SUCCESS)
     	{
     		return UART_SUCCESS;
     	}

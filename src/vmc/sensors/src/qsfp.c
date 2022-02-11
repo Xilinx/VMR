@@ -14,6 +14,7 @@ u8 i2c_num_pmc = 0;
 u8 QSFP_ReadTemperature(float *TemperatureValue, u8 sensorInstance)
 {
 	u8 status = XST_FAILURE;
+	const TickType_t xBlockTime = pdMS_TO_TICKS(10);
 
 	unsigned char lsb_temp_reg = QSFP_LSB_TEMPERATURE_REG;
 	unsigned char msb_temp_reg = QSFP_MSB_TEMPERATURE_REG;
@@ -55,7 +56,7 @@ u8 QSFP_ReadTemperature(float *TemperatureValue, u8 sensorInstance)
 
 		Xil_Out32(wr_Address,MIO);
 
-		usleep(1000); // Required to update MODSEL status on MIO
+		vTaskDelay(xBlockTime); // Required to update MODSEL status on MIO
 
 		status = i2c_send_rs_recv(i2c_num_pmc, QSFP_SLAVE_ADDRESS, &lsb_temp_reg, 1, &temperature_buff[0], i2c_read_len);
 		if (status == XST_FAILURE)
