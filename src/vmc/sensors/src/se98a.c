@@ -6,10 +6,10 @@
 #include "cl_i2c.h"
 #include "../inc/se98a.h"
 
-u8 SE98A_ReadTemperature(u8 i2c_num, u8 slaveAddr, s32 *temperatureValue)
+u8 SE98A_ReadTemperature(u8 i2c_num, u8 slaveAddr, s16 *temperatureValue)
 {
     u8 status = 0;
-    s32 TempHexVal = 0;
+    s16 TempHexVal = 0;
     unsigned char i2c_read_buff[2] = {0};
     long int i2c_read_len = 2;
     unsigned char i2c_write_buff[2];

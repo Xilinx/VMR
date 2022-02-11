@@ -33,16 +33,20 @@
 #define QSFP_MAX_NUM    (2)
 
 #define ASDM_HEADER_VER     (0x1)
-#define NUM_BOARD_INFO_SENSORS  (11)
-#define NUM_TEMPERATURE_SENSORS  (7)
+#define NUM_BOARD_INFO_SENSORS  (13)
+#define NUM_TEMPERATURE_SENSORS  (8)
 #define NUM_SC_VOLTAGE_SENSORS  (16)
 #define NUM_SC_CURRENT_SENSORS  (5)
 #define NUM_POWER_SENSORS       (1)
+
+#define SNSRNAME_ACTIVE_MSP_VER "Active MSP Ver\0"
 
 SDR_t *sdrInfo;
 SemaphoreHandle_t sdr_lock;
 static u8 asdmInitSuccess = false;
 extern Versal_BoardInfo board_info;
+extern SC_VMC_Data sc_vmc_data;
+extern u8 fpt_sc_version[3];
 
 extern s8 Temperature_Read_Inlet(snsrRead_t *snsrData);
 extern s8 Temperature_Read_Outlet(snsrRead_t *snsrData);
@@ -59,6 +63,7 @@ Asdm_Sensor_Thresholds_t thresholds_limit_tbl[]= {
     { "Outlet Temp",	0,   0,  0,     80,  85, 95 },
     { "Board Temp",	0,   0,  0,     80,  85, 95 },
     { "Sysmon Temp",	0,   0,  0,     88,  97, 107 },
+    { "Vccint Temp",	0,   0,  0,     100, 110, 125 },
     { "QSFP0 Temp",     0,   0,  0,     80,  85, 90 },
     { "QSFP1 Temp",     0,   0,  0,     80,  85, 90 },
 
@@ -235,16 +240,28 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
 	    .defaultValue = board_info.board_mac[0],
 	},
 	{
-        .repoType = BoardInfoSDR,
-        .sensorName = "MAC 1\0",
-        .snsrValTypeLength = SENSOR_TYPE_NUM | sizeof(board_info.board_mac[1]),
-        .defaultValue = board_info.board_mac[1],
-    },
+	    .repoType = BoardInfoSDR,
+	    .sensorName = "MAC 1\0",
+	    .snsrValTypeLength = SENSOR_TYPE_NUM | sizeof(board_info.board_mac[1]),
+	    .defaultValue = board_info.board_mac[1],
+        },
     {
         .repoType = BoardInfoSDR,
         .sensorName = "Fan Presence\0",
         .snsrValTypeLength = SENSOR_TYPE_ASCII | sizeof(board_info.board_act_pas),
         .defaultValue = &board_info.board_act_pas[0],
+    },
+    {
+        .repoType = BoardInfoSDR,
+        .sensorName = SNSRNAME_ACTIVE_MSP_VER,
+        .snsrValTypeLength = SENSOR_TYPE_NUM | sizeof(sc_vmc_data.scVersion),
+        .defaultValue = &sc_vmc_data.scVersion[0],
+    },
+    {
+        .repoType = BoardInfoSDR,
+        .sensorName = "Target MSP Ver\0",
+        .snsrValTypeLength = SENSOR_TYPE_NUM | sizeof(fpt_sc_version),
+        .defaultValue = &fpt_sc_version[0],
     },
 	{
 	    .repoType = BoardInfoSDR,
@@ -257,7 +274,7 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
 	    .sensorName = "Inlet Temp\0",
 	    .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_2B,
 	    .snsrUnitModifier = 0x0,
-	    .supportedThreshold = SNSR_MAX_VAL | SNSR_MAX_VAL | HAS_UPPER_THRESHOLDS,
+	    .supportedThreshold = SNSR_MAX_VAL | SNSR_AVG_VAL | HAS_UPPER_THRESHOLDS,
 	    .sesnorListTbl = (u8 *) SE98_TEMP0,
 	    .sampleCount = 0x1,
 	    .monitorFunc = &Temperature_Read_Inlet,
@@ -268,7 +285,7 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
 	    .sensorName = "Outlet Temp\0",
 	    .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_2B,
 	    .snsrUnitModifier = 0x0,
-	    .supportedThreshold = SNSR_MAX_VAL | SNSR_MAX_VAL | HAS_UPPER_THRESHOLDS,
+	    .supportedThreshold = SNSR_MAX_VAL | SNSR_AVG_VAL | HAS_UPPER_THRESHOLDS,
 	    .sampleCount = 0x1,
 	    .sesnorListTbl = (u8 *) SE98_TEMP1,
 	    .monitorFunc = &Temperature_Read_Outlet,
@@ -278,7 +295,7 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
 	    .sensorName = "Board Temp\0",
 	    .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_4B,
 	    .snsrUnitModifier = 0x0,
-	    .supportedThreshold = SNSR_MAX_VAL | SNSR_MAX_VAL | HAS_UPPER_THRESHOLDS,
+	    .supportedThreshold = SNSR_MAX_VAL | SNSR_AVG_VAL | HAS_UPPER_THRESHOLDS,
 	    .sampleCount = 0x1,
 	    .sesnorListTbl = (u8 *) FAN_TEMP,
 	    .monitorFunc = &Temperature_Read_Board,
@@ -288,17 +305,27 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
 	    .sensorName = "Sysmon Temp\0",
 	    .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_4B,
 	    .snsrUnitModifier = 0x0,
-	    .supportedThreshold = SNSR_MAX_VAL | SNSR_MAX_VAL | HAS_UPPER_THRESHOLDS,
+	    .supportedThreshold = SNSR_MAX_VAL | SNSR_AVG_VAL | HAS_UPPER_THRESHOLDS,
 	    .sampleCount = 0x1,
 	    .sesnorListTbl = (u8 *) FPGA_TEMP,
 	    .monitorFunc = &Temperature_Read_ACAP_Device_Sysmon,
 	},
 	{
 	    .repoType = TemperatureSDR,
+	    .sensorName = "Vccint Temp\0",
+	    .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_2B,
+	    .snsrUnitModifier = 0x0,
+	    .supportedThreshold = SNSR_MAX_VAL | SNSR_AVG_VAL | HAS_UPPER_THRESHOLDS,
+	    .sampleCount = 0x1,
+	    .sesnorListTbl = (u8 *) VCCINT_TEMP,
+	    .monitorFunc = &PMBUS_SC_Sensor_Read,
+	},
+	{
+	    .repoType = TemperatureSDR,
 	    .getSensorName = &getQSFPName,
 	    .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_4B,
 	    .snsrUnitModifier = 0x0,
-	    .supportedThreshold = SNSR_MAX_VAL | SNSR_MAX_VAL | HAS_UPPER_THRESHOLDS,
+	    .supportedThreshold = SNSR_MAX_VAL | SNSR_AVG_VAL | HAS_UPPER_THRESHOLDS,
 	    .sampleCount = 0x1,
 	    .sensorInstance = QSFP_MAX_NUM,
 	    .monitorFunc = &Temperature_Read_QSFP,
@@ -307,7 +334,7 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
 	    .repoType = TemperatureSDR,
 	    .sensorName = "Fan RPM\0",
 	    .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_2B,
-	    .supportedThreshold = SNSR_MAX_VAL | SNSR_MAX_VAL,
+	    .supportedThreshold = SNSR_MAX_VAL | SNSR_AVG_VAL,
 	    .sampleCount = 0x1,
 	    .sesnorListTbl = (u8 *) FAN_SPEED,
 	    .monitorFunc = &Fan_RPM_Read,
@@ -317,7 +344,7 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
 	    .getSensorName = &getVoltagesName,
 	    .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_2B,
 	    .snsrUnitModifier = -3,
-	    .supportedThreshold = SNSR_MAX_VAL | SNSR_MAX_VAL ,
+	    .supportedThreshold = SNSR_MAX_VAL | SNSR_AVG_VAL ,
 	    .sampleCount = 0x1,
 	    .sensorInstance = NUM_SC_VOLTAGE_SENSORS,
 	    .monitorFunc = &PMBUS_SC_Sensor_Read,
@@ -327,7 +354,7 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
 	    .getSensorName = &getCurrentNames,
 	    .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_2B,
 	    .snsrUnitModifier = -3,
-	    .supportedThreshold = SNSR_MAX_VAL | SNSR_MAX_VAL ,
+	    .supportedThreshold = SNSR_MAX_VAL | SNSR_AVG_VAL ,
 	    .sampleCount = 0x1,
 	    .sensorInstance = NUM_SC_CURRENT_SENSORS,
 	    .monitorFunc = &PMBUS_SC_Sensor_Read,
@@ -337,7 +364,7 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
 	    .sensorName = "Total Power\0",
 	    .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_4B,
 	    .snsrUnitModifier = 0,
-	    .supportedThreshold = SNSR_MAX_VAL | SNSR_MAX_VAL ,
+	    .supportedThreshold = SNSR_MAX_VAL | SNSR_AVG_VAL ,
 	    .sampleCount = 0x1,
 	    .monitorFunc = &Power_Monitor,
 	},
@@ -432,18 +459,34 @@ u8 Update_Sensor_Value(Asdm_RepositoryTypeEnum_t repoType, u8 sensorIdx, snsrRea
 		/* Update Sensor Status */
 		sensorRecord->sensor_status = snsrInfo->snsrSatus;
 
-		/* Update Max Sensor Value */
-		if ( *((float *)sensorRecord->sensor_value) > *((float *)sensorRecord->sensorMaxValue))
+		if(snsrInfo->sensorValueSize >= sizeof(float))
 		{
-		    memcpy(sensorRecord->sensorMaxValue,sensorRecord->sensor_value,
-			    snsrInfo->sensorValueSize);
+			/* Update Max Sensor Value */
+			if ( *((float *)sensorRecord->sensor_value) > *((float *)sensorRecord->sensorMaxValue))
+			{
+			    memcpy(sensorRecord->sensorMaxValue,sensorRecord->sensor_value,
+				    snsrInfo->sensorValueSize);
+			}
+
+			/* Calculate and Update Average Value */
+			*((float *)sensorRecord->sensorAverageValue) = *((float *)sensorRecord->sensorAverageValue)
+			    				- (*((float *)sensorRecord->sensorAverageValue)/sensorRecord->sampleCount)
+			    				+ (*((float *)sensorRecord->sensor_value)/sensorRecord->sampleCount);
 		}
+		else
+		{
+			/* Update Max Sensor Value */
+			if ( *((u16 *)sensorRecord->sensor_value) > *((u16 *)sensorRecord->sensorMaxValue))
+			{
+				memcpy(sensorRecord->sensorMaxValue,sensorRecord->sensor_value,
+						snsrInfo->sensorValueSize);
+			}
 
-		/* Calculate and Update Average Value */
-		*((float *)sensorRecord->sensorAverageValue) = *((float *)sensorRecord->sensorAverageValue)
-		    				- (*((float *)sensorRecord->sensorAverageValue)/sensorRecord->sampleCount)
-		    				+ (*((float *)sensorRecord->sensor_value)/sensorRecord->sampleCount);
-
+			/* Calculate and Update Average Value */
+			*((u16 *)sensorRecord->sensorAverageValue) = (*((u16 *)sensorRecord->sensorAverageValue)
+					    				- (*((u16 *)sensorRecord->sensorAverageValue)/sensorRecord->sampleCount))
+									+ (*((u16 *)sensorRecord->sensor_value)/sensorRecord->sampleCount);
+		}
 		/* Increment the Sample Count after a Successful read*/
 		sensorRecord->sampleCount++;
 	    }
@@ -1240,6 +1283,13 @@ u8 Asdm_Send_I2C_Sensors_SC(u8 *scPayload)
 	/* We need to Send all the Temperature sensors to SC for OOB */
 	for(i = 0 ; i< sdrInfo[tempSensorIdx].header.no_of_records; i++)
 	{
+	    /* We do not need send VCCINT_TEMP to SC,
+ 	       as we are receiving it from SC
+	    */
+	    if(sensorRecord[i].mspSensorId == VCCINT_TEMP)
+	    {
+		continue;
+	    }
 	    //Add SC sensor Index for the Sensor
 	    scPayload[dataIndex++] = sensorRecord[i].mspSensorId;
 
@@ -1253,4 +1303,25 @@ u8 Asdm_Send_I2C_Sensors_SC(u8 *scPayload)
 
 	}
 	return dataIndex;
+}
+
+void Asdm_Update_Active_MSP_sensor()
+{
+	s8 boardInfoSensorIdx = getSDRIndex(BoardInfoSDR);
+	u8 idx = 0;
+
+	Asdm_SensorRecord_t *sensorRecord = sdrInfo[boardInfoSensorIdx].sensorRecord;
+	for(idx = sdrInfo[boardInfoSensorIdx].header.no_of_records -1 ; idx >= 0 ; idx--)
+	{
+		if(!memcmp(sensorRecord[idx].sensor_name,SNSRNAME_ACTIVE_MSP_VER,strlen(SNSRNAME_ACTIVE_MSP_VER)))
+		{
+			if (xSemaphoreTake(sdr_lock, portMAX_DELAY))
+			{
+				memcpy(sensorRecord[idx].sensor_value,
+						&sc_vmc_data.scVersion[0],sizeof(sc_vmc_data.scVersion));
+				xSemaphoreGive(sdr_lock);
+				break;
+			}
+		}
+	}
 }
