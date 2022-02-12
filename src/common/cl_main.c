@@ -33,6 +33,15 @@ static tasks_register_t handler[] = {
 #endif
 };
 
+extern void vApplicationStackOverflowHook(TaskHandle_t xTask, char *pcTaskName)
+{
+	CL_ERR(APP_MAIN, "stack overflow %x %s\r\n", &xTask, (portCHAR *)pcTaskName);
+	/* If the parameters have been corrupted then inspect pxCurrentTCB to
+	 * identify which task has overflowed its stack.
+	 */
+	for (;;) { }
+}
+
 void cl_system_pre_init(void)
 {
 	/* Init flash device */
@@ -95,3 +104,4 @@ int main( void )
 	/* Should never go here unless there is not enough memory */
 	CL_LOG(APP_MAIN, "not enough memory, exit.");
 }
+

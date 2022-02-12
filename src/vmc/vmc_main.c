@@ -66,7 +66,7 @@ static void pVMCTask(void *params)
 
     if (xTaskCreate( SensorMonitorTask,
 		( const char * ) "Sensor_Monitor",
-		2048,
+		TASK_STACK_DEPTH,
 		NULL,
 		tskIDLE_PRIORITY + 1,
 		&xSensorMonTask
@@ -84,7 +84,7 @@ static void pVMCTask(void *params)
 
     if (xTaskCreate( VMC_SC_CommsTask,
 		( const char * ) "VMC_SC_Comms",
-		2048,
+		TASK_STACK_DEPTH,
 		NULL,
 		tskIDLE_PRIORITY + 1,
 		&xVMCSCTask
@@ -103,7 +103,7 @@ int VMC_Launch( void )
 {
     if (xTaskCreate( pVMCTask,
 		( const char * ) "VMC",
-		2048,
+		TASK_STACK_DEPTH,
 		NULL,
 		tskIDLE_PRIORITY + 1,
 		&xVMCTask

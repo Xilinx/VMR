@@ -1025,7 +1025,7 @@ void SC_Update_Task_Create(void)
     /* Create the SC update task */
     if (xTaskCreate(SCUpdateTask,
     		        (const char *) "SC_Update_Task",
-					1024,
+					TASK_STACK_DEPTH,
 					NULL,
 					tskIDLE_PRIORITY + 2,
 					&xSCUpdateTaskHandle) != pdPASS)

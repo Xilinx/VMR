@@ -36,4 +36,6 @@ int cl_xgq_apu_is_ready(void);
 int cl_xgq_apu_identify(struct cl_msg *msg);
 int cl_xgq_apu_download_xclbin(char *data, u32 size);
 
+#define TASK_STACK_DEPTH 0x10000 /* 64k * sizeof(word) = 256k */
+
 #endif
