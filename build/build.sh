@@ -1,5 +1,7 @@
 #!/bin/bash
 
+source ./utils.sh
+
 TOOL_VERSION="2021.2"
 DEFAULT_VITIS="/proj/xbuilds/${TOOL_VERSION}_daily_latest/installs/lin64/Vitis/HEAD/settings64.sh"
 STDOUT_JTAG=0
