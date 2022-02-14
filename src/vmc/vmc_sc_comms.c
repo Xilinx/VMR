@@ -2,11 +2,10 @@
 #include "FreeRTOS.h"
 #include "task.h"
 
-
 #include "vmc_sc_comms.h"
+#include "vmc_update_sc.h"
 
 extern TaskHandle_t xVMCSCTask;
-extern TaskHandle_t xVMCUartpoll;
 
 SC_VMC_Data sc_vmc_data;
 
@@ -29,7 +28,7 @@ extern uint8_t sc_update_flag;
 u8 VMC_SC_Comms_Msg[] = {
        MSP432_COMMS_VOLT_SNSR_REQ,
        MSP432_COMMS_POWER_SNSR_REQ,
-	MSP432_COMMS_TEMP_SNSR_REQ,
+	   MSP432_COMMS_TEMP_SNSR_REQ,
        MSP432_COMMS_VMC_SEND_I2C_SNSR_REQ,
 };
 
@@ -469,8 +468,8 @@ void VMC_SC_CommsTask(void *params)
     	}
     	else
     	{
-    		/* Wait for SC update complete */
-    		vTaskDelay(2000);
+    		/* Wait for SC update complete ~20Sec*/
+    		vTaskDelay(DELAY_MS(1000 * 20));
     	}
     }
 

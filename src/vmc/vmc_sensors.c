@@ -587,8 +587,8 @@ void SensorMonitorTask(void *params)
     	}
     	else
     	{
-    		/* Wait for SC update complete */
-    		vTaskDelay(2000);
+    		/* Wait for SC update complete ~20Sec*/
+    		vTaskDelay(DELAY_MS(1000 * 20));
     	}
 
     }
