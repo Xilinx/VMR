@@ -1,7 +1,25 @@
 #!/bin/bash
 
+source ./utils.sh
+
 TOOL_VERSION="2021.2"
 DEFAULT_VITIS="/proj/xbuilds/${TOOL_VERSION}_daily_latest/installs/lin64/Vitis/HEAD/settings64.sh"
+STDOUT_JTAG=0
+NOT_STABLE=0
+ROOT_DIR=`pwd`
+BSP_DIR="$ROOT_DIR/vmr_platform/vmr_platform/psv_cortexr5_0/freertos10_xilinx_domain/bsp/"
+REAL_BSP=`realpath ../bsp/2021.2_stable/bsp`
+
+check_result()
+{
+	typeset log="$1"
+	typeset ret="$2"
+
+	if [ $2 -ne 0 ];then
+		echo "$1 err: $2"
+		exit 1;
+	fi
+}
 
 default_env() {
 	echo -ne "no xsct, using version: "
@@ -25,6 +43,12 @@ default_env() {
 build_clean() {
 	echo "=== Remove build directories ==="
 	rm -r xsa .metadata vmr_platform vmr_system vmr 
+}
+
+append_stable_bsp() {
+	echo "=== Using bsp in:$REAL_BSP. \"diff -rw dir1 dir2\" to compare bsp source files "
+	rsync -rlviI $REAL_BSP vmr_platform/vmr_platform/psv_cortexr5_0/freertos10_xilinx_domain/
+	check_result "rsync" $?
 }
 
 grep_file()
@@ -92,12 +116,27 @@ make_version_h()
 
 check_vmr() {
 	if [[ ! -f "vmr/Debug/vmr.elf" ]];then
-		echo "build failed, cannot find vmr.elf"
+		echo "Build failed, cannot find vmr.elf"
 		exit 1
 	fi
+
 	echo "=== VMR github info ==="
 	arm-none-eabi-strings vmr/Debug/vmr.elf |grep -E "VMR_GIT|VMR_TOOL"
-	echo "=== VMR github info ==="
+
+	echo "=== Build env info ==="
+	if [ NOT_STABLE == 1 ];then
+		echo "BSP is daily latest"
+	else
+		echo "BSP is appended from $REAL_BSP"
+	fi
+
+	if [ STDOUT_JTAG == 1 ];then
+		echo "STDOUT is JTAG"
+	else
+		echo "STDOUT is UARTLite"
+	fi
+
+	echo "=== Build done ==="
 }
 
 build_app_all() {
@@ -129,6 +168,8 @@ usage() {
     echo "-TA                        TA exact version, default is [${TOOL_VERSION}_daily_latest]"
     echo "-version                   version.json file"
     echo "-platform                  platform.json file for enable platform specific resources"
+    echo "-jtag                      build VMR stdout to jtag"
+    echo "-daily_latest              build VMR from daily latest bsp, otherwise use stable bsp from this VMR repo"
     echo "-help"
     exit $1
 }
@@ -171,6 +212,14 @@ do
 			shift
 			PLATFORM_FILE=$1
 			;;
+		-jtag)
+			shift
+			STDOUT_JTAG=1
+			;;
+		-daily_latest)
+			shift
+			NOT_STABLE=1
+			;;
                 * | --* | -*)
                         echo "Invalid argument: $1"
                         usage 1
@@ -210,22 +259,45 @@ if [ $? -ne 0 ];then
 	exit 1;
 fi
 
-# always perform build clean for a clean build env
+#####################
+# build starts here #
+#####################
+
+#
+# (1) always perform build clean for a clean build env
+#
 build_clean
 mkdir xsa
-cp $BUILD_XSA xsa/gen3x16.xsa
-if [ $? -ne 0 ];then
-	echo "cannot copy ${BUILD_XSA} exit."
-	exit 1;
+cp $BUILD_XSA xsa/vmr.xsa
+check_result "copy $BUILD_XSA" $?
+
+#
+# (2) using xsct to create bsp with jtag flag
+#
+echo "=== Create vmr_platform ==="
+xsct ./create_bsp.tcl $STDOUT_JTAG $NOT_STABLE
+check_result "Create vmr_platform" $?
+
+#
+# (3) override freertos and recompile it
+#
+if [ $NOT_STABLE == 1 ];then
+	echo "=== Build BSP with daily_latest"
+else
+	echo "=== Build BSP with stable version"
+	append_stable_bsp
+	xsct ./rebuild_bsp.tcl
+	check_result "Rebuild BSP" $?
+#	cd $BSP_DIR
+#	set -x
+#make -C psv_cortexr5_0/libsrc/freertos10_xilinx_v1_10/src -s libs  "SHELL=/bin/sh" "COMPILER=armr5-none-eabi-gcc" "ASSEMBLER=armr5-none-eabi-as" "ARCHIVER=armr5-none-eabi-ar" "COMPILER_FLAGS=  -O2 -c -mcpu=cortex-r5" "EXTRA_COMPILER_FLAGS=-g -DARMR5 -Wall -Wextra -mfloat-abi=hard -mfpu=vfpv3-d16 -fno-tree-loop-distribute-patterns -Dversal"
+#	set +x
+#	check_result "Recompile bsp" $?
+#	cd $ROOT_DIR
 fi
 
-echo "=== Create BSP Project ==="
-xsct ./create_bsp.tcl
-if [ $? -ne 0 ];then
-	echo "cannot create project from xsa: $BUILD_XSA"
-	echo "xsct: " `which xsct` " exit."
-	exit 1;
-fi
-
+#
+# (4) build vmr application after platform bsp is built done
+#
 echo "=== Build APP ==="
 build_app_all

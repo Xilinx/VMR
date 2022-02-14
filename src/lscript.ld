@@ -10,8 +10,8 @@
 /*                                                                 */
 /*******************************************************************/
 
-_STACK_SIZE = DEFINED(_STACK_SIZE) ? _STACK_SIZE : 0x4000000;
-_HEAP_SIZE = DEFINED(_HEAP_SIZE) ? _HEAP_SIZE : 0xB000000;
+_STACK_SIZE = DEFINED(_STACK_SIZE) ? _STACK_SIZE : 0x10000000;
+_HEAP_SIZE = DEFINED(_HEAP_SIZE) ? _HEAP_SIZE : 0x20000000;
 
 _ABORT_STACK_SIZE = DEFINED(_ABORT_STACK_SIZE) ? _ABORT_STACK_SIZE : 1024;
 _SUPERVISOR_STACK_SIZE = DEFINED(_SUPERVISOR_STACK_SIZE) ? _SUPERVISOR_STACK_SIZE : 2048;
@@ -28,7 +28,7 @@ MEMORY
    blp_shell_utils_remap_0_mem2 : ORIGIN = 0x20108000000, LENGTH = 0x8000000
    ulp_plram_ctrl_Mem0 : ORIGIN = 0x20204000000, LENGTH = 0x20000
    blp_shell_utils_remap_1_mem0 : ORIGIN = 0x20206000000, LENGTH = 0x1000000
-   blp_axi_noc_mc_C0_DDR_LOW0x4 : ORIGIN = 0x40000000, LENGTH = 0x30000000
+   blp_axi_noc_mc_C0_DDR_LOW0x4 : ORIGIN = 0x40000000, LENGTH = 0x3E800000
    blp_axi_noc_mc_C0_DDR_LOW2x4 : ORIGIN = 0xC080000000, LENGTH = 0x380000000
    blp_cips_pspmc_0_psv_pmc_ram_psv_pmc_ram : ORIGIN = 0xF2000000, LENGTH = 0x20000
    blp_cips_pspmc_0_psv_r5_0_instruction_cache_psv_r5_0_instruction_cache : ORIGIN = 0xFFE40000, LENGTH = 0x10000

@@ -276,7 +276,7 @@ int32_t Enable_DemoMenu(void)
 	}
 
 
-    if ( (retc = xTaskCreate(DemoMenuTask, "DemoMenu_Task", MENU_THREADSTACKSIZE, NULL, demoMenu_task_PRIORITY, NULL)) != pdPASS)
+    if ( (retc = xTaskCreate(DemoMenuTask, "DemoMenu_Task", TASK_STACK_DEPTH, NULL, demoMenu_task_PRIORITY, NULL)) != pdPASS)
 	{
     	xil_printf("Task creation failed!.\r\n");
 		return retc;

@@ -661,7 +661,7 @@ static int init_task()
 {
 	if (xTaskCreate( receiveTask,
 		( const char *) "XGQ Receive Task",
-		1024,
+		TASK_STACK_DEPTH,
 		NULL,
 		tskIDLE_PRIORITY + 1,
 		&receiveTaskHandle) != pdPASS) {
@@ -671,8 +671,8 @@ static int init_task()
 	}
 
 	if (xTaskCreate( quickTask,
-		( const char *) "quick Task",
-		1024,
+		( const char *) "XGQ quick Task",
+		TASK_STACK_DEPTH,
 		NULL,
 		tskIDLE_PRIORITY + 1,
 		&quickTaskHandle) != pdPASS) {
@@ -683,8 +683,8 @@ static int init_task()
 	}
 
 	if (xTaskCreate( slowTask,
-		( const char *) "slow Task",
-		1024,
+		( const char *) "XGQ slow Task",
+		TASK_STACK_DEPTH,
 		NULL,
 		tskIDLE_PRIORITY + 1,
 		&slowTaskHandle) != pdPASS) {

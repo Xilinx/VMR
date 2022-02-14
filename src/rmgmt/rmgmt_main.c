@@ -359,6 +359,8 @@ static void pvXGQTask( void *pvParameters )
 			RMGMT_LOG("apu is ready.");
 			xgq_apu_control_flag = 1;
 		}
+
+		RMGMT_ERR("free heap %d", xPortGetFreeHeapSize());
 	}
 	RMGMT_LOG("done");
 }
@@ -367,7 +369,7 @@ static int rmgmt_create_tasks(void)
 {
 	if (xTaskCreate( pvXGQTask,
 		 ( const char * ) "R5-0-XGQ",
-		 2048,
+		 TASK_STACK_DEPTH,
 		 NULL,
 		 tskIDLE_PRIORITY + 1,
 		 &xXGQTask) != pdPASS) {

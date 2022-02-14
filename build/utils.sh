@@ -1,0 +1,1 @@
+export FORCE_MARK_AS_EDGE_XSA=1

@@ -14,6 +14,7 @@
 
 #include "cl_uart_rtos.h"
 #include "cl_log.h"
+#include "cl_main.h"
 
 
 
@@ -522,7 +523,7 @@ static void UART_Task(void* pvParameters)
 **************************************************************************/
 int32_t UART_RTOS_Enable(uart_rtos_config_t *uartConfig)
 {
-    if(xTaskCreate(UART_Task,"UART_Task", UART_RTOS_TASK_STACK_SIZE, uartConfig, UART_RTOS_TASK_PRIORITY, NULL) != pdPASS)
+    if(xTaskCreate(UART_Task,"UART_Task", TASK_STACK_DEPTH, uartConfig, UART_RTOS_TASK_PRIORITY, NULL) != pdPASS)
     {
     	xil_printf("UART Task Create Failed!");
     	return XST_FAILURE;

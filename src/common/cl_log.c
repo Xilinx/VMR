@@ -26,7 +26,7 @@ struct cl_msg_dbg {
 /* semaphore lock should be inited by cl_main.c */
 extern SemaphoreHandle_t cl_logbuf_lock;
 
-static uint8_t log_level_gl = CL_LOG_LEVEL_ERR;
+static uint8_t log_level_gl = CL_LOG_LEVEL_LOG;
 u32 cl_msg_idx = 0;
 struct cl_msg_dbg msg_dbg_log[CL_MSG_DBG_MAX_RECS];
 

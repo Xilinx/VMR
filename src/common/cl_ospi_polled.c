@@ -1446,7 +1446,7 @@ int ospi_flash_copy(flash_area_t area, u32 src, u32 tgt, u32 len)
 	u32 idx = 0;
 	int ret = 0;
 
-	OSPI_LOG("src 0x%x, tgt 0x%x. start", src, tgt);
+	OSPI_DBG("src 0x%x, tgt 0x%x. start", src, tgt);
 
 	ospi_flash_percentage = 0;
 	/* copy enough (len + 1) page size from srouce to target */
@@ -1463,7 +1463,7 @@ int ospi_flash_copy(flash_area_t area, u32 src, u32 tgt, u32 len)
 	}
 
 	ospi_flash_percentage = 100;
-	OSPI_LOG("src 0x%x, tgt 0x%x. done %d", src, tgt, ret);
+	OSPI_DBG("src 0x%x, tgt 0x%x. done %d", src, tgt, ret);
 	return ret;
 }
 

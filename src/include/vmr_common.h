@@ -115,10 +115,10 @@ int32_t VMC_SCFW_Program_Progress(void);
 
 int fpga_pdi_download(UINTPTR data, UINTPTR size, int has_pl);
 int fpga_pdi_download_workaround(UINTPTR data, UINTPTR size, int has_pl);
+
 #if defined(CONFIG_2022_1_VITIS)
-#ifdef STDIN_BASEADDRESS
+
 #undef STDIN_BASEADDRESS
-#endif
 #define STDIN_BASEADDRESS 0xFF010000
 
 #undef STDOUT_BASEADDRESS
@@ -138,14 +138,17 @@ int fpga_pdi_download_workaround(UINTPTR data, UINTPTR size, int has_pl);
 
 static inline int pdi_download(UINTPTR data, UINTPTR size, int has_pl)
 {
-	//still has issues with 2022.1, :-(
-	//return fpga_pdi_download(data, size, has_pl);
-	return fpga_pdi_download_workaround(data, size, has_pl);
+	return fpga_pdi_download(data, size, has_pl);
+	//return fpga_pdi_download_workaround(data, size, has_pl);
 }
+
 #else
+
 static inline int pdi_download(UINTPTR data, UINTPTR size, int has_pl)
 {
-	/* 2021.2 vitis has bugs, apply workaround */
-	return fpga_pdi_download_workaround(data, size, has_pl);
+	/* 2021.2 has patches now*/
+	return fpga_pdi_download(data, size, has_pl);
+	//return fpga_pdi_download_workaround(data, size, has_pl);
 }
+
 #endif
