@@ -1,3 +1,7 @@
+/******************************************************************************
+ * Copyright (C) 2020 Xilinx, Inc.  All rights reserved.
+ * SPDX-License-Identifier: MIT
+ *******************************************************************************/
 
 #ifndef SRC_VMC_VMC_UPDATE_SC_H_
 #define SRC_VMC_VMC_UPDATE_SC_H_
@@ -9,7 +13,10 @@
 
 #define ULONG_MAX 						0xFFFFFFFFUL
 
-#define TIMEOUT_MS(x)   				( ((x)*10)     /portTICK_PERIOD_MS )
+#define DELAY_MS(x)   					((x)     /portTICK_PERIOD_MS )
+#define RCV_TIMEOUT_MS(x)  				((x)     /portTICK_PERIOD_MS )
+
+#define SC_UPDATE_MAX_RETRY_COUNT		(10u)
 
 #define BSL_VERSION_REQ					(0x06)
 #define BSL_VERSION_RESP				(0x11)
@@ -28,7 +35,11 @@
 #define BSL_DATA_WRITE_RESP_SEC_CHAR	(0x00)
 #define BSL_CRC_SUCCESS_RESP			(0x3A)
 #define BSL_SYNC_SUCCESS				(0x00)
+#define SC_BSL_SYNCED_REQ				(0x01)
+#define SC_BSL_SYNCED_RESP				(0x02)
 
+#define SC_ENABLE_BSL_REQ				(0x09)
+#define SC_ENABLE_BSL_RESP				(0x0A)
 
 #define CMD_RX_DATA_BLOCK_32			(0x20)
 #define CMD_RX_PASSWORD					(0x21)
@@ -87,7 +98,7 @@ typedef enum
 	STATUS_SUCCESS = 0,
 	STATUS_FAILURE,
 	STATUS_IN_PROGRESS
-}upgrade_status;
+}upgrade_status_t;
 
 typedef enum
 {
@@ -102,9 +113,27 @@ typedef enum
 	BSL_LOAD_PC_32,
 	MSP_GET_STATUS,
 	BSL_REBOOT_RESET,
-	TX_BSL_VERSION
-}upgrade_state;
+	TX_BSL_VERSION,
+	SC_BSL_SYNC
+}upgrade_state_t;
 
+
+typedef enum scUpateError_e
+{
+	SC_UPDATE_NO_ERROR = 0xE0,
+	SC_UP_TO_DATE_NO_UPDATE_REQ,
+	SC_UPDATE_ERROR_SC_BSL_SYNC_FAILED,
+	SC_UPDATE_ERROR_EN_BSL_FAILED,
+	SC_UPDATE_ERROR_VMC_BSL_SYNC_FAILED,
+	SC_UPDATE_ERROR_BSL_UNLOCK_PASSWORD_FAILED,
+	SC_UPDATE_ERROR_ERASE_FAILED,
+	SC_UPDATE_ERROR_INVALID_SC_SYMBOL_FOUND,
+	SC_UPDATE_ERROR_POST_CRC_FAILED,
+	SC_UPDATE_ERROR_INVALID_BSL_RESP,
+	SC_UPDATE_ERROR_NO_VALID_FPT_SC_FOUND,
+	SC_UPDATE_ERROR_FAILED_TO_GET_BSL_VERSION,
+	SC_UPDATE_ERROR_OPEARTION_TIMEDOUT
+}scUpateError_t;
 
 
 int32_t VMC_Start_SC_Update(void);
@@ -114,6 +143,6 @@ void VMC_Parse_Fpt_SC_Version(u32 addr_location, u8 *bsl_send_data_pkt);
 bool VMC_Read_SC_FW(void);
 u8 Get_SC_Checksum(void);
 u8 Check_Received_SC_Header(void *ptr1, void *ptr2, u8 len);
-upgrade_status matchCRC_postWrite(unsigned int writeAdd);
+upgrade_status_t matchCRC_postWrite(unsigned int writeAdd);
 
 #endif /* SRC_VMC_VMC_UPDATE_SC_H_ */

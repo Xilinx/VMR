@@ -93,7 +93,7 @@ static void pVMCTask(void *params)
 	return ;
     }
 
-    /* Create the SC update task */
+    /* Create SC update task */
     SC_Update_Task_Create();
 
     vTaskSuspend(NULL);
