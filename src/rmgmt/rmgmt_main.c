@@ -321,7 +321,9 @@ static int xgq_vmr_cb(cl_msg_t *msg, void *arg)
 	case CL_PROGRAM_SC:
 		/* calling into vmc_update APIs, we check progress separately */
 		if (acquire_download_sema()) {
+			RMGMT_LOG("start programing SC ...");
 			VMC_Start_SC_Update();
+			RMGMT_LOG("end programing SC ...");
 			release_download_sema();
 		} else {
 			RMGMT_LOG("system busy, please try later");
@@ -405,7 +407,7 @@ static void pvXGQTask( void *pvParameters )
 			xgq_apu_control_flag = 1;
 		}
 
-		RMGMT_ERR("free heap %d", xPortGetFreeHeapSize());
+		RMGMT_DBG("free heap %d", xPortGetFreeHeapSize());
 	}
 	RMGMT_LOG("done");
 }
