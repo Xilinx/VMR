@@ -144,14 +144,14 @@ int cl_xgq_apu_download_xclbin(char *data, u32 size)
 	if (!shm_acquire_data(&base_off, &data_size))
 		return -EBUSY;
 
-	MSG_LOG("base off 0x%x, size %d", base_off, size);
+	MSG_LOG("base 0x%x, data size %d, total size %d", base_off, data_size, size);
 	for (int i = 0; i < 8; i++)
 		MSG_LOG("%x", data[i]);
 	for (int i = size - 8; i < size; i++)
 		MSG_LOG("%x", data[i]);
 
 	/* set to 1M for test only */
-	data_size = 0x100000;
+	//data_size = 0x100000;
 
 	while (remain_size > 0) {
 		u32 trunk_size = remain_size > data_size ? data_size : remain_size;
