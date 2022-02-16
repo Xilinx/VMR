@@ -7,9 +7,24 @@
 
 ## TA location 2022.1
 
-	XRT: /proj/xbuilds/2022.1_daily_latest/xbb/xrt/packages/
-	Shell: /proj/xbuilds/2022.1_daily_latest/xbb/packages/internal_platforms/vck5000/gen4x8_xdma/
-	XSA: /proj/xbuilds/2022.1_daily_latest/xbb/packages/internal_platforms/vck5000/gen4x8_xdma/1-202120-1-dev/
+	XRT: 	/proj/xbuilds/2022.1_daily_latest/xbb/xrt/packages/
+	Shell: 	/proj/xbuilds/2022.1_daily_latest/xbb/packages/internal_platforms/vck5000/gen4x8_xdma/base/
+	XSA: 	/proj/xbuilds/2022.1_daily_latest/xbb/packages/internal_platforms/vck5000/gen4x8_xdma/1-202120-1-dev/
+	APU: 	/proj/xbuilds/2022.1_daily_latest/internal_platforms/sw/versal/apu_packages/versal/
+
+## Code Review procedure
+
+### 1. Code Review Standard
+
+	TBD, we will have a meeting to discuss this (2/15/2022).
+	
+### 2. Code Merge Standard
+
+	Unit test should be performed on TA XRT + TA Shell + TA APU;
+	Test report should reflect what tests have been performed;
+	At least one code reviewer sign off the approval with reason;
+
+	Note: failed to do so may result a code backout (git revert) if serious regression found. 
 
 ## Build vmr.elf
 
