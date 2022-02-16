@@ -6,6 +6,9 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "FreeRTOS.h"
+#include "semphr.h"
+
 #include "rmgmt_common.h"
 #include "rmgmt_xfer.h"
 #include "rmgmt_clock.h"
@@ -31,6 +34,20 @@ int xgq_clock_flag = 0;
 int xgq_apubin_flag = 0;
 int xgq_vmr_control_flag = 0;
 int xgq_apu_control_flag = 0;
+
+SemaphoreHandle_t xSemaDownload;
+
+int32_t VMC_Start_SC_Update(void);
+
+static bool acquire_download_sema()
+{
+	return xSemaphoreTake(xSemaDownload, (TickType_t)10) == pdTRUE;
+}
+
+static bool release_download_sema()
+{
+	return xSemaphoreGive(xSemaDownload) == pdTRUE;
+}
 
 static int xgq_clock_cb(cl_msg_t *msg, void *arg)
 {
@@ -90,9 +107,22 @@ static int rmgmt_download_pdi(cl_msg_t *msg, bool is_rpu_pdi)
 	return 0;
 }
 
+/* We acquire sema for pdi but not for apubin because the apubin can be
+ * run in parallel with xclbin download and sc download.
+ * The race between pdi download and apubin download is handled by host driver.
+ */
 static int xgq_pdi_cb(cl_msg_t *msg, void *arg)
 {
-	return rmgmt_download_pdi(msg, true);
+	int ret = 0;
+
+	if (acquire_download_sema()) {
+		ret = rmgmt_download_pdi(msg, true);
+		release_download_sema();
+		return ret;
+	}
+
+	RMGMT_LOG("system busy, please try later");
+	return -1;
 }
 
 static int xgq_apubin_cb(cl_msg_t *msg, void *arg)
@@ -115,7 +145,13 @@ static int xgq_xclbin_cb(cl_msg_t *msg, void *arg)
 	rh.rh_data_size = size;
 	cl_memcpy_fromio8(address, rh.rh_data, size);
 
-	ret = rmgmt_download_xclbin(&rh);
+	if (acquire_download_sema()) {
+		ret = rmgmt_download_xclbin(&rh);
+		release_download_sema();
+	} else {
+		RMGMT_LOG("system busy, please try later");
+		ret = -1;
+	}
 
 	msg->hdr.rcode = ret;
 	RMGMT_DBG("complete msg id%d, ret %d", msg->hdr.cid, ret);
@@ -283,8 +319,16 @@ static int xgq_vmr_cb(cl_msg_t *msg, void *arg)
 		cl_apu_status_query(msg);
 		break;
 	case CL_PROGRAM_SC:
-		/* place holder for starting SC download */
-		VMC_Start_SC_Update();
+		/* calling into vmc_update APIs, we check progress separately */
+		if (acquire_download_sema()) {
+			RMGMT_LOG("start programing SC ...");
+			VMC_Start_SC_Update();
+			RMGMT_LOG("end programing SC ...");
+			release_download_sema();
+		} else {
+			RMGMT_LOG("system busy, please try later");
+			ret = -1;
+		}
 		break;
 	default:
 		RMGMT_LOG("unknown type %d", msg->multiboot_payload.req_type);
@@ -311,6 +355,9 @@ static void pvXGQTask( void *pvParameters )
 {
 	const TickType_t x1second = pdMS_TO_TICKS( 1000*1 );
 	int cnt = 0;
+
+	xSemaDownload = xSemaphoreCreateMutex();
+	configASSERT(xSemaDownload != NULL);
 
 	for ( ;; )
 	{
@@ -360,7 +407,7 @@ static void pvXGQTask( void *pvParameters )
 			xgq_apu_control_flag = 1;
 		}
 
-		RMGMT_ERR("free heap %d", xPortGetFreeHeapSize());
+		RMGMT_DBG("free heap %d", xPortGetFreeHeapSize());
 	}
 	RMGMT_LOG("done");
 }

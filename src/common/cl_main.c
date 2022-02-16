@@ -13,6 +13,7 @@
 #include "cl_main.h"
 #include "cl_log.h"
 #include "cl_uart_rtos.h"
+#include "cl_flash.h"
 #include "../vmc/vmc_api.h"
 #include "sysmon.h"
 
@@ -84,6 +85,13 @@ void cl_apu_status_query(struct cl_msg *msg)
 {
 	/*TODO: should not put long time blocking function here */
 	cl_xgq_apu_identify(msg);
+}
+
+int32_t VMC_SCFW_Program_Progress(void);
+
+int flash_progress() {
+	return VMC_SCFW_Program_Progress() ?
+		VMC_SCFW_Program_Progress() : ospi_flash_progress();
 }
 
 int main( void )

@@ -109,7 +109,7 @@ static inline int rmgmt_enable_pl_reset()
 #else
 static inline int rmgmt_enable_pl_reset() { return -ENODEV; }
 #endif
-int32_t VMC_SCFW_Program_Progress(void);
+
 #endif
 
 

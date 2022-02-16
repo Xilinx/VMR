@@ -245,7 +245,7 @@ int cl_xgq_client_probe()
 		return -1;
 	}
 	if (mem.apu_channel_ready == 0) {
-		MSG_LOG("apu channel is not ready yet");
+		MSG_DBG("apu channel is not ready yet");
 		return -1;
 	}
 
@@ -273,5 +273,6 @@ int cl_xgq_client_probe()
 
 int cl_xgq_apu_is_ready()
 {
+	MSG_DBG("%s", xgq_apu_ready ? "READY" : "NOT READY");
 	return xgq_apu_ready;
 }
