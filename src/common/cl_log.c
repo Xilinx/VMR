@@ -30,6 +30,10 @@ static uint8_t log_level_gl = CL_LOG_LEVEL_LOG;
 u32 cl_msg_idx = 0;
 struct cl_msg_dbg msg_dbg_log[CL_MSG_DBG_MAX_RECS];
 
+char buf[MAX_LOG_LEN] = { 0 };
+char log_buf[MAX_BUF_LEN] = { 0 };
+struct vmr_shared_mem mem = { 0 };
+
 void cl_loglevel_set(uint8_t log_level)
 {
 	log_level_gl = log_level;
@@ -59,10 +63,6 @@ static void vmr_log_collect(uint32_t msg_index_addr, uint32_t msg_buf_addr,
 static void cl_printf_impl(const char *name, uint32_t line, uint8_t log_level,
 	const char *app_name, const char *fmt, va_list *argp)
 {
-	char buf[MAX_LOG_LEN] = { 0 };
-	char log_buf[MAX_BUF_LEN] = { 0 };
-	struct vmr_shared_mem mem = { 0 };
-
 	/* DBG > LOG > ERR, default is ERR = 0 */
 	if (log_level > log_level_gl)
 		return;
@@ -75,6 +75,11 @@ static void cl_printf_impl(const char *name, uint32_t line, uint8_t log_level,
 	if (xSemaphoreTake(cl_logbuf_lock, portMAX_DELAY) == 0)
 		return;
 		
+	/* set buffers to 0 */
+	memset(buf, 0, sizeof(buf));
+	memset(log_buf, 0, sizeof(log_buf));
+	memset(&mem, 0, sizeof(mem));
+
 	/* assembile log message into log_buf char array */
 	vsnprintf(buf, sizeof(buf), fmt, *argp);
 	snprintf(log_buf, sizeof(log_buf), "[ %ld ] %s:%s:%ld: %s\r\n",
