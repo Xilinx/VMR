@@ -213,11 +213,9 @@ do
 			PLATFORM_FILE=$1
 			;;
 		-jtag)
-			shift
 			STDOUT_JTAG=1
 			;;
 		-daily_latest)
-			shift
 			NOT_STABLE=1
 			;;
                 * | --* | -*)

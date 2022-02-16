@@ -12,7 +12,7 @@ platform create -out vmr_platform -name {vmr_platform} -hw xsa/vmr.xsa -proc {bl
 
 # optional for patching fixes
 # repo -set /proj/rdi/staff/davidzha/embeddedsw/
-repo -set /public/bugcases/CR/1105000-1105999/1105240/embeddedsw/
+# repo -set /public/bugcases/CR/1105000-1105999/1105240/embeddedsw/
 
 if { [lindex $argv 0] == 1 } {
 
