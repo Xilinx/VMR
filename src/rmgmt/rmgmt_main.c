@@ -34,6 +34,7 @@ int xgq_clock_flag = 0;
 int xgq_apubin_flag = 0;
 int xgq_vmr_control_flag = 0;
 int xgq_apu_control_flag = 0;
+char log_msg[256] = { 0 };
 
 SemaphoreHandle_t xSemaDownload;
 
@@ -159,39 +160,67 @@ static int xgq_xclbin_cb(cl_msg_t *msg, void *arg)
 	return 0;
 }
 
-static int check_firewall()
+static int check_firewall(cl_msg_t *msg)
 {
 	u32 firewall = EP_FIREWALL_USER_BASE;
-	u32 val;
+	u32 val = 0;
 
 	val = IO_SYNC_READ32(firewall);
+	/*
+	 * copy messge back from log_msg to shared memory
+	 */
 
-	return IS_FIRED(val);
+	val = IS_FIRED(val);
+	if (val) {
+		u32 safe_size = sizeof(log_msg);
+		u32 dst_addr = RPU_SHARED_MEMORY_ADDR(msg->log_payload.address);
+		u32 count = 0;
+		
+		if (msg->log_payload.size < sizeof(log_msg)) {
+			RMGMT_ERR("log buffer %d is too small, log message %d is trunked",
+				msg->log_payload.size, sizeof(log_msg));
+			safe_size = msg->log_payload.size;
+		}
+
+		count = snprintf(log_msg, safe_size,
+			"AXI Firewall User is tripped, status: 0x%lx\n", val);
+		cl_memcpy_toio8(dst_addr, &log_msg, safe_size);
+
+		/* set correct size in result payload */
+		msg->log_payload.size = count;
+	}
+
+	return val;
 }
 
 static int load_firmware(cl_msg_t *msg)
 {
 	u32 dst_addr = 0;
 	u32 src_addr = 0;
-	u32 offset = 0;
-	u32 size = 0;
+	u32 fw_offset = 0;
+	u32 fw_size = 0;
 
-	if (rmgmt_fpt_get_xsabin(msg, &offset, &size)) {
+	if (rmgmt_fpt_get_xsabin(msg, &fw_offset, &fw_size)) {
 		RMGMT_ERR("get xsabin firmware failed");
 		return -1;
 	}
 
 	dst_addr = RPU_SHARED_MEMORY_ADDR(msg->log_payload.address);
-	src_addr = offset;
+	src_addr = fw_offset;
 
+	if (msg->log_payload.size < fw_size) {
+		RMGMT_ERR("request size %d is smaller than fw_size %d",
+			msg->log_payload.size, fw_size);
+		return -1;
+	}
 	/*
 	 * TODO: the dst size can be small, check size <= dst size and
 	 * copy small truck back based on offset + dst size in the future */
-	cl_memcpy(dst_addr, src_addr, size);
+	cl_memcpy(dst_addr, src_addr, fw_size);
 
 	/* remaining cound is actually size for now,
 	 * it can be entire size - offset in the future*/
-	msg->log_payload.size = size;
+	msg->log_payload.size = fw_size;
 
 	return 0;
 }
@@ -202,7 +231,7 @@ static int xgq_log_page_cb(cl_msg_t *msg, void *arg)
 
 	switch (msg->log_payload.pid) {
 	case CL_LOG_AF:
-		ret = check_firewall();
+		ret = check_firewall(msg);
 		break;
 	case CL_LOG_FW:
 		ret = load_firmware(msg);
