@@ -286,12 +286,20 @@ else
 	append_stable_bsp
 	xsct ./rebuild_bsp.tcl
 	check_result "Rebuild BSP" $?
+
+#cd $BSP_DIR
+#	make clean; make all
+#	check_result "make stable bsp: $BSP_DIR" $?
+#	cd $ROOT_DIR
+
+
 #	cd $BSP_DIR
 #	set -x
 #make -C psv_cortexr5_0/libsrc/freertos10_xilinx_v1_10/src -s libs  "SHELL=/bin/sh" "COMPILER=armr5-none-eabi-gcc" "ASSEMBLER=armr5-none-eabi-as" "ARCHIVER=armr5-none-eabi-ar" "COMPILER_FLAGS=  -O2 -c -mcpu=cortex-r5" "EXTRA_COMPILER_FLAGS=-g -DARMR5 -Wall -Wextra -mfloat-abi=hard -mfpu=vfpv3-d16 -fno-tree-loop-distribute-patterns -Dversal"
 #	set +x
 #	check_result "Recompile bsp" $?
 #	cd $ROOT_DIR
+	echo "=== Build BSP with stable version done"
 fi
 
 #
