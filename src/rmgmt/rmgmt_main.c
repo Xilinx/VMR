@@ -174,6 +174,7 @@ static int check_firewall(cl_msg_t *msg)
 	if (val) {
 		u32 safe_size = sizeof(log_msg);
 		u32 dst_addr = RPU_SHARED_MEMORY_ADDR(msg->log_payload.address);
+		u32 count = 0;
 		
 		if (msg->log_payload.size < sizeof(log_msg)) {
 			RMGMT_ERR("log buffer %d is too small, log message %d is trunked",
@@ -181,12 +182,12 @@ static int check_firewall(cl_msg_t *msg)
 			safe_size = msg->log_payload.size;
 		}
 
-		snprintf(log_msg, sizeof(log_msg), "AXI Firewall User is tripped, "
-			"status: 0x%lx\n", val);
+		count = snprintf(log_msg, safe_size,
+			"AXI Firewall User is tripped, status: 0x%lx\n", val);
 		cl_memcpy_toio8(dst_addr, &log_msg, safe_size);
 
 		/* set correct size in result payload */
-		msg->log_payload.size = safe_size;
+		msg->log_payload.size = count;
 	}
 
 	return val;
