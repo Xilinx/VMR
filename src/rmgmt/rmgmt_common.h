@@ -33,6 +33,8 @@
 
 #define RMGMT_ERR(fmt, arg...)	\
 	CL_ERR(APP_RMGMT, fmt, ##arg)
+#define RMGMT_WARN(fmt, arg...)	\
+	CL_ERR(APP_RMGMT, fmt, ##arg)
 #define RMGMT_LOG(fmt, arg...)	\
 	CL_LOG(APP_RMGMT, fmt, ##arg)
 #define RMGMT_DBG(fmt, arg...)	\

@@ -149,7 +149,7 @@ static int xgq_xclbin_cb(cl_msg_t *msg, void *arg)
 		ret = rmgmt_download_xclbin(&rh);
 		release_download_sema();
 	} else {
-		RMGMT_LOG("system busy, please try later");
+		RMGMT_WARN("system busy, please try later");
 		ret = -1;
 	}
 

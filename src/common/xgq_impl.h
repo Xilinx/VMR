@@ -136,14 +136,16 @@ static inline uint32_t xgq_double_read32(uint64_t io_hdl, uint64_t addr, int is_
 #define XGQ_MAJOR			1
 #define XGQ_MINOR			0
 #define XGQ_MIN_NUM_SLOTS		2
+#define XGQ_VERSION			((XGQ_MAJOR<<16)+XGQ_MINOR)
+#define GET_XGQ_MAJOR(version)		(version>>16)
+#define GET_XGQ_MINOR(version)		(version&0xFFFF)
 
 /*
  * Meta data shared b/w client and server of XGQ
  */
 struct xgq_header {
 	uint32_t xh_magic; /* Always the first member */
-	uint16_t xh_minor;
-	uint16_t xh_major;
+	uint32_t xh_version;
 
 	/* SQ and CQ share the same num of slots. */
 	uint32_t xh_slot_num;
@@ -289,13 +291,13 @@ static inline void xgq_ring_write_consumed(uint64_t io_hdl, struct xgq_ring *rin
 static inline uint64_t xgq_ring_slot_ptr_produced(struct xgq_ring *ring)
 {
 	return ring->xr_slot_addr +
-	       ring->xr_slot_sz * (ring->xr_produced & (ring->xr_slot_num - 1));
+	       (uint64_t)ring->xr_slot_sz * (ring->xr_produced & (ring->xr_slot_num - 1));
 }
 
 static inline uint64_t xgq_ring_slot_ptr_consumed(struct xgq_ring *ring)
 {
 	return ring->xr_slot_addr +
-	       ring->xr_slot_sz * (ring->xr_consumed & (ring->xr_slot_num - 1));
+	       (uint64_t)ring->xr_slot_sz * (ring->xr_consumed & (ring->xr_slot_num - 1));
 }
 
 static inline int xgq_can_produce(struct xgq *xgq)
@@ -327,8 +329,7 @@ static inline int xgq_can_consume(struct xgq *xgq)
 }
 
 /*
- * Fast forward to where we left, should only be called during attach.
- * The ring may not be empty if peer alloc'ed ring, then pushed cmds to it before we attach.
+ * Fast forward to where we left. Used only during xgq_attach().
  */
 static inline void xgq_fast_forward(struct xgq *xgq, struct xgq_ring *ring)
 {
@@ -336,8 +337,20 @@ static inline void xgq_fast_forward(struct xgq *xgq, struct xgq_ring *ring)
 	xgq_ring_read_consumed(xgq->xq_io_hdl, ring);
 }
 
-static inline void xgq_init(struct xgq *xgq, uint64_t flags, uint64_t io_hdl, uint64_t ring_addr,
-	    size_t n_slots, uint32_t slot_size, uint64_t sq_produced, uint64_t cq_produced)
+/*
+ * Set consumed to be the same as produced to ignore any existing commands. And there should not
+ * be any left over commands anyway. Used only during xgq_alloc().
+ */
+static inline void xgq_soft_reset(struct xgq *xgq, struct xgq_ring *ring)
+{
+	xgq_ring_read_produced(xgq->xq_io_hdl, ring);
+	ring->xr_consumed = ring->xr_produced;
+	xgq_ring_write_consumed(xgq->xq_io_hdl, ring);
+}
+
+static inline void
+xgq_init(struct xgq *xgq, uint64_t flags, uint64_t io_hdl, uint64_t ring_addr,
+	 size_t n_slots, uint32_t slot_size, uint64_t sq_produced, uint64_t cq_produced)
 {
 	struct xgq_header hdr = {};
 	uint64_t sqprod, cqprod;
@@ -366,8 +379,7 @@ static inline void xgq_init(struct xgq *xgq, uint64_t flags, uint64_t io_hdl, ui
 		      n_slots, sizeof(struct xgq_com_queue_entry));
 
 	hdr.xh_magic = 0;
-	hdr.xh_major = XGQ_MAJOR;
-	hdr.xh_minor = XGQ_MINOR;
+	hdr.xh_version = XGQ_VERSION;
 	hdr.xh_slot_num = n_slots;
 	hdr.xh_sq_offset = xgq->xq_sq.xr_slot_addr - ring_addr;
 	hdr.xh_sq_slot_size = slot_size;
@@ -378,6 +390,9 @@ static inline void xgq_init(struct xgq *xgq, uint64_t flags, uint64_t io_hdl, ui
 	hdr.xh_cq_produced = 0;
 	hdr.xh_flags = xgq->xq_flags;
 	xgq_copy_to_ring(xgq->xq_io_hdl, &hdr, ring_addr, sizeof(hdr));
+
+	xgq_soft_reset(xgq, &xgq->xq_sq);
+	xgq_soft_reset(xgq, &xgq->xq_cq);
 
 	// Write the magic number to confirm the header is fully initialized
 	hdr.xh_magic = XGQ_ALLOC_MAGIC;
@@ -430,7 +445,6 @@ xgq_alloc(struct xgq *xgq, uint64_t flags, uint64_t io_hdl, uint64_t ring_addr, 
 		return -E2BIG;
 
 	xgq_init(xgq, flags, io_hdl, ring_addr, numslots, slot_size, sq_produced, cq_produced);
-
 	*ring_len = xgq_ring_len(numslots, slot_size);
 	return 0;
 }
@@ -483,7 +497,7 @@ static inline int xgq_attach(struct xgq *xgq, uint64_t flags, uint64_t io_hdl, u
 		return -EAGAIN;
 
 	xgq_copy_from_ring(xgq->xq_io_hdl, &hdr, ring_addr, sizeof(struct xgq_header));
-	if (hdr.xh_major != XGQ_MAJOR)
+	if (GET_XGQ_MAJOR(hdr.xh_version) != XGQ_MAJOR)
 		return -EOPNOTSUPP;
 
 	nslots = hdr.xh_slot_num;
