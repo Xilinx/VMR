@@ -365,6 +365,11 @@ static int rmgmt_ospi_apu_download(struct rmgmt_handler *rh, u32 len)
 	u32 dtb_offset = 0;
 	u32 dtb_size = 0;
 
+	if (cl_xgq_apu_is_ready()) {
+		RMGMT_WARN("apu is ready, no need to re-download");
+		return 0;
+	}
+
 	if (rmgmt_fpt_get_systemdtb(&msg, &dtb_offset, &dtb_size)) {
 		RMGMT_ERR("get system.dtb failed");
 		return -1;

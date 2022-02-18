@@ -131,6 +131,9 @@ int cl_msg_handle_complete(cl_msg_t *msg)
 		cmd_cq->cq_vmr_payload.has_ext_sysdtb =
 			msg->multiboot_payload.has_ext_sysdtb;
 
+		/* pass back apu status */
+		cmd_cq->cq_vmr_payload.apu_is_ready = cl_xgq_apu_is_ready();
+
 		/* pass back log level and flush progress */
 		cmd_cq->cq_vmr_payload.debug_level = cl_loglevel_get();
 		cmd_cq->cq_vmr_payload.program_progress = ospi_flash_progress();

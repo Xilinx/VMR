@@ -57,7 +57,7 @@ enum xgq_cmd_sensor_application_id {
 };
 
 /**
- * sensor SDR request types
+ * sensor data request types
  */
 enum xgq_cmd_sensor_page_id {
 	XGQ_CMD_SENSOR_SID_GET_SIZE	= 0x0,
@@ -125,8 +125,7 @@ struct xgq_cmd_log_payload {
  * @address:	pre-allocated sensor data, device writes sensor data at this address
  * @size:	size of pre-allocated sensor data
  * @offset:	offset of returned device data
- * @aid:	sensor command id
- * @sid:	sensor request id
+ * @pid:	sensor request id
  * @addr_type:	pre-allocated address type
  *
  * This payload is used for sensor data report.
@@ -208,12 +207,12 @@ struct xgq_cmd_vmr_control_payload {
 struct xgq_cmd_sq {
 	struct xgq_cmd_sq_hdr hdr;
 	union {
-		struct xgq_cmd_log_payload 		log_payload;
-		struct xgq_cmd_clock_payload 		clock_payload;
-		struct xgq_cmd_data_payload 		pdi_payload;
-		struct xgq_cmd_data_payload 		xclbin_payload;
-		struct xgq_cmd_sensor_payload 		sensor_payload;
-		struct xgq_cmd_vmr_control_payload 	vmr_control_payload;
+		struct xgq_cmd_log_payload		log_payload;
+		struct xgq_cmd_clock_payload		clock_payload;
+		struct xgq_cmd_data_payload		pdi_payload;
+		struct xgq_cmd_data_payload		xclbin_payload;
+		struct xgq_cmd_sensor_payload		sensor_payload;
+		struct xgq_cmd_vmr_control_payload	vmr_control_payload;
 	};
 };
 
@@ -283,7 +282,8 @@ struct xgq_cmd_cq_vmr_payload {
 	uint16_t has_ext_xsabin:1;
 	uint16_t has_ext_scfw:1;
 	uint16_t has_ext_sysdtb:1;
-	uint16_t resvd1:7;
+	uint16_t apu_is_ready:1;
+	uint16_t resvd1:6;
 	uint16_t multi_boot_offset;
 	uint32_t debug_level:3;
 	uint32_t program_progress:7;
