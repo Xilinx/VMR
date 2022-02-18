@@ -1342,8 +1342,9 @@ static void prvAddNewTaskToReadyList( TCB_t * pxNewTCB )
         {
             configASSERT( uxSchedulerSuspended == 0 );
             vTaskSuspendAll();
-	    /* AMD fix 1: avoid race-condition with interrupts */
-	    vPortDisableInterrupt(configTIMER_INTERRUPT_ID);
+	    /* potential issue: avoid race-condition with interrupts
+	     * vPortDisableInterrupt(configTIMER_INTERRUPT_ID);
+	     */
             {
                 traceTASK_DELAY();
 
@@ -1356,7 +1357,7 @@ static void prvAddNewTaskToReadyList( TCB_t * pxNewTCB )
                  * executing task. */
                 prvAddCurrentTaskToDelayedList( xTicksToDelay, pdFALSE );
             }
-	    vPortEnableInterrupt(configTIMER_INTERRUPT_ID);
+	    /* vPortEnableInterrupt(configTIMER_INTERRUPT_ID); */
             xAlreadyYielded = xTaskResumeAll();
         }
         else
