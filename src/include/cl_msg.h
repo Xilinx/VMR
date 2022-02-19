@@ -116,10 +116,9 @@ struct xgq_vmr_multiboot_payload {
 };
 
 struct xgq_vmr_head {
-	u16 version;
 	u16 type;
 	u16 cid;
-	u16 rcode;
+	u32 rcode;
 };
 
 /*TODO: rename request payload and result payload */
