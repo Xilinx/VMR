@@ -135,8 +135,9 @@ s8 Temperature_Read_Board(snsrRead_t *snsrData)
 	status = max6639_ReadDDRTemperature(i2c_num, SLAVE_ADDRESS_MAX6639, &TempReading);
 	if (status == XST_SUCCESS)
 	{
-		memcpy(&snsrData->snsrValue[0],&TempReading,sizeof(TempReading));
-		snsrData->sensorValueSize = sizeof(TempReading);
+		u16 roundedOffVal = (TempReading > 0) ? TempReading : 0;
+		memcpy(&snsrData->snsrValue[0],&roundedOffVal,sizeof(roundedOffVal));
+		snsrData->sensorValueSize = sizeof(roundedOffVal);
 		snsrData->snsrSatus = Vmc_Snsr_State_Normal;
 	}
 	else
@@ -158,8 +159,9 @@ s8 Temperature_Read_ACAP_Device_Sysmon(snsrRead_t *snsrData)
 	status = XSysMonPsv_ReadTempProcessed(&InstancePtr, SYSMONPSV_TEMP_MAX, &TempReading);
 	if (status == XST_SUCCESS)
 	{
-		memcpy(&snsrData->snsrValue[0],&TempReading,sizeof(TempReading));
-		snsrData->sensorValueSize = sizeof(TempReading);
+		u16 roundedOffVal = (TempReading > 0) ? TempReading : 0;
+		memcpy(&snsrData->snsrValue[0],&roundedOffVal,sizeof(roundedOffVal));
+		snsrData->sensorValueSize = sizeof(roundedOffVal);
 		snsrData->snsrSatus = Vmc_Snsr_State_Normal;
 	}
 	else
@@ -223,8 +225,9 @@ s8 Temperature_Read_QSFP(snsrRead_t *snsrData)
 	static bool is_qsfp_critical_threshold_reached = false;
 	status = QSFP_ReadTemperature(&TempReading, snsrData->sensorInstance);
 
-	memcpy(&snsrData->snsrValue[0],&TempReading,sizeof(TempReading));
-	snsrData->sensorValueSize = sizeof(TempReading);
+	u16 roundedOffVal = (TempReading > 0) ? TempReading : 0;
+	memcpy(&snsrData->snsrValue[0],&roundedOffVal,sizeof(roundedOffVal));
+	snsrData->sensorValueSize = sizeof(roundedOffVal);
 
 	if (status == XST_SUCCESS)
 	{
@@ -320,13 +323,13 @@ s8 Power_Monitor(snsrRead_t *snsrData)
 
     if(totalPower != 0)
     {
-        memcpy(&snsrData->snsrValue[0],&totalPower,sizeof(totalPower));
-        snsrData->sensorValueSize = sizeof(totalPower);
+	u16 roundedOffVal = (totalPower > 0) ? totalPower : 0;
+        memcpy(&snsrData->snsrValue[0],&roundedOffVal,sizeof(roundedOffVal));
+        snsrData->sensorValueSize = sizeof(roundedOffVal);
         snsrData->snsrSatus = Vmc_Snsr_State_Normal;
     }
     else
     {
-        memcpy(&snsrData->snsrValue[0],&totalPower,sizeof(totalPower));
         snsrData->snsrSatus = Vmc_Snsr_State_Comms_failure;
     }
 
