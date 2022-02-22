@@ -293,7 +293,7 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
 	{
 	    .repoType = TemperatureSDR,
 	    .sensorName = "Board Temp\0",
-	    .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_4B,
+	    .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_2B,
 	    .snsrUnitModifier = 0x0,
 	    .supportedThreshold = SNSR_MAX_VAL | SNSR_AVG_VAL | HAS_UPPER_THRESHOLDS,
 	    .sampleCount = 0x1,
@@ -303,7 +303,7 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
 	{
 	    .repoType = TemperatureSDR,
 	    .sensorName = "Sysmon Temp\0",
-	    .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_4B,
+	    .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_2B,
 	    .snsrUnitModifier = 0x0,
 	    .supportedThreshold = SNSR_MAX_VAL | SNSR_AVG_VAL | HAS_UPPER_THRESHOLDS,
 	    .sampleCount = 0x1,
@@ -323,7 +323,7 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
 	{
 	    .repoType = TemperatureSDR,
 	    .getSensorName = &getQSFPName,
-	    .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_4B,
+	    .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_2B,
 	    .snsrUnitModifier = 0x0,
 	    .supportedThreshold = SNSR_MAX_VAL | SNSR_AVG_VAL | HAS_UPPER_THRESHOLDS,
 	    .sampleCount = 0x1,
@@ -362,7 +362,7 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
 	{
 	    .repoType = PowerSDR,
 	    .sensorName = "Total Power\0",
-	    .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_4B,
+	    .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_2B,
 	    .snsrUnitModifier = 0,
 	    .supportedThreshold = SNSR_MAX_VAL | SNSR_AVG_VAL ,
 	    .sampleCount = 0x1,
