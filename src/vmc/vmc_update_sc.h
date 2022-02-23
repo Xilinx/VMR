@@ -17,6 +17,7 @@
 #define RCV_TIMEOUT_MS(x)  				((x)     /portTICK_PERIOD_MS )
 
 #define SC_UPDATE_MAX_RETRY_COUNT		(10u)
+#define MODE_VER_MAX_RETRY_COUNT		(3u)
 
 #define BSL_VERSION_REQ					(0x06)
 #define BSL_VERSION_RESP				(0x11)

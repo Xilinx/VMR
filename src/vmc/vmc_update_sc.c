@@ -216,12 +216,6 @@ void xSCUpdateTimeOutTimerCallback(TimerHandle_t xTimer)
 	memset(receive_bufr,0x00,sizeof(receive_bufr));
 	receivedByteCount = 0;
 
-	/* Timer reset */
-	if(xTimerReset(xTimer, pdMS_TO_TICKS(100)) != pdPASS)
-	{
-		VMC_ERR("\n\rFailed to reset xSCUpdateTimeOutTimer \r\n");
-	}
-
 	/* Release done flag */
 	sc_update_flag = 0x00;
 
@@ -580,14 +574,14 @@ upgrade_status_t matchCRC_postWrite(unsigned int writeAdd)
 
 	u8 crcPkt[12] = {0};
 
-	crcPkt[0] = 0x80;
+	crcPkt[0] = BSL_MSG_HEADER;
 
 	/* Pkt len */
 	crcPkt[1] = 0x7;
 	crcPkt[2] = 0;
 
 	/* CMD Id */
-	crcPkt[3] = 0x26;
+	crcPkt[3] = CMD_CRC_CHECK_32;
 
 	/* Add the Address byte */
 	crcPkt[4] = writeAdd & 0xFF;
@@ -674,6 +668,8 @@ void SCUpdateTask(void * arg)
 			{
 				case SC_BSL_SYNC:
 				{
+					static u8 ModeRetryCnt = 0;
+					static u8 retryCount = 0;
 					u8 sc_bsl_sync[SC_BSL_SYNCED_REQ] = {0xFF};
 					memset(receive_bufr,0xFF,sizeof(receive_bufr));
 
@@ -687,6 +683,7 @@ void SCUpdateTask(void * arg)
 					{
 						if( UART_RTOS_Receive(&uart_vmcsc_log, &receive_bufr[0], SC_BSL_SYNCED_RESP, &receivedByteCount, RCV_TIMEOUT_MS(200)) != UART_SUCCESS )
 						{
+							retryCount +=1;
 							VMC_ERR("Uart Receive Failure.. Retrying !! \r\n");
 						}
 						else
@@ -694,18 +691,38 @@ void SCUpdateTask(void * arg)
 							/* Check if MSP is in SC/BSL mode */
 							if ((receive_bufr[0] == ESCAPE_CHAR) && (receive_bufr[1] == STX))
 							{
+								ModeRetryCnt = 0;
+								retryCount = 0;
 								upgradeState = SC_ENABLE_BSL;
 							}
-							else if(receive_bufr[0] == BSL_SYNC_SUCCESS)
+							else if((receive_bufr[0] == BSL_SYNC_SUCCESS) && (ModeRetryCnt <= MODE_VER_MAX_RETRY_COUNT ))
 							{
-								upgradeState = BSL_UNLOCK_PASSWORD;
+								ModeRetryCnt += 1;
+								if(ModeRetryCnt >= MODE_VER_MAX_RETRY_COUNT)
+								{
+									ModeRetryCnt = 0;
+									retryCount = 0;
+									upgradeState = BSL_UNLOCK_PASSWORD;
+								}
 							}
 							else
 							{
-								VMC_LOG("SC BSL SYNC Failure.. Retrying !! \r\n");
+								retryCount +=1;
 								upgradeState = SC_BSL_SYNC;
+								VMC_LOG("SC BSL SYNC Failure.. Retrying !! \r\n");
 							}
 						}
+					}
+
+					if(retryCount == SC_UPDATE_MAX_RETRY_COUNT)
+					{
+						retryCount = 0;
+						upgradeError = SC_UPDATE_ERROR_SC_BSL_SYNC_FAILED;
+						update_progress = upgradeError;
+						upgradeStatus = STATUS_FAILURE;
+						upgradeState = SC_STATE_IDLE;
+
+						VMC_ERR("\n\rUpdate failure. Retry.. \n\r");
 					}
 
 					memset(receive_bufr,0xFF,sizeof(receive_bufr));
@@ -717,6 +734,7 @@ void SCUpdateTask(void * arg)
 
 				case SC_ENABLE_BSL:
 				{
+					static u8 retryCount = 0;
 					u8 enbsl[SC_ENABLE_BSL_REQ] = { 0x5C,0x2,0x1,0x0,0x0,0x1,0x0,0x5C,0x3 };
 
 					VMC_LOG("\n\rSend CMD : SC_ENABLE_BSL \n\r");
@@ -729,19 +747,33 @@ void SCUpdateTask(void * arg)
 					{
 						if( UART_RTOS_Receive(&uart_vmcsc_log, &receive_bufr[0], SC_ENABLE_BSL_RESP, &receivedByteCount, RCV_TIMEOUT_MS(200)) != UART_SUCCESS )
 						{
+							retryCount +=1;
 							VMC_ERR("Uart Receive Failure.. Retrying !! \r\n");
 						}
 						else
 						{
-							if(receive_bufr[2] == MSP432_COMMS_MSG_GOOD)
+							if((receive_bufr[0] == ESCAPE_CHAR) && (receive_bufr[2] == MSP432_COMMS_MSG_GOOD))
 							{
+								retryCount = 0;
 								upgradeState = BSL_SYNCED;
 							}
 							else
 							{
+								retryCount +=1;
 								upgradeState = SC_ENABLE_BSL;
 							}
 						}
+					}
+
+					if(retryCount == SC_UPDATE_MAX_RETRY_COUNT)
+					{
+						retryCount = 0;
+						upgradeError = SC_UPDATE_ERROR_EN_BSL_FAILED;
+						update_progress = upgradeError;
+						upgradeStatus = STATUS_FAILURE;
+						upgradeState = SC_STATE_IDLE;
+
+						VMC_ERR("\n\rUpdate failure. Retry.. \n\r");
 					}
 
 					memset(receive_bufr,0xFF,sizeof(receive_bufr));
@@ -753,6 +785,7 @@ void SCUpdateTask(void * arg)
 
 				case BSL_SYNCED:
 				{
+					static u8 retryCount = 0;
 					u8 syncbuf[BSL_SYNCED_REQ] = {0xFF};
 
 					VMC_LOG("\n\rSend CMD : BSL_SYNCED \n\r");
@@ -765,6 +798,7 @@ void SCUpdateTask(void * arg)
 					{
 						if( UART_RTOS_Receive(&uart_vmcsc_log, &receive_bufr[0], BSL_SYNCED_RESP, &receivedByteCount,RCV_TIMEOUT_MS(100)) != UART_SUCCESS )
 						{
+							retryCount +=1;
 							VMC_ERR("Uart Receive Failure.. Retrying !! \r\n");
 						}
 						else
@@ -773,15 +807,28 @@ void SCUpdateTask(void * arg)
 							 * as we need send SYNC char till the time we didn't get ACK from BSL */
 							if(receive_bufr[0] == BSL_SYNC_SUCCESS)
 							{
-								upgradeState = BSL_UNLOCK_PASSWORD;
+								retryCount = 0;
 								update_progress = 1;
+								upgradeState = BSL_UNLOCK_PASSWORD;
 							}
 							else
 							{
-								VMC_LOG("SYNC Failure.. Retrying !! \r\n");
+								retryCount +=1;
 								upgradeState = BSL_SYNCED;
+								xil_printf("SYNC Failure.. Retrying !! \r\n");
 							}
 						}
+					}
+
+					if(retryCount == SC_UPDATE_MAX_RETRY_COUNT)
+					{
+						retryCount = 0;
+						upgradeError = SC_UPDATE_ERROR_VMC_BSL_SYNC_FAILED;
+						update_progress = upgradeError;
+						upgradeStatus = STATUS_FAILURE;
+						upgradeState = SC_STATE_IDLE;
+
+						VMC_ERR("\n\rUpdate failure. Retry.. \n\r");
 					}
 
 					memset(receive_bufr,0x00,sizeof(receive_bufr));
@@ -804,6 +851,7 @@ void SCUpdateTask(void * arg)
 					{
 						if( UART_RTOS_Receive(&uart_vmcsc_log, &receive_bufr[0], BSL_UNLOCK_PASSWORD_RESP, &receivedByteCount,RCV_TIMEOUT_MS(200)) != UART_SUCCESS )
 						{
+							retryCount +=1;
 							VMC_ERR("Uart Receive Failure.. Retrying !! \r\n");
 						}
 						else
@@ -812,11 +860,12 @@ void SCUpdateTask(void * arg)
 							{
 								if(receive_bufr[4] == BSL_DATA_WRITE_RESP_FIRST_CHAR && receive_bufr[5] == BSL_DATA_WRITE_RESP_SEC_CHAR)
 								{
-									upgradeState = BSL_MASS_ERASE;
 									retryCount = 0;
+									upgradeState = BSL_MASS_ERASE;
 								}
 								else
 								{
+									retryCount +=1;
 									upgradeState = BSL_UNLOCK_PASSWORD;
 								}
 							}
@@ -836,13 +885,7 @@ void SCUpdateTask(void * arg)
 						upgradeStatus = STATUS_FAILURE;
 						upgradeState = SC_STATE_IDLE;
 
-						/* Stop timer as update failed */
-						if(xTimerStop(xSCUpdateTimeOutTimer, 0) != pdPASS)
-						{
-							VMC_ERR("\n\rFailed to stop xSCUpdateTimeOutTimer \r\n");
-						}
-
-						VMC_LOG("\n\rUpdate failure. Retry.. \n\r");
+						VMC_ERR("\n\rUpdate failure. Retry.. \n\r");
 					}
 
 					memset(receive_bufr,0x00,sizeof(receive_bufr));
@@ -854,6 +897,7 @@ void SCUpdateTask(void * arg)
 
 				case BSL_MASS_ERASE:
 				{
+					static u8 retryCount = 0;
 					u8 massErase[BSL_MASS_ERASE_REQ] = { 0x80,0x01,0x00,0x15,0x64,0xA3 };
 
 					VMC_LOG("\n\rSend CMD : BSL_MASS_ERASE \n\r");
@@ -866,6 +910,7 @@ void SCUpdateTask(void * arg)
 					{
 						if( UART_RTOS_Receive(&uart_vmcsc_log, &receive_bufr[0], BSL_MASS_ERASE_RESP, &receivedByteCount,RCV_TIMEOUT_MS(200)) != UART_SUCCESS )
 						{
+							retryCount +=1;
 							VMC_ERR("Uart Receive Failure \r\n");
 						}
 						else
@@ -874,18 +919,32 @@ void SCUpdateTask(void * arg)
 							{
 								if(receive_bufr[4] == BSL_DATA_WRITE_RESP_FIRST_CHAR && receive_bufr[5] == BSL_DATA_WRITE_RESP_SEC_CHAR)
 								{
+									retryCount = 0;
 									upgradeState = BSL_DATA_TX_32;
 								}
 								else
 								{
+									retryCount +=1;
 									upgradeState = BSL_MASS_ERASE;
 								}
 							}
 							else
 							{
+								retryCount +=1;
 								upgradeState = BSL_MASS_ERASE;
 							}
 						}
+					}
+
+					if(retryCount == SC_UPDATE_MAX_RETRY_COUNT)
+					{
+						retryCount = 0;
+						upgradeError = SC_UPDATE_ERROR_ERASE_FAILED;
+						update_progress = upgradeError;
+						upgradeStatus = STATUS_FAILURE;
+						upgradeState = SC_STATE_IDLE;
+
+						VMC_ERR("\n\rUpdate failure. Retry.. \n\r");
 					}
 
 					memset(receive_bufr,0x00,sizeof(receive_bufr));
@@ -926,12 +985,6 @@ void SCUpdateTask(void * arg)
 						update_progress = upgradeError;
 						upgradeStatus = STATUS_FAILURE;
 						upgradeState = SC_STATE_IDLE;
-
-						/* Stop timer as update failed */
-						if(xTimerStop(xSCUpdateTimeOutTimer, 0) != pdPASS)
-						{
-							VMC_ERR("\n\rFailed to stop xSCUpdateTimeOutTimer \r\n");
-						}
 
 						break;
 					}
@@ -1058,12 +1111,6 @@ void SCUpdateTask(void * arg)
 						upgradeState = SC_STATE_IDLE;
 					}
 
-					/* Stop timer as update completed */
-					if(xTimerStop(xSCUpdateTimeOutTimer, 0) != pdPASS)
-					{
-						VMC_ERR("\n\rFailed to stop xSCUpdateTimeOutTimer \r\n");
-					}
-
 					memset(receive_bufr,0x00,sizeof(receive_bufr));
 					receivedByteCount = 0;
 
@@ -1111,6 +1158,7 @@ void SCUpdateTask(void * arg)
 
 				case TX_BSL_VERSION:
 				{
+					static u8 retryCount = 0;
 					u8 version[BSL_VERSION_REQ] = { 0x80,0x01,0x00,0x19,0xE8,0x62 };
 
 					VMC_LOG("\n\rSend CMD : TX_BSL_VERSION \n\r");
@@ -1123,6 +1171,7 @@ void SCUpdateTask(void * arg)
 					{
 						if( UART_RTOS_Receive(&uart_vmcsc_log, &receive_bufr[0], BSL_VERSION_RESP, &receivedByteCount,RCV_TIMEOUT_MS(200)) != UART_SUCCESS )
 						{
+							retryCount +=1;
 							VMC_ERR("Uart Receive Failure \r\n");
 						}
 						else
@@ -1131,19 +1180,33 @@ void SCUpdateTask(void * arg)
 							{
 								if(receive_bufr[13] == 0x00 && receive_bufr[14] == 0x0D)
 								{
+									retryCount = 0;
 									upgradeStatus = STATUS_SUCCESS;
 									upgradeState = SC_STATE_IDLE;
 								}
 								else
 								{
+									retryCount +=1;
 									upgradeState = TX_BSL_VERSION;
 								}
 							}
 							else
 							{
+								retryCount +=1;
 								upgradeState = TX_BSL_VERSION;
 							}
 						}
+					}
+
+					if(retryCount == SC_UPDATE_MAX_RETRY_COUNT)
+					{
+						retryCount = 0;
+						upgradeError = SC_UPDATE_ERROR_FAILED_TO_GET_BSL_VERSION;
+						update_progress = upgradeError;
+						upgradeStatus = STATUS_FAILURE;
+						upgradeState = SC_STATE_IDLE;
+
+						VMC_ERR("\n\rFailed to get BSL version. Retry.. \n\r");
 					}
 
 					memset(receive_bufr,0x00,sizeof(receive_bufr));
@@ -1167,6 +1230,12 @@ void SCUpdateTask(void * arg)
 		}
 		/* Waiting for 5Sec so that XRT will get the updated progress of SC update */
 		vTaskDelay(DELAY_MS(1000 * 5));
+
+		/* Stop timer as update completed (Pass/Fail) */
+		if(xTimerStop(xSCUpdateTimeOutTimer, pdMS_TO_TICKS(100)) != pdPASS)
+		{
+			VMC_ERR("\n\rFailed to stop xSCUpdateTimeOutTimer \r\n");
+		}
 
 		/* Reset progress variables */
 		update_progress = 0;
