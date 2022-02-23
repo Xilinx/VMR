@@ -136,7 +136,7 @@ int cl_msg_handle_complete(cl_msg_t *msg)
 
 		/* pass back log level and flush progress */
 		cmd_cq->cq_vmr_payload.debug_level = cl_loglevel_get();
-		cmd_cq->cq_vmr_payload.program_progress = ospi_flash_progress();
+		cmd_cq->cq_vmr_payload.program_progress = flash_progress();
 
 		MSG_LOG("apu is ready %d", cl_xgq_apu_is_ready());
 	} else if (msg->hdr.type == CL_MSG_LOG_PAGE) {
