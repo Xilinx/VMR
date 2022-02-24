@@ -13,6 +13,8 @@
 #include "vmc_update_sc.h"
 #include "vmc_sc_comms.h"
 
+extern TaskHandle_t xSensorMonTask;
+extern TaskHandle_t xVMCSCTask;
 
 upgrade_status_t upgradeStatus = STATUS_SUCCESS;
 upgrade_state_t upgradeState = SC_STATE_IDLE;
@@ -40,9 +42,6 @@ u8 msg[1] = {0x00};
 u8 fpt_sc_version[3] = {0x00};
 bool all_pkt_sent = false;
 bool fptSCvalid = false;
-
-/* Variable to keep track whether SC update is going on or not */
-u8 sc_update_flag = 0x00;
 
 /* Variables will keep track of SC update progress */
 int32_t update_progress = 0;
@@ -216,8 +215,9 @@ void xSCUpdateTimeOutTimerCallback(TimerHandle_t xTimer)
 	memset(receive_bufr,0x00,sizeof(receive_bufr));
 	receivedByteCount = 0;
 
-	/* Release done flag */
-	sc_update_flag = 0x00;
+	/* Resume stopped tasks */
+	vTaskResume(xVMCSCTask);
+	vTaskResume(xSensorMonTask);
 
 	VMC_LOG("\n\rSC Update Timeout.. \n\rERROR in SC Update. Retry... \r\n");
 }
@@ -651,7 +651,8 @@ void SCUpdateTask(void * arg)
     	/* Wait for notification */
         xTaskNotifyWait(ULONG_MAX, ULONG_MAX, NULL, portMAX_DELAY);
 
-        sc_update_flag = 0x01;
+        vTaskSuspend(xSensorMonTask);
+        vTaskSuspend(xVMCSCTask);
 
 		if ((upgradeState == SC_STATE_IDLE)
 				&& (upgradeStatus == STATUS_SUCCESS
@@ -1243,8 +1244,9 @@ void SCUpdateTask(void * arg)
 		max_data_slot = 0;
 		upgradeError = SC_UPDATE_NO_ERROR;
 
-		/* Release done flag */
-		sc_update_flag = 0x00;
+		/* Resume stopped tasks */
+		vTaskResume(xVMCSCTask);
+		vTaskResume(xSensorMonTask);
     }
 
     vTaskSuspend(NULL);
