@@ -575,24 +575,16 @@ void SensorMonitorTask(void *params)
     for(;;)
     {
         /* Read All Sensors */
-    	if(!sc_update_flag)
-    	{
-    		Monitor_Sensors();
-    		Monitor_Thresholds();
+		Monitor_Sensors();
+		Monitor_Thresholds();
 
 #ifdef VMC_TEST
-    		se98a_monitor();
-    		max6639_monitor();
-    		sysmon_monitor();
-    		qsfp_monitor ();
+		se98a_monitor();
+		max6639_monitor();
+		sysmon_monitor();
+		qsfp_monitor ();
 #endif
-    		vTaskDelay(200);
-    	}
-    	else
-    	{
-    		/* Wait for SC update complete ~20Sec*/
-    		vTaskDelay(DELAY_MS(1000 * 20));
-    	}
+
 
     }
 
