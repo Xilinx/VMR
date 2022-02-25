@@ -9,6 +9,6 @@ src/common/	@krishna-xilinx @houlz0507 @xdavidz
 src/include/	@krishna-xilinx @houlz0507 @xdavidz
 src/lscript.ld	@xdavidz
 src/rmgmt/	@xdavidz
-src/vmc/	@krishna-xilinx
+src/vmc/	@krishna-xilinx @houlz0507 @xdavidz
 
 build/ @xdavidz
