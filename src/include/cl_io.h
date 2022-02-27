@@ -130,4 +130,16 @@ static inline int cl_memcpy(u32 dst_addr, u32 src_addr, size_t n)
 
 	return n;
 }
+
+static inline int cl_memset_io8(u32 dst, u8 val, size_t len)
+{
+	size_t i;
+
+	for (i = 0; i < len; i++, dst++ ) {
+		IO_SYNC_WRITE8(val, dst);
+	}
+
+	return len;
+}
+
 #endif
