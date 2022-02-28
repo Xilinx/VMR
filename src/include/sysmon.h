@@ -107,8 +107,8 @@ extern "C" {
 #define SYSMON_UPPER_SATURATION		65535
 #define SYSMON_LOWER_SATURATION		0
 
-#define BIT(nr) (1UL << (nr))
-#define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
+#define _BIT(nr) (1UL << (nr))
+#define _ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 
 #define INTR_0 0U
 #define INTR_1 1U
@@ -151,7 +151,7 @@ extern "C" {
 	.address = _address, \
 	.channel = _address, \
 	.event_spec = _events, \
-	.num_event_specs = ARRAY_SIZE(_events), \
+	.num_event_specs = _ARRAY_SIZE(_events), \
 	.scan_type = { \
 		.sign = 's', \
 		.realbits = 15, \
@@ -166,8 +166,8 @@ extern "C" {
 	.indexed = 1, \
 	.address = _address, \
 	.channel = _address, \
-	.info_mask_separate = BIT(SYSMON_CHAN_INFO_RAW) | \
-		BIT(SYSMON_CHAN_INFO_PROCESSED), \
+	.info_mask_separate = _BIT(SYSMON_CHAN_INFO_RAW) | \
+		_BIT(SYSMON_CHAN_INFO_PROCESSED), \
 	.scan_type = { \
 		.sign = 's', \
 		.realbits = 15, \
@@ -339,6 +339,17 @@ int XSysMonPsv_GetEventMask(XSysMonPsv_TempEvent Event);
 void XSysMonPsv_Q8P7ToCelsius(int raw_data, int *val, int *val2);
 void XSysMonPsv_CelsiusToQ8P7(u32 *raw_data, int val, int val2);
 int XSysMonPsv_Init(XSysMonPsv *InstancePtr, XScuGic *IntcInst);
+int XSysMonPsv_ReadTempProcessed(XSysMonPsv *InstancePtr, XSysMonPsv_TempType Type, float *Val);
+u32 XSysMonPsv_GetNodeValue(XSysMonPsv *InstancePtr, int sat_id);
+int XSysMonPsv_IntrEnable(XSysMonPsv *InstancePtr, u32 Mask, u8 IntrNum);
+void XSysMonPsv_UnlockRegspace(XSysMonPsv *InstancePtr);
+int XSysMonPsv_IntrDisable(XSysMonPsv *InstancePtr, u32 Mask, u8 IntrNum);
+void XSysMonPsv_IntrClear(XSysMonPsv *InstancePtr, u32 Mask);
+int XSysMonPsv_SetupIntrHandlr(XScuGic *IntcInstancePtr,XSysMonPsv *InstancePtr, u16 IntrId);
+int XSysMonPsv_RegisterRegionTempCallback(XSysMonPsv *InstancePtr, void (*cb)(void *data, struct regional_node *node), void *data, XSysMonPsv_Region RegionId);
+int XSysMonPsv_UnregisterRegionTempCallback(XSysMonPsv *InstancePtr, XSysMonPsv_Region RegionId);
+int XSysMonPsv_RegisterDeviceTempCallback(XSysMonPsv *InstancePtr, void (*cb)(void *data), void *data);
+void XSysMonPsv_UnregisterDeviceTempCallback(XSysMonPsv *InstancePtr);
 
 #ifdef __cplusplus
 }

@@ -28,7 +28,7 @@ TaskHandle_t xVMCTaskMonitor;
 
 SemaphoreHandle_t vmc_sc_lock;
 
-int Enable_DemoMenu(void);
+u8 Enable_DemoMenu(void);
 
 extern void VMC_SC_CommsTask(void *params);
 extern void SensorMonitorTask(void *params);
