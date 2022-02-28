@@ -606,22 +606,14 @@ static void init_vmr_status(uint32_t ring_len)
 	IO_SYNC_WRITE32(0x0, RPU_SHARED_MEMORY_ADDR(mem.vmr_status_off));	
 }
 
-static inline void xgq_print_info()
-{
-#ifdef XGQ_SERVER
-	MSG_LOG("xgq server");
-#else
-	MSG_LOG("xgq client");
-#endif
-}
-
 static int init_xgq()
 {
 	int ret = 0;
 	size_t ring_len = RPU_RING_BUFFER_LEN;
 	uint64_t flags = 0;
 
-	xgq_print_info();
+	/* Reset ring buffer */
+	cl_memset_io8(RPU_RING_BUFFER_OFFSET, 0, ring_len);
 
         ret = xgq_alloc(&rpu_xgq, flags, xgq_io_hdl, RPU_RING_BUFFER_OFFSET, &ring_len,
 		RPU_XGQ_SLOT_SIZE, RPU_SQ_BASE, RPU_CQ_BASE);
