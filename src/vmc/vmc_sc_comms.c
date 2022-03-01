@@ -444,27 +444,33 @@ void VMC_SC_CommsTask(void *params)
     for(;;)
     {
     	/* Notify SC of VMC Presence */
-
-		if(!isVMCActive)
-		{
-			VMC_Fetch_SC_SensorData(MSP432_COMMS_VMC_ACTIVE_REQ);
-		}
-		/* Fetch the SC Version and Power Config  */
-		if(!isPowerModeActive)
-		{
-			VMC_Fetch_SC_SensorData(MSP432_COMMS_VMC_VERSION_POWERMODE_REQ);
-		}
-		/* Fetch the Volt & power Sensor length  */
-		if( isVMCActive &&  (!getSensorRespLen))
-		{
-			VMC_Fetch_SC_SensorData(MSP432_COMMS_VMC_GET_RESP_SIZE_REQ);
-		}
-		/*
-		 *  Fetching Sensor values from SC
-		 */
-		VMC_Mointor_SC_Sensors();
-		vTaskDelay(100);
-
+    	if(!sc_update_flag)
+    	{
+    		if(!isVMCActive)
+    		{
+    			VMC_Fetch_SC_SensorData(MSP432_COMMS_VMC_ACTIVE_REQ);
+    		}
+    		/* Fetch the SC Version and Power Config  */
+    		if(!isPowerModeActive)
+    		{
+    			VMC_Fetch_SC_SensorData(MSP432_COMMS_VMC_VERSION_POWERMODE_REQ);
+    		}
+    		/* Fetch the Volt & power Sensor length  */
+    		if( isVMCActive &&  (!getSensorRespLen))
+    		{
+    			VMC_Fetch_SC_SensorData(MSP432_COMMS_VMC_GET_RESP_SIZE_REQ);
+    		}
+    		/*
+    		 *  Fetching Sensor values from SC
+    		 */
+    		VMC_Mointor_SC_Sensors();
+    		vTaskDelay(100);
+    	}
+    	else
+    	{
+    		/* Wait for SC update complete ~20Sec*/
+    		vTaskDelay(DELAY_MS(1000 * 20));
+    	}
     }
 
     vTaskSuspend(NULL);
