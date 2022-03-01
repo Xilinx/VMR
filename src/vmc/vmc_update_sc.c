@@ -61,6 +61,8 @@ u8 bslPasswd[BSL_UNLOCK_PASSWORD_REQ] = { 0x80, 0x39, 0x00, 0x21, 0x58, 0x41,
 
 
 extern void rmgmt_extension_fpt_query(struct cl_msg *msg);
+extern SemaphoreHandle_t vmc_sc_comms_lock;
+extern SemaphoreHandle_t vmc_sensor_monitoring_lock;
 
 
 int32_t VMC_SCFW_Program_Progress(void)
@@ -215,9 +217,6 @@ void xSCUpdateTimeOutTimerCallback(TimerHandle_t xTimer)
 
 	memset(receive_bufr,0x00,sizeof(receive_bufr));
 	receivedByteCount = 0;
-
-	/* Release done flag */
-	sc_update_flag = 0x00;
 
 	VMC_LOG("\n\rSC Update Timeout.. \n\rERROR in SC Update. Retry... \r\n");
 }
@@ -651,7 +650,18 @@ void SCUpdateTask(void * arg)
     	/* Wait for notification */
         xTaskNotifyWait(ULONG_MAX, ULONG_MAX, NULL, portMAX_DELAY);
 
-        sc_update_flag = 0x01;
+        if(xSemaphoreTake(vmc_sc_comms_lock, portMAX_DELAY) == pdFALSE)
+        {
+        	VMC_ERR("\n\r Failed to take vmc_sc_comms_lock \n\r");
+			continue;
+        }
+
+        if(xSemaphoreTake(vmc_sensor_monitoring_lock, portMAX_DELAY) == pdFALSE)
+        {
+			xSemaphoreGive(vmc_sc_comms_lock);
+        	VMC_ERR("\n\r Failed to take vmc_sensor_monitoring_lock \n\r");
+			continue;
+        }
 
 		if ((upgradeState == SC_STATE_IDLE)
 				&& (upgradeStatus == STATUS_SUCCESS
@@ -1228,6 +1238,8 @@ void SCUpdateTask(void * arg)
 					upgradeState = SC_STATE_IDLE;
 			}
 		}
+
+
 		/* Waiting for 5Sec so that XRT will get the updated progress of SC update */
 		vTaskDelay(DELAY_MS(1000 * 5));
 
@@ -1243,8 +1255,9 @@ void SCUpdateTask(void * arg)
 		max_data_slot = 0;
 		upgradeError = SC_UPDATE_NO_ERROR;
 
-		/* Release done flag */
-		sc_update_flag = 0x00;
+		/* Resume SC communication and monitoring */
+		xSemaphoreGive(vmc_sensor_monitoring_lock);
+		xSemaphoreGive(vmc_sc_comms_lock);
     }
 
     vTaskSuspend(NULL);

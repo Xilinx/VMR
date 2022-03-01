@@ -10,7 +10,7 @@ extern TaskHandle_t xVMCSCTask;
 SC_VMC_Data sc_vmc_data;
 
 extern SemaphoreHandle_t vmc_sc_lock;
-
+extern SemaphoreHandle_t vmc_sc_comms_lock;
 /* VMC SC Comms handles and flags */
 extern uart_rtos_handle_t uart_vmcsc_log;
 
@@ -444,7 +444,7 @@ void VMC_SC_CommsTask(void *params)
     for(;;)
     {
     	/* Notify SC of VMC Presence */
-    	if(!sc_update_flag)
+    	if(xSemaphoreTake(vmc_sc_comms_lock, portMAX_DELAY) == pdTRUE)
     	{
     		if(!isVMCActive)
     		{
@@ -464,12 +464,8 @@ void VMC_SC_CommsTask(void *params)
     		 *  Fetching Sensor values from SC
     		 */
     		VMC_Mointor_SC_Sensors();
+    		xSemaphoreGive(vmc_sc_comms_lock);
     		vTaskDelay(100);
-    	}
-    	else
-    	{
-    		/* Wait for SC update complete ~20Sec*/
-    		vTaskDelay(DELAY_MS(1000 * 20));
     	}
     }
 
