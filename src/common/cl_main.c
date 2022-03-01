@@ -80,6 +80,7 @@ u32 cl_rpu_status_query(struct cl_msg *msg, char *buf, u32 size)
 		CL_ERR(APP_MAIN, "msg is truncated");
 		return size;
 	}
+	size = size - count;
 
 #ifdef _VMR_VERSION_
 	CL_LOG(APP_MAIN, "vitis version: %s", VMR_TOOL_VERSION);
