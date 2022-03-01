@@ -64,27 +64,49 @@ void cl_system_pre_init(void)
 
 }
 
-void cl_rpu_status_query(struct cl_msg *msg)
+u32 cl_rpu_status_query(struct cl_msg *msg, char *buf, u32 size)
 {
+	u32 count = 0;
+
 #ifdef VMR_BUILD_XRT_ONLY
 	CL_LOG(APP_MAIN, "XRT only build");
+	count = snprintf(buf, size, "XRT only build\n");	
 #else
 	CL_LOG(APP_MAIN, "VMR full build");
+	count = snprintf(buf, size, "VMR full build\n");	
 #endif
 
+	if (count > size) {
+		CL_ERR(APP_MAIN, "msg is truncated");
+		return size;
+	}
+
 #ifdef _VMR_VERSION_
-	CL_LOG(APP_MAIN, "tool version: %s", VMR_TOOL_VERSION);
+	CL_LOG(APP_MAIN, "vitis version: %s", VMR_TOOL_VERSION);
 	CL_LOG(APP_MAIN, "git hash: %s", VMR_GIT_HASH);
 	CL_LOG(APP_MAIN, "git branch: %s", VMR_GIT_BRANCH);
 	CL_LOG(APP_MAIN, "build date: %s", VMR_GIT_HASH_DATE);
+
+	count += snprintf(buf + count, size,
+		"Vitis version: %s\ngit hash: %s\ngit branch: %s\nbuild date: %s\n",
+		VMR_TOOL_VERSION, VMR_GIT_HASH, VMR_GIT_BRANCH, VMR_GIT_HASH_DATE);
+	if (count > size) {
+		CL_ERR(APP_MAIN, "msg is truncated");
+		return size;
+	}
 #endif
 
+	return count;
 }
 
-void cl_apu_status_query(struct cl_msg *msg)
+u32 cl_apu_status_query(struct cl_msg *msg, char *buf, u32 size)
 {
-	/*TODO: should not put long time blocking function here */
-	cl_xgq_apu_identify(msg);
+	u32 count = 0;
+
+	//cl_xgq_apu_identify(msg);
+	count = snprintf(buf, size, "apu is ready: %d\n", cl_xgq_apu_is_ready()); 
+
+	return count;
 }
 
 int32_t VMC_SCFW_Program_Progress(void);
