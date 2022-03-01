@@ -6,6 +6,7 @@ TOOL_VERSION="2021.2"
 DEFAULT_VITIS="/proj/xbuilds/${TOOL_VERSION}_daily_latest/installs/lin64/Vitis/HEAD/settings64.sh"
 STDOUT_JTAG=0
 NOT_STABLE=0
+BUILD_XRT=0
 ROOT_DIR=`pwd`
 BSP_DIR="$ROOT_DIR/vmr_platform/vmr_platform/psv_cortexr5_0/freertos10_xilinx_domain/bsp/"
 REAL_BSP=`realpath ../bsp/2021.2_stable/bsp`
@@ -124,18 +125,23 @@ check_vmr() {
 	arm-none-eabi-strings vmr/Debug/vmr.elf |grep -E "VMR_GIT|VMR_TOOL"
 
 	echo "=== Build env info ==="
-	if [ NOT_STABLE == 1 ];then
+	if [ $NOT_STABLE == 1 ];then
 		echo "BSP is daily latest"
 	else
 		echo "BSP is appended from $REAL_BSP"
 	fi
 
-	if [ STDOUT_JTAG == 1 ];then
+	if [ $STDOUT_JTAG == 1 ];then
 		echo "STDOUT is JTAG"
 	else
 		echo "STDOUT is UARTLite"
 	fi
 
+	if [ $BUILD_XRT == 1 ];then
+		echo "XRT only build"
+	else
+		echo "Full Build"
+	fi
 	echo "=== Build done ==="
 }
 
