@@ -116,8 +116,10 @@ struct xgq_vmr_multiboot_payload {
 };
 
 struct xgq_vmr_head {
+	u16 version;
 	u16 type;
 	u16 cid;
+	u16 pad;
 	u32 rcode;
 };
 
