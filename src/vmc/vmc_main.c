@@ -27,6 +27,8 @@ TaskHandle_t xVMCSCTask;
 TaskHandle_t xVMCTaskMonitor;
 
 SemaphoreHandle_t vmc_sc_lock;
+SemaphoreHandle_t vmc_sc_comms_lock;
+SemaphoreHandle_t vmc_sensor_monitoring_lock;
 
 int Enable_DemoMenu(void);
 
@@ -61,7 +63,13 @@ static void pVMCTask(void *params)
 
     /* Retry till fan controller is programmed */
     while (max6639_init(1, 0x2E));  // only for vck5000
-    
+
+	/* vmc_sensor_monitoring_lock */
+    vmc_sensor_monitoring_lock = xSemaphoreCreateMutex();
+	if(vmc_sensor_monitoring_lock == NULL){
+		VMC_ERR("vmc_sensor_monitoring_lock creation failed \n\r");
+	}
+
     /* Start Sensor Monitor task */
 
     if (xTaskCreate( SensorMonitorTask,
@@ -80,7 +88,12 @@ static void pVMCTask(void *params)
     if(vmc_sc_lock == NULL){
     VMC_ERR("vmc_sc_lock creation failed \n\r");
     }
-    xSemaphoreGive(vmc_sc_lock);
+
+	/* vmc_sc_comms_lock */
+    vmc_sc_comms_lock = xSemaphoreCreateMutex();
+	if(vmc_sc_comms_lock == NULL){
+		VMC_ERR("vmc_sc_comms_lock creation failed \n\r");
+	}
 
     if (xTaskCreate( VMC_SC_CommsTask,
 		( const char * ) "VMC_SC_Comms",

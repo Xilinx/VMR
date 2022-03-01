@@ -25,6 +25,8 @@ extern TaskHandle_t xSensorMonTask;
 extern XSysMonPsv InstancePtr;
 extern XScuGic IntcInst;
 extern SemaphoreHandle_t vmc_sc_lock;
+extern SemaphoreHandle_t vmc_sensor_monitoring_lock;
+
 
 extern SC_VMC_Data sc_vmc_data;
 
@@ -575,7 +577,7 @@ void SensorMonitorTask(void *params)
     for(;;)
     {
         /* Read All Sensors */
-    	if(!sc_update_flag)
+    	if(xSemaphoreTake(vmc_sensor_monitoring_lock, portMAX_DELAY) == pdTRUE)
     	{
     		Monitor_Sensors();
     		Monitor_Thresholds();
@@ -586,14 +588,9 @@ void SensorMonitorTask(void *params)
     		sysmon_monitor();
     		qsfp_monitor ();
 #endif
+    		xSemaphoreGive(vmc_sensor_monitoring_lock);
     		vTaskDelay(200);
     	}
-    	else
-    	{
-    		/* Wait for SC update complete ~20Sec*/
-    		vTaskDelay(DELAY_MS(1000 * 20));
-    	}
-
     }
 
     vTaskSuspend(NULL);
