@@ -34,7 +34,7 @@ int xgq_clock_flag = 0;
 int xgq_apubin_flag = 0;
 int xgq_vmr_control_flag = 0;
 int xgq_apu_control_flag = 0;
-char log_msg[256] = { 0 };
+char log_msg[512] = { 0 };
 
 SemaphoreHandle_t xSemaDownload;
 
@@ -160,6 +160,87 @@ static int xgq_xclbin_cb(cl_msg_t *msg, void *arg)
 	return 0;
 }
 
+static u32 rmgmt_fpt_status_query(cl_msg_t *msg, char *buf, u32 size)
+{
+	u32 count = 0;
+
+	rmgmt_fpt_query(msg);
+
+	count = snprintf(buf, size, "A image offset: 0x%x size: 0x%x capacity: 0x%x\n",
+		msg->multiboot_payload.default_partition_offset,
+		msg->multiboot_payload.pdimeta_size,
+		msg->multiboot_payload.default_partition_size);
+	if (count > size) {
+		CL_ERR(APP_MAIN, "msg is truncated");
+		return size;
+	}
+	
+	count += snprintf(buf + count, size,
+		"B image offset: 0x%x size: 0x%x capacity: 0x%x\n",
+		msg->multiboot_payload.backup_partition_offset,
+		msg->multiboot_payload.pdimeta_backup_size,
+		msg->multiboot_payload.backup_partition_size);
+	if (count > size) {
+		CL_ERR(APP_MAIN, "msg is truncated");
+		return size;
+	}
+
+	count += snprintf(buf + count, size, "SC firmware size: 0x%x\n",
+		msg->multiboot_payload.scfw_size);
+	if (count > size) {
+		CL_ERR(APP_MAIN, "msg is truncated");
+		return size;
+	}
+
+	return count;
+}
+
+/*
+ * shared memory is reserved (a semaphore is hold on host driver) for this op,
+ * log_msg will not be touched by other op as well.
+ */
+static int vmr_verbose_info(cl_msg_t *msg)
+{
+	u32 safe_size = sizeof(log_msg);
+	u32 dst_addr = RPU_SHARED_MEMORY_ADDR(msg->log_payload.address);
+	u32 count = 0;
+	u32 total_count = 0;
+
+	count = cl_rpu_status_query(msg, &log_msg, safe_size);
+	if (msg->log_payload.size < total_count + count) {
+		RMGMT_ERR("log buffer %d is too small, log message %s is truncated",
+			msg->log_payload.size, log_msg);
+		goto done;
+	}		
+	cl_memcpy_toio8(dst_addr + total_count, &log_msg, count);
+	total_count += count;
+
+	count = cl_apu_status_query(msg, &log_msg, safe_size);
+	if (msg->log_payload.size < total_count + count) {
+		RMGMT_ERR("log buffer %d is too small, log message %s is truncated",
+			msg->log_payload.size, log_msg);
+		goto done;
+	}
+	cl_memcpy_toio8(dst_addr + total_count, &log_msg, count);
+	total_count += count;
+
+	count = rmgmt_fpt_status_query(msg, &log_msg, safe_size);
+	if (msg->log_payload.size < total_count + count) {
+		RMGMT_ERR("log buffer %d is too small, log message %s is truncated",
+			msg->log_payload.size, log_msg);
+		goto done;
+	}
+	cl_memcpy_toio8(dst_addr + total_count, &log_msg, count);
+	total_count += count;
+
+done:
+
+	/* set correct size in result payload */
+	msg->log_payload.size = total_count;
+
+	return 0;
+}
+
 static int check_firewall(cl_msg_t *msg)
 {
 	u32 firewall = EP_FIREWALL_USER_BASE;
@@ -236,7 +317,9 @@ static int xgq_log_page_cb(cl_msg_t *msg, void *arg)
 	case CL_LOG_FW:
 		ret = load_firmware(msg);
 		break;
-	case CL_LOG_DBG:
+	case CL_LOG_INFO:
+		ret = vmr_verbose_info(msg);
+		break;
 	default:
 		RMGMT_LOG("unsupported type %d", msg->log_payload.pid);
 		ret = -1;
@@ -344,8 +427,6 @@ static int xgq_vmr_cb(cl_msg_t *msg, void *arg)
 		break;
 	case CL_VMR_QUERY:
 		rmgmt_fpt_query(msg);
-		cl_rpu_status_query(msg);
-		cl_apu_status_query(msg);
 		break;
 	case CL_PROGRAM_SC:
 		/* calling into vmc_update APIs, we check progress separately */
