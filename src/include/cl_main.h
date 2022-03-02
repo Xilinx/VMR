@@ -34,6 +34,7 @@ u32 cl_apu_status_query(struct cl_msg *msg, char *buf, u32 size);
 
 int cl_xgq_client_probe(void);
 int cl_xgq_apu_is_ready(void);
+int cl_xgq_pl_is_ready(void);
 int cl_xgq_apu_identify(struct cl_msg *msg);
 int cl_xgq_apu_download_xclbin(char *data, u32 size);
 
