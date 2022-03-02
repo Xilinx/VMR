@@ -431,7 +431,9 @@ int rmgmt_flush_rpu_pdi(struct rmgmt_handler *rh, struct cl_msg *msg)
 	}
 
 	/*TODO: avoid 2nd request might wipe out B exactly as A, add checksum */
-	if (!rmgmt_flush_no_backup(msg)) {
+
+	/* If enfore to skip copy or boot from B image, skip copy to B */
+	if (!rmgmt_flush_no_backup(msg) && !rmgmt_boot_from_backup(msg)) {
 		ret = rmgmt_copy_default_to_backup(msg);
 		if (ret)
 			return ret;
@@ -459,21 +461,15 @@ int rmgmt_flush_rpu_pdi(struct rmgmt_handler *rh, struct cl_msg *msg)
 
 	if (meta.fpt_pdi_magic != FPT_PDIMETA_MAGIC) {
 		RMGMT_ERR("Invalid PDIMETA magic: %x", meta.fpt_pdi_magic);
+		RMGMT_ERR("WARN: enforce to flash pdi onto default partition");
 
-		if (!rmgmt_flush_no_backup(msg)) {
-			RMGMT_ERR("ERROR: not an enforced operation, rejected.");
-			return -1;
-		} else {
-			RMGMT_ERR("WARN: enforce to flash pdi onto default partition");
+		/* Note: always erase before write and no erase after write */
+		ret = rmgmt_fpt_pdi_meta_erase(msg, FPT_TYPE_PDIMETA);
+		if (ret)
+			return ret;
 
-			/* Note: always erase before write and no erase after write */
-			ret = rmgmt_fpt_pdi_meta_erase(msg, FPT_TYPE_PDIMETA);
-			if (ret)
-				return ret;
-
-			/* reset to valide magic number */
-			meta.fpt_pdi_magic = FPT_PDIMETA_MAGIC;
-		}
+		/* reset to valide magic number */
+		meta.fpt_pdi_magic = FPT_PDIMETA_MAGIC;
 	}
 
 	/* TODO: check not same checksum, avoid dup flush */
