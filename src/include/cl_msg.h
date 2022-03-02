@@ -32,7 +32,7 @@ typedef enum cl_log_type {
 	CL_LOG_UNKNOWN		= 0x0,
 	CL_LOG_AF		= 0x1,
 	CL_LOG_FW		= 0x2,
-	CL_LOG_DBG		= 0x3,
+	CL_LOG_INFO		= 0x3,
 } cl_log_type_t;
 
 typedef enum cl_clock_type {

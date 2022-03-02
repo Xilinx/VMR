@@ -29,8 +29,9 @@ void cl_system_pre_init(void);
 
 struct cl_msg;
 
-void cl_rpu_status_query(struct cl_msg *msg);
-void cl_apu_status_query(struct cl_msg *msg);
+u32 cl_rpu_status_query(struct cl_msg *msg, char *buf, u32 size);
+u32 cl_apu_status_query(struct cl_msg *msg, char *buf, u32 size);
+
 int cl_xgq_client_probe(void);
 int cl_xgq_apu_is_ready(void);
 int cl_xgq_apu_identify(struct cl_msg *msg);

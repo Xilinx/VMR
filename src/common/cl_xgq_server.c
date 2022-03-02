@@ -209,6 +209,9 @@ static cl_log_type_t convert_log_pid(enum xgq_cmd_log_page_type type)
 	case XGQ_CMD_LOG_FW:
 		ltype = CL_LOG_FW;
 		break;
+	case XGQ_CMD_LOG_INFO:
+		ltype = CL_LOG_INFO;
+		break;
 	default:
 		ltype = CL_LOG_UNKNOWN;
 		break;
