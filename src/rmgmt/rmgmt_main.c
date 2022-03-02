@@ -55,6 +55,12 @@ static int xgq_clock_cb(cl_msg_t *msg, void *arg)
 	int ret = 0;
 	uint32_t freq = 0;
 
+	if(!cl_xgq_pl_is_ready()) {
+		RMGMT_ERR("pl is not ready, skip");
+		ret = -EIO;
+		goto done;
+	}
+
 	switch (msg->clock_payload.ocl_req_type) {
 	case CL_CLOCK_SCALE:
 		ret = rmgmt_clock_freq_scaling(msg);
@@ -70,11 +76,12 @@ static int xgq_clock_cb(cl_msg_t *msg, void *arg)
 		msg->clock_payload.ocl_req_freq[0] = freq;
 		break;
 	default:
-		RMGMT_LOG("ERROR: unknown req_type %d",
+		RMGMT_ERR("ERROR: unknown req_type %d",
 			msg->clock_payload.ocl_req_type);
 		break;
 	}
 
+done:
 	msg->hdr.rcode = ret;
 	cl_msg_handle_complete(msg);
 	RMGMT_DBG("complete msg id %d, ret %d", msg->hdr.cid, ret);
@@ -135,11 +142,16 @@ static int xgq_xclbin_cb(cl_msg_t *msg, void *arg)
 {
 	int ret = 0;
 
+	if(!cl_xgq_pl_is_ready()) {
+		RMGMT_ERR("pl is not ready, skip");
+		return -EIO;
+	}
+
 	u32 address = RPU_SHARED_MEMORY_ADDR(msg->data_payload.address);
 	u32 size = msg->data_payload.size;
 	if (size > rh.rh_max_size) {
 		RMGMT_LOG("ERROR: size %d is too big", size);
-		ret = 1;
+		ret = -EINVAL;
 	}
 
 	/* prepare rmgmt handler */
@@ -151,7 +163,7 @@ static int xgq_xclbin_cb(cl_msg_t *msg, void *arg)
 		release_download_sema();
 	} else {
 		RMGMT_WARN("system busy, please try later");
-		ret = -1;
+		ret = -EBUSY;
 	}
 
 	msg->hdr.rcode = ret;
@@ -266,8 +278,10 @@ static int vmr_clear_firewall()
 	int i = 0;
 	u32 val = 0;
 
-	if (!check_firewall())
+	if (!check_firewall()) {
+		RMGMT_LOG("done");
 		return 0;
+	}
 	
 	for (i = 0; i < FIREWALL_RETRY_COUNT; i++) {
 		if (read_firewall() & FIREWALL_STATUS_BUSY) {
@@ -525,6 +539,9 @@ static void pvXGQTask( void *pvParameters )
 
 	xSemaDownload = xSemaphoreCreateMutex();
 	configASSERT(xSemaDownload != NULL);
+	
+	/* try to clear any existign uncleared firewall before rmgmt launch */
+	vmr_clear_firewall();
 
 	for ( ;; )
 	{
