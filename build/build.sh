@@ -134,7 +134,7 @@ check_vmr() {
 	if [ $STDOUT_JTAG == 1 ];then
 		echo "STDOUT is JTAG"
 	else
-		echo "STDOUT is UARTLite"
+		echo "STDOUT is default"
 	fi
 
 	if [ $BUILD_XRT == 1 ];then
