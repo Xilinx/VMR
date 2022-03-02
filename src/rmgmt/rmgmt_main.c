@@ -362,7 +362,7 @@ static int vmr_load_firmware(cl_msg_t *msg)
 
 static int xgq_log_page_cb(cl_msg_t *msg, void *arg)
 {
-	u32 ret = 0;
+	int ret = 0;
 
 	switch (msg->log_payload.pid) {
 	case CL_LOG_AF_CHECK:
