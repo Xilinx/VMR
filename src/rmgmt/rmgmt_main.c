@@ -50,9 +50,6 @@ static bool release_download_sema()
 	return xSemaphoreGive(xSemaDownload) == pdTRUE;
 }
 
-#define OCL_MAX_ID	3
-#define OCL_MIN_NUM	1
-#define OCL_MAX_NUM	4
 /*
  * Block comment for validation functions:
  * We should always keep VMR running, any incoming request should be validated
@@ -77,7 +74,7 @@ static int validate_clock_payload(struct xgq_vmr_clock_payload *payload)
 		goto done;
 	}
 
-	if (payload->ocl_req_num < OCL_MIN_NUM || payload->ocl_req_num > OCL_MAX_NUM) {
+	if (payload->ocl_req_num > OCL_MAX_NUM) {
 		RMGMT_ERR("invalid req_num %d", payload->ocl_req_num);
 		goto done;
 	}
