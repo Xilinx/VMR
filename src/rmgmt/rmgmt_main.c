@@ -29,7 +29,6 @@ msg_handle_t *vmr_hdl;
 int xgq_pdi_flag = 0;
 int xgq_xclbin_flag = 0;
 int xgq_log_page_flag = 0;
-int xgq_sensor_flag = 0;
 int xgq_clock_flag = 0;
 int xgq_apubin_flag = 0;
 int xgq_vmr_control_flag = 0;
@@ -61,29 +60,27 @@ static int validate_clock_payload(struct xgq_vmr_clock_payload *payload)
 
 	if (payload->ocl_region != 0) {
 		RMGMT_ERR("ocl region %d is not 0", payload->ocl_region);
-		goto done;
+		return ret;
 	}
 
 	if (payload->ocl_req_type > CL_CLOCK_SCALE) {
 		RMGMT_ERR("invalid req_type %d", payload->ocl_req_type);
-		goto done;
+		return ret;
 	}
 
 	if (payload->ocl_req_id > OCL_MAX_ID) {
 		RMGMT_ERR("invalid req_id %d", payload->ocl_req_id);
-		goto done;
+		return ret;
 	}
 
 	if (payload->ocl_req_num > OCL_MAX_NUM) {
 		RMGMT_ERR("invalid req_num %d", payload->ocl_req_num);
-		goto done;
+		return ret;
 	}
 
 	/*TODO: check freq by comparing with cached xclbin */
 
-	ret = 0;
-done:
-	return ret;
+	return 0;
 }
 
 static inline int validate_data_payload(struct xgq_vmr_data_payload *payload)
@@ -94,7 +91,12 @@ static inline int validate_data_payload(struct xgq_vmr_data_payload *payload)
 
 	if (address + size >= RPU_SHARED_MEMORY_END) {
 		RMGMT_ERR("address overflow 0x%x", address);
-		goto done;
+		return ret;
+	}
+
+	if (size > rh.rh_max_size) {
+		RMGMT_ERR("size 0x%x over max 0x%x", size, rh.rh_max_size);
+		return ret;
 	}
 
 	if (size > rh.rh_max_size) {
@@ -104,31 +106,32 @@ static inline int validate_data_payload(struct xgq_vmr_data_payload *payload)
 
 	/* TODO: add more checking based on addr_type in the future */
 
-	ret = 0;
-done:
-	return ret;
+	return 0;
 }
 
-static inline int validate_log_payload(struct xgq_vmr_log_payload *payload)
+static inline int validate_log_payload(struct xgq_vmr_log_payload *payload, u32 size)
 {
 	int ret = -EINVAL;
 	u32 address = RPU_SHARED_MEMORY_ADDR(payload->address);
 
 	if (address >= RPU_SHARED_MEMORY_END) {
 		RMGMT_ERR("address overflow 0x%x", address);
-		goto done;
+		return ret;
 	}
 
 	if (payload->pid > CL_LOG_INFO) {
 		RMGMT_ERR("invalid log type 0x%x", payload->pid);
-		goto done;
+		return ret;
 	}
 
+	if (payload->size < size) {
+		RMGMT_ERR("request size 0x%x is smaller than result size 0x%x",
+			payload->size, size);
+		return ret;
+	}
 	/* TODO: add more checking based on addr_type in the future */
 
-	ret = 0;
-done:
-	return ret;
+	return 0;
 }
 
 static int xgq_clock_cb(cl_msg_t *msg, void *arg)
@@ -451,23 +454,18 @@ static int vmr_load_firmware(cl_msg_t *msg)
 	u32 fw_size = 0;
 	int ret = 0;
 
-	ret = validate_log_payload(&msg->log_payload);
-	if (ret)
-		return ret;
-
 	if (rmgmt_fpt_get_xsabin(msg, &fw_offset, &fw_size)) {
 		RMGMT_ERR("get xsabin firmware failed");
 		return -1;
 	}
 
+	ret = validate_log_payload(&msg->log_payload, fw_size);
+	if (ret)
+		return ret;
+
 	dst_addr = RPU_SHARED_MEMORY_ADDR(msg->log_payload.address);
 	src_addr = fw_offset;
 
-	if (msg->log_payload.size < fw_size) {
-		RMGMT_ERR("request size %d is smaller than fw_size %d",
-			msg->log_payload.size, fw_size);
-		return -1;
-	}
 	/*
 	 * TODO: the dst size can be small, check size <= dst size and
 	 * copy small truck back based on offset + dst size in the future */

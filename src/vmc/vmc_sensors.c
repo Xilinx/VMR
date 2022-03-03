@@ -522,17 +522,41 @@ void Monitor_Thresholds()
 	}
 }
 
+#define SENSOR_MAX_SIZE 512
+static inline int validate_sensor_payload(struct xgq_vmr_sensor_payload *payload)
+{
+	int ret = -EINVAL;
+	u32 address = RPU_SHARED_MEMORY_ADDR(payload->address);
+
+	if (address >= RPU_SHARED_MEMORY_END) {
+		VMC_ERR("address overflow 0x%x", address);
+		return ret;
+	}
+
+	if (payload->size > SENSOR_MAX_SIZE) {
+		VMC_ERR("size overflow 0x%x max 0x%x", payload->size, SENSOR_MAX_SIZE);
+		return ret;
+	}
+
+	return 0;
+}
+
 static int xgq_sensor_cb(cl_msg_t *msg, void *arg)
 {
     u32 address = RPU_SHARED_MEMORY_ADDR(msg->sensor_payload.address);
     u32 size = msg->sensor_payload.size;
     u8 reqBuffer[2] = {0};
-    u8 respBuffer[512] = {0};
+    u8 respBuffer[SENSOR_MAX_SIZE] = {0};
     u16 respSize = 0;
     s32 ret = 0;
 
     reqBuffer[0] = msg->sensor_payload.aid;
     reqBuffer[1] = msg->sensor_payload.sid;
+
+    ret = validate_sensor_payload(&msg->sensor_payload);
+    if (ret)
+	goto done;
+
     if(Asdm_Process_Sensor_Request(&reqBuffer[0], &respBuffer[0], &respSize))
     {
         VMC_ERR("ERROR: Failed to Process Sensor Request %d 0x%x",
@@ -552,6 +576,7 @@ static int xgq_sensor_cb(cl_msg_t *msg, void *arg)
         }
     }
 
+done:
 
     msg->hdr.rcode = ret;
     VMC_DBG("complete msg id%d, ret %d", msg->hdr.cid, ret);
