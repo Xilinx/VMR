@@ -55,6 +55,12 @@ static int xgq_clock_cb(cl_msg_t *msg, void *arg)
 	int ret = 0;
 	uint32_t freq = 0;
 
+	if(!cl_xgq_pl_is_ready()) {
+		RMGMT_ERR("pl is not ready, skip");
+		ret = -EIO;
+		goto done;
+	}
+
 	switch (msg->clock_payload.ocl_req_type) {
 	case CL_CLOCK_SCALE:
 		ret = rmgmt_clock_freq_scaling(msg);
@@ -70,11 +76,12 @@ static int xgq_clock_cb(cl_msg_t *msg, void *arg)
 		msg->clock_payload.ocl_req_freq[0] = freq;
 		break;
 	default:
-		RMGMT_LOG("ERROR: unknown req_type %d",
+		RMGMT_ERR("ERROR: unknown req_type %d",
 			msg->clock_payload.ocl_req_type);
 		break;
 	}
 
+done:
 	msg->hdr.rcode = ret;
 	cl_msg_handle_complete(msg);
 	RMGMT_DBG("complete msg id %d, ret %d", msg->hdr.cid, ret);
@@ -135,11 +142,16 @@ static int xgq_xclbin_cb(cl_msg_t *msg, void *arg)
 {
 	int ret = 0;
 
+	if(!cl_xgq_pl_is_ready()) {
+		RMGMT_ERR("pl is not ready, skip");
+		return -EIO;
+	}
+
 	u32 address = RPU_SHARED_MEMORY_ADDR(msg->data_payload.address);
 	u32 size = msg->data_payload.size;
 	if (size > rh.rh_max_size) {
 		RMGMT_LOG("ERROR: size %d is too big", size);
-		ret = 1;
+		ret = -EINVAL;
 	}
 
 	/* prepare rmgmt handler */
@@ -151,7 +163,7 @@ static int xgq_xclbin_cb(cl_msg_t *msg, void *arg)
 		release_download_sema();
 	} else {
 		RMGMT_WARN("system busy, please try later");
-		ret = -1;
+		ret = -EBUSY;
 	}
 
 	msg->hdr.rcode = ret;
@@ -241,22 +253,78 @@ done:
 	return 0;
 }
 
-static int check_firewall(cl_msg_t *msg)
+static inline u32 read_firewall()
 {
-	u32 firewall = EP_FIREWALL_USER_BASE;
+	return IO_SYNC_READ32(EP_FIREWALL_USER_BASE + FAULT_STATUS);
+}
+
+static inline void write_firewall_unblock(u32 val)
+{
+	return IO_SYNC_WRITE32(val, EP_FIREWALL_USER_BASE + UNBLOCK_CTRL);
+}
+
+static inline u32 check_firewall()
+{
+	return IS_FIRED(read_firewall());
+}
+
+int cl_xgq_pl_is_ready()
+{
+	return !check_firewall();
+}
+
+static int vmr_clear_firewall()
+{
+	int i = 0;
 	u32 val = 0;
 
-	val = IO_SYNC_READ32(firewall);
+	if (!check_firewall()) {
+		RMGMT_LOG("done");
+		return 0;
+	}
+	
+	for (i = 0; i < FIREWALL_RETRY_COUNT; i++) {
+		if (read_firewall() & FIREWALL_STATUS_BUSY) {
+			vTaskDelay(pdMS_TO_TICKS(BUSY_RETRY_INTERVAL));
+			continue;
+		} else {
+			break;
+		}
+	}
+
+	if (read_firewall() & FIREWALL_STATUS_BUSY) {
+		RMGMT_ERR("firewall is busy, status: 0x%x", read_firewall());
+		return -EINVAL;
+	}
+
+	/* now clear firewall */
+	write_firewall_unblock(1);
+
+	for (i = 0; i < FIREWALL_RETRY_COUNT; i++) {
+		if (!check_firewall())
+			return 0;
+
+		vTaskDelay(pdMS_TO_TICKS(CLEAR_RETRY_INTERVAL));
+	}
+
+	RMGMT_ERR("failed clear firewall, status: 0x%x", read_firewall());
+	return -EINVAL;
+}
+
+static u32 vmr_check_firewall(cl_msg_t *msg)
+{
+	u32 val = check_firewall();
+
 	/*
 	 * copy messge back from log_msg to shared memory
 	 */
-
-	val = IS_FIRED(val);
 	if (val) {
 		u32 safe_size = sizeof(log_msg);
 		u32 dst_addr = RPU_SHARED_MEMORY_ADDR(msg->log_payload.address);
 		u32 count = 0;
 		
+		RMGMT_ERR("tripped status: 0x%x", val);
+
 		if (msg->log_payload.size < sizeof(log_msg)) {
 			RMGMT_ERR("log buffer %d is too small, log message %d is trunked",
 				msg->log_payload.size, sizeof(log_msg));
@@ -274,7 +342,7 @@ static int check_firewall(cl_msg_t *msg)
 	return val;
 }
 
-static int load_firmware(cl_msg_t *msg)
+static int vmr_load_firmware(cl_msg_t *msg)
 {
 	u32 dst_addr = 0;
 	u32 src_addr = 0;
@@ -311,18 +379,21 @@ static int xgq_log_page_cb(cl_msg_t *msg, void *arg)
 	int ret = 0;
 
 	switch (msg->log_payload.pid) {
-	case CL_LOG_AF:
-		ret = check_firewall(msg);
+	case CL_LOG_AF_CHECK:
+		ret = vmr_check_firewall(msg);
+		break;
+	case CL_LOG_AF_CLEAR:
+		ret = vmr_clear_firewall();
 		break;
 	case CL_LOG_FW:
-		ret = load_firmware(msg);
+		ret = vmr_load_firmware(msg);
 		break;
 	case CL_LOG_INFO:
 		ret = vmr_verbose_info(msg);
 		break;
 	default:
 		RMGMT_LOG("unsupported type %d", msg->log_payload.pid);
-		ret = -1;
+		ret = -EINVAL;
 		break;
 	}
 
@@ -468,6 +539,9 @@ static void pvXGQTask( void *pvParameters )
 
 	xSemaDownload = xSemaphoreCreateMutex();
 	configASSERT(xSemaDownload != NULL);
+	
+	/* try to clear any existign uncleared firewall before rmgmt launch */
+	vmr_clear_firewall();
 
 	for ( ;; )
 	{

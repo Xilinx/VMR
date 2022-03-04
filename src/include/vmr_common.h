@@ -6,7 +6,11 @@
 #ifndef VMR_COMMON_H
 #define VMR_COMMON_H
 
+/* compatible with linux OS error codes */
+#define EIO	5
+#define EBUSY	16
 #define ENODEV	19
+#define EINVAL	22
 
 #define XGQ_SQ_TAIL_POINTER     0x0
 #define XGQ_SQ_INTR_REG         0x4
@@ -45,11 +49,15 @@
 #define EP_PMC_REG		0xF1130000
 
 #define FAULT_STATUS            0x0
+#define UNBLOCK_CTRL            0x8
 #define BIT(n) 			(1UL << (n))
 #define READ_RESPONSE_BUSY      BIT(0)
 #define WRITE_RESPONSE_BUSY     BIT(16)
 #define FIREWALL_STATUS_BUSY    (READ_RESPONSE_BUSY | WRITE_RESPONSE_BUSY)
 #define IS_FIRED(val) 		(val & ~FIREWALL_STATUS_BUSY)
+#define FIREWALL_RETRY_COUNT	10
+#define	BUSY_RETRY_INTERVAL	100		/* ms */
+#define	CLEAR_RETRY_INTERVAL	2		/* ms */
 
 #define	PMC_ERR1_STATUS_MASK	(1 << 24)
 #define	PMC_ERR_OUT1_EN_MASK	(1 << 24)

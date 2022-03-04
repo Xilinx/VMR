@@ -132,13 +132,12 @@ int cl_msg_handle_complete(cl_msg_t *msg)
 			msg->multiboot_payload.has_ext_sysdtb;
 
 		/* pass back apu status */
-		cmd_cq->cq_vmr_payload.apu_is_ready = cl_xgq_apu_is_ready();
+		cmd_cq->cq_vmr_payload.ps_is_ready = cl_xgq_apu_is_ready();
+		cmd_cq->cq_vmr_payload.pl_is_ready = cl_xgq_pl_is_ready();
 
 		/* pass back log level and flush progress */
 		cmd_cq->cq_vmr_payload.debug_level = cl_loglevel_get();
 		cmd_cq->cq_vmr_payload.program_progress = flash_progress();
-
-		MSG_LOG("apu is ready %d", cl_xgq_apu_is_ready());
 	} else if (msg->hdr.type == CL_MSG_LOG_PAGE) {
 		cmd_cq->cq_log_payload.count = msg->log_payload.size;
 	}
@@ -203,8 +202,11 @@ static cl_log_type_t convert_log_pid(enum xgq_cmd_log_page_type type)
 	cl_log_type_t ltype = CL_LOG_UNKNOWN;
 
 	switch (type) {
-	case XGQ_CMD_LOG_AF:
-		ltype = CL_LOG_AF;
+	case XGQ_CMD_LOG_AF_CHECK:
+		ltype = CL_LOG_AF_CHECK;
+		break;
+	case XGQ_CMD_LOG_AF_CLEAR:
+		ltype = CL_LOG_AF_CLEAR;
 		break;
 	case XGQ_CMD_LOG_FW:
 		ltype = CL_LOG_FW;
