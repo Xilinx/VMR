@@ -523,7 +523,7 @@ void Monitor_Thresholds()
 }
 
 #define SENSOR_MAX_SIZE 512
-static inline int validate_sensor_payload(struct xgq_vmr_sensor_payload *payload)
+static int validate_sensor_payload(struct xgq_vmr_sensor_payload *payload)
 {
 	int ret = -EINVAL;
 	u32 address = RPU_SHARED_MEMORY_ADDR(payload->address);

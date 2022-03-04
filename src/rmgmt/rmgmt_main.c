@@ -83,7 +83,7 @@ static int validate_clock_payload(struct xgq_vmr_clock_payload *payload)
 	return 0;
 }
 
-static inline int validate_data_payload(struct xgq_vmr_data_payload *payload)
+static int validate_data_payload(struct xgq_vmr_data_payload *payload)
 {
 	int ret = -EINVAL;
 	u32 address = RPU_SHARED_MEMORY_ADDR(payload->address);
@@ -109,7 +109,7 @@ static inline int validate_data_payload(struct xgq_vmr_data_payload *payload)
 	return 0;
 }
 
-static inline int validate_log_payload(struct xgq_vmr_log_payload *payload, u32 size)
+static int validate_log_payload(struct xgq_vmr_log_payload *payload, u32 size)
 {
 	int ret = -EINVAL;
 	u32 address = RPU_SHARED_MEMORY_ADDR(payload->address);
