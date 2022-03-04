@@ -29,7 +29,6 @@ msg_handle_t *vmr_hdl;
 int xgq_pdi_flag = 0;
 int xgq_xclbin_flag = 0;
 int xgq_log_page_flag = 0;
-int xgq_sensor_flag = 0;
 int xgq_clock_flag = 0;
 int xgq_apubin_flag = 0;
 int xgq_vmr_control_flag = 0;
@@ -50,16 +49,100 @@ static bool release_download_sema()
 	return xSemaphoreGive(xSemaDownload) == pdTRUE;
 }
 
+/*
+ * Block comment for validation functions:
+ * We should always keep VMR running, any incoming request should be validated
+ * in acceptable range, otherwise return -EINVAL.
+ */
+static int validate_clock_payload(struct xgq_vmr_clock_payload *payload)
+{
+	int ret = -EINVAL;
+
+	if(!cl_xgq_pl_is_ready()) {
+		RMGMT_ERR("pl is not ready.");
+		return -EIO;
+	}
+
+
+	if (payload->ocl_region != 0) {
+		RMGMT_ERR("ocl region %d is not 0", payload->ocl_region);
+		return ret;
+	}
+
+	if (payload->ocl_req_type > CL_CLOCK_SCALE) {
+		RMGMT_ERR("invalid req_type %d", payload->ocl_req_type);
+		return ret;
+	}
+
+	if (payload->ocl_req_id > OCL_MAX_ID) {
+		RMGMT_ERR("invalid req_id %d", payload->ocl_req_id);
+		return ret;
+	}
+
+	if (payload->ocl_req_num > OCL_MAX_NUM) {
+		RMGMT_ERR("invalid req_num %d", payload->ocl_req_num);
+		return ret;
+	}
+
+	/*TODO: check freq by comparing with cached xclbin */
+
+	return 0;
+}
+
+static int validate_data_payload(struct xgq_vmr_data_payload *payload)
+{
+	int ret = -EINVAL;
+	u32 address = RPU_SHARED_MEMORY_ADDR(payload->address);
+	u32 size = payload->size;
+
+	if (address + size >= RPU_SHARED_MEMORY_END) {
+		RMGMT_ERR("address overflow 0x%x", address);
+		return ret;
+	}
+
+	if (size > rh.rh_max_size) {
+		RMGMT_ERR("size 0x%x over max 0x%x", size, rh.rh_max_size);
+		return ret;
+	}
+
+	/* TODO: add more checking based on addr_type in the future */
+
+	return 0;
+}
+
+static int validate_log_payload(struct xgq_vmr_log_payload *payload, u32 size)
+{
+	int ret = -EINVAL;
+	u32 address = RPU_SHARED_MEMORY_ADDR(payload->address);
+
+	if (address >= RPU_SHARED_MEMORY_END) {
+		RMGMT_ERR("address overflow 0x%x", address);
+		return ret;
+	}
+
+	if (payload->pid > CL_LOG_INFO) {
+		RMGMT_ERR("invalid log type 0x%x", payload->pid);
+		return ret;
+	}
+
+	if (payload->size < size) {
+		RMGMT_ERR("request size 0x%x is smaller than result size 0x%x",
+			payload->size, size);
+		return ret;
+	}
+	/* TODO: add more checking based on addr_type in the future */
+
+	return 0;
+}
+
 static int xgq_clock_cb(cl_msg_t *msg, void *arg)
 {
 	int ret = 0;
 	uint32_t freq = 0;
 
-	if(!cl_xgq_pl_is_ready()) {
-		RMGMT_ERR("pl is not ready, skip");
-		ret = -EIO;
+	ret = validate_clock_payload(&msg->clock_payload);
+	if (ret)
 		goto done;
-	}
 
 	switch (msg->clock_payload.ocl_req_type) {
 	case CL_CLOCK_SCALE:
@@ -90,14 +173,16 @@ done:
 
 static int rmgmt_download_pdi(cl_msg_t *msg, bool is_rpu_pdi)
 {
+	u32 address = 0;
+	u32 size = 0;
 	int ret = 0;
 
-	u32 address = RPU_SHARED_MEMORY_ADDR(msg->data_payload.address);
-	u32 size = msg->data_payload.size;
-	if (size > rh.rh_max_size) {
-		RMGMT_LOG("ERROR: size %d is too big", size);
-		ret = 1;
-	}
+	ret = validate_data_payload(&msg->data_payload);
+	if (ret)
+		return ret;
+
+	address = RPU_SHARED_MEMORY_ADDR(msg->data_payload.address);
+	size = msg->data_payload.size;
 
 	/* prepare rmgmt handler */
 	rh.rh_data_size = size;
@@ -108,11 +193,7 @@ static int rmgmt_download_pdi(cl_msg_t *msg, bool is_rpu_pdi)
 	else
 		ret = rmgmt_download_apu_pdi(&rh);
 
-	msg->hdr.rcode = ret;
-
-	RMGMT_DBG("complete msg id %d, ret %d", msg->hdr.cid, ret);
-	cl_msg_handle_complete(msg);
-	return 0;
+	return ret;
 }
 
 /* We acquire sema for pdi but not for apubin because the apubin can be
@@ -126,33 +207,47 @@ static int xgq_pdi_cb(cl_msg_t *msg, void *arg)
 	if (acquire_download_sema()) {
 		ret = rmgmt_download_pdi(msg, true);
 		release_download_sema();
-		return ret;
+	} else {
+		RMGMT_WARN("system busy, please try later");
+		ret = -EBUSY;
 	}
 
-	RMGMT_LOG("system busy, please try later");
-	return -1;
+	msg->hdr.rcode = ret;
+	RMGMT_DBG("complete msg id %d, ret %d", msg->hdr.cid, ret);
+	cl_msg_handle_complete(msg);
+	return 0;
 }
 
 static int xgq_apubin_cb(cl_msg_t *msg, void *arg)
 {
-	return rmgmt_download_pdi(msg, false);
+	int ret = 0;
+
+	ret = rmgmt_download_pdi(msg, false);
+
+	msg->hdr.rcode = ret;
+	RMGMT_DBG("complete msg id %d, ret %d", msg->hdr.cid, ret);
+	cl_msg_handle_complete(msg);
+	return 0;
 }
 
 static int xgq_xclbin_cb(cl_msg_t *msg, void *arg)
 {
+	u32 address = 0;
+	u32 size = 0;
 	int ret = 0;
 
 	if(!cl_xgq_pl_is_ready()) {
-		RMGMT_ERR("pl is not ready, skip");
-		return -EIO;
+		RMGMT_ERR("pl is not ready");
+		ret = -EIO;
+		goto done;
 	}
 
-	u32 address = RPU_SHARED_MEMORY_ADDR(msg->data_payload.address);
-	u32 size = msg->data_payload.size;
-	if (size > rh.rh_max_size) {
-		RMGMT_LOG("ERROR: size %d is too big", size);
-		ret = -EINVAL;
-	}
+	ret = validate_data_payload(&msg->data_payload);
+	if (ret)
+		goto done;
+
+	address = RPU_SHARED_MEMORY_ADDR(msg->data_payload.address);
+	size = msg->data_payload.size;
 
 	/* prepare rmgmt handler */
 	rh.rh_data_size = size;
@@ -166,6 +261,7 @@ static int xgq_xclbin_cb(cl_msg_t *msg, void *arg)
 		ret = -EBUSY;
 	}
 
+done:
 	msg->hdr.rcode = ret;
 	RMGMT_DBG("complete msg id%d, ret %d", msg->hdr.cid, ret);
 	cl_msg_handle_complete(msg);
@@ -178,7 +274,7 @@ static u32 rmgmt_fpt_status_query(cl_msg_t *msg, char *buf, u32 size)
 
 	rmgmt_fpt_query(msg);
 
-	count = snprintf(buf, size, "A image offset: 0x%x size: 0x%x capacity: 0x%x\n",
+	count = snprintf(buf, size, "A image offset: 0x%lx size: 0x%lx capacity: 0x%lx\n",
 		msg->multiboot_payload.default_partition_offset,
 		msg->multiboot_payload.pdimeta_size,
 		msg->multiboot_payload.default_partition_size);
@@ -188,7 +284,7 @@ static u32 rmgmt_fpt_status_query(cl_msg_t *msg, char *buf, u32 size)
 	}
 	
 	count += snprintf(buf + count, size,
-		"B image offset: 0x%x size: 0x%x capacity: 0x%x\n",
+		"B image offset: 0x%lx size: 0x%lx capacity: 0x%lx\n",
 		msg->multiboot_payload.backup_partition_offset,
 		msg->multiboot_payload.pdimeta_backup_size,
 		msg->multiboot_payload.backup_partition_size);
@@ -197,7 +293,7 @@ static u32 rmgmt_fpt_status_query(cl_msg_t *msg, char *buf, u32 size)
 		return size;
 	}
 
-	count += snprintf(buf + count, size, "SC firmware size: 0x%x\n",
+	count += snprintf(buf + count, size, "SC firmware size: 0x%lx\n",
 		msg->multiboot_payload.scfw_size);
 	if (count > size) {
 		CL_ERR(APP_MAIN, "msg is truncated");
@@ -218,7 +314,7 @@ static int vmr_verbose_info(cl_msg_t *msg)
 	u32 count = 0;
 	u32 total_count = 0;
 
-	count = cl_rpu_status_query(msg, &log_msg, safe_size);
+	count = cl_rpu_status_query(msg, log_msg, safe_size);
 	if (msg->log_payload.size < total_count + count) {
 		RMGMT_ERR("log buffer %d is too small, log message %s is truncated",
 			msg->log_payload.size, log_msg);
@@ -227,7 +323,7 @@ static int vmr_verbose_info(cl_msg_t *msg)
 	cl_memcpy_toio8(dst_addr + total_count, &log_msg, count);
 	total_count += count;
 
-	count = cl_apu_status_query(msg, &log_msg, safe_size);
+	count = cl_apu_status_query(msg, log_msg, safe_size);
 	if (msg->log_payload.size < total_count + count) {
 		RMGMT_ERR("log buffer %d is too small, log message %s is truncated",
 			msg->log_payload.size, log_msg);
@@ -236,7 +332,7 @@ static int vmr_verbose_info(cl_msg_t *msg)
 	cl_memcpy_toio8(dst_addr + total_count, &log_msg, count);
 	total_count += count;
 
-	count = rmgmt_fpt_status_query(msg, &log_msg, safe_size);
+	count = rmgmt_fpt_status_query(msg, log_msg, safe_size);
 	if (msg->log_payload.size < total_count + count) {
 		RMGMT_ERR("log buffer %d is too small, log message %s is truncated",
 			msg->log_payload.size, log_msg);
@@ -348,20 +444,20 @@ static int vmr_load_firmware(cl_msg_t *msg)
 	u32 src_addr = 0;
 	u32 fw_offset = 0;
 	u32 fw_size = 0;
+	int ret = 0;
 
 	if (rmgmt_fpt_get_xsabin(msg, &fw_offset, &fw_size)) {
 		RMGMT_ERR("get xsabin firmware failed");
 		return -1;
 	}
 
+	ret = validate_log_payload(&msg->log_payload, fw_size);
+	if (ret)
+		return ret;
+
 	dst_addr = RPU_SHARED_MEMORY_ADDR(msg->log_payload.address);
 	src_addr = fw_offset;
 
-	if (msg->log_payload.size < fw_size) {
-		RMGMT_ERR("request size %d is smaller than fw_size %d",
-			msg->log_payload.size, fw_size);
-		return -1;
-	}
 	/*
 	 * TODO: the dst size can be small, check size <= dst size and
 	 * copy small truck back based on offset + dst size in the future */

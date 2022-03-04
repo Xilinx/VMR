@@ -12,6 +12,9 @@
 #define ENODEV	19
 #define EINVAL	22
 
+#define OCL_MAX_ID	3
+#define OCL_MAX_NUM	4
+
 #define XGQ_SQ_TAIL_POINTER     0x0
 #define XGQ_SQ_INTR_REG         0x4
 #define XGQ_SQ_INTR_CTRL        0xC
@@ -99,7 +102,6 @@
 
 #define RPU_SHARED_MEMORY_ADDR(offset) (RPU_SHARED_MEMORY_START + (u32)offset)
 #define APU_SHARED_MEMORY_ADDR(offset) (APU_SHARED_MEMORY_START + (u32)offset)
-
 
 #if defined(CONFIG_FORCE_RESET)
 #define EP_FORCE_RESET		XPAR_BLP_BLP_LOGIC_BASE_CLOCKING_FORCE_RESET_GPIO_BASEADDR
