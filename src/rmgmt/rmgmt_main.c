@@ -104,7 +104,7 @@ static int rmgmt_download_pdi(cl_msg_t *msg, bool is_rpu_pdi)
 	cl_memcpy_fromio8(address, rh.rh_data, size);
 
 	if (is_rpu_pdi)
-		ret = rmgmt_flush_rpu_pdi(&rh, msg);
+		ret = rmgmt_flash_rpu_pdi(&rh, msg);
 	else
 		ret = rmgmt_download_apu_pdi(&rh);
 
