@@ -58,6 +58,12 @@ static int validate_clock_payload(struct xgq_vmr_clock_payload *payload)
 {
 	int ret = -EINVAL;
 
+	if(!cl_xgq_pl_is_ready()) {
+		RMGMT_ERR("pl is not ready.");
+		return -EIO;
+	}
+
+
 	if (payload->ocl_region != 0) {
 		RMGMT_ERR("ocl region %d is not 0", payload->ocl_region);
 		return ret;
@@ -87,15 +93,10 @@ static int validate_data_payload(struct xgq_vmr_data_payload *payload)
 {
 	int ret = -EINVAL;
 	u32 address = RPU_SHARED_MEMORY_ADDR(payload->address);
-	u32 size = payload.size;
+	u32 size = payload->size;
 
 	if (address + size >= RPU_SHARED_MEMORY_END) {
 		RMGMT_ERR("address overflow 0x%x", address);
-		return ret;
-	}
-
-	if (size > rh.rh_max_size) {
-		RMGMT_ERR("size 0x%x over max 0x%x", size, rh.rh_max_size);
 		return ret;
 	}
 
@@ -138,12 +139,6 @@ static int xgq_clock_cb(cl_msg_t *msg, void *arg)
 {
 	int ret = 0;
 	uint32_t freq = 0;
-
-	if(!cl_xgq_pl_is_ready()) {
-		RMGMT_ERR("pl is not ready, skip");
-		ret = -EIO;
-		goto done;
-	}
 
 	ret = validate_clock_payload(&msg->clock_payload);
 	if (ret)
@@ -242,7 +237,7 @@ static int xgq_xclbin_cb(cl_msg_t *msg, void *arg)
 	int ret = 0;
 
 	if(!cl_xgq_pl_is_ready()) {
-		RMGMT_ERR("pl is not ready, skip");
+		RMGMT_ERR("pl is not ready");
 		ret = -EIO;
 		goto done;
 	}
@@ -250,9 +245,6 @@ static int xgq_xclbin_cb(cl_msg_t *msg, void *arg)
 	ret = validate_data_payload(&msg->data_payload);
 	if (ret)
 		goto done;
-
-	u32 address = RPU_SHARED_MEMORY_ADDR(msg->data_payload.address);
-	u32 size = msg->data_payload.size;
 
 	address = RPU_SHARED_MEMORY_ADDR(msg->data_payload.address);
 	size = msg->data_payload.size;
