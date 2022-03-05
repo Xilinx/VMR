@@ -60,7 +60,7 @@ void rmgmt_fpt_query(struct cl_msg *msg);
 void rmgmt_boot_fpt_query(struct cl_msg *msg);
 void rmgmt_extension_fpt_query(struct cl_msg *msg);
 
-int rmgmt_flush_rpu_pdi(struct rmgmt_handler *rh, struct cl_msg *msg);
+int rmgmt_flash_rpu_pdi(struct rmgmt_handler *rh, struct cl_msg *msg);
 
 int rmgmt_fpt_get_xsabin(struct cl_msg *msg, u32 *addr, u32 *size);
 int rmgmt_fpt_get_scfw(struct cl_msg *msg, u32 *addr, u32 *size);

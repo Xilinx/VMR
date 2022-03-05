@@ -135,7 +135,7 @@ int cl_msg_handle_complete(cl_msg_t *msg)
 		cmd_cq->cq_vmr_payload.ps_is_ready = cl_xgq_apu_is_ready();
 		cmd_cq->cq_vmr_payload.pl_is_ready = cl_xgq_pl_is_ready();
 
-		/* pass back log level and flush progress */
+		/* pass back log level and flash progress */
 		cmd_cq->cq_vmr_payload.debug_level = cl_loglevel_get();
 		cmd_cq->cq_vmr_payload.program_progress = flash_progress();
 	} else if (msg->hdr.type == CL_MSG_LOG_PAGE) {
@@ -348,14 +348,14 @@ static int submit_to_queue(u32 sq_addr)
 		msg.data_payload.address = (u32)sq->pdi_payload.address;
 		msg.data_payload.size = (u32)sq->pdi_payload.size;
 
-		switch (sq->pdi_payload.flush_type) {
-		case XGQ_CMD_FLUSH_NO_BACKUP:
-			msg.data_payload.flush_no_backup = 1;
+		switch (sq->pdi_payload.flash_type) {
+		case XGQ_CMD_FLASH_NO_BACKUP:
+			msg.data_payload.flash_no_backup = 1;
 			break;
-		case XGQ_CMD_FLUSH_TO_LEGACY:
-			msg.data_payload.flush_to_legacy = 1;
+		case XGQ_CMD_FLASH_TO_LEGACY:
+			msg.data_payload.flash_to_legacy = 1;
 			break;
-		case XGQ_CMD_FLUSH_DEFAULT:
+		case XGQ_CMD_FLASH_DEFAULT:
 		default:
 			break;
 		}

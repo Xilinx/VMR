@@ -54,8 +54,8 @@ struct xgq_vmr_data_payload {
 	uint32_t address;
 	uint32_t size;
 	uint32_t addr_type:4;
-	uint32_t flush_no_backup:1;
-	uint32_t flush_to_legacy:1;
+	uint32_t flash_no_backup:1;
+	uint32_t flash_to_legacy:1;
 	uint32_t rsvd1:26;
 	uint32_t pad1;
 };
