@@ -34,9 +34,9 @@ static inline bool rmgmt_boot_from_recovery(struct cl_msg *msg)
 	return msg->multiboot_payload.boot_on_recovery;
 }
 
-static inline bool rmgmt_flush_no_backup(struct cl_msg *msg)
+static inline bool rmgmt_flash_no_backup(struct cl_msg *msg)
 {
-	return msg->data_payload.flush_no_backup == 1;
+	return msg->data_payload.flash_no_backup == 1;
 }
 
 static u32 rmgmt_fpt_pdi_get_base(struct cl_msg *msg, int fpt_type)
@@ -386,11 +386,11 @@ void rmgmt_fpt_query(struct cl_msg *msg) {
 
 /*
  * Flush flow:
- * 1) if flush_to_legacy is set, enfore to flush to offset 0x0;
- * 2) else if flush_no_backup is set, skip backup, otherwise backup A to B;
- * 3) flush pdi onto A and update size in metadata
+ * 1) if flash_to_legacy is set, enfore to flash to offset 0x0;
+ * 2) else if flash_no_backup is set, skip backup, otherwise backup A to B;
+ * 3) flash pdi onto A and update size in metadata
  */
-int rmgmt_flush_rpu_pdi(struct rmgmt_handler *rh, struct cl_msg *msg)
+int rmgmt_flash_rpu_pdi(struct rmgmt_handler *rh, struct cl_msg *msg)
 {
 	int ret = 0;
 	u32 offset = 0;
@@ -413,7 +413,7 @@ int rmgmt_flush_rpu_pdi(struct rmgmt_handler *rh, struct cl_msg *msg)
 	pdi_data = (u8 *)axlf + pdi_offset;
 	len = pdi_size;
 
-	if (msg->data_payload.flush_to_legacy) {
+	if (msg->data_payload.flash_to_legacy) {
 		RMGMT_ERR("WARN: force to flash back to legacy mode, PDI starts at 0x0");
 
 		offset = 0x0;
@@ -433,7 +433,7 @@ int rmgmt_flush_rpu_pdi(struct rmgmt_handler *rh, struct cl_msg *msg)
 	/*TODO: avoid 2nd request might wipe out B exactly as A, add checksum */
 
 	/* If enfore to skip copy or boot from B image, skip copy to B */
-	if (!rmgmt_flush_no_backup(msg) && !rmgmt_boot_from_backup(msg)) {
+	if (!rmgmt_flash_no_backup(msg) && !rmgmt_boot_from_backup(msg)) {
 		ret = rmgmt_copy_default_to_backup(msg);
 		if (ret)
 			return ret;
@@ -472,7 +472,7 @@ int rmgmt_flush_rpu_pdi(struct rmgmt_handler *rh, struct cl_msg *msg)
 		meta.fpt_pdi_magic = FPT_PDIMETA_MAGIC;
 	}
 
-	/* TODO: check not same checksum, avoid dup flush */
+	/* TODO: check not same checksum, avoid dup flash */
 
 	/* Note: always erase and write, otherwise data is corrupted after write */
 	ret = ospi_flash_erase(CL_FLASH_BOOT, offset, len);
