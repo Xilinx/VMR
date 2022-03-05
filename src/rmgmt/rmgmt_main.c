@@ -372,7 +372,6 @@ int cl_xgq_pl_is_ready()
 static int vmr_clear_firewall()
 {
 	int i = 0;
-	u32 val = 0;
 
 	if (!check_firewall()) {
 		RMGMT_LOG("done");
