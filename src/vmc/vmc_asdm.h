@@ -128,7 +128,7 @@ typedef struct __attribute__((packed)) Asdm_Sensor_MetaData_s
     u8 sensorInstance;
     snsrNameFunc getSensorName;
 
-    u8 *sesnorListTbl;
+    u8 sesnorListTbl;
     u8 sampleCount;
     sensorMonitorFunc monitorFunc;
 

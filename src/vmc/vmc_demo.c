@@ -21,6 +21,8 @@
 
 extern void AsdmSensor_Display(void);
 
+extern uint8_t    logging_level;
+
 #define demoMenu_task_PRIORITY	tskIDLE_PRIORITY + 1
 
 /** Maximum menu levels that are supported in xmenu */
@@ -72,7 +74,6 @@ TestMenu TestsMenu[] =
     {"Asdm Sensor Read", NULL, AsdmSensor_Display},
     {"Get Board Info", NULL, BoardInfoTest},
     {"Sensor Data Read", NULL, SensorData_Display},
-
     {NULL, NULL, NULL}
 };
 
@@ -81,15 +82,12 @@ extern SemaphoreHandle_t logbuf_lock; /* used to block until LogBuf is in use */
 
 static void App_SetLogLevel(void)
 {
-    uint32_t EntryIndex = 0;
-    int64_t Choice = 0;
+    u8 EntryIndex = 0;
+    long Choice = 0;
     char UserInput = 0;
-    uint8_t loglevel = 0;
-    uint32_t receivedBytes = 0;
+    u32 receivedBytes = 0;
 
-
-    loglevel = VMC_GetLogLevel();
-    VMC_DMO("Current log level is: %d %s\n\r\n\r", (unsigned int)loglevel, LogLevels[loglevel]);
+    VMC_DMO("Current log level is: %d %s\n\r\n\r", (unsigned int)logging_level, LogLevels[logging_level]);
     for(EntryIndex = 0; LogLevels[EntryIndex] != NULL; EntryIndex++)
     {
     	VMC_DMO("%d %s\n\r", (unsigned int)EntryIndex, LogLevels[EntryIndex]);
@@ -130,14 +128,13 @@ static void App_SetLogLevel(void)
  */
 static void DemoMenuTask(void *arg0)
 {
-    uint32_t TestIndex = 0;
-    uint32_t MenuLevel = 0;
-    int64_t Choice = 0;
+    u8 TestIndex = 0;
+    u8 MenuLevel = 0;
+    long Choice = 0;
     char UserInput = 0;
-    char Temp_var = 0;
     TestMenu *pTestMenuLevel[MAX_MENU_LEVELS];
     TestMenu *pTestMenu;
-    uint32_t receivedBytes = 0;
+    u32 receivedBytes = 0;
 
     /*
      * Change the log level from none to inform to enable the debug port.
@@ -163,13 +160,12 @@ static void DemoMenuTask(void *arg0)
 
         for(TestIndex = 0; pTestMenu[TestIndex].TestName != NULL; TestIndex++)
         {
-            if(TestIndex < 9)
+            if(TestIndex < 9) /* to print menu items from 1 to 9 */
             	VMC_DMO("%d %s\n\r", (unsigned int)TestIndex + 1, pTestMenu[TestIndex].TestName);
             else
             {
             	/* Continue printing menu items using lower case letters starting with 'a'. */
-                Temp_var = (TestIndex - 9)+ CHAR_a;
-                VMC_DMO("%c %s\n\r", (unsigned int)Temp_var, pTestMenu[TestIndex].TestName);
+                VMC_DMO("%c %s\n\r", (unsigned int)((TestIndex - 9)+ CHAR_a), pTestMenu[TestIndex].TestName);
             }
         }
         VMC_DMO("------------------------------------------------------------------------------------\n\r");
@@ -256,10 +252,10 @@ static void DemoMenuTask(void *arg0)
     return;
 }
 
-int32_t Enable_DemoMenu(void)
+u8 Enable_DemoMenu(void)
 {
 
-	int32_t retc = 0;
+	u8 retc = 0;
 
     /* Return, if already enabled */
     if ( isDemoMenuEnabled )

@@ -30,7 +30,7 @@ SemaphoreHandle_t vmc_sc_lock;
 SemaphoreHandle_t vmc_sc_comms_lock;
 SemaphoreHandle_t vmc_sensor_monitoring_lock;
 
-int Enable_DemoMenu(void);
+u8 Enable_DemoMenu(void);
 
 extern void VMC_SC_CommsTask(void *params);
 extern void SensorMonitorTask(void *params);

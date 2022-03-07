@@ -30,6 +30,10 @@
 #include "sysmon_list.h"
 #include <errno.h>
 
+/* For Now we are using very limited features in sysmon
+ * commented un-used code to avoid compiler warnings.
+ * */
+#if 0
 static const struct sysmon_event_spec InstancePtremp_events[] = {
 	{
 		.type = SYSMON_EV_TYPE_THRESH,
@@ -62,7 +66,7 @@ static const struct sysmon_chan_spec temp_events[] = {
 	SYSMON_CHAN_TEMP_EVENT(SYSMONPSV_TEMP_EVENT, "temp", InstancePtremp_events),
 	SYSMON_CHAN_TEMP_EVENT(SYSMONPSV_OT_EVENT, "ot", InstancePtremp_events),
 };
-
+#endif
 
 void XSysMonPsv_ReadReg(XSysMonPsv *InstancePtr, u32 offset, u32 *data)
 {
@@ -109,6 +113,7 @@ u32 XSysMonPsv_GetNodeValue(XSysMonPsv *InstancePtr, int sat_id)
 	return raw;
 }
 
+#if 0
 static u32 XSysMonPsv_TempThreshOffset(XSysMonPsv_TempEvent Event, enum sysmon_event_direction dir)
 {
 	switch (Event) {
@@ -123,6 +128,7 @@ static u32 XSysMonPsv_TempThreshOffset(XSysMonPsv_TempEvent Event, enum sysmon_e
 	}
 	return -EINVAL;
 }
+#endif
 
 u32 XSysMonPsv_SupplyOffset(int address)
 {
@@ -198,12 +204,12 @@ void XSysMonPsv_SupplyProcessedToRaw(int val, int val2, u32 reg_val, u32 *raw_da
 int XSysMonPsv_GetEventMask(XSysMonPsv_TempEvent Event)
 {
 	if (Event == SYSMONPSV_TEMP_EVENT)
-		return BIT(SYSMON_BIT_TEMP);
+		return _BIT(SYSMON_BIT_TEMP);
 	else if (Event == SYSMONPSV_OT_EVENT)
-		return BIT(SYSMON_BIT_OT);
+		return _BIT(SYSMON_BIT_OT);
 
 	/* return supply */
-	return BIT(Event / 32);
+	return _BIT(Event / 32);
 }
 
 /****************************************************************************/

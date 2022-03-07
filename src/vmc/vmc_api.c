@@ -23,7 +23,7 @@
 
 extern uart_rtos_handle_t uart_log;
 extern Versal_sensor_readings sensor_readings;
-static uint8_t    logging_level = VMC_LOG_LEVEL_NONE;
+uint8_t    logging_level = VMC_LOG_LEVEL_NONE;
 static char LogBuf[MAX_LOG_SIZE];
 SemaphoreHandle_t logbuf_lock; /* used to block until LogBuf is in use */
 Versal_BoardInfo board_info;

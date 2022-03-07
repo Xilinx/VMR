@@ -34,6 +34,7 @@ typedef enum app_type {
 /**
  * Note: please make sure index matches enum value of app_type
  */
+__attribute__((unused))
 static const char *app_type_name[] = {
 	"MAIN",
 	"RMGMT",
