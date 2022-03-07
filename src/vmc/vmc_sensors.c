@@ -533,7 +533,7 @@ static int validate_sensor_payload(struct xgq_vmr_sensor_payload *payload)
 		return ret;
 	}
 
-	if (payload->size > SENSOR_MAX_SIZE) {
+	if (payload->size < SENSOR_MAX_SIZE) {
 		VMC_ERR("size overflow 0x%x max 0x%x", payload->size, SENSOR_MAX_SIZE);
 		return ret;
 	}
