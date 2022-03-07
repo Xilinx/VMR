@@ -28,7 +28,7 @@ extern uint8_t sc_update_flag;
 u8 VMC_SC_Comms_Msg[] = {
        MSP432_COMMS_VOLT_SNSR_REQ,
        MSP432_COMMS_POWER_SNSR_REQ,
-	   MSP432_COMMS_TEMP_SNSR_REQ,
+	MSP432_COMMS_TEMP_SNSR_REQ,
        MSP432_COMMS_VMC_SEND_I2C_SNSR_REQ,
 };
 
@@ -271,6 +271,8 @@ bool VMC_send_packet(u8 Message_id , u8 Flags,u8 Payloadlength, u8 *Payload)
 	(void)memcpy(&buf[length], &pkt_framing.EOP[0], EOP_SIZE);
 	length += EOP_SIZE;
 
+	configASSERT(length <= MAX_VMC_SC_UART_BUF_SIZE);
+
 	retVal = UART_RTOS_Send(&uart_vmcsc_log,&buf[0],length);
 	if(retVal == UART_SUCCESS){
 		return true;
@@ -285,6 +287,8 @@ void VMC_uart_receive(u8  Expected_Msg_Length)
 
 	if(UART_RTOS_Receive(&uart_vmcsc_log, Data, Expected_Msg_Length ,&receivedcount,0x104) == UART_SUCCESS)
 	{
+		configASSERT(receivedcount <= MAX_VMC_SC_UART_BUF_SIZE);
+
 		if(receivedcount > 2 )   // condition to avoid negative indexing
 		{
 			memcpy(g_scData,Data,receivedcount);
@@ -322,6 +326,9 @@ void VMC_Fetch_SC_SensorData(u8 messageID)
         case MSP432_COMMS_VOLT_SNSR_REQ:
         {
             VMC_send_packet(MSP432_COMMS_VOLT_SNSR_REQ,MSP432_COMMS_NO_FLAG,0x00,buf);
+
+            configASSERT(sc_vmc_data.voltsensorlength <= MAX_VMC_SC_UART_BUF_SIZE);
+
             VMC_uart_receive(sc_vmc_data.voltsensorlength);
             if(isPacketReceived)
             {
@@ -336,6 +343,9 @@ void VMC_Fetch_SC_SensorData(u8 messageID)
         case MSP432_COMMS_POWER_SNSR_REQ:
         {
             VMC_send_packet(MSP432_COMMS_POWER_SNSR_REQ,MSP432_COMMS_NO_FLAG,0x00,buf);
+
+            configASSERT(sc_vmc_data.powersensorlength <= MAX_VMC_SC_UART_BUF_SIZE);
+
             VMC_uart_receive(sc_vmc_data.powersensorlength);
             if(isPacketReceived)
             {
@@ -365,6 +375,9 @@ void VMC_Fetch_SC_SensorData(u8 messageID)
             u8 payloadLength = 0;
             memset(scPayload ,0x00,128);
             payloadLength = Asdm_Send_I2C_Sensors_SC(scPayload);
+
+	    configASSERT(payloadLength <= MAX_VMC_SC_UART_BUF_SIZE);
+
             VMC_send_packet(MSP432_COMMS_VMC_SEND_I2C_SNSR_REQ,
                             MSP432_COMMS_NO_FLAG,payloadLength,scPayload);
             if(isPacketReceived)
@@ -427,14 +440,21 @@ void VMC_Fetch_SC_SensorData(u8 messageID)
 
 void VMC_Mointor_SC_Sensors()
 {
+    /*
+     * Skip checking 0,1,2 id for now, it causes a hardware issue
+     * Or, avoid checking this while pdi is being flashed or downloaded by PLM.
+     * Or, check additional conditions and make sure it is safe to continue.
+     *
     u8 msgId = 0;
-
 
     for(msgId=0; msgId < MAX_MSGID_COUNT; msgId++)
     {
         VMC_Fetch_SC_SensorData(VMC_SC_Comms_Msg[msgId]);
         vTaskDelay(20);
     }
+    */
+
+    VMC_Fetch_SC_SensorData(MSP432_COMMS_VMC_SEND_I2C_SNSR_REQ);
 }
 
 void VMC_SC_CommsTask(void *params)
