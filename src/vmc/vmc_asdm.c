@@ -275,7 +275,7 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
 	    .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_2B,
 	    .snsrUnitModifier = 0x0,
 	    .supportedThreshold = SNSR_MAX_VAL | SNSR_AVG_VAL | HAS_UPPER_THRESHOLDS,
-	    .sesnorListTbl = (u8 *) SE98_TEMP0,
+	    .sesnorListTbl = SE98_TEMP0,
 	    .sampleCount = 0x1,
 	    .monitorFunc = &Temperature_Read_Inlet,
 
@@ -287,7 +287,7 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
 	    .snsrUnitModifier = 0x0,
 	    .supportedThreshold = SNSR_MAX_VAL | SNSR_AVG_VAL | HAS_UPPER_THRESHOLDS,
 	    .sampleCount = 0x1,
-	    .sesnorListTbl = (u8 *) SE98_TEMP1,
+	    .sesnorListTbl = SE98_TEMP1,
 	    .monitorFunc = &Temperature_Read_Outlet,
 	},
 	{
@@ -297,7 +297,7 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
 	    .snsrUnitModifier = 0x0,
 	    .supportedThreshold = SNSR_MAX_VAL | SNSR_AVG_VAL | HAS_UPPER_THRESHOLDS,
 	    .sampleCount = 0x1,
-	    .sesnorListTbl = (u8 *) FAN_TEMP,
+	    .sesnorListTbl = FAN_TEMP,
 	    .monitorFunc = &Temperature_Read_Board,
 	},
 	{
@@ -307,7 +307,7 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
 	    .snsrUnitModifier = 0x0,
 	    .supportedThreshold = SNSR_MAX_VAL | SNSR_AVG_VAL | HAS_UPPER_THRESHOLDS,
 	    .sampleCount = 0x1,
-	    .sesnorListTbl = (u8 *) FPGA_TEMP,
+	    .sesnorListTbl = FPGA_TEMP,
 	    .monitorFunc = &Temperature_Read_ACAP_Device_Sysmon,
 	},
 	{
@@ -317,7 +317,7 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
 	    .snsrUnitModifier = 0x0,
 	    .supportedThreshold = SNSR_MAX_VAL | SNSR_AVG_VAL | HAS_UPPER_THRESHOLDS,
 	    .sampleCount = 0x1,
-	    .sesnorListTbl = (u8 *) VCCINT_TEMP,
+	    .sesnorListTbl = VCCINT_TEMP,
 	    .monitorFunc = &PMBUS_SC_Sensor_Read,
 	},
 	{
@@ -336,7 +336,7 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
 	    .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_2B,
 	    .supportedThreshold = SNSR_MAX_VAL | SNSR_AVG_VAL,
 	    .sampleCount = 0x1,
-	    .sesnorListTbl = (u8 *) FAN_SPEED,
+	    .sesnorListTbl = FAN_SPEED,
 	    .monitorFunc = &Fan_RPM_Read,
         },
 	{
@@ -816,7 +816,7 @@ s8 Init_Asdm()
 		}
 		else
 		{
-		    tmp[idx].mspSensorId = (u8) pSdrMetaData[totalRecords].sesnorListTbl;
+		    tmp[idx].mspSensorId = pSdrMetaData[totalRecords].sesnorListTbl;
 		}
 
 		/* Update the Monitor Function for the Sensor (Internal)*/
@@ -1137,6 +1137,7 @@ s8 Asdm_Process_Sensor_Request(u8 *req, u8 *resp, u16 *respSize)
             return Asdm_Get_Sensor_Value(req, resp, respSize);
         }
     }
+    return 0;
 }
 /********************************************************************
  * Caller - Sensor_Monitor Task
