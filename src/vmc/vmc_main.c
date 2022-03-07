@@ -5,6 +5,7 @@
 
 #include "FreeRTOS.h"
 #include "task.h"
+#include "semphr.h"
 
 #include "cl_log.h"
 #include "cl_i2c.h"
@@ -66,9 +67,7 @@ static void pVMCTask(void *params)
 
 	/* vmc_sensor_monitoring_lock */
     vmc_sensor_monitoring_lock = xSemaphoreCreateMutex();
-	if(vmc_sensor_monitoring_lock == NULL){
-		VMC_ERR("vmc_sensor_monitoring_lock creation failed \n\r");
-	}
+    configASSERT(vmc_sensor_monitoring_lock != NULL);
 
     /* Start Sensor Monitor task */
 
@@ -85,15 +84,11 @@ static void pVMCTask(void *params)
 
     /* vmc_sc_lock */
     vmc_sc_lock = xSemaphoreCreateMutex();
-    if(vmc_sc_lock == NULL){
-    VMC_ERR("vmc_sc_lock creation failed \n\r");
-    }
+    configASSERT(vmc_sc_lock != NULL);
 
 	/* vmc_sc_comms_lock */
     vmc_sc_comms_lock = xSemaphoreCreateMutex();
-	if(vmc_sc_comms_lock == NULL){
-		VMC_ERR("vmc_sc_comms_lock creation failed \n\r");
-	}
+    configASSERT(vmc_sc_comms_lock != NULL);
 
     if (xTaskCreate( VMC_SC_CommsTask,
 		( const char * ) "VMC_SC_Comms",

@@ -70,6 +70,9 @@
 #define NO_UPDATE_REQUIRED				(0x00)
 
 #define BSL_MAX_DATA_SIZE				(266u)
+#define BSL_MAX_RCV_DATA_SIZE			(32u)
+#define BSL_VERSION_FIRST_BYTE			(0x0D)
+#define BSL_VERSION_SEC_BYTE			(0x00)
 
 #define SC_HEADER_SIZE					(0x0000000B)
 #define SC_RES_HEADER_SIZE	    		(0x00000005)
@@ -78,6 +81,9 @@
 
 #define BYTES_TO_READ					(0x01)
 #define BSL_DATA_PACKET_CRC_SIZE		(0x02)
+
+#define MAX_SC_VERSION_SIZE				(0x03)
+
 
 
 typedef struct efpt_sc
@@ -133,17 +139,13 @@ typedef enum scUpateError_e
 	SC_UPDATE_ERROR_INVALID_BSL_RESP,
 	SC_UPDATE_ERROR_NO_VALID_FPT_SC_FOUND,
 	SC_UPDATE_ERROR_FAILED_TO_GET_BSL_VERSION,
-	SC_UPDATE_ERROR_OPEARTION_TIMEDOUT
+	SC_UPDATE_ERROR_OPEARTION_TIMEDOUT,
+	SC_UPDATE_ERROR_LOCK_CREATION_FAILED
 }scUpateError_t;
 
 
 int32_t VMC_Start_SC_Update(void);
 void SC_Update_Task_Create(void);
-void VMC_Parse_Fpt_SC(u32 addr_location, u8 *bsl_send_data_pkt , u16 *pkt_length);
-void VMC_Parse_Fpt_SC_Version(u32 addr_location, u8 *bsl_send_data_pkt);
-bool VMC_Read_SC_FW(void);
-u8 Get_SC_Checksum(void);
-u8 Check_Received_SC_Header(void *ptr1, void *ptr2, u8 len);
-upgrade_status_t matchCRC_postWrite(unsigned int writeAdd);
+
 
 #endif /* SRC_VMC_VMC_UPDATE_SC_H_ */
