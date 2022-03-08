@@ -1245,11 +1245,20 @@ void AsdmSensor_Display(void)
 		}
 		else if((sensorRecord[idx].sensor_value_type_length & LENGTH_BITMASK) < 4)
 		{
-			VMC_PRNT(" %s		%d		%s	%d	%d \n\r",(sensorRecord[idx].sensor_name),
-				*((u16 *)sensorRecord[idx].sensor_value),
-				((sensorRecord[idx].sensor_status == Vmc_Snsr_State_Normal) ? "Ok":"Error"),
-				*((u16 *)(sensorRecord[idx].sensorMaxValue)),
-				*((u16 *)(sensorRecord[idx].sensorAverageValue)));
+			if(!(strcmp(sensorRecord[idx].sensor_name,"VCCINT_Current"))){
+				VMC_PRNT(" %s		%d		%s	%d	%d \n\r",(sensorRecord[idx].sensor_name),
+						*((u32 *)sensorRecord[idx].sensor_value),
+						((sensorRecord[idx].sensor_status == Vmc_Snsr_State_Normal) ? "Ok":"Error"),
+						*((u32 *)(sensorRecord[idx].sensorMaxValue)),
+						*((u32 *)(sensorRecord[idx].sensorAverageValue)));
+
+			}else{
+				VMC_PRNT(" %s		%d		%s	%d	%d \n\r",(sensorRecord[idx].sensor_name),
+						*((u16 *)sensorRecord[idx].sensor_value),
+						((sensorRecord[idx].sensor_status == Vmc_Snsr_State_Normal) ? "Ok":"Error"),
+						*((u16 *)(sensorRecord[idx].sensorMaxValue)),
+						*((u16 *)(sensorRecord[idx].sensorAverageValue)));
+			}
 		}
 		else if((sensorRecord[idx].sensor_value_type_length & LENGTH_BITMASK) == sizeof(float))
 		{
