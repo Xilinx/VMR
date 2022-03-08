@@ -114,7 +114,7 @@ int XSysMonPsv_IntrDisable(XSysMonPsv *InstancePtr, u32 Mask, u8 IntrNum)
 * @note		None.
 *
 *****************************************************************************/
-int XSysMonPsv_IntrGetStatus(struct InstancePtr *InstancePtr)
+int XSysMonPsv_IntrGetStatus(XSysMonPsv *InstancePtr)
 {
 	u32 intr_status;
 
@@ -158,7 +158,7 @@ void XSysMonPsv_IntrClear(XSysMonPsv *InstancePtr, u32 Mask)
 * @note		None.
 *
 *****************************************************************************/
-void XSysMonPsv_UnlockRegspace(struct InstancePtr *InstancePtr)
+void XSysMonPsv_UnlockRegspace(XSysMonPsv *InstancePtr)
 {
 	XSysMonPsv_WriteReg(InstancePtr, XSYSMON_PCSR_LOCK, LOCK_CODE);
 }
@@ -196,7 +196,7 @@ static void XSysMonPsv_RegionEventHandler(XSysMonPsv *InstancePtr)
 				eventnode->temp = val;
 				thresh_up = val;
 				event = 1;
-				printf("%s %d %d %d %x\n", __func__, __LINE__, region->id, node->sat_id, val);
+				xil_printf("%s %d %d %d %x\n", __func__, __LINE__, region->id, node->sat_id, val);
 			}
 		}
 		if (event && region->cb)
@@ -204,6 +204,24 @@ static void XSysMonPsv_RegionEventHandler(XSysMonPsv *InstancePtr)
 	}
 }
 
+/******************************************************************************/
+/**
+ * This function call the callback function registered with device when temp
+ * event is triggered.
+ *
+ * @param	Pointer Instance to XSysMonPsv.
+ *
+ * @return	- -EINVAL if error
+ * 			- SUCCESS if successful..
+ *
+ * @note	None.
+ *
+*******************************************************************************/
+void XSysMonPsv_TempEventHandler(XSysMonPsv *InstancePtr)
+{
+	if(InstancePtr->temp_cb && InstancePtr->data)
+		InstancePtr->temp_cb(InstancePtr->data);
+}
 /****************************************************************************/
 /**
 *
@@ -219,25 +237,21 @@ static void XSysMonPsv_RegionEventHandler(XSysMonPsv *InstancePtr)
 ***************************************************************************/
 static void XSysMonPsv_HandleEvent(XSysMonPsv *InstancePtr, u32 Event)
 {
-	u32 bit, reg_val;
-	unsigned int alarm_flag_reg;
-	u32 alarm_flag_offset = SYSMON_ALARM_FLAG + (Event * 4);
-	u32 alarm_reg_offset = SYSMON_ALARM_REG + (Event * 4);
 
 	switch (Event) {
 	case SYSMON_BIT_TEMP:
-		printf("SYSMON_BIT_TEMP\n");
+		xil_printf("SYSMON_BIT_TEMP\n");
 		XSysMonPsv_TempEventHandler(InstancePtr);
-		XSysMonPsv_WriteReg(InstancePtr, SYSMON_IDR, BIT(SYSMON_BIT_TEMP));
-		InstancePtr->masked_temp |= BIT(SYSMON_BIT_TEMP);
+		XSysMonPsv_WriteReg(InstancePtr, SYSMON_IDR, _BIT(SYSMON_BIT_TEMP));
+		InstancePtr->masked_temp |= _BIT(SYSMON_BIT_TEMP);
 		XSysMonPsv_RegionEventHandler(InstancePtr);
 		break;
 
 	case SYSMON_BIT_OT:
-		printf("SYSMON_BIT_OT\n");
+		xil_printf("SYSMON_BIT_OT\n");
 		XSysMonPsv_TempEventHandler(InstancePtr);
-		XSysMonPsv_WriteReg(InstancePtr, SYSMON_IDR, BIT(SYSMON_BIT_OT));
-		InstancePtr->masked_temp |= BIT(SYSMON_BIT_OT);
+		XSysMonPsv_WriteReg(InstancePtr, SYSMON_IDR, _BIT(SYSMON_BIT_OT));
+		InstancePtr->masked_temp |= _BIT(SYSMON_BIT_OT);
 		XSysMonPsv_RegionEventHandler(InstancePtr);
 		break;
 	case SYSMON_BIT_ALARM4:
@@ -293,7 +307,8 @@ static void XSysMonPsv_HandleEvents(XSysMonPsv *InstancePtr,
 static void XSysMonPsv_IntrHandler(void *data)
 {
 	u32 isr, imr;
-	struct InstancePtr *InstancePtr = (struct InstancePtr *)data;
+
+	XSysMonPsv *InstancePtr = (XSysMonPsv *)data;
 
 	XSysMonPsv_ReadReg(InstancePtr, SYSMON_ISR, &isr);
 	XSysMonPsv_ReadReg(InstancePtr, SYSMON_IMR, &imr);
@@ -398,7 +413,7 @@ int XSysMonPsv_RegisterRegionTempCallback(XSysMonPsv *InstancePtr, void (*cb)(vo
 	//Removed mutex lock ==> TBD
 
 	if (list_empty(&InstancePtr->region_list)) {
-		printf("Failed to set a callback.\n");
+		xil_printf("Failed to set a callback.\n");
 		ret = -EINVAL;
 		goto exit;
 	}
@@ -407,19 +422,19 @@ int XSysMonPsv_RegisterRegionTempCallback(XSysMonPsv *InstancePtr, void (*cb)(vo
 		if (region->id == RegionId) {
 			found = 1;
 			if (region->cb) {
-				printf("Error callback already set. Unregister the existing callback to set a new one.\n");
+				xil_printf("Error callback already set. Unregister the existing callback to set a new one.\n");
 				ret = -EINVAL;
 				goto exit;
 			}
 			region->cb = cb;
 			region->data = data;
-			printf("Callback registered for region %d\n", RegionId);
+			xil_printf("Callback registered for region %d\n", RegionId);
 			break;
 		}
 	}
 
 	if (!found) {
-		printf("Error invalid region. Please select the correct region\n");
+		xil_printf("Error invalid region. Please select the correct region\n");
 		ret = -EINVAL;
 	}
 
@@ -451,7 +466,7 @@ int XSysMonPsv_UnregisterRegionTempCallback(XSysMonPsv *InstancePtr, XSysMonPsv_
 	//Removed mutex lock ==> TBD
 
 	if (list_empty(&InstancePtr->region_list)) {
-		printf("Failed to set a callback.\n");
+		xil_printf("Failed to set a callback.\n");
 		ret = -EINVAL;
 		goto exit;
 	}
@@ -461,13 +476,13 @@ int XSysMonPsv_UnregisterRegionTempCallback(XSysMonPsv *InstancePtr, XSysMonPsv_
 			found = 1;
 			region->cb = NULL;
 			region->data = NULL;
-			printf("Callback unregistered for region %d\n", RegionId);
+			xil_printf("Callback unregistered for region %d\n", RegionId);
 			break;
 		}
 	}
 
 	if (!found) {
-		printf("Error no such region. Please select the correct region\n");
+		xil_printf("Error no such region. Please select the correct region\n");
 		ret = -EINVAL;
 	}
 
@@ -494,7 +509,7 @@ int XSysMonPsv_RegisterDeviceTempCallback(XSysMonPsv *InstancePtr, void (*cb)(vo
 	//mutex lock ==> TBD
 
 	if (InstancePtr->temp_cb) {
-		printf("Error callback already set. Unregister the existing callback to set a new one.\n");
+		xil_printf("Error callback already set. Unregister the existing callback to set a new one.\n");
 		return -EINVAL;
 	}
 	InstancePtr->temp_cb = cb;
@@ -519,23 +534,4 @@ void XSysMonPsv_UnregisterDeviceTempCallback(XSysMonPsv *InstancePtr)
 {
 	InstancePtr->temp_cb = NULL;
 	InstancePtr->data = NULL;
-}
-
-/******************************************************************************/
-/**
- * This function call the callback function registered with device when temp
- * event is triggered.
- *
- * @param	Pointer Instance to XSysMonPsv.
- *
- * @return	- -EINVAL if error
- * 			- SUCCESS if successful..
- *
- * @note	None.
- *
-*******************************************************************************/
-void XSysMonPsv_TempEventHandler(XSysMonPsv *InstancePtr)
-{
-	if(InstancePtr->temp_cb && InstancePtr->data)
-		InstancePtr->temp_cb(InstancePtr->data);
 }

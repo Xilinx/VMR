@@ -9,6 +9,10 @@
 #include "../inc/qsfp.h"
 #include "../../vmc_api.h"
 
+/* FreeRTOS includes */
+#include <FreeRTOS.h>
+#include <task.h>
+
 u8 i2c_num_pmc = 0;
 
 u8 QSFP_ReadTemperature(float *TemperatureValue, u8 sensorInstance)

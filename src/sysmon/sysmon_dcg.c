@@ -127,7 +127,7 @@ int XSysMonPsv_ReadTempProcessedSat(XSysMonPsv *InstancePtr, int SatId, float *V
  * @note	None.
  *
 *******************************************************************************/
-int XSysMonPsv_ReadTempRawSat(XSysMonPsv *InstancePtr, int SatId, int *Val)
+int XSysMonPsv_ReadTempRawSat(XSysMonPsv *InstancePtr, int SatId, u32 *Val)
 {
 	u32 offset;
 
