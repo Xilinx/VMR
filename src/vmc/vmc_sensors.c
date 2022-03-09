@@ -522,19 +522,20 @@ void Monitor_Thresholds()
 	}
 }
 
-#define SENSOR_MAX_SIZE 512
+#define SENSOR_RESP_BUFFER_SIZE 512
 static int validate_sensor_payload(struct xgq_vmr_sensor_payload *payload)
 {
 	int ret = -EINVAL;
 	u32 address = RPU_SHARED_MEMORY_ADDR(payload->address);
 
-	if (address >= RPU_SHARED_MEMORY_END) {
+	if ((address + SENSOR_RESP_BUFFER_SIZE) >= RPU_SHARED_MEMORY_END) {
 		VMC_ERR("address overflow 0x%x", address);
 		return ret;
 	}
 
-	if (payload->size < SENSOR_MAX_SIZE) {
-		VMC_ERR("size overflow 0x%x max 0x%x", payload->size, SENSOR_MAX_SIZE);
+	/* Check if the Response Buffer is greater than Request buffer */
+	if (SENSOR_RESP_BUFFER_SIZE > payload->size) {
+		VMC_ERR("Resp size 0x%x exceeding Req size 0x%x",SENSOR_RESP_BUFFER_SIZE, payload->size);
 		return ret;
 	}
 
@@ -546,7 +547,7 @@ static int xgq_sensor_cb(cl_msg_t *msg, void *arg)
     u32 address = RPU_SHARED_MEMORY_ADDR(msg->sensor_payload.address);
     u32 size = msg->sensor_payload.size;
     u8 reqBuffer[2] = {0};
-    u8 respBuffer[SENSOR_MAX_SIZE] = {0};
+    u8 respBuffer[SENSOR_RESP_BUFFER_SIZE] = {0};
     u16 respSize = 0;
     s32 ret = 0;
 
@@ -588,15 +589,15 @@ void SensorMonitorTask(void *params)
 {
     VMC_LOG(" Sensor Monitor Task Created !!!\n\r");
 
+    if(Init_Asdm())
+    {
+         VMC_ERR(" ASDM Init Failed \n\r");
+    }
+    
     if (xgq_sensor_flag == 0 &&
         cl_msg_handle_init(&sensor_hdl, CL_MSG_SENSOR, xgq_sensor_cb, NULL) == 0) {
         VMC_LOG("init sensor handle done.");
         xgq_sensor_flag = 1;
-    }
-
-    if(Init_Asdm())
-    {
-         VMC_ERR(" ASDM Init Failed \n\r");
     }
 
     for(;;)
