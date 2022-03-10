@@ -39,6 +39,7 @@ static int32_t 	UART_Config(uart_rtos_handle_t *handle, XUartPsv *UartInstPtr, u
 
 /************************** Variable Definitions ***************************/
 
+extern SemaphoreHandle_t vmc_debug_logbuf_lock; /* used to block until LogBuf is in use */
 
 /************************** Code ******************************************/
 
@@ -577,6 +578,10 @@ s32 UART_RTOS_Debug_Enable(uart_rtos_handle_t *handle)
 	};
 
 	debugUartConig.uartHandler = handle;
+
+
+	vmc_debug_logbuf_lock = xSemaphoreCreateMutex();
+	configASSERT(NULL != vmc_debug_logbuf_lock);
 
 	return UART_RTOS_Enable(&debugUartConig);
 }

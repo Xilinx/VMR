@@ -23,26 +23,26 @@
 
 extern uart_rtos_handle_t uart_log;
 extern Versal_sensor_readings sensor_readings;
-uint8_t    logging_level = VMC_LOG_LEVEL_NONE;
+u8    logging_level = VMC_LOG_LEVEL_NONE;
 static char LogBuf[MAX_LOG_SIZE];
-SemaphoreHandle_t logbuf_lock; /* used to block until LogBuf is in use */
+SemaphoreHandle_t vmc_debug_logbuf_lock; /* used to block until LogBuf is in use */
 Versal_BoardInfo board_info;
 
 
-void Debug_Printf(char *filename, uint32_t line, uint8_t log_level, const char *fmt, va_list *argp);
+void Debug_Printf(char *filename, u32 line, u8 log_level, const char *fmt, va_list *argp);
 
 
-void VMC_SetLogLevel(uint8_t LogLevel)
+void VMC_SetLogLevel(u8 LogLevel)
 {
     logging_level = (LogLevel <= VMC_LOG_LEVEL_NONE)? LogLevel:logging_level;
 }
 
-uint8_t VMC_GetLogLevel(void)
+u8 VMC_GetLogLevel(void)
 {
     return logging_level;
 }
 
-void VMC_Printf(char *filename, uint32_t line, uint8_t log_level, const char *fmt, ...)
+void VMC_Printf(char *filename, u32 line, u8 log_level, const char *fmt, ...)
 {
     va_list args;
 
@@ -51,11 +51,11 @@ void VMC_Printf(char *filename, uint32_t line, uint8_t log_level, const char *fm
     va_end(args);
 }
 
-int32_t VMC_User_Input_Read(char *ReadChar, uint32_t *receivedBytes)
+s32 VMC_User_Input_Read(char *ReadChar, u32 *receivedBytes)
 {
     if (VMC_GetLogLevel() != VMC_LOG_LEVEL_NONE)
     {
-    	if(UART_RTOS_Receive(&uart_log, (uint8_t *)ReadChar, 1, receivedBytes,portMAX_DELAY) ==  UART_SUCCESS)
+    	if(UART_RTOS_Receive(&uart_log, (u8 *)ReadChar, 1, receivedBytes,portMAX_DELAY) ==  UART_SUCCESS)
     	{
     		return UART_SUCCESS;
     	}
@@ -70,18 +70,18 @@ int32_t VMC_User_Input_Read(char *ReadChar, uint32_t *receivedBytes)
 }
 
 
-void Debug_Printf(char *filename, uint32_t line, uint8_t log_level, const char *fmt, va_list *argp)
+void Debug_Printf(char *filename, u32 line, u8 log_level, const char *fmt, va_list *argp)
 {
-    uint8_t msg_idx = 0;
-    uint16_t max_msg_size = MAX_LOG_SIZE;
+    u8 msg_idx = 0;
+    u16 max_msg_size = MAX_LOG_SIZE;
     if (log_level < logging_level)
     {
         return;
     }
 
-    if (xSemaphoreTake(logbuf_lock, portMAX_DELAY))
+    if (xSemaphoreTake(vmc_debug_logbuf_lock, portMAX_DELAY))
     {
-        if (logging_level == VMC_LOG_LEVEL_VERBOSE && log_level != VMC_LOG_LEVEL_DEMO_MENU)
+        if ((logging_level == VMC_LOG_LEVEL_VERBOSE) && (log_level != VMC_LOG_LEVEL_DEMO_MENU))
 		{
 			for ( ; (filename[msg_idx] != '\0') && (msg_idx < MAX_FILE_NAME_SIZE); msg_idx++)
 			{
@@ -94,13 +94,13 @@ void Debug_Printf(char *filename, uint32_t line, uint8_t log_level, const char *
 		}
 		max_msg_size -= msg_idx;
 		vsnprintf(&LogBuf[msg_idx], max_msg_size, fmt, *argp);
-		UART_RTOS_Send(&uart_log, (uint8_t *)LogBuf, MAX_LOG_SIZE);
+		UART_RTOS_Send(&uart_log, (u8 *)LogBuf, MAX_LOG_SIZE);
 		memset(LogBuf , '\0' , MAX_LOG_SIZE);
-		xSemaphoreGive(logbuf_lock);
+		xSemaphoreGive(vmc_debug_logbuf_lock);
     }
     else
     {
-        xil_printf("Failed to get lock for logbuf_lock \n\r");
+        xil_printf("Failed to get lock for vmc_debug_logbuf_lock \n\r");
     }
 
 }

@@ -21,14 +21,11 @@
 #include "cl_main.h"
 #include "cl_io.h"
 
-/* Uncomment for enabling VMC debug. */
-//#define VMC_DEBUG
-
 #define	VMC_STRING	"VMC"
 
 #ifdef VMC_DEBUG
 #warning "When enabled RPU UART RX has conflic with APU UART so need to disable XRT code (RMGMT_Launch and cl_msg_service_launch)."
-#define VMR_BUILD_VMC_ONLY
+
 
 #define VMC_DMO(fmt, arg...) 		\
 	VMC_Printf(__FILENAME__, __LINE__, VMC_LOG_LEVEL_DEMO_MENU, fmt,##arg)
@@ -45,15 +42,15 @@
 			VMC_STRING, __FILENAME__, __LINE__, __FUNCTION__, ##arg)
 #else
 #define VMC_DMO(fmt, arg...)	\
-	CL_UART_DMO(APP_VMC, fmt, ##arg)
+	CL_DMO(APP_VMC, fmt, ##arg)
 #define VMC_PRNT(fmt, arg...)	\
-	CL_UART_PRNT(APP_VMC, fmt, ##arg)
+	CL_PRNT(APP_VMC, fmt, ##arg)
 #define VMC_LOG(fmt, arg...)	\
-	CL_UART_LOG(APP_VMC, fmt, ##arg)
+	CL_LOG(APP_VMC, fmt, ##arg)
 #define VMC_ERR(fmt, arg...)	\
-	CL_UART_ERR(APP_VMC, fmt, ##arg)
+	CL_ERR(APP_VMC, fmt, ##arg)
 #define VMC_DBG(fmt, arg...)	\
-	CL_UART_DBG(APP_VMC, fmt, ##arg)
+	CL_DBG(APP_VMC, fmt, ##arg)
 
 #endif
 
@@ -102,7 +99,7 @@ typedef struct Versal_BoardInfo
 * @note None
 **
 ******************************************************************************/
-void VMC_SetLogLevel(uint8_t LogLevel);
+void VMC_SetLogLevel(u8 LogLevel);
 
 /*****************************************************************************/
 /**
@@ -115,7 +112,7 @@ void VMC_SetLogLevel(uint8_t LogLevel);
 * @note None
 **
 ******************************************************************************/
-uint8_t VMC_GetLogLevel(void);
+u8 VMC_GetLogLevel(void);
 
 /*****************************************************************************/
 /**
@@ -132,7 +129,7 @@ uint8_t VMC_GetLogLevel(void);
 * @note None
 **
 ******************************************************************************/
-void VMC_Printf(char *filename, uint32_t line, uint8_t log_level, const char *fmt, ...);
+void VMC_Printf(char *filename, u32 line, u8 log_level, const char *fmt, ...);
 
 /*****************************************************************************/
 /**
@@ -145,7 +142,7 @@ void VMC_Printf(char *filename, uint32_t line, uint8_t log_level, const char *fm
 * @note None
 **
 ******************************************************************************/
-int32_t VMC_User_Input_Read(char *ReadChar, uint32_t *receivedBytes);
+s32 VMC_User_Input_Read(char *ReadChar, u32 *receivedBytes);
 
 /*****************************************************************************/
 /**
