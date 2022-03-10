@@ -21,7 +21,7 @@
 
 extern void AsdmSensor_Display(void);
 
-extern uint8_t    logging_level;
+extern u8    logging_level;
 
 #define demoMenu_task_PRIORITY	tskIDLE_PRIORITY + 1
 
@@ -78,7 +78,6 @@ TestMenu TestsMenu[] =
 };
 
 static bool isDemoMenuEnabled = false;
-extern SemaphoreHandle_t logbuf_lock; /* used to block until LogBuf is in use */
 
 static void App_SetLogLevel(void)
 {
@@ -262,14 +261,6 @@ u8 Enable_DemoMenu(void)
     {
         return 0;
     }
-
-
-	/* logbuf is making log messages thread safe.*/
-	logbuf_lock = xSemaphoreCreateMutex();
-	if(logbuf_lock == NULL){
-		xil_printf("\n\r logbuf_lock creation failed \n\r");
-		return XST_FAILURE;
-	}
 
 
     if ( (retc = xTaskCreate(DemoMenuTask, "DemoMenu_Task", TASK_STACK_DEPTH, NULL, demoMenu_task_PRIORITY, NULL)) != pdPASS)

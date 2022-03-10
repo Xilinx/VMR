@@ -11,8 +11,7 @@
 #include "stdio.h"
 
 #include "cl_version.h"
-
-//#define VMC_DEBUG
+#include "cl_config.h"
 
 /*
  * The pdMS_TO_TICKS is defined as (xTimeInMs * configTICKRATEHZ) / 1000

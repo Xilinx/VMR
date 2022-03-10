@@ -30,6 +30,8 @@ SemaphoreHandle_t vmc_sc_lock;
 SemaphoreHandle_t vmc_sc_comms_lock;
 SemaphoreHandle_t vmc_sensor_monitoring_lock;
 
+uart_rtos_handle_t uart_vmcsc_log;
+
 u8 Enable_DemoMenu(void);
 
 extern void VMC_SC_CommsTask(void *params);
@@ -38,20 +40,21 @@ extern void SensorMonitorTask(void *params);
 static void pVMCTask(void *params)
 {
     /* Platform Init will Initialise I2C, GPIO, SPI, etc */
-	
+
+    s8 Status;
+    XGpio Gpio;
+
     VMC_LOG(" VMC launched \n\r");
 
     I2CInit();
-
-    s8 Status;
-
-    XGpio Gpio;
 
     /* Initialize the GPIO driver */
     Status = XGpio_Initialize(&Gpio, XPAR_BLP_BLP_LOGIC_ULP_CLOCKING_UCS_CONTROL_STATUS_GPIO_UCS_CONTROL_STATUS_DEVICE_ID);
     if (Status == XST_SUCCESS) {
         xil_printf("\n\r Gpio Initialized \r\n");
     }
+
+    UART_VMC_SC_Enable(&uart_vmcsc_log);
 
 #ifdef VMC_DEBUG
     /* Demo menu log is enabled */    
