@@ -14,16 +14,11 @@ extern SemaphoreHandle_t vmc_sc_comms_lock;
 /* VMC SC Comms handles and flags */
 extern uart_rtos_handle_t uart_vmcsc_log;
 
-u8 g_scData[MAX_VMC_SC_UART_BUF_SIZE] = {0x00};
-u16 g_scDataCount = 0;
-bool isPacketReceived;
-u8 scPayload[128] = {0};
 
-volatile bool isVMCActive ;
-volatile bool isPowerModeActive ;
-volatile bool getSensorRespLen ;
+static bool isVMCActive ;
+static bool isPowerModeActive ;
+static bool getSensorRespLen ;
 
-extern uint8_t sc_update_flag;
 
 u8 VMC_SC_Comms_Msg[] = {
        MSP432_COMMS_VOLT_SNSR_REQ,
@@ -58,7 +53,7 @@ u16 vmcU8ToU16(u8 *payload) {
 }
 uint32_t vmcU8ToU32(uint8_t* payload)
 {
-	return (uint32_t)payload[3] | (((uint32_t)payload[2]) << 8) | (((uint32_t)payload[1]) << 16) | (((uint32_t)payload[0]) << 24);
+	return (uint32_t)payload[0] | (((uint32_t)payload[1]) << 8) | (((uint32_t)payload[2]) << 16) | (((uint32_t)payload[3]) << 24);
 }
 uint64_t vmcU8ToU64(uint8_t * payload)
 {
@@ -83,7 +78,7 @@ void VMC_Update_Sensor_Length(u16 length,u8 *payload)
 
 void VMC_Update_Version_PowerMode(u16 length,u8 *payload)
 {
-	u16 i=0;
+	u16 i= 0;
 	static u8 isActiveMSPVerUpdated = false;
 	for(i=0; i<length;)
 	{
@@ -116,7 +111,11 @@ void VMC_StoreSensor_Value(u8 id, u32 value)
 
 	if (xSemaphoreTake(vmc_sc_lock, portMAX_DELAY))
 	{
-		sc_vmc_data.sensor_values[id] = value;
+		if(id == VCCINT_I){
+			sc_vmc_data.VCCINT_sensor_value = value;
+		}else{
+			sc_vmc_data.sensor_values[id] = value;
+		}
 		xSemaphoreGive(vmc_sc_lock);
 	}
 	else
@@ -131,7 +130,6 @@ void VMC_Update_Sensors(u16 length,u8 *payload)
 
     for(i=0; i<length;)
     {
-
     	 if (payload[i + 1] == 1)
     	 {
     		 VMC_StoreSensor_Value(payload[i], (uint32_t)payload[i + 2]);
@@ -278,162 +276,185 @@ bool VMC_send_packet(u8 Message_id , u8 Flags,u8 Payloadlength, u8 *Payload)
 	return false;
 }
 
-void VMC_uart_receive(u8  Expected_Msg_Length)
+bool VMC_uart_receive(u8  Expected_Msg_Length , uint8_t *buf)
 {
 	u32 receivedcount = 0 ;
-	u8 Data[MAX_VMC_SC_UART_BUF_SIZE] = {0x00};
 
-	if(UART_RTOS_Receive(&uart_vmcsc_log, Data, Expected_Msg_Length ,&receivedcount,0x104) == UART_SUCCESS)
+	if(UART_RTOS_Receive(&uart_vmcsc_log, buf, Expected_Msg_Length ,&receivedcount,RCV_TIMEOUT_MS(500)) == UART_SUCCESS)
 	{
-		if(receivedcount > 2 )   // condition to avoid negative indexing
+		if((receivedcount > MIN_VMC_SC_UART_BUF_SIZE ) &&  (receivedcount < MAX_VMC_SC_UART_BUF_SIZE ))
 		{
-			memcpy(g_scData,Data,receivedcount);
-			if ((g_scData[receivedcount-1] == ETX) && (g_scData[receivedcount-2] == ESCAPE_CHAR))
+			if ((buf[receivedcount-1] == ETX) && (buf[receivedcount-2] == ESCAPE_CHAR))
 			{
-				isPacketReceived = true;
+				return true;
 			}
 		}
 	}
+	return false ;
 }
 
 void Get_Sensor_Response_Length(u8 Data)
 {
-	u8  Expected_Msg_Length = 11;
-	u8 payloadLength = 1;
+	u8 Expected_Msg_Length = SENSOR_RSP_LENGTH;
+	u8 payloadLength = PAYLOAD_LENGTH_SIZE;
+	u8 SC_uart_data[MAX_VMC_SC_UART_BUF_SIZE] = {0x00};
+	u8 buf[32] = {0x00};
 
-	scPayload[0] = Data ;
-	VMC_send_packet(MSP432_COMMS_VMC_GET_RESP_SIZE_REQ,MSP432_COMMS_NO_FLAG,payloadLength,scPayload);
-	VMC_uart_receive(Expected_Msg_Length);
-	if(isPacketReceived)
+
+	buf[0] = Data ;
+	if(VMC_send_packet(MSP432_COMMS_VMC_GET_RESP_SIZE_REQ,MSP432_COMMS_NO_FLAG,payloadLength,buf))
 	{
-		Parse_SCData(g_scData);
-		isPacketReceived = false;
+		if(VMC_uart_receive(Expected_Msg_Length, &SC_uart_data[0])){
+			Parse_SCData(&SC_uart_data[0]);
+		}
+		memset(SC_uart_data,0x00,MAX_VMC_SC_UART_BUF_SIZE);
 	}
-	memset(g_scData,0x00,MAX_VMC_SC_UART_BUF_SIZE);
-	g_scDataCount = 0;
+	else
+	{
+		VMC_ERR("Failed to Send GET_RESP_SIZE_REQ to SC !!! \n\r");
+	}
+
 }
 
 void VMC_Fetch_SC_SensorData(u8 messageID)
 {
-    u8 buf[32] = {0x00};
+	u8 buf[32] = {0x00};
+	u8 SC_uart_data[MAX_VMC_SC_UART_BUF_SIZE] = {0x00};
 
-    switch(messageID)
-    {
-        case MSP432_COMMS_VOLT_SNSR_REQ:
-        {
-            VMC_send_packet(MSP432_COMMS_VOLT_SNSR_REQ,MSP432_COMMS_NO_FLAG,0x00,buf);
-            VMC_uart_receive(sc_vmc_data.voltsensorlength);
-            if(isPacketReceived)
-            {
-                Parse_SCData(g_scData);
-                isPacketReceived = false;
-            }
-            memset(g_scData,0x00,MAX_VMC_SC_UART_BUF_SIZE);
-            g_scDataCount = 0;
-            break;
-        }
+	switch(messageID)
+	{
+	case MSP432_COMMS_VOLT_SNSR_REQ:
+	{
+		if(VMC_send_packet(MSP432_COMMS_VOLT_SNSR_REQ,MSP432_COMMS_NO_FLAG,0x00,buf))
+		{
+			if(VMC_uart_receive(sc_vmc_data.voltsensorlength, &SC_uart_data[0])){
+				Parse_SCData(&SC_uart_data[0]);
+			}
+			memset(SC_uart_data,0x00,MAX_VMC_SC_UART_BUF_SIZE);
+			break;
+		}
+		else
+		{
+			VMC_ERR("Failed to Send VOLT_SNSR_REQ to SC !!! \n\r");
+			break;
+		}
+	}
 
-        case MSP432_COMMS_POWER_SNSR_REQ:
-        {
-            VMC_send_packet(MSP432_COMMS_POWER_SNSR_REQ,MSP432_COMMS_NO_FLAG,0x00,buf);
-            VMC_uart_receive(sc_vmc_data.powersensorlength);
-            if(isPacketReceived)
-            {
-            	Parse_SCData(g_scData);
-            	isPacketReceived = false;
-            }
-            memset(g_scData,0x00,MAX_VMC_SC_UART_BUF_SIZE);
-            g_scDataCount = 0;
-            break;
-        }
-        case MSP432_COMMS_TEMP_SNSR_REQ:
-        {
-            u8  Expected_Msg_Length = 12;
-            VMC_send_packet(MSP432_COMMS_TEMP_SNSR_REQ,MSP432_COMMS_NO_FLAG,0x00,buf);
-            VMC_uart_receive(Expected_Msg_Length);
-            if(isPacketReceived)
-            {
-            	Parse_SCData(g_scData);
-            	isPacketReceived = false;
-            }
-            memset(g_scData,0x00,MAX_VMC_SC_UART_BUF_SIZE);
-            g_scDataCount = 0;
-            break;
-        }
-        case MSP432_COMMS_VMC_SEND_I2C_SNSR_REQ:
-        {
-            u8 payloadLength = 0;
-            memset(scPayload ,0x00,128);
-            payloadLength = Asdm_Send_I2C_Sensors_SC(scPayload);
-            VMC_send_packet(MSP432_COMMS_VMC_SEND_I2C_SNSR_REQ,
-                            MSP432_COMMS_NO_FLAG,payloadLength,scPayload);
-            if(isPacketReceived)
-            {
-                Parse_SCData(g_scData);
-                isPacketReceived = false;
-            }
-            memset(g_scData,0x00,MAX_VMC_SC_UART_BUF_SIZE);
-            g_scDataCount = 0;
-            break;
-        }
+	case MSP432_COMMS_POWER_SNSR_REQ:
+	{
+		if(VMC_send_packet(MSP432_COMMS_POWER_SNSR_REQ,MSP432_COMMS_NO_FLAG,0x00,buf))
+		{
+			if(VMC_uart_receive(sc_vmc_data.powersensorlength, &SC_uart_data[0])){
+				Parse_SCData(&SC_uart_data[0]);
+			}
+			memset(SC_uart_data,0x00,MAX_VMC_SC_UART_BUF_SIZE);
+			break;
+		}
+		else
+		{
+			VMC_ERR("Failed to Send POWER_SNSR_REQ to SC !!! \n\r");
+			break;
+		}
+	}
+	case MSP432_COMMS_TEMP_SNSR_REQ:
+	{
+		u8  Expected_Msg_Length = TEMP_SNSR_LENGTH;
+		if(VMC_send_packet(MSP432_COMMS_TEMP_SNSR_REQ,MSP432_COMMS_NO_FLAG,0x00,buf))
+		{
+			if(VMC_uart_receive(Expected_Msg_Length, &SC_uart_data[0])){
+				Parse_SCData(&SC_uart_data[0]);
+			}
+			memset(SC_uart_data,0x00,MAX_VMC_SC_UART_BUF_SIZE);
+			break;
+		}
+		else
+		{
+			VMC_ERR("Failed to Send TEMP_SNSR_REQ to SC !!! \n\r");
+			break;
+		}
+	}
+	case MSP432_COMMS_VMC_SEND_I2C_SNSR_REQ:
+	{
+		u8 payloadLength = 0;
+		memset(SC_uart_data ,0x00,MAX_VMC_SC_UART_BUF_SIZE);
+		payloadLength = Asdm_Send_I2C_Sensors_SC(SC_uart_data);
+		if(VMC_send_packet(MSP432_COMMS_VMC_SEND_I2C_SNSR_REQ,
+				MSP432_COMMS_NO_FLAG,payloadLength,SC_uart_data))
+		{
+			memset(SC_uart_data,0x00,MAX_VMC_SC_UART_BUF_SIZE);
+			break;
+		}
+		else
+		{
+			VMC_ERR("Failed to Send I2C_SNSR_REQ to SC !!! \n\r");
+			break;
+		}
+	}
 
-        case MSP432_COMMS_VMC_VERSION_POWERMODE_REQ:
-        {
-            u8  Expected_Msg_Length = 18;
-            VMC_send_packet(MSP432_COMMS_VMC_VERSION_POWERMODE_REQ,
-                            MSP432_COMMS_NO_FLAG,0x00,buf);
-            VMC_uart_receive(Expected_Msg_Length);
-            if(isPacketReceived)
-            {
-                Parse_SCData(g_scData);
-                isPacketReceived = false;
-                isPowerModeActive = true;
-            }
-            memset(g_scData,0x00,MAX_VMC_SC_UART_BUF_SIZE);
-            g_scDataCount = 0;
-            break;
-        }
-        case MSP432_COMMS_VMC_ACTIVE_REQ:
-        {
-            u8  Expected_Msg_Length = 10;
-            VMC_send_packet(MSP432_COMMS_VMC_ACTIVE_REQ,MSP432_COMMS_NO_FLAG,0x00,buf);
-            VMC_uart_receive(Expected_Msg_Length);
-            if(isPacketReceived)
-            {
-                Parse_SCData(g_scData);
-                isPacketReceived = false;
-                isVMCActive = true;
-            }
-            memset(g_scData,0x00,MAX_VMC_SC_UART_BUF_SIZE);
-            g_scDataCount = 0;
-            break;
-        }
+	case MSP432_COMMS_VMC_VERSION_POWERMODE_REQ:
+	{
+		u8  Expected_Msg_Length = VERSION_POWERMODE_LENGTH;
+		if(VMC_send_packet(MSP432_COMMS_VMC_VERSION_POWERMODE_REQ,
+				MSP432_COMMS_NO_FLAG,0x00,buf))
+		{
+			if(VMC_uart_receive(Expected_Msg_Length, &SC_uart_data[0])){
+				Parse_SCData(&SC_uart_data[0]);
+				isPowerModeActive = true;
+			}
+			else {
+				xil_printf("version failed \r\n");
+			}
+			memset(SC_uart_data,0x00,MAX_VMC_SC_UART_BUF_SIZE);
+			break;
+		}
+		else
+		{
+			VMC_ERR("Failed to Send VERSION_POWERMODE_REQ to SC !!! \n\r");
+			break;
+		}
+	}
+	case MSP432_COMMS_VMC_ACTIVE_REQ:
+	{
+		u8  Expected_Msg_Length = VMC_ACTIVE_LENGTH;
+		if(VMC_send_packet(MSP432_COMMS_VMC_ACTIVE_REQ,MSP432_COMMS_NO_FLAG,0x00,buf))
+		{
+			if(VMC_uart_receive(Expected_Msg_Length, &SC_uart_data[0])){
+				Parse_SCData(&SC_uart_data[0]);
+				isVMCActive = true;
+			}
+			memset(SC_uart_data,0x00,MAX_VMC_SC_UART_BUF_SIZE);
+			break;
+		}
+		else
+		{
+			VMC_ERR("Failed to Send VMC_ACTIVE_REQ to SC !!! \n\r");
+			break;
+		}
+	}
+	case MSP432_COMMS_VMC_GET_RESP_SIZE_REQ:
+	{
+		Get_Sensor_Response_Length(MSP432_COMMS_VOLT_SNSR_REQ);
+		Get_Sensor_Response_Length(MSP432_COMMS_POWER_SNSR_REQ);
 
-        case MSP432_COMMS_VMC_GET_RESP_SIZE_REQ:
-        {
-	    Get_Sensor_Response_Length(MSP432_COMMS_VOLT_SNSR_REQ);
-	    Get_Sensor_Response_Length(MSP432_COMMS_POWER_SNSR_REQ);
-
-	    if((sc_vmc_data.voltsensorlength != 0) && (sc_vmc_data.powersensorlength != 0 ))
-	    {
-		    getSensorRespLen = true ;
-	    }
-	    break;
-        }
-        default:
-            break;
-}
+		if((sc_vmc_data.voltsensorlength != 0) && (sc_vmc_data.powersensorlength != 0 ))
+		{
+			getSensorRespLen = true ;
+		}
+		break;
+	}
+	default:
+		break;
+	}
 }
 
 void VMC_Mointor_SC_Sensors()
 {
     u8 msgId = 0;
 
-
     for(msgId=0; msgId < MAX_MSGID_COUNT; msgId++)
     {
         VMC_Fetch_SC_SensorData(VMC_SC_Comms_Msg[msgId]);
-        vTaskDelay(20);
+        vTaskDelay(DELAY_MS(200));
     }
 }
 
@@ -444,29 +465,27 @@ void VMC_SC_CommsTask(void *params)
     for(;;)
     {
     	/* Notify SC of VMC Presence */
-    	if(xSemaphoreTake(vmc_sc_comms_lock, portMAX_DELAY) == pdTRUE)
-    	{
-    		if(!isVMCActive)
-    		{
-    			VMC_Fetch_SC_SensorData(MSP432_COMMS_VMC_ACTIVE_REQ);
-    		}
-    		/* Fetch the SC Version and Power Config  */
-    		if(!isPowerModeActive)
-    		{
-    			VMC_Fetch_SC_SensorData(MSP432_COMMS_VMC_VERSION_POWERMODE_REQ);
-    		}
-    		/* Fetch the Volt & power Sensor length  */
-    		if( isVMCActive &&  (!getSensorRespLen))
-    		{
-    			VMC_Fetch_SC_SensorData(MSP432_COMMS_VMC_GET_RESP_SIZE_REQ);
-    		}
-    		/*
-    		 *  Fetching Sensor values from SC
-    		 */
-    		VMC_Mointor_SC_Sensors();
-    		xSemaphoreGive(vmc_sc_comms_lock);
-    		vTaskDelay(100);
-    	}
+
+		if(!isVMCActive)
+		{
+			VMC_Fetch_SC_SensorData(MSP432_COMMS_VMC_ACTIVE_REQ);
+		}
+		/* Fetch the SC Version and Power Config  */
+		if(!isPowerModeActive)
+		{
+			VMC_Fetch_SC_SensorData(MSP432_COMMS_VMC_VERSION_POWERMODE_REQ);
+		}
+		/* Fetch the Volt & power Sensor length  */
+		if( isVMCActive &&  (!getSensorRespLen))
+		{
+			VMC_Fetch_SC_SensorData(MSP432_COMMS_VMC_GET_RESP_SIZE_REQ);
+		}
+		/*
+		 *  Fetching Sensor values from SC
+		 */
+		VMC_Mointor_SC_Sensors();
+		vTaskDelay(DELAY_MS(1000 *1));
+
     }
 
     vTaskSuspend(NULL);

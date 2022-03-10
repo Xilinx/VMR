@@ -461,6 +461,10 @@ int32_t UART_RTOS_Receive(uart_rtos_handle_t *handle, uint8_t *buf, uint32_t siz
 		*received = 0;
 		retVal = UART_ERROR_EVENT;
 	}
+	else
+	{
+		*received = 0;
+	}
 
 	if(pdFALSE == xSemaphoreGive(handle->rxSem))
 	{
