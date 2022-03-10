@@ -274,7 +274,8 @@ static u32 rmgmt_fpt_status_query(cl_msg_t *msg, char *buf, u32 size)
 
 	rmgmt_fpt_query(msg);
 
-	count = snprintf(buf, size, "A image offset: 0x%lx size: 0x%lx capacity: 0x%lx\n",
+	count = snprintf(buf, size, "default image offset: 0x%lx\n"
+		"default image size: 0x%lx\ndefault image capacity: 0x%lx\n",
 		msg->multiboot_payload.default_partition_offset,
 		msg->multiboot_payload.pdimeta_size,
 		msg->multiboot_payload.default_partition_size);
@@ -283,8 +284,8 @@ static u32 rmgmt_fpt_status_query(cl_msg_t *msg, char *buf, u32 size)
 		return size;
 	}
 	
-	count += snprintf(buf + count, size,
-		"B image offset: 0x%lx size: 0x%lx capacity: 0x%lx\n",
+	count += snprintf(buf + count, size, "backup image offset: 0x%lx\n"
+		"backup image size: 0x%lx\nbackup image capacity: 0x%lx\n",
 		msg->multiboot_payload.backup_partition_offset,
 		msg->multiboot_payload.pdimeta_backup_size,
 		msg->multiboot_payload.backup_partition_size);

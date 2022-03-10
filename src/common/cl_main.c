@@ -69,11 +69,11 @@ u32 cl_rpu_status_query(struct cl_msg *msg, char *buf, u32 size)
 	u32 count = 0;
 
 #ifdef VMR_BUILD_XRT_ONLY
-	CL_LOG(APP_MAIN, "XRT only build");
-	count = snprintf(buf, size, "XRT only build\n");	
+	CL_LOG(APP_MAIN, "Build flags: -XRT");
+	count = snprintf(buf, size, "Build flags: -XRT\n");
 #else
-	CL_LOG(APP_MAIN, "VMR full build");
-	count = snprintf(buf, size, "VMR full build\n");	
+	CL_LOG(APP_MAIN, "Build flags: default full build");
+	count = snprintf(buf, size, "Build flags: default full build\n");
 #endif
 
 	if (count > size) {
@@ -86,10 +86,10 @@ u32 cl_rpu_status_query(struct cl_msg *msg, char *buf, u32 size)
 	CL_LOG(APP_MAIN, "vitis version: %s", VMR_TOOL_VERSION);
 	CL_LOG(APP_MAIN, "git hash: %s", VMR_GIT_HASH);
 	CL_LOG(APP_MAIN, "git branch: %s", VMR_GIT_BRANCH);
-	CL_LOG(APP_MAIN, "build date: %s", VMR_GIT_HASH_DATE);
+	CL_LOG(APP_MAIN, "git hash date: %s", VMR_GIT_HASH_DATE);
 
 	count += snprintf(buf + count, size,
-		"Vitis version: %s\ngit hash: %s\ngit branch: %s\nbuild date: %s\n",
+		"vitis version: %s\ngit hash: %s\ngit branch: %s\ngit hash date: %s\n",
 		VMR_TOOL_VERSION, VMR_GIT_HASH, VMR_GIT_BRANCH, VMR_GIT_HASH_DATE);
 	if (count > size) {
 		CL_ERR(APP_MAIN, "msg is truncated");
@@ -105,7 +105,7 @@ u32 cl_apu_status_query(struct cl_msg *msg, char *buf, u32 size)
 	u32 count = 0;
 
 	//cl_xgq_apu_identify(msg);
-	count = snprintf(buf, size, "apu is ready: %d\n", cl_xgq_apu_is_ready()); 
+	count = snprintf(buf, size, "is PS ready: %d\n", cl_xgq_apu_is_ready());
 
 	return count;
 }
