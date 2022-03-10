@@ -64,6 +64,9 @@ static void pVMCTask(void *params)
     /* Retry till fan controller is programmed */
     while (max6639_init(1, 0x2E));  // only for vck5000
 
+    /* Create SC update task */
+    SC_Update_Task_Create();
+
 	/* vmc_sensor_monitoring_lock */
     vmc_sensor_monitoring_lock = xSemaphoreCreateMutex();
 	if(vmc_sensor_monitoring_lock == NULL){
@@ -106,8 +109,6 @@ static void pVMCTask(void *params)
 	return ;
     }
 
-    /* Create SC update task */
-    SC_Update_Task_Create();
 
     vTaskSuspend(NULL);
 }

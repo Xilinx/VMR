@@ -34,12 +34,12 @@
 
 #define ASDM_HEADER_VER     (0x1)
 #define NUM_BOARD_INFO_SENSORS  (13)
-#define NUM_TEMPERATURE_SENSORS  (8)
-#define NUM_SC_VOLTAGE_SENSORS  (16)
-#define NUM_SC_CURRENT_SENSORS  (5)
+#define NUM_TEMPERATURE_SENSORS  (5)
+#define NUM_SC_VOLTAGE_SENSORS  (6)
+#define NUM_SC_CURRENT_SENSORS  (4)
 #define NUM_POWER_SENSORS       (1)
 
-#define SNSRNAME_ACTIVE_MSP_VER "Active MSP Ver\0"
+#define SNSRNAME_ACTIVE_SC_VER "Active SC Ver\0"
 
 SDR_t *sdrInfo;
 SemaphoreHandle_t sdr_lock;
@@ -59,11 +59,9 @@ extern s8 Power_Monitor(snsrRead_t *snsrData);
 
 Asdm_Sensor_Thresholds_t thresholds_limit_tbl[]= {
     /*  Name           LW   LC   LF    UW   UC  UF  */
-    { "Inlet Temp",	0,   0,  0,     80,  85, 95 },
-    { "Outlet Temp",	0,   0,  0,     80,  85, 95 },
     { "Board Temp",	0,   0,  0,     80,  85, 95 },
-    { "Sysmon Temp",	0,   0,  0,     88,  97, 107 },
-    { "Vccint Temp",	0,   0,  0,     100, 110, 125 },
+    { "ACAP Max Temp",	0,   0,  0,     88,  97, 107 },
+    { "VCCINT Temp",	0,   0,  0,     100, 110, 125 },
     { "QSFP0 Temp",     0,   0,  0,     80,  85, 90 },
     { "QSFP1 Temp",     0,   0,  0,     80,  85, 90 },
 
@@ -88,11 +86,10 @@ void getCurrentNames(u8 index, char8* snsrName, u8 *sensorId)
     };
 
     struct sensorData snsrData[] =    {
-        { VCCINT_I,       "VCCINT_Current\0"   },
-        { VCC1V2_I,       "VCC_1V2_Current\0"  },
-        { PEX_12V_I_IN,   "12V_PEX_Current\0"  },
-        { V12_IN_AUX0_I,  "12V_AUX0_Current\0" },
-        { V12_IN_AUX1_I,  "12V_AUX1_Current\0" },
+        { VCCINT_I,       "VCCINT\0"   },
+        { PEX_12V_I_IN,   "12V PEX\0"  },
+        { V12_IN_AUX0_I,  "12V AUX0\0" },
+        { V12_IN_AUX1_I,  "12V AUX1\0" },
     };
 
     if(NULL != snsrName)
@@ -115,22 +112,12 @@ void getVoltagesName(u8 index, char8* snsrName, u8 *sensorId)
 
     struct sensorData voltageData[] =
     {
-        { PEX_12V,    "PEX_12V\0" },
-        { PEX_3V3,    "PEX_3V3\0" },
-        { AUX_3V3,     "AUX_3V3\0" },
-        { AUX_12V,     "AUX_12V\0" },
-        { AUX1_12V,    "AUX1_12V\0" },
-        { SYS_5V5,     "SYS_5V5\0" },
-        { VCC1V2_TOP,  "VCC1V2_TOP\0" },
-        { VCC1V8,      "VCC1V8\0" },
-        { VCCAUX,      "VCCAUX\0" },
-        { DDR4_VPP_TOP,"DDR4_VPP_TOP\0" },
-        { MGT0V9AVCC,  "MGT0V9AVCC\0" },
-        { VCCAUX_PMC,  "VCCAUX_PMC\0" },
-        { MGTAVTT,     "MGTAVTT\0" },
-        { VCC_3V3,     "VCC_3V3\0" },
+        { PEX_12V,    "12V PEX\0" },
+        { PEX_3V3,    "3V3 PEX\0" },
+        { AUX_3V3,     "3V3 AUX\0" },
+        { AUX_12V,     "12V AUX0\0" },
+        { AUX1_12V,    "12V AUX1\0" },
         { VCCINT,      "VCCINT\0" },
-        { VCCRAM,      "VCCRAM\0" },
     };
 
     if(NULL != snsrName)
@@ -153,8 +140,8 @@ void getQSFPName(u8 index, char8* snsrName, u8 *sensorId)
 
     struct sensorData qsfpData[] =
     {
-        { CAGE_TEMP0,  "QSFP_TEMP0\0" },
-        { CAGE_TEMP1,  "QSFP_TEMP1\0" }
+        { CAGE_TEMP0,  "QSFP0 TEMP\0" },
+        { CAGE_TEMP1,  "QSFP1 TEMP\0" }
     };
 
     if(NULL != snsrName)
@@ -253,13 +240,13 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
     },
     {
         .repoType = BoardInfoSDR,
-        .sensorName = SNSRNAME_ACTIVE_MSP_VER,
+        .sensorName = SNSRNAME_ACTIVE_SC_VER,
         .snsrValTypeLength = SENSOR_TYPE_NUM | sizeof(sc_vmc_data.scVersion),
         .defaultValue = &sc_vmc_data.scVersion[0],
     },
     {
         .repoType = BoardInfoSDR,
-        .sensorName = "Target MSP Ver\0",
+        .sensorName = "Target SC Ver\0",
         .snsrValTypeLength = SENSOR_TYPE_NUM | sizeof(fpt_sc_version),
         .defaultValue = &fpt_sc_version[0],
     },
@@ -269,7 +256,7 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
 	    .snsrValTypeLength = SENSOR_TYPE_NUM | sizeof(board_info.OEM_ID),
 	    .defaultValue = &board_info.OEM_ID[0],
 	},
-	{
+/*	{
 	    .repoType = TemperatureSDR,
 	    .sensorName = "Inlet Temp\0",
 	    .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_2B,
@@ -290,6 +277,7 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
 	    .sesnorListTbl = SE98_TEMP1,
 	    .monitorFunc = &Temperature_Read_Outlet,
 	},
+*/
 	{
 	    .repoType = TemperatureSDR,
 	    .sensorName = "Board Temp\0",
@@ -302,7 +290,7 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
 	},
 	{
 	    .repoType = TemperatureSDR,
-	    .sensorName = "Sysmon Temp\0",
+	    .sensorName = "ACAP Max Temp\0",
 	    .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_2B,
 	    .snsrUnitModifier = 0x0,
 	    .supportedThreshold = SNSR_MAX_VAL | SNSR_AVG_VAL | HAS_UPPER_THRESHOLDS,
@@ -312,7 +300,7 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
 	},
 	{
 	    .repoType = TemperatureSDR,
-	    .sensorName = "Vccint Temp\0",
+	    .sensorName = "VCCINT Temp\0",
 	    .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_2B,
 	    .snsrUnitModifier = 0x0,
 	    .supportedThreshold = SNSR_MAX_VAL | SNSR_AVG_VAL | HAS_UPPER_THRESHOLDS,
@@ -330,7 +318,7 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
 	    .sensorInstance = QSFP_MAX_NUM,
 	    .monitorFunc = &Temperature_Read_QSFP,
 	},
-	{
+/*	{
 	    .repoType = TemperatureSDR,
 	    .sensorName = "Fan RPM\0",
 	    .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_2B,
@@ -339,6 +327,7 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
 	    .sesnorListTbl = FAN_SPEED,
 	    .monitorFunc = &Fan_RPM_Read,
         },
+*/
 	{
 	    .repoType = VoltageSDR,
 	    .getSensorName = &getVoltagesName,
@@ -1314,7 +1303,7 @@ void Asdm_Update_Active_MSP_sensor()
 	Asdm_SensorRecord_t *sensorRecord = sdrInfo[boardInfoSensorIdx].sensorRecord;
 	for(idx = sdrInfo[boardInfoSensorIdx].header.no_of_records -1 ; idx >= 0 ; idx--)
 	{
-		if(!memcmp(sensorRecord[idx].sensor_name,SNSRNAME_ACTIVE_MSP_VER,strlen(SNSRNAME_ACTIVE_MSP_VER)))
+		if(!memcmp(sensorRecord[idx].sensor_name,SNSRNAME_ACTIVE_SC_VER,strlen(SNSRNAME_ACTIVE_SC_VER)))
 		{
 			if (xSemaphoreTake(sdr_lock, portMAX_DELAY))
 			{
