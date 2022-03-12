@@ -8,8 +8,8 @@ STDOUT_JTAG=0
 NOT_STABLE=0
 BUILD_XRT=0
 ROOT_DIR=`pwd`
-BSP_DIR="$ROOT_DIR/vmr_platform/vmr_platform/psv_cortexr5_0/freertos10_xilinx_domain/bsp/"
 REAL_BSP=`realpath ../bsp/2021.2_stable/bsp`
+REAL_VMR=`realpath ../vmr`
 
 check_result()
 {
@@ -43,7 +43,8 @@ default_env() {
 
 build_clean() {
 	echo "=== Remove build directories ==="
-	rm -r xsa .metadata vmr_platform vmr_system vmr 
+	rm -rf xsa .metadata vmr_platform vmr_system vmr 
+	rm -rf build_tmp_dir
 }
 
 append_stable_bsp() {
@@ -65,6 +66,8 @@ grep_yes()
 
 make_version_h()
 {
+	typeset C_DIR="$1"
+
 	if [ -z $BUILD_VERSION_FILE ];then
 		echo "=== WARN: No build version is specified, trying to load local git version."
 		VMR_VERSION_HASH=`git rev-parse --verify HEAD`
@@ -83,7 +86,7 @@ make_version_h()
 
 	# NOTE: we only take git version, version date and branch for now
 
-	CL_VERSION_H="vmr/src/include/cl_version.h"
+	CL_VERSION_H="${C_DIR}/vmr/src/include/cl_version.h"
 
 	echo "#ifndef _VMR_VERSION_" >> $CL_VERSION_H
 	echo "#define _VMR_VERSION_" >> $CL_VERSION_H
@@ -116,13 +119,16 @@ make_version_h()
 }
 
 check_vmr() {
-	if [[ ! -f "vmr/Debug/vmr.elf" ]];then
-		echo "Build failed, cannot find vmr.elf"
+	typeset C_DIR="$1"
+	typeset VMR_FILE="${C_DIR}/vmr/Debug/vmr.elf"
+
+	if [[ ! -f "${VMR_FILE}" ]];then
+		echo "Build failed, cannot find $VMR_FILE"
 		exit 1
 	fi
 
 	echo "=== VMR github info ==="
-	arm-none-eabi-strings vmr/Debug/vmr.elf |grep -E "VMR_GIT|VMR_TOOL"
+	arm-none-eabi-strings $VMR_FILE |grep -E "VMR_GIT|VMR_TOOL"
 
 	echo "=== Build env info ==="
 	if [ $NOT_STABLE == 1 ];then
@@ -142,28 +148,53 @@ check_vmr() {
 	else
 		echo "Full Build"
 	fi
-	echo "=== Build done ==="
+	echo "=== Build vmr.elf ==="
+	cp $VMR_FILE $ROOT_DIR
+	realpath $ROOT_DIR/vmr.elf
+	echo "=== Build done. ==="
+
 }
 
 build_app_all() {
 	xsct ./create_app.tcl
-	rsync -av ../src vmr --exclude cmc
+	rsync -av ../vmr/src vmr --exclude cmc
 	xsct ./config_app.tcl
-	make_version_h
+	make_version_h "."
 	xsct ./make_app.tcl
-	check_vmr
+	check_vmr "."
 }
 
 build_app_incremental() {
 	rm -r vmr/src
 	rm -r vmr/Debug/vmr.elf
-	rsync -av ../src vmr --exclude cmc --exclude *.swp
-	make_version_h
+	rsync -av ../vmr/src vmr --exclude cmc --exclude *.swp
+	make_version_h "."
 	xsct ./make_app.tcl
-	check_vmr
+	check_vmr "."
+}
+
+build_bsp_stable() {
+	echo "make build_tmp_dir"
+	mkdir build_tmp_dir
+	echo "rsync and make BSP"
+	rsync -aq $REAL_BSP build_tmp_dir
+	cd build_tmp_dir/bsp 
+	make clean;make all
+	check_result "make stable BSP" $?
+	cd $ROOT_DIR
+
+	echo "rsync and make VMR"
+	rsync -aq $REAL_VMR build_tmp_dir
+	make_version_h "build_tmp_dir"
+	cd build_tmp_dir/vmr/Debug
+	make clean;make all
+	check_result "make VMR" $?
+	cd $ROOT_DIR
+	check_vmr "build_tmp_dir"
 }
 
 usage() {
+    echo "Instruction: PLEASE READ!!!"
     echo "Usage:"
     echo 
     echo "-clean                     Remove build directories"  
@@ -232,7 +263,10 @@ do
 	shift
 done
 
-## Build code starts here ###
+#####################
+# build starts here #
+#####################
+
 if [[ $BUILD_CLEAN == 1 ]];then
 	build_clean
 	exit 0;
@@ -245,46 +279,41 @@ fi
 XSCT_VERSION=`which xsct|rev|cut -f3 -d"/"|rev`
 echo "using xsct: ${XSCT_VERSION} from env to build VMR"
 
+# option1: only build app by vitis
 if [[ $BUILD_APP == 1 ]];then
 	build_app_incremental
 	exit 0;
 fi
 
-echo "=== Build BSP ==="
+# option2: default build based on cached stable bsp
 if [ -z $BUILD_XSA ];then
-	echo "ERROR: Building BSP requires xsa.";
-	usage
-	exit 1;
+	echo "=== No XSA specified, build from stable BSP.";
+	build_clean
+	build_bsp_stable
+	exit 0;
 fi
 
+#####################
+# build entire BSP  #
+#####################
+echo "=== Build BSP ==="
 ls $BUILD_XSA
 if [ $? -ne 0 ];then
 	echo "cannot find ${BUILD_XSA}"
 	exit 1;
 fi
 
-#####################
-# build starts here #
-#####################
-
-#
-# (1) always perform build clean for a clean build env
-#
+echo "=== (1) always perform build clean for a clean build env"
 build_clean
 mkdir xsa
 cp $BUILD_XSA xsa/vmr.xsa
 check_result "copy $BUILD_XSA" $?
 
-#
-# (2) using xsct to create bsp with jtag flag
-#
-echo "=== Create vmr_platform ==="
+echo "=== (2) using xsct to create bsp with jtag flag"
 xsct ./create_bsp.tcl $STDOUT_JTAG $NOT_STABLE
 check_result "Create vmr_platform" $?
 
-#
-# (3) override freertos and recompile it
-#
+echo "=== (3) override freertos and recompile it"
 if [ $NOT_STABLE == 1 ];then
 	echo "=== Build BSP with daily_latest"
 else
@@ -293,23 +322,13 @@ else
 	xsct ./rebuild_bsp.tcl
 	check_result "Rebuild BSP" $?
 
-#cd $BSP_DIR
+#       cd $BSP_DIR
 #	make clean; make all
 #	check_result "make stable bsp: $BSP_DIR" $?
 #	cd $ROOT_DIR
 
-
-#	cd $BSP_DIR
-#	set -x
-#make -C psv_cortexr5_0/libsrc/freertos10_xilinx_v1_10/src -s libs  "SHELL=/bin/sh" "COMPILER=armr5-none-eabi-gcc" "ASSEMBLER=armr5-none-eabi-as" "ARCHIVER=armr5-none-eabi-ar" "COMPILER_FLAGS=  -O2 -c -mcpu=cortex-r5" "EXTRA_COMPILER_FLAGS=-g -DARMR5 -Wall -Wextra -mfloat-abi=hard -mfpu=vfpv3-d16 -fno-tree-loop-distribute-patterns -Dversal"
-#	set +x
-#	check_result "Recompile bsp" $?
-#	cd $ROOT_DIR
 	echo "=== Build BSP with stable version done"
 fi
 
-#
-# (4) build vmr application after platform bsp is built done
-#
-echo "=== Build APP ==="
+echo "=== (4) build vmr application after platform bsp is built done"
 build_app_all
