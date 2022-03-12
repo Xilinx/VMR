@@ -15,17 +15,17 @@
 
 
 u32 clock_wiz_bases[] = {
-	EP_ACLK_KERNEL_0,
-	EP_ACLK_KERNEL_1,
-	EP_ACLK_HBM_0,
-	EP_ACLK_SHUTDOWN_0,
+	VMR_EP_ACLK_KERNEL_0,
+	VMR_EP_ACLK_KERNEL_1,
+	VMR_EP_ACLK_HBM_0,
+	VMR_EP_ACLK_SHUTDOWN_0,
 };
 
 u32 clock_counter_bases[] = {
-	EP_ACLK_FREQ_KERNEL_0,
-	EP_ACLK_FREQ_KERNEL_1,
-	EP_ACLK_FREQ_HBM,
-	EP_ACLK_FREQ_K1_K2,
+	VMR_EP_ACLK_FREQ_KERNEL_0,
+	VMR_EP_ACLK_FREQ_KERNEL_1,
+	VMR_EP_ACLK_FREQ_HBM,
+	VMR_EP_ACLK_FREQ_K1_K2,
 };
 
 static inline int clock_wiz_busy(int idx, int cycle, int interval)
