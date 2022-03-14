@@ -79,7 +79,7 @@ void ucs_clock_shutdown()
     shutdownSatus = IO_SYNC_READ32(XPAR_BLP_BLP_LOGIC_ULP_CLOCKING_UCS_CONTROL_STATUS_GPIO_UCS_CONTROL_STATUS_BASEADDR);
 
     if(shutdownSatus & 0x01)
-    	VMC_ERR("Clock shutdown due to power value reached to critical threshold \n\r");
+    	VMC_ERR("Clock shutdown due to power or temperature value reached to critical threshold \n\r");
 
     /*
      * To-DO : Log clock shutdown event to dmesg
