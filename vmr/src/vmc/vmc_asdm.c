@@ -38,6 +38,7 @@
 #define NUM_SC_VOLTAGE_SENSORS  (6)
 #define NUM_SC_CURRENT_SENSORS  (4)
 #define NUM_POWER_SENSORS       (1)
+#define CURRENT_SENSORS_INSTANCES (3)
 
 #define SNSRNAME_ACTIVE_SC_VER "Active SC Ver\0"
 
@@ -56,6 +57,7 @@ extern s8 Fan_RPM_Read(snsrRead_t *snsrData);
 extern s8 Temperature_Read_QSFP(snsrRead_t *snsrData);
 extern s8 PMBUS_SC_Sensor_Read(snsrRead_t *snsrData);
 extern s8 Power_Monitor(snsrRead_t *snsrData);
+extern s8 PMBUS_SC_Vccint_Read(snsrRead_t *snsrData);
 
 Asdm_Sensor_Thresholds_t thresholds_limit_tbl[]= {
     /*  Name           LW   LC   LF    UW   UC  UF  */
@@ -86,7 +88,6 @@ void getCurrentNames(u8 index, char8* snsrName, u8 *sensorId)
     };
 
     struct sensorData snsrData[] =    {
-        { VCCINT_I,       "VCCINT\0"   },
         { PEX_12V_I_IN,   "12V PEX\0"  },
         { V12_IN_AUX0_I,  "12V AUX0\0" },
         { V12_IN_AUX1_I,  "12V AUX1\0" },
@@ -345,8 +346,18 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
 	    .snsrUnitModifier = -3,
 	    .supportedThreshold = SNSR_MAX_VAL | SNSR_AVG_VAL ,
 	    .sampleCount = 0x1,
-	    .sensorInstance = NUM_SC_CURRENT_SENSORS,
+	    .sensorInstance = CURRENT_SENSORS_INSTANCES,
 	    .monitorFunc = &PMBUS_SC_Sensor_Read,
+	},
+	{
+	    .repoType = CurrentSDR,
+	    .sensorName = "VCCINT\0",
+	    .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_4B,
+	    .snsrUnitModifier = -3,
+	    .supportedThreshold = SNSR_MAX_VAL | SNSR_AVG_VAL ,
+	    .sampleCount = 0x1,
+	    .sesnorListTbl = VCCINT_I,
+	    .monitorFunc = &PMBUS_SC_Vccint_Read,
 	},
 	{
 	    .repoType = PowerSDR,
@@ -1234,20 +1245,22 @@ void AsdmSensor_Display(void)
 		}
 		else if((sensorRecord[idx].sensor_value_type_length & LENGTH_BITMASK) < 4)
 		{
+
 			VMC_PRNT(" %s		%d		%s	%d	%d \n\r",(sensorRecord[idx].sensor_name),
-				*((u16 *)sensorRecord[idx].sensor_value),
-				((sensorRecord[idx].sensor_status == Vmc_Snsr_State_Normal) ? "Ok":"Error"),
-				*((u16 *)(sensorRecord[idx].sensorMaxValue)),
-				*((u16 *)(sensorRecord[idx].sensorAverageValue)));
+					*((u16 *)sensorRecord[idx].sensor_value),
+					((sensorRecord[idx].sensor_status == Vmc_Snsr_State_Normal) ? "Ok":"Error"),
+					*((u16 *)(sensorRecord[idx].sensorMaxValue)),
+					*((u16 *)(sensorRecord[idx].sensorAverageValue)));
+
 		}
-		else if((sensorRecord[idx].sensor_value_type_length & LENGTH_BITMASK) == sizeof(float))
+		else if((sensorRecord[idx].sensor_value_type_length & LENGTH_BITMASK) == sizeof(u32))
 		{
 
-			VMC_PRNT(" %s		%0.3f		%2s	%0.3f	%0.3f \n\r",(sensorRecord[idx].sensor_name),
-				*((float *)sensorRecord[idx].sensor_value),
+			VMC_PRNT(" %s		%d		%s	%d	%d \n\r",(sensorRecord[idx].sensor_name),
+				*((u32 *)sensorRecord[idx].sensor_value),
 				((sensorRecord[idx].sensor_status == Vmc_Snsr_State_Normal) ? "Ok":"Error"),
-				*((float *)(sensorRecord[idx].sensorMaxValue)),
-				*((float *)(sensorRecord[idx].sensorAverageValue)));
+				*((u32 *)(sensorRecord[idx].sensorMaxValue)),
+				*((u32 *)(sensorRecord[idx].sensorAverageValue)));
 		}
 	    }
 	}

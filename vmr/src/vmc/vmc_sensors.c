@@ -263,33 +263,66 @@ s8 Temperature_Read_QSFP(snsrRead_t *snsrData)
 
 s8 PMBUS_SC_Sensor_Read(snsrRead_t *snsrData)
 {
-    s8 status = XST_FAILURE;
-    u16 sensorReading = 0;
+	s8 status = XST_FAILURE;
+	u16 sensorReading = 0;
 
-    if (xSemaphoreTake(vmc_sc_lock, portMAX_DELAY))
-    {
-    	sensorReading = sc_vmc_data.sensor_values[snsrData->mspSensorIndex];
-    	xSemaphoreGive(vmc_sc_lock);
-    }
-    else
-    {
-    	VMC_ERR("vmc_sc_lock lock failed \r\n");
-    }
+	if (xSemaphoreTake(vmc_sc_lock, portMAX_DELAY))
+	{
+		sensorReading = sc_vmc_data.sensor_values[snsrData->mspSensorIndex];
+		xSemaphoreGive(vmc_sc_lock);
+	}
+	else
+	{
+		VMC_ERR("vmc_sc_lock lock failed \r\n");
+	}
 
-    if(sensorReading != 0)
-    {
-        memcpy(&snsrData->snsrValue[0],&sensorReading,sizeof(sensorReading));
-        snsrData->sensorValueSize = sizeof(sensorReading);
-        snsrData->snsrSatus = Vmc_Snsr_State_Normal;
-    }
-    else
-    {
-    	memcpy(&snsrData->snsrValue[0],&sensorReading,sizeof(sensorReading));
-        snsrData->snsrSatus = Vmc_Snsr_State_Comms_failure;
-        VMC_DBG("MSP Sensor Id : %d Data read failed \n\r",snsrData->mspSensorIndex);
-    }
+	if(sensorReading != 0)
+	{
+		memcpy(&snsrData->snsrValue[0],&sensorReading,sizeof(sensorReading));
+		snsrData->sensorValueSize = sizeof(sensorReading);
+		snsrData->snsrSatus = Vmc_Snsr_State_Normal;
+	}
+	else
+	{
+		memcpy(&snsrData->snsrValue[0],&sensorReading,sizeof(sensorReading));
+		snsrData->snsrSatus = Vmc_Snsr_State_Comms_failure;
+		VMC_DBG("MSP Sensor Id : %d Data read failed \n\r",snsrData->mspSensorIndex);
+	}
 
-    return status;
+	return status;
+}
+
+s8 PMBUS_SC_Vccint_Read(snsrRead_t *snsrData)
+{
+	s8 status = XST_FAILURE;
+	u32 vccint_i_sensorReading = 0;
+
+
+	if (xSemaphoreTake(vmc_sc_lock, portMAX_DELAY))
+	{
+		vccint_i_sensorReading = sc_vmc_data.VCCINT_sensor_value;
+		xSemaphoreGive(vmc_sc_lock);
+	}
+	else
+	{
+		VMC_ERR("vmc_sc_lock lock failed \r\n");
+	}
+
+	if(vccint_i_sensorReading != 0)
+	{
+		memcpy(&snsrData->snsrValue[0],&vccint_i_sensorReading,sizeof(vccint_i_sensorReading));
+		snsrData->sensorValueSize = sizeof(vccint_i_sensorReading);
+		snsrData->snsrSatus = Vmc_Snsr_State_Normal;
+	}
+	else
+	{
+		memcpy(&snsrData->snsrValue[0],&vccint_i_sensorReading,sizeof(vccint_i_sensorReading));
+		snsrData->snsrSatus = Vmc_Snsr_State_Comms_failure;
+		VMC_DBG("MSP Sensor Id : %d Data read failed \n\r",snsrData->mspSensorIndex);
+	}
+
+
+	return status;
 }
 
 s8 Power_Monitor(snsrRead_t *snsrData)
