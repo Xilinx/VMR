@@ -58,7 +58,7 @@ u16 vmcU8ToU16(u8 *payload) {
 }
 uint32_t vmcU8ToU32(uint8_t* payload)
 {
-	return (uint32_t)payload[3] | (((uint32_t)payload[2]) << 8) | (((uint32_t)payload[1]) << 16) | (((uint32_t)payload[0]) << 24);
+	return (uint32_t)payload[0] | (((uint32_t)payload[1]) << 8) | (((uint32_t)payload[2]) << 16) | (((uint32_t)payload[3]) << 24);
 }
 uint64_t vmcU8ToU64(uint8_t * payload)
 {
@@ -114,9 +114,14 @@ void VMC_Update_Version_PowerMode(u16 length,u8 *payload)
 void VMC_StoreSensor_Value(u8 id, u32 value)
 {
 
+
 	if (xSemaphoreTake(vmc_sc_lock, portMAX_DELAY))
 	{
-		sc_vmc_data.sensor_values[id] = value;
+		if(id == VCCINT_I) {
+			sc_vmc_data.VCCINT_sensor_value = value;
+		} else {
+			sc_vmc_data.sensor_values[id] = value;
+		}
 		xSemaphoreGive(vmc_sc_lock);
 	}
 	else

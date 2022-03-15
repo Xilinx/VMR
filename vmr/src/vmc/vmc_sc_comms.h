@@ -269,6 +269,7 @@ typedef struct SC_VMC_Data{
     u8   availpower;
     u8   configmode;
     u8   scVersion[4];
+    u32  VCCINT_sensor_value;
     u16  sensor_values[SENSOR_ID_MAX];
 }SC_VMC_Data;
 
