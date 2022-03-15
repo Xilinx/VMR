@@ -12,8 +12,9 @@ platform create -out vmr_platform -name {vmr_platform} -hw xsa/vmr.xsa -proc {bl
 
 if { [lindex $argv 1] == 1 } {
 	puts "=== use 2022.1 daily_lastest embeddedws"
+	# comment out ssw patches
 	#repo -set /proj/xsjhdstaff2/davidzha/ssw_2022.1/
-	repo -set /public/bugcases/CR/1105000-1105999/1105240/ssw_2022.1/
+	#repo -set /public/bugcases/CR/1105000-1105999/1105240/ssw_2022.1/
 } else {
 	puts "===  patching 2021.2 fixes for non-daily_latest stable builds"
 	#repo -set /proj/rdi/staff/davidzha/embeddedsw/

@@ -1,1 +1,2 @@
-export FORCE_MARK_AS_EDGE_XSA=1
+#export FORCE_MARK_AS_EDGE_XSA=1
+export FORCE_MARK_XSA_NAME=xilinx_vck5000_gen4x8_xdma_2_202210_1

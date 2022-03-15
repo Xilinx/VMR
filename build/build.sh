@@ -2,10 +2,10 @@
 
 source ./utils.sh
 
-TOOL_VERSION="2021.2"
+TOOL_VERSION="2022.1"
 DEFAULT_VITIS="/proj/xbuilds/${TOOL_VERSION}_daily_latest/installs/lin64/Vitis/HEAD/settings64.sh"
 STDOUT_JTAG=0
-NOT_STABLE=0
+NOT_STABLE=1
 BUILD_XRT=0
 ROOT_DIR=`pwd`
 REAL_BSP=`realpath ../bsp/2021.2_stable/bsp`
@@ -157,6 +157,8 @@ check_vmr() {
 
 build_app_all() {
 	xsct ./create_app.tcl
+	check_result "Create App" $?
+
 	rsync -av ../vmr/src vmr --exclude cmc
 	xsct ./config_app.tcl
 	make_version_h "."
@@ -167,6 +169,7 @@ build_app_all() {
 build_app_incremental() {
 	rm -r vmr/src
 	rm -r vmr/Debug/vmr.elf
+
 	rsync -av ../vmr/src vmr --exclude cmc --exclude *.swp
 	make_version_h "."
 	xsct ./make_app.tcl
@@ -202,11 +205,13 @@ usage() {
     echo "-app                       Re-build Application only"  
     echo "-config_VMR                Update VMR project too edit in Vitis GUI"
     echo "-XRT                       Build XRT only"
-    echo "-TA                        TA exact version, default is [${TOOL_VERSION}_daily_latest]"
+    echo "-TA                        TA exact version, default is [${TOOL_VERSION}_daily_latest]."
+    echo "                           Note: only take effect when env has no Vitis env"
     echo "-version                   version.json file"
     echo "-platform                  platform.json file for enable platform specific resources"
     echo "-jtag                      build VMR stdout to jtag"
-    echo "-daily_latest              build VMR from daily latest bsp, otherwise use stable bsp from this VMR repo"
+    echo "-daily_latest              build VMR from daily latest bsp (this is enabled by default)"
+    echo "-stable                    build VMR from cached stable bsp (this is not enabled by default)"
     echo "-help"
     exit $1
 }
@@ -255,6 +260,9 @@ do
 		-daily_latest)
 			NOT_STABLE=1
 			;;
+		-stable)
+			NOT_STABLE=0
+			;;
                 * | --* | -*)
                         echo "Invalid argument: $1"
                         usage 1
@@ -286,7 +294,7 @@ if [[ $BUILD_APP == 1 ]];then
 fi
 
 # option2: default build based on cached stable bsp
-if [ -z $BUILD_XSA ];then
+if [ -z $BUILD_XSA ] || [ $BUILD_XSA == "No" ];then
 	echo "=== No XSA specified, build from stable BSP.";
 	build_clean
 	build_bsp_stable
@@ -296,7 +304,7 @@ fi
 #####################
 # build entire BSP  #
 #####################
-echo "=== Build BSP ==="
+echo "=== Build BSP from xsa: $BUILD_XSA ==="
 ls $BUILD_XSA
 if [ $? -ne 0 ];then
 	echo "cannot find ${BUILD_XSA}"

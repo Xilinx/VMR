@@ -1,4 +1,6 @@
 setws .
 puts "create app"
-app create -name vmr -platform vmr_platform -domain freertos10_xilinx_domain -template "Empty Application(C)"
-#app create -name vmr -platform vmr_platform -domain freertos10_xilinx_domain -template "Empty Application"
+set xsaName $::env(FORCE_MARK_XSA_NAME)
+puts "xsaName is: $xsaName"
+app create -name vmr -platform ${xsaName} -domain freertos10_xilinx_domain -template "Empty Application(C)"
+
