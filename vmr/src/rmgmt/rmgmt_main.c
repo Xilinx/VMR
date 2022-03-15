@@ -33,7 +33,7 @@ int xgq_clock_flag = 0;
 int xgq_apubin_flag = 0;
 int xgq_vmr_control_flag = 0;
 int xgq_apu_control_flag = 0;
-char log_msg[512] = { 0 };
+char log_msg[1024] = { 0 };
 
 SemaphoreHandle_t xSemaDownload;
 
