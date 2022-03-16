@@ -123,7 +123,7 @@ void rmgmt_extension_fpt_query(struct cl_msg *msg)
 {
 	struct fpt_hdr hdr = { 0 };
 
-	cl_memcpy_fromio8(RPU_PRELOAD_FPT, &hdr, sizeof(hdr));
+	cl_memcpy_fromio8(VMR_EP_RPU_PRELOAD_FPT, &hdr, sizeof(hdr));
 
 	msg->multiboot_payload.has_extfpt = (hdr.fpt_magic == FPT_MAGIC) ? 1 : 0;
 
@@ -138,7 +138,7 @@ void rmgmt_extension_fpt_query(struct cl_msg *msg)
 
 	for (int i = 1; i <= hdr.fpt_num_entries; i++) {
 		struct fpt_entry entry;
-		cl_memcpy_fromio8(RPU_PRELOAD_FPT + hdr.fpt_entry_size * i,
+		cl_memcpy_fromio8(VMR_EP_RPU_PRELOAD_FPT + hdr.fpt_entry_size * i,
 			&entry, sizeof(entry));
 
 		if (entry.partition_type == FPT_TYPE_SC_FW) {
@@ -265,7 +265,7 @@ void rmgmt_boot_fpt_query(struct cl_msg *msg)
 	RMGMT_DBG("hdr recovery magic %x", hdr.fpt_magic);
 	msg->multiboot_payload.has_fpt_recovery = (hdr.fpt_magic == FPT_MAGIC) ? 1 : 0;
 
-	multi_boot_offset = IO_SYNC_READ32(EP_PLM_MULTIBOOT);
+	multi_boot_offset = IO_SYNC_READ32(VMR_EP_PLM_MULTIBOOT);
 	msg->multiboot_payload.multi_boot_offset = multi_boot_offset;
 
 	RMGMT_LOG("A offset %x:%x, B offset %x:%x",

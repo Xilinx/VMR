@@ -214,6 +214,9 @@ static cl_log_type_t convert_log_pid(enum xgq_cmd_log_page_type type)
 	case XGQ_CMD_LOG_INFO:
 		ltype = CL_LOG_INFO;
 		break;
+	case XGQ_CMD_LOG_ENDPOINT:
+		ltype = CL_LOG_ENDPOINT;
+		break;
 	default:
 		ltype = CL_LOG_UNKNOWN;
 		break;
@@ -509,7 +512,7 @@ static inline bool read_vmr_shared_mem(struct vmr_shared_mem *mem)
 {
 	int ret = 0;
 
-	ret = cl_memcpy_fromio32(RPU_SHARED_MEMORY_START, mem, sizeof(*mem));
+	ret = cl_memcpy_fromio32(VMR_EP_RPU_SHARED_MEMORY_START, mem, sizeof(*mem));
 	if (ret == -1 || mem->vmr_magic_no != VMR_MAGIC_NO) {
 		MSG_ERR("read shared memory partition table failed");
 		return false;
@@ -603,9 +606,9 @@ static void init_vmr_status(uint32_t ring_len)
 	mem.log_msg_buf_off = mem.vmr_status_off + mem.vmr_status_len;
 	mem.log_msg_buf_len = LOG_BUF_LEN;
 	mem.vmr_data_start = mem.log_msg_buf_off + mem.log_msg_buf_len;
-	mem.vmr_data_end = RPU_SHARED_MEMORY_END - RPU_SHARED_MEMORY_START;
+	mem.vmr_data_end = VMR_EP_RPU_SHARED_MEMORY_END - VMR_EP_RPU_SHARED_MEMORY_START;
 
-	cl_memcpy_toio32(RPU_SHARED_MEMORY_START, &mem, sizeof(mem));
+	cl_memcpy_toio32(VMR_EP_RPU_SHARED_MEMORY_START, &mem, sizeof(mem));
 
 	/* re-init device stat to 0 */
 	IO_SYNC_WRITE32(0x0, RPU_SHARED_MEMORY_ADDR(mem.vmr_status_off));	
@@ -618,10 +621,10 @@ static int init_xgq()
 	uint64_t flags = 0;
 
 	/* Reset ring buffer */
-	cl_memset_io8(RPU_RING_BUFFER_OFFSET, 0, ring_len);
+	cl_memset_io8(VMR_EP_RPU_RING_BUFFER_BASE, 0, ring_len);
 
-        ret = xgq_alloc(&rpu_xgq, flags, xgq_io_hdl, RPU_RING_BUFFER_OFFSET, &ring_len,
-		RPU_XGQ_SLOT_SIZE, RPU_SQ_BASE, RPU_CQ_BASE);
+        ret = xgq_alloc(&rpu_xgq, flags, xgq_io_hdl, VMR_EP_RPU_RING_BUFFER_BASE, &ring_len,
+		RPU_XGQ_SLOT_SIZE, VMR_EP_RPU_SQ_BASE, VMR_EP_RPU_CQ_BASE);
 	if (ret) {
 		MSG_ERR("xgq_alloc failed: %d", ret);
 		return ret;

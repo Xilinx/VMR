@@ -63,7 +63,7 @@ void ucs_clock_shutdown()
     u32 shutdownSatus = 0 ;
 
     // offset for clock shutdown
-    u32 originalValue = IO_SYNC_READ32(EP_UCS_CONTROL);
+    u32 originalValue = IO_SYNC_READ32(VMR_EP_UCS_CONTROL);
 
     // clear 23:4 bits
     u32 triggerValue = originalValue & 0xFF00000F;
@@ -72,8 +72,8 @@ void ucs_clock_shutdown()
     triggerValue = triggerValue | 0x001B6320;
 
      //the bits can be immediately cleared back to 0, as the shutdown state is latched by the hardware
-    IO_SYNC_WRITE32(triggerValue, EP_UCS_CONTROL) ;
-    IO_SYNC_WRITE32(originalValue, EP_UCS_CONTROL) ;
+    IO_SYNC_WRITE32(triggerValue, VMR_EP_UCS_CONTROL) ;
+    IO_SYNC_WRITE32(originalValue, VMR_EP_UCS_CONTROL) ;
 
     //offset to read shutdown status
     shutdownSatus = IO_SYNC_READ32(XPAR_BLP_BLP_LOGIC_ULP_CLOCKING_UCS_CONTROL_STATUS_GPIO_UCS_CONTROL_STATUS_BASEADDR);
@@ -528,7 +528,7 @@ static int validate_sensor_payload(struct xgq_vmr_sensor_payload *payload)
 	int ret = -EINVAL;
 	u32 address = RPU_SHARED_MEMORY_ADDR(payload->address);
 
-	if ((address + SENSOR_RESP_BUFFER_SIZE) >= RPU_SHARED_MEMORY_END) {
+	if ((address + SENSOR_RESP_BUFFER_SIZE) >= VMR_EP_RPU_SHARED_MEMORY_END) {
 		VMC_ERR("address overflow 0x%x", address);
 		return ret;
 	}

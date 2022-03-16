@@ -52,22 +52,22 @@ struct rmgmt_handler {
 
 static void inline axigate_freeze()
 {
-	IO_SYNC_WRITE32(0x0, EP_PR_ISOLATION);
+	IO_SYNC_WRITE32(0x0, VMR_EP_PR_ISOLATION);
 }
 
 static void inline axigate_free()
 {
-	IO_SYNC_WRITE32(0x3, EP_PR_ISOLATION);
+	IO_SYNC_WRITE32(0x3, VMR_EP_PR_ISOLATION);
 }
 
 static void inline ucs_stop()
 {
-	IO_SYNC_WRITE32(0x0, EP_UCS_CONTROL);
+	IO_SYNC_WRITE32(0x0, VMR_EP_UCS_CONTROL);
 }
 
 static void inline ucs_start()
 {
-	IO_SYNC_WRITE32(0x1, EP_UCS_CONTROL);
+	IO_SYNC_WRITE32(0x1, VMR_EP_UCS_CONTROL);
 }
 
 #endif

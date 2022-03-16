@@ -34,6 +34,7 @@ typedef enum cl_log_type {
 	CL_LOG_FW		= 0x2,
 	CL_LOG_INFO		= 0x3,
 	CL_LOG_AF_CLEAR		= 0x4,
+	CL_LOG_ENDPOINT		= 0x5,
 } cl_log_type_t;
 
 typedef enum cl_clock_type {

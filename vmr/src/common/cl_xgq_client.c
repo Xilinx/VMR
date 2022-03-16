@@ -53,7 +53,7 @@ static bool shm_acquire_data(u32 *addr_off, u32 *size)
 		return false;
 
 	*addr_off = mem.apu_xgq_ring_buffer + APU_RING_BUFFER_SIZE;
-	*size = APU_SHARED_MEMORY_END - APU_SHARED_MEMORY_ADDR(*addr_off) + 1;
+	*size = VMR_EP_APU_SHARED_MEMORY_END - APU_SHARED_MEMORY_ADDR(*addr_off) + 1;
 
 	return true;
 }
@@ -239,7 +239,7 @@ int cl_xgq_client_probe()
 		return -1;
 	}
 
-	ret = cl_memcpy_fromio32(APU_SHARED_MEMORY_START, &mem, sizeof(mem));
+	ret = cl_memcpy_fromio32(VMR_EP_APU_SHARED_MEMORY_START, &mem, sizeof(mem));
 	if (ret == -1) {
 		MSG_ERR("read APU shared memory partition table failed");
 		return -1;
@@ -259,7 +259,7 @@ int cl_xgq_client_probe()
 
 	/* APU channel is ready, attaching xgq */
 	ret = xgq_attach(&apu_xgq, flags, 0, APU_SHARED_MEMORY_ADDR(mem.apu_xgq_ring_buffer),
-		APU_SQ_BASE, APU_CQ_BASE);
+		VMR_EP_APU_SQ_BASE, VMR_EP_APU_CQ_BASE);
 	if (ret != 0) {
 		MSG_ERR("xgq_attach failed: %d, please reset device", ret);
 		return -1;

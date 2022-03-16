@@ -127,6 +127,9 @@ check_vmr() {
 		exit 1
 	fi
 
+	#echo "=== VMR EndPoints info ==="
+	#arm-none-eabi-strings $VMR_FILE |grep "^VMR_EP"
+
 	echo "=== VMR github info ==="
 	arm-none-eabi-strings $VMR_FILE |grep -E "VMR_GIT|VMR_TOOL"
 

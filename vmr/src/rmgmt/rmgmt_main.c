@@ -33,11 +33,39 @@ int xgq_clock_flag = 0;
 int xgq_apubin_flag = 0;
 int xgq_vmr_control_flag = 0;
 int xgq_apu_control_flag = 0;
-char log_msg[512] = { 0 };
+char log_msg[1024] = { 0 };
 
 SemaphoreHandle_t xSemaDownload;
 
 int32_t VMC_Start_SC_Update(void);
+
+static struct vmr_endpoints vmr_eps[] = {
+	{"VMR_EP_SYSTEM_DTB", VMR_EP_SYSTEM_DTB},
+	{"VMR_EP_PR_ISOLATION", VMR_EP_PR_ISOLATION},
+	{"VMR_EP_UCS_CONTROL", VMR_EP_UCS_CONTROL},
+	{"VMR_EP_FIREWALL_USER_BASE", VMR_EP_FIREWALL_USER_BASE},
+	{"VMR_EP_GAPPING_DEMAND", VMR_EP_GAPPING_DEMAND},
+	{"VMR_EP_ACLK_KERNEL_0", VMR_EP_ACLK_KERNEL_0},
+	{"VMR_EP_ACLK_KERNEL_1", VMR_EP_ACLK_KERNEL_1},
+	{"VMR_EP_ACLK_FREQ_0", VMR_EP_ACLK_FREQ_0},
+	{"VMR_EP_ACLK_FREQ_KERNEL_0", VMR_EP_ACLK_FREQ_KERNEL_0},
+	{"VMR_EP_ACLK_FREQ_KERNEL_1", VMR_EP_ACLK_FREQ_KERNEL_1},
+	{"VMR_EP_PLM_MULTIBOOT", VMR_EP_PLM_MULTIBOOT},
+	{"VMR_EP_PMC_REG", VMR_EP_PMC_REG},
+	{"VMR_EP_RPU_SHARED_MEMORY_START", VMR_EP_RPU_SHARED_MEMORY_START},
+	{"VMR_EP_RPU_SHARED_MEMORY_END", VMR_EP_RPU_SHARED_MEMORY_END},
+	{"VMR_EP_RPU_PRELOAD_FPT", VMR_EP_RPU_PRELOAD_FPT},
+	{"VMR_EP_RPU_SQ_BASE", VMR_EP_RPU_SQ_BASE},
+	{"VMR_EP_RPU_CQ_BASE", VMR_EP_RPU_CQ_BASE},
+	{"VMR_EP_APU_SHARED_MEMORY_START", VMR_EP_APU_SHARED_MEMORY_START},
+	{"VMR_EP_APU_SHARED_MEMORY_END", VMR_EP_APU_SHARED_MEMORY_END},
+	{"VMR_EP_APU_SQ_BASE", VMR_EP_APU_SQ_BASE},
+	{"VMR_EP_APU_CQ_BASE", VMR_EP_APU_CQ_BASE},
+	{"VMR_EP_RPU_RING_BUFFER_BASE", VMR_EP_RPU_RING_BUFFER_BASE},
+#ifdef CONFIG_FORCE_RESET
+	{"VMR_EP_FORCE_RESET", VMR_EP_FORCE_RESET},
+#endif
+};
 
 static bool acquire_download_sema()
 {
@@ -95,7 +123,7 @@ static int validate_data_payload(struct xgq_vmr_data_payload *payload)
 	u32 address = RPU_SHARED_MEMORY_ADDR(payload->address);
 	u32 size = payload->size;
 
-	if (address + size >= RPU_SHARED_MEMORY_END) {
+	if (address + size >= VMR_EP_RPU_SHARED_MEMORY_END) {
 		RMGMT_ERR("address overflow 0x%x", address);
 		return ret;
 	}
@@ -115,7 +143,7 @@ static int validate_log_payload(struct xgq_vmr_log_payload *payload, u32 size)
 	int ret = -EINVAL;
 	u32 address = RPU_SHARED_MEMORY_ADDR(payload->address);
 
-	if (address >= RPU_SHARED_MEMORY_END) {
+	if (address >= VMR_EP_RPU_SHARED_MEMORY_END) {
 		RMGMT_ERR("address overflow 0x%x", address);
 		return ret;
 	}
@@ -280,27 +308,42 @@ static u32 rmgmt_fpt_status_query(cl_msg_t *msg, char *buf, u32 size)
 		msg->multiboot_payload.pdimeta_size,
 		msg->multiboot_payload.default_partition_size);
 	if (count > size) {
-		CL_ERR(APP_MAIN, "msg is truncated");
+		RMGMT_WARN("msg is truncated");
 		return size;
 	}
 	
-	count += snprintf(buf + count, size, "backup image offset: 0x%lx\n"
+	count += snprintf(buf + count, size - count, "backup image offset: 0x%lx\n"
 		"backup image size: 0x%lx\nbackup image capacity: 0x%lx\n",
 		msg->multiboot_payload.backup_partition_offset,
 		msg->multiboot_payload.pdimeta_backup_size,
 		msg->multiboot_payload.backup_partition_size);
 	if (count > size) {
-		CL_ERR(APP_MAIN, "msg is truncated");
+		RMGMT_WARN("msg is truncated");
 		return size;
 	}
 
-	count += snprintf(buf + count, size, "SC firmware size: 0x%lx\n",
+	count += snprintf(buf + count, size - count, "SC firmware size: 0x%lx\n",
 		msg->multiboot_payload.scfw_size);
 	if (count > size) {
-		CL_ERR(APP_MAIN, "msg is truncated");
+		RMGMT_WARN("msg is truncated");
 		return size;
 	}
 
+	return count;
+}
+
+static u32 rmgmt_endpoints_query(cl_msg_t *msg, char *buf, u32 size)
+{
+	u32 count = 0;
+
+	for (int i = 0; i < ARRAY_SIZE(vmr_eps); i++) {
+		count += snprintf(buf + count, size - count, "%s: 0x%lx\n",
+			vmr_eps[i].vmr_ep_name, vmr_eps[i].vmr_ep_address);
+		if (count > size) {
+			RMGMT_WARN("msg is truncated at %d %s", i, vmr_eps[i].vmr_ep_name);
+			return size;
+		}
+	}
 	return count;
 }
 
@@ -343,7 +386,29 @@ static int vmr_verbose_info(cl_msg_t *msg)
 	total_count += count;
 
 done:
+	/* set correct size in result payload */
+	msg->log_payload.size = total_count;
 
+	return 0;
+}
+
+static int vmr_endpoint_info(cl_msg_t *msg)
+{
+	u32 safe_size = sizeof(log_msg);
+	u32 dst_addr = RPU_SHARED_MEMORY_ADDR(msg->log_payload.address);
+	u32 count = 0;
+	u32 total_count = 0;
+
+	count = rmgmt_endpoints_query(msg, log_msg, safe_size);
+	if (msg->log_payload.size < total_count + count) {
+		RMGMT_ERR("log buffer %d is too small, log message %s is truncated",
+			msg->log_payload.size, log_msg);
+		goto done;
+	}
+	cl_memcpy_toio8(dst_addr + total_count, &log_msg, count);
+	total_count += count;
+
+done:
 	/* set correct size in result payload */
 	msg->log_payload.size = total_count;
 
@@ -352,12 +417,12 @@ done:
 
 static inline u32 read_firewall()
 {
-	return IO_SYNC_READ32(EP_FIREWALL_USER_BASE + FAULT_STATUS);
+	return IO_SYNC_READ32(VMR_EP_FIREWALL_USER_BASE + FAULT_STATUS);
 }
 
 static inline void write_firewall_unblock(u32 val)
 {
-	return IO_SYNC_WRITE32(val, EP_FIREWALL_USER_BASE + UNBLOCK_CTRL);
+	return IO_SYNC_WRITE32(val, VMR_EP_FIREWALL_USER_BASE + UNBLOCK_CTRL);
 }
 
 static inline u32 check_firewall()
@@ -487,6 +552,9 @@ static int xgq_log_page_cb(cl_msg_t *msg, void *arg)
 	case CL_LOG_INFO:
 		ret = vmr_verbose_info(msg);
 		break;
+	case CL_LOG_ENDPOINT:
+		ret = vmr_endpoint_info(msg);
+		break;
 	default:
 		RMGMT_LOG("unsupported type %d", msg->log_payload.pid);
 		ret = -EINVAL;
@@ -502,7 +570,7 @@ static int xgq_log_page_cb(cl_msg_t *msg, void *arg)
 static int rmgmt_init_pmc()
 {
 	u32 val = 0;
-	u32 pmc_intr = EP_PMC_REG;
+	u32 pmc_intr = VMR_EP_PMC_REG;
 
 	val = IO_SYNC_READ32(pmc_intr);
 
@@ -550,7 +618,7 @@ static int rmgmt_enable_boot_default()
 
 static void rmgmt_enable_srst_por()
 {
-	u32 pmc_intr = EP_PMC_REG;
+	u32 pmc_intr = VMR_EP_PMC_REG;
 
 	IO_SYNC_WRITE32(PMC_POR_ENABLE_BIT, pmc_intr + PMC_REG_ACTION);
 	IO_SYNC_WRITE32(PMC_POR_ENABLE_BIT, pmc_intr + PMC_REG_SRST);
@@ -558,7 +626,7 @@ static void rmgmt_enable_srst_por()
 
 static void rmgmt_set_multiboot(u32 offset)
 {
-	IO_SYNC_WRITE32(offset, EP_PLM_MULTIBOOT);
+	IO_SYNC_WRITE32(offset, VMR_EP_PLM_MULTIBOOT);
 }
 
 static int rmgmt_enable_boot_backup()

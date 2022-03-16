@@ -374,7 +374,7 @@ static int rmgmt_ospi_apu_download(struct rmgmt_handler *rh, u32 len)
 		RMGMT_ERR("get system.dtb failed");
 		return -1;
 	}
-	cl_memcpy(EP_SYSTEM_DTB, dtb_offset, dtb_size);
+	cl_memcpy(VMR_EP_SYSTEM_DTB, dtb_offset, dtb_size);
 
 	ret = rmgmt_xclbin_section_info(axlf, PDI, &offset, &size);
 	if (ret) {
