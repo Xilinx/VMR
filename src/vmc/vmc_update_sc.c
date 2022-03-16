@@ -5,6 +5,7 @@
 
 #include "FreeRTOS.h"
 #include "timers.h"
+#include "semphr.h"
 #include "task.h"
 
 #include "vmc_api.h"
@@ -12,64 +13,47 @@
 #include "cl_uart_rtos.h"
 #include "vmc_update_sc.h"
 #include "vmc_sc_comms.h"
+#include "../rmgmt/rmgmt_fpt.h"
 
+
+static TimerHandle_t xSCUpdateTimeOutTimer = NULL;
+static TaskHandle_t xSCUpdateTaskHandle = NULL;
+
+extern SemaphoreHandle_t vmc_sc_comms_lock;
+extern SemaphoreHandle_t vmc_sensor_monitoring_lock;
+extern uart_rtos_handle_t uart_vmcsc_log;
+extern SC_VMC_Data sc_vmc_data;
+
+/* Global structures */
+efpt_sc_t fpt_sc_loc;
+
+/* Variables for SC update data packets */
+u8 fpt_sc_version[MAX_SC_VERSION_SIZE] = {0x00};
+static u32 addr = 0x00;
+static u32 data_ptr = 0x00;
+static u32 Prev_length = 0x00;
+static bool addr_flag = false;
+static bool all_pkt_sent = false;
+static bool fptSCvalid = false;
+
+/* Variables will keep track of SC update progress */
+int32_t update_progress = 0;
+static u32 curr_prog = 0;
+static u32 max_data_slot = 0;
+
+u8 receive_bufr[BSL_MAX_RCV_DATA_SIZE] = {0x00};
+static u32 receivedByteCount = 0x00;
 
 upgrade_status_t upgradeStatus = STATUS_SUCCESS;
 upgrade_state_t upgradeState = SC_STATE_IDLE;
 scUpateError_t upgradeError = SC_UPDATE_NO_ERROR;
 
-TimerHandle_t xSCUpdateTimeOutTimer = NULL;
-TaskHandle_t xSCUpdateTaskHandle = NULL;
-extern uart_rtos_handle_t uart_vmcsc_log;
-
-/* Global structures */
-SC_VMC_Data sc_version;
-cl_msg_t fpt_sc_offsets;
-efpt_sc_t fpt_sc_loc;
-
-/* Variables for SC update data packets */
-u8 bsl_send_data_pkt[BSL_MAX_DATA_SIZE] = {0x00};
-u8 addr_flag = 0x00;
-u32 addr = 0x00;
-u16 total_length = 0x00;
-u32 data_ptr = 0;
-u32 Prev_length = 0x00;
-u16 CRC_Val = 0x00;
-u16 dataCRC = 0x00;
-u8 msg[1] = {0x00};
-u8 fpt_sc_version[3] = {0x00};
-bool all_pkt_sent = false;
-bool fptSCvalid = false;
-
-/* Variable to keep track whether SC update is going on or not */
-u8 sc_update_flag = 0x00;
-
-/* Variables will keep track of SC update progress */
-int32_t update_progress = 0;
-u32 curr_prog = 0;
-u32 max_data_slot = 0;
-
-u8 receive_bufr[32] = {0x00};
-u32 receivedByteCount = 0x00;
-
-u8 bslPasswd[BSL_UNLOCK_PASSWORD_REQ] = { 0x80, 0x39, 0x00, 0x21, 0x58, 0x41,
-		0x50, 0x3A, 0x20, 0x58, 0x69, 0x6C, 0x69, 0x6E, 0x78, 0x20, 0x41, 0x6C,
-		0x6C, 0x20, 0x50, 0x72, 0x6F, 0x67, 0x72, 0x61, 0x6D, 0x6D, 0x61, 0x62,
-		0x6C, 0x65, 0x2C, 0x20, 0x58, 0x42, 0x42, 0x3A, 0x20, 0x58, 0x69, 0x6C,
-		0x69, 0x6E, 0x78, 0x20, 0x42, 0x72, 0x61, 0x6E, 0x64, 0x65, 0x64, 0x20,
-		0x42, 0x6F, 0x61, 0x72, 0x64, 0x73, 0x82, 0xE5 };
-
-
-extern void rmgmt_extension_fpt_query(struct cl_msg *msg);
-extern SemaphoreHandle_t vmc_sc_comms_lock;
-extern SemaphoreHandle_t vmc_sensor_monitoring_lock;
 
 
 int32_t VMC_SCFW_Program_Progress(void)
 {
 	return update_progress;
 }
-
 
 static inline void VMC_Read_Data32(u32 *addr, u32 *data, size_t sz)
 {
@@ -81,7 +65,7 @@ static inline void VMC_Read_Data32(u32 *addr, u32 *data, size_t sz)
 	}
 }
 
-unsigned short crc16( unsigned char * pMsg, unsigned int size )
+static inline unsigned short crc16( unsigned char * pMsg, unsigned int size )
 {
 	unsigned short crc = 0xFFFF;
     unsigned short i = 0;
@@ -98,8 +82,7 @@ unsigned short crc16( unsigned char * pMsg, unsigned int size )
     return crc;
 }
 
-
-char Char2HexAdd( char C)
+static inline char Char2HexAdd( char C)
 {
 
     if (C >= '0' && C <= '9')
@@ -114,8 +97,7 @@ char Char2HexAdd( char C)
     return (C & 0x0F);
 }
 
-
-char Char2Hex (char C)
+static inline char Char2Hex (char C)
 {
 
     if (C >= '0' && C <= '9')
@@ -130,8 +112,7 @@ char Char2Hex (char C)
     return (C & 0x0F);
 }
 
-
-int VMC_Validate_BSL_resp(unsigned char *buffer, unsigned short length)
+static inline int VMC_Validate_BSL_resp(unsigned char *buffer, unsigned short length)
 {
 	int status = -1;
 	u16 dataLen = 0;
@@ -159,8 +140,7 @@ int VMC_Validate_BSL_resp(unsigned char *buffer, unsigned short length)
 	return status;
 }
 
-
-u8 Check_Received_SC_Header(void *ptr1, void *ptr2, u8 len)
+static inline u8 Check_Received_SC_Header(void *ptr1, void *ptr2, u8 len)
 {
 	u8 *buf1 = ptr1;
 	u8 *buf2 = ptr2;
@@ -179,20 +159,20 @@ u8 Check_Received_SC_Header(void *ptr1, void *ptr2, u8 len)
     return 0;
 }
 
-u8 Get_SC_Checksum(void)
+static inline u8 Get_SC_Checksum(void)
 {
 	/* Get the SC version and compare with the backup one and return accordingly */
 	u8 retVal = UPDATE_REQUIRED;
 
-	/* if (fpt_sc_version[MAJOR] > sc_version.scVersion[MAJOR]) {
+	/* if (fpt_sc_version[MAJOR] > sc_vmc_data.scVersion[MAJOR]) {
 		retVal = UPDATE_REQUIRED;
-	} else if (fpt_sc_version[MAJOR] == sc_version.scVersion[MAJOR]) {
-		if (fpt_sc_version[MINOR] > sc_version.scVersion[MINOR]) {
+	} else if (fpt_sc_version[MAJOR] == sc_vmc_data.scVersion[MAJOR]) {
+		if (fpt_sc_version[MINOR] > sc_vmc_data.scVersion[MINOR]) {
 			retVal = UPDATE_REQUIRED;
-		} else if (fpt_sc_version[MINOR] == sc_version.scVersion[MINOR]) {
-			if (fpt_sc_version[REVISION] > sc_version.scVersion[REVISION]) {
+		} else if (fpt_sc_version[MINOR] == sc_vmc_data.scVersion[MINOR]) {
+			if (fpt_sc_version[REVISION] > sc_vmc_data.scVersion[REVISION]) {
 				retVal = UPDATE_REQUIRED;
-			} else if (fpt_sc_version[REVISION] == sc_version.scVersion[REVISION]) {
+			} else if (fpt_sc_version[REVISION] == sc_vmc_data.scVersion[REVISION]) {
 				retVal = NO_UPDATE_REQUIRED;
 			} else {
 				retVal = UPDATE_REQUIRED;
@@ -214,54 +194,6 @@ void xSCUpdateTimeOutTimerCallback(TimerHandle_t xTimer)
 	update_progress = upgradeError;
 	upgradeStatus = STATUS_FAILURE;
 	upgradeState = SC_STATE_IDLE;
-
-	memset(receive_bufr,0x00,sizeof(receive_bufr));
-	receivedByteCount = 0;
-
-	VMC_LOG("\n\rSC Update Timeout.. \n\rERROR in SC Update. Retry... \r\n");
-}
-
-void VMC_Get_Fpt_SC_Version(cl_msg_t *msg)
-{
-	u8 read_buffer[SC_HEADER_SIZE] = {0};
-	u8 header[SC_HEADER_SIZE] = SC_HEADER_MSG;
-	u8 retVal = 0x01;
-	data_ptr = 0x00;
-
-
-	rmgmt_extension_fpt_query(msg);
-
-	fpt_sc_loc.start_address = msg->multiboot_payload.scfw_offset;
-	fpt_sc_loc.size = msg->multiboot_payload.scfw_size;
-
-	VMC_LOG("\n\rFpt SC Base Addr : 0x%x\r\n",fpt_sc_loc.start_address);
-	VMC_LOG("\n\rFpt SC size : 0x%x\r\n",fpt_sc_loc.size);
-
-	VMC_Read_Data32((u32 *) fpt_sc_loc.start_address, (u32 *)read_buffer, (SC_HEADER_SIZE+1)/4);
-
-	retVal = Check_Received_SC_Header(read_buffer,header,sizeof(read_buffer));
-	if(retVal == 0x00)
-	{
-		fptSCvalid = true;
-		VMC_LOG("\n\rSC Identification Passed !!\r\n");
-
-		portENTER_CRITICAL();
-		VMC_Parse_Fpt_SC_Version(((fpt_sc_loc.start_address + SC_TOT_HEADER_SIZE + fpt_sc_loc.size) - 0x33), &fpt_sc_version[0]);
-		portEXIT_CRITICAL();
-
-		VMC_LOG("\n\rFpt SC version : v%d.%d.%d\r\n",fpt_sc_version[0], fpt_sc_version[1], fpt_sc_version[2]);
-
-		xSCUpdateTimeOutTimer = xTimerCreate("SC Update timeout timer", pdMS_TO_TICKS(1000 * 60), pdFALSE, NULL, xSCUpdateTimeOutTimerCallback);
-		if((xSCUpdateTimeOutTimer == NULL))
-		{
-			VMC_LOG("\n\rSC Update Timer creation failed.. !!\r\n");
-		}
-	}
-	else
-	{
-		fptSCvalid = false;
-		VMC_ERR("\n\rSC Identification failed !!\r\n");
-	}
 }
 
 int32_t VMC_Start_SC_Update(void)
@@ -302,13 +234,13 @@ int32_t VMC_Start_SC_Update(void)
 	return retVal;
 }
 
-
 void VMC_Parse_Fpt_SC_Version(u32 addr_location, u8 *versionbuff)
 {
 	u8 state = PARSE_ADDRESS;
 	u8 Complete_flag = 0;
 	u8 version_ptr = 0x00;
 	bool version_flag = false;
+	u8 msg = 0x00;
 
 	while (Complete_flag == 0)
 	{
@@ -317,18 +249,18 @@ void VMC_Parse_Fpt_SC_Version(u32 addr_location, u8 *versionbuff)
 
 		case PARSE_ADDRESS:
 
-			msg[0] = IO_SYNC_READ8(addr_location + data_ptr);
+			msg = IO_SYNC_READ8(addr_location + data_ptr);
 			data_ptr += BYTES_TO_READ;
 
-			if ((addr_flag == 1) && (msg[0] != SECTION_START) && (msg[0] != FILE_TERMINATION_CHAR))
+			if ((addr_flag == true) && (msg != SECTION_START) && (msg != FILE_TERMINATION_CHAR))
 			{
-				addr_flag = 0;
+				addr_flag = false;
 				addr = 0;
-				while (msg[0] != NEW_LINE)
+				while (msg != NEW_LINE)
 				{
-					msg[0] = Char2HexAdd(msg[0]);
-					addr = (addr << (4)) | (msg[0] & 0x0F);
-					msg[0] = IO_SYNC_READ8(addr_location + data_ptr);
+					msg = Char2HexAdd(msg);
+					addr = (addr << (4)) | (msg & 0x0F);
+					msg = IO_SYNC_READ8(addr_location + data_ptr);
 					data_ptr += BYTES_TO_READ;
 				}
 
@@ -342,11 +274,11 @@ void VMC_Parse_Fpt_SC_Version(u32 addr_location, u8 *versionbuff)
 			}
 			else
 			{
-				if (msg[0] == SECTION_START)
+				if (msg == SECTION_START)
 				{
-					addr_flag = 1;
+					addr_flag = true;
 				}
-				else if (msg[0] == FILE_TERMINATION_CHAR)
+				else if (msg == FILE_TERMINATION_CHAR)
 				{
 					Complete_flag = 1;
 				}
@@ -360,45 +292,45 @@ void VMC_Parse_Fpt_SC_Version(u32 addr_location, u8 *versionbuff)
 
 		case PARSE_DATA:
 
-			msg[0] = IO_SYNC_READ8(addr_location + data_ptr);
+			msg = IO_SYNC_READ8(addr_location + data_ptr);
 			data_ptr += BYTES_TO_READ;
 
-			while ((msg[0] != SECTION_START) && (msg[0] != FILE_TERMINATION_CHAR))
+			while ((msg != SECTION_START) && (msg != FILE_TERMINATION_CHAR))
 			{
-				if (msg[0] != NEW_LINE && msg[0] != SPACE)
+				if (msg != NEW_LINE && msg != SPACE)
 				{
-					msg[0] = Char2Hex(msg[0]);
+					msg = Char2Hex(msg);
 					if(version_flag)
-						versionbuff[version_ptr] = msg[0] & 0x0F;
+						versionbuff[version_ptr] = msg & 0x0F;
 
-					if ((msg[0] == NEW_LINE) || (msg[0] == SPACE) || (msg[0] == SECTION_START))
+					if ((msg == NEW_LINE) || (msg == SPACE) || (msg == SECTION_START))
 					{
-						addr_flag = 1;
+						addr_flag = true;
 						version_flag = false;
 						state = PARSE_ADDRESS;
 						break;
 					}
 
-					msg[0] = IO_SYNC_READ8(addr_location + data_ptr);
+					msg = IO_SYNC_READ8(addr_location + data_ptr);
 					data_ptr += BYTES_TO_READ;
-					msg[0] = Char2Hex(msg[0]);
+					msg = Char2Hex(msg);
 					if(version_flag)
 					{
-						versionbuff[version_ptr] = (versionbuff[version_ptr] << 4) | (msg[0] & 0x0F);
+						versionbuff[version_ptr] = (versionbuff[version_ptr] << 4) | (msg & 0x0F);
 						version_ptr++;
 					}
 				}
 
-				msg[0] = IO_SYNC_READ8(addr_location + data_ptr);
+				msg = IO_SYNC_READ8(addr_location + data_ptr);
 				data_ptr += BYTES_TO_READ;
 			}
-			if (msg[0] == SECTION_START)
+			if (msg == SECTION_START)
 			{
-				addr_flag = 1;
+				addr_flag = true;
 				state = PARSE_ADDRESS;
 				version_flag = false;
 			}
-			else if (msg[0] == FILE_TERMINATION_CHAR)
+			else if (msg == FILE_TERMINATION_CHAR)
 			{
 				Complete_flag = 1;
 			}
@@ -412,12 +344,13 @@ void VMC_Parse_Fpt_SC_Version(u32 addr_location, u8 *versionbuff)
 	}
 }
 
-
-void VMC_Parse_Fpt_SC(u32 addr_location, u8 *bsl_send_data_pkt, u16 *pkt_length)
+void VMC_Parse_Fpt_SC(u32 addr_location, u8 *bsl_send_data_pkt, u16 *pkt_length, u16 *dataCRC)
 {
 	u8 state = PARSE_ADDRESS;
 	u8 Complete_flag = 0;
 	u32 length = 0;
+	u8 msg = 0x00;
+	u16 CRC_Val = 0x00;
 
 	while (Complete_flag == 0)
 	{
@@ -426,7 +359,7 @@ void VMC_Parse_Fpt_SC(u32 addr_location, u8 *bsl_send_data_pkt, u16 *pkt_length)
 
 		case PARSE_ADDRESS:
 
-			msg[0] = IO_SYNC_READ8(addr_location + data_ptr);
+			msg = IO_SYNC_READ8(addr_location + data_ptr);
 			data_ptr += BYTES_TO_READ;
 			curr_prog +=1;
 			if(curr_prog >= max_data_slot)
@@ -435,15 +368,15 @@ void VMC_Parse_Fpt_SC(u32 addr_location, u8 *bsl_send_data_pkt, u16 *pkt_length)
 				curr_prog = 0;
 			}
 
-			if ((addr_flag == 1) && (msg[0] != SECTION_START) && (msg[0] != FILE_TERMINATION_CHAR))
+			if ((addr_flag == true) && (msg != SECTION_START) && (msg != FILE_TERMINATION_CHAR))
 			{
-				addr_flag = 0;
+				addr_flag = false;
 				addr = 0;
-				while (msg[0] != NEW_LINE)
+				while (msg != NEW_LINE)
 				{
-					msg[0] = Char2HexAdd(msg[0]);
-					addr = (addr << (4)) | (msg[0] & 0x0F);
-					msg[0] = IO_SYNC_READ8(addr_location + data_ptr);
+					msg = Char2HexAdd(msg);
+					addr = (addr << (4)) | (msg & 0x0F);
+					msg = IO_SYNC_READ8(addr_location + data_ptr);
 					data_ptr += BYTES_TO_READ;
 					curr_prog +=1;
 					if(curr_prog >= max_data_slot)
@@ -463,11 +396,11 @@ void VMC_Parse_Fpt_SC(u32 addr_location, u8 *bsl_send_data_pkt, u16 *pkt_length)
 			}
 			else
 			{
-				if (msg[0] == SECTION_START)
+				if (msg == SECTION_START)
 				{
-					addr_flag = 1;
+					addr_flag = true;
 				}
-				else if (msg[0] == FILE_TERMINATION_CHAR)
+				else if (msg == FILE_TERMINATION_CHAR)
 				{
 					Complete_flag = 1;
 					all_pkt_sent = true;
@@ -489,7 +422,7 @@ void VMC_Parse_Fpt_SC(u32 addr_location, u8 *bsl_send_data_pkt, u16 *pkt_length)
 
 		case PARSE_DATA:
 
-			msg[0] = IO_SYNC_READ8(addr_location + data_ptr);
+			msg = IO_SYNC_READ8(addr_location + data_ptr);
 			data_ptr += BYTES_TO_READ;
 			curr_prog +=1;
 			if(curr_prog >= max_data_slot)
@@ -498,14 +431,14 @@ void VMC_Parse_Fpt_SC(u32 addr_location, u8 *bsl_send_data_pkt, u16 *pkt_length)
 				curr_prog = 0;
 			}
 
-			while ((msg[0] != SECTION_START) && (length < (BSL_MAX_DATA_SIZE - BSL_DATA_PACKET_CRC_SIZE)) && (msg[0] != FILE_TERMINATION_CHAR))
+			while ((msg != SECTION_START) && (length < (BSL_MAX_DATA_SIZE - BSL_DATA_PACKET_CRC_SIZE)) && (msg != FILE_TERMINATION_CHAR))
 			{
-				if (msg[0] != NEW_LINE && msg[0] != SPACE)
+				if (msg != NEW_LINE && msg != SPACE)
 				{
-					msg[0] = Char2Hex(msg[0]);
-					bsl_send_data_pkt[length] = msg[0] & 0x0F;
+					msg = Char2Hex(msg);
+					bsl_send_data_pkt[length] = msg & 0x0F;
 
-					msg[0] = IO_SYNC_READ8(addr_location + data_ptr);
+					msg = IO_SYNC_READ8(addr_location + data_ptr);
 					data_ptr += BYTES_TO_READ;
 					curr_prog +=1;
 					if(curr_prog >= max_data_slot)
@@ -513,12 +446,12 @@ void VMC_Parse_Fpt_SC(u32 addr_location, u8 *bsl_send_data_pkt, u16 *pkt_length)
 						update_progress +=1;
 						curr_prog = 0;
 					}
-					msg[0] = Char2Hex(msg[0]);
-					bsl_send_data_pkt[length] = (bsl_send_data_pkt[length] << 4) | (msg[0] & 0x0F);
+					msg = Char2Hex(msg);
+					bsl_send_data_pkt[length] = (bsl_send_data_pkt[length] << 4) | (msg & 0x0F);
 					length++;
 				}
 
-				msg[0] = IO_SYNC_READ8(addr_location + data_ptr);
+				msg = IO_SYNC_READ8(addr_location + data_ptr);
 				data_ptr += BYTES_TO_READ;
 				curr_prog +=1;
 				if(curr_prog >= max_data_slot)
@@ -527,11 +460,11 @@ void VMC_Parse_Fpt_SC(u32 addr_location, u8 *bsl_send_data_pkt, u16 *pkt_length)
 					curr_prog = 0;
 				}
 			}
-			if (msg[0] == SECTION_START)
+			if (msg == SECTION_START)
 			{
-				addr_flag = 1;
+				addr_flag = true;
 			}
-			else if (msg[0] == FILE_TERMINATION_CHAR)
+			else if (msg == FILE_TERMINATION_CHAR)
 			{
 				all_pkt_sent = true;
 				/* VMC_LOG("Progress before q : %d",update_progress); */
@@ -552,7 +485,7 @@ void VMC_Parse_Fpt_SC(u32 addr_location, u8 *bsl_send_data_pkt, u16 *pkt_length)
 			length += 3;
 			bsl_send_data_pkt[length] = CRC_Val & 0xFF;
 			bsl_send_data_pkt[length + 1] = (CRC_Val >> 8) & 0xFF;
-			dataCRC = crc16(&bsl_send_data_pkt[8], Prev_length);
+			*dataCRC = crc16(&bsl_send_data_pkt[8], Prev_length);
 
 			break;
 
@@ -563,9 +496,51 @@ void VMC_Parse_Fpt_SC(u32 addr_location, u8 *bsl_send_data_pkt, u16 *pkt_length)
 	}
 }
 
+void VMC_Get_Fpt_SC_Version(void)
+{
+	u8 read_buffer[SC_HEADER_SIZE+1] = {0};
+	u8 header[] = SC_HEADER_MSG;
+	u8 retVal = 0x01;
+	data_ptr = 0x00;
 
+	cl_msg_t msg = {0};
 
-upgrade_status_t matchCRC_postWrite(unsigned int writeAdd)
+	rmgmt_extension_fpt_query(&msg);
+
+	fpt_sc_loc.start_address = msg.multiboot_payload.scfw_offset;
+	fpt_sc_loc.size = msg.multiboot_payload.scfw_size;
+
+	VMC_LOG("\n\rFpt SC Base Addr : 0x%x\r\n",fpt_sc_loc.start_address);
+	VMC_LOG("\n\rFpt SC size : 0x%x\r\n",fpt_sc_loc.size);
+
+	VMC_Read_Data32((u32 *) fpt_sc_loc.start_address, (u32 *)read_buffer, (SC_HEADER_SIZE+1)/4);
+
+	retVal = Check_Received_SC_Header(&read_buffer[0],&header[0],(sizeof(read_buffer)-1));
+	if(retVal == 0x00)
+	{
+		fptSCvalid = true;
+		VMC_LOG("\n\rSC Identification Passed !!\r\n");
+
+		portENTER_CRITICAL();
+		VMC_Parse_Fpt_SC_Version(((fpt_sc_loc.start_address + SC_TOT_HEADER_SIZE + fpt_sc_loc.size) - 0x33), &fpt_sc_version[0]);
+		portEXIT_CRITICAL();
+
+		VMC_LOG("\n\rFpt SC version : v%d.%d.%d\r\n",fpt_sc_version[0], fpt_sc_version[1], fpt_sc_version[2]);
+
+		xSCUpdateTimeOutTimer = xTimerCreate("SC Update timeout timer", pdMS_TO_TICKS(1000 * 60), pdFALSE, NULL, xSCUpdateTimeOutTimerCallback);
+		if((xSCUpdateTimeOutTimer == NULL))
+		{
+			VMC_LOG("\n\rSC Update Timer creation failed.. !!\r\n");
+		}
+	}
+	else
+	{
+		fptSCvalid = false;
+		VMC_ERR("\n\rSC Identification failed !!\r\n");
+	}
+}
+
+upgrade_status_t matchCRC_postWrite(unsigned int writeAdd, u16 dataCRC)
 {
 	upgrade_status_t status = STATUS_SUCCESS;
 
@@ -636,13 +611,12 @@ upgrade_status_t matchCRC_postWrite(unsigned int writeAdd)
 	return status;
 }
 
-
 void SCUpdateTask(void * arg)
 {
 	VMC_LOG(" SC Update Task Created !!!\n\r");
 
 	/* After Bootup, this function validates fpt SC image and the version */
-	VMC_Get_Fpt_SC_Version(&fpt_sc_offsets);
+	VMC_Get_Fpt_SC_Version();
 
 
     while(1)
@@ -724,7 +698,7 @@ void SCUpdateTask(void * arg)
 						}
 					}
 
-					if(retryCount == SC_UPDATE_MAX_RETRY_COUNT)
+					if(retryCount >= SC_UPDATE_MAX_RETRY_COUNT)
 					{
 						retryCount = 0;
 						upgradeError = SC_UPDATE_ERROR_SC_BSL_SYNC_FAILED;
@@ -775,7 +749,7 @@ void SCUpdateTask(void * arg)
 						}
 					}
 
-					if(retryCount == SC_UPDATE_MAX_RETRY_COUNT)
+					if(retryCount >= SC_UPDATE_MAX_RETRY_COUNT)
 					{
 						retryCount = 0;
 						upgradeError = SC_UPDATE_ERROR_EN_BSL_FAILED;
@@ -830,7 +804,7 @@ void SCUpdateTask(void * arg)
 						}
 					}
 
-					if(retryCount == SC_UPDATE_MAX_RETRY_COUNT)
+					if(retryCount >= SC_UPDATE_MAX_RETRY_COUNT)
 					{
 						retryCount = 0;
 						upgradeError = SC_UPDATE_ERROR_VMC_BSL_SYNC_FAILED;
@@ -851,6 +825,13 @@ void SCUpdateTask(void * arg)
 				case BSL_UNLOCK_PASSWORD:
 				{
 					static u8 retryCount = 0;
+					u8 bslPasswd[BSL_UNLOCK_PASSWORD_REQ] = { 0x80, 0x39, 0x00, 0x21, 0x58, 0x41,
+							0x50, 0x3A, 0x20, 0x58, 0x69, 0x6C, 0x69, 0x6E, 0x78, 0x20, 0x41, 0x6C,
+							0x6C, 0x20, 0x50, 0x72, 0x6F, 0x67, 0x72, 0x61, 0x6D, 0x6D, 0x61, 0x62,
+							0x6C, 0x65, 0x2C, 0x20, 0x58, 0x42, 0x42, 0x3A, 0x20, 0x58, 0x69, 0x6C,
+							0x69, 0x6E, 0x78, 0x20, 0x42, 0x72, 0x61, 0x6E, 0x64, 0x65, 0x64, 0x20,
+							0x42, 0x6F, 0x61, 0x72, 0x64, 0x73, 0x82, 0xE5 };
+
 					VMC_LOG("\n\rSend CMD : BSL_UNLOCK_PASSWORD \n\r");
 
 					if( UART_RTOS_Send(&uart_vmcsc_log, &bslPasswd[0], BSL_UNLOCK_PASSWORD_REQ) != UART_SUCCESS )
@@ -887,7 +868,7 @@ void SCUpdateTask(void * arg)
 						}
 					}
 
-					if(retryCount == SC_UPDATE_MAX_RETRY_COUNT)
+					if(retryCount >= SC_UPDATE_MAX_RETRY_COUNT)
 					{
 						retryCount = 0;
 						upgradeError = SC_UPDATE_ERROR_BSL_UNLOCK_PASSWORD_FAILED;
@@ -946,7 +927,7 @@ void SCUpdateTask(void * arg)
 						}
 					}
 
-					if(retryCount == SC_UPDATE_MAX_RETRY_COUNT)
+					if(retryCount >= SC_UPDATE_MAX_RETRY_COUNT)
 					{
 						retryCount = 0;
 						upgradeError = SC_UPDATE_ERROR_ERASE_FAILED;
@@ -959,7 +940,7 @@ void SCUpdateTask(void * arg)
 
 					memset(receive_bufr,0x00,sizeof(receive_bufr));
 					receivedByteCount = 0;
-					vTaskDelay(DELAY_MS(20));
+					vTaskDelay(DELAY_MS(100));
 
 					break;
 				}
@@ -973,7 +954,10 @@ void SCUpdateTask(void * arg)
 
 				case BSL_DATA_TX_32:
 				{
+					u8 bsl_send_data_pkt[BSL_MAX_DATA_SIZE] = {0x00};
+					u16 total_length = 0x00;
 					u8 start_symbol = 0x00;
+					u16 dataCRC = 0x00;
 					bool sc_available_for_parsing = false;
 					data_ptr = 0x00;
 					all_pkt_sent = false;
@@ -984,7 +968,7 @@ void SCUpdateTask(void * arg)
 					start_symbol = IO_SYNC_READ8(fpt_sc_loc.start_address + SC_TOT_HEADER_SIZE);
 					if(start_symbol == SECTION_START)
 					{
-						addr_flag = 0x01;
+						addr_flag = true;
 						VMC_LOG("symbol matched !!\r\n");
 						sc_available_for_parsing = true;
 					}
@@ -1011,7 +995,7 @@ void SCUpdateTask(void * arg)
 							receivedByteCount = 0x00;
 
 							portENTER_CRITICAL();
-							VMC_Parse_Fpt_SC((fpt_sc_loc.start_address + SC_TOT_HEADER_SIZE), &bsl_send_data_pkt[0], &total_length);
+							VMC_Parse_Fpt_SC((fpt_sc_loc.start_address + SC_TOT_HEADER_SIZE), &bsl_send_data_pkt[0], &total_length, &dataCRC);
 							portEXIT_CRITICAL();
 
 							if( UART_RTOS_Send(&uart_vmcsc_log, &bsl_send_data_pkt[0], total_length) != UART_SUCCESS )
@@ -1030,7 +1014,7 @@ void SCUpdateTask(void * arg)
 									{
 										if(receive_bufr[4] == BSL_DATA_WRITE_RESP_FIRST_CHAR && receive_bufr[5] == BSL_DATA_WRITE_RESP_SEC_CHAR)
 										{
-											if( matchCRC_postWrite(addr) != STATUS_SUCCESS )
+											if( matchCRC_postWrite(addr, dataCRC) != STATUS_SUCCESS )
 											{
 												upgradeStatus = STATUS_FAILURE;
 												upgradeState = SC_STATE_IDLE;
@@ -1077,15 +1061,14 @@ void SCUpdateTask(void * arg)
 					}
 
 					/* Clean up */
-					msg[0] = 0;
+					addr_flag = false;
 					data_ptr = 0x00;
 					curr_prog = 0;
 					max_data_slot = 0;
 					receivedByteCount = 0;
 					memset(receive_bufr, 0x00, sizeof(receive_bufr));
-					vTaskDelay(DELAY_MS(20));
-
 					upgradeState = BSL_LOAD_PC_32;
+					vTaskDelay(DELAY_MS(100));
 
 					break;
 				}
@@ -1188,7 +1171,7 @@ void SCUpdateTask(void * arg)
 						{
 							if(!VMC_Validate_BSL_resp(&receive_bufr[0], BSL_VERSION_RESP))
 							{
-								if(receive_bufr[13] == 0x00 && receive_bufr[14] == 0x0D)
+								if(receive_bufr[13] == BSL_VERSION_SEC_BYTE && receive_bufr[14] == BSL_VERSION_FIRST_BYTE)
 								{
 									retryCount = 0;
 									upgradeStatus = STATUS_SUCCESS;
@@ -1208,7 +1191,7 @@ void SCUpdateTask(void * arg)
 						}
 					}
 
-					if(retryCount == SC_UPDATE_MAX_RETRY_COUNT)
+					if(retryCount >= SC_UPDATE_MAX_RETRY_COUNT)
 					{
 						retryCount = 0;
 						upgradeError = SC_UPDATE_ERROR_FAILED_TO_GET_BSL_VERSION;
@@ -1254,6 +1237,9 @@ void SCUpdateTask(void * arg)
 		curr_prog = 0;
 		max_data_slot = 0;
 		upgradeError = SC_UPDATE_NO_ERROR;
+
+		memset(receive_bufr,0x00,sizeof(receive_bufr));
+		receivedByteCount = 0;
 
 		/* Resume SC communication and monitoring */
 		xSemaphoreGive(vmc_sensor_monitoring_lock);
