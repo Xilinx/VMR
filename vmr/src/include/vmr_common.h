@@ -85,29 +85,6 @@
 #define VMR_EP_PLM_MULTIBOOT	0xF1110004
 #define VMR_EP_PMC_REG		0xF1130000
 
-#define FAULT_STATUS            0x0
-#define UNBLOCK_CTRL            0x8
-#define BIT(n) 			(1UL << (n))
-#define READ_RESPONSE_BUSY      BIT(0)
-#define WRITE_RESPONSE_BUSY     BIT(16)
-#define FIREWALL_STATUS_BUSY    (READ_RESPONSE_BUSY | WRITE_RESPONSE_BUSY)
-#define IS_FIRED(val) 		(val & ~FIREWALL_STATUS_BUSY)
-#define FIREWALL_RETRY_COUNT	10
-#define	BUSY_RETRY_INTERVAL	100		/* ms */
-#define	CLEAR_RETRY_INTERVAL	2		/* ms */
-
-#define	PMC_ERR1_STATUS_MASK	(1 << 24)
-#define	PMC_ERR_OUT1_EN_MASK	(1 << 24)
-#define	PMC_POR1_EN_MASK	(1 << 24)
-#define	PMC_POR_ENABLE_BIT	(1 << 24)
-#define	PMC_REG_ERR_OUT1_MASK	0x20
-#define	PMC_REG_ERR_OUT1_EN	0x24
-#define	PMC_REG_POR1_MASK	0x40
-#define	PMC_REG_POR1_EN		0x44
-#define	PMC_REG_ACTION		0x48
-#define	PMC_REG_SRST		0x84
-#define	PL_TO_PMC_ERROR_SIGNAL_PATH_MASK	(1 << 0)
-
 /* Note: eventually we should be driven by xparameter.h */
 #define VMR_EP_RPU_SHARED_MEMORY_START	(0x38000000)
 #define VMR_EP_RPU_SHARED_MEMORY_END	(0x3FFFF000)
@@ -146,6 +123,9 @@
 
 #define SHUTDOWN_LATCHED_STATUS	0x01
 
+#define BIT(n) 			(1UL << (n))
+#define MIN(x, y) 		(((x) < (y)) ? (x) : (y))
+
 struct vmr_endpoints {
 	char *vmr_ep_name;
 	u32  vmr_ep_address;
@@ -170,7 +150,7 @@ static inline int rmgmt_enable_pl_reset()
 }
 #else
 static inline int rmgmt_enable_pl_reset() { return -ENODEV; }
-#endif
+#endif //endif of CONFIG_FORCE_RESET
 
 #if defined(CONFIG_2022_1_VITIS)
 /*
@@ -193,7 +173,6 @@ static inline int rmgmt_enable_pl_reset() { return -ENODEV; }
 
 #undef XPAR_BLP_BLP_LOGIC_XGQ_M2R_HIGHADDR
 #define XPAR_BLP_BLP_LOGIC_XGQ_M2R_HIGHADDR 0x80010FFF
-
-#endif
+#endif //endif of CONFIG_2022_1_VITIS
 
 #endif //endif of VMR_COMMON_H
