@@ -39,8 +39,8 @@ puts "=== customize bsp libs"
 bsp setlib xilfpga
 bsp setlib xilmailbox
 bsp getlibs
-puts "=== customize FreeRTOS heap size (65536 * 4 * 50) = 13107200 "
-bsp config total_heap_size 13107200
+puts "=== customize FreeRTOS heap size 0x16000000 (352M)"
+bsp config total_heap_size 0x16000000
 
 #repo add platform for apps
 repo -add-platform vmr_platform
