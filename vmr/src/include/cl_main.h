@@ -32,14 +32,17 @@ struct cl_msg;
 u32 cl_rpu_status_query(struct cl_msg *msg, char *buf, u32 size);
 u32 cl_apu_status_query(struct cl_msg *msg, char *buf, u32 size);
 
-int cl_xgq_client_probe(void);
 int cl_xgq_apu_is_ready(void);
 int cl_xgq_pl_is_ready(void);
+int cl_rmgmt_is_ready(void);
+int cl_xgq_client_probe(void);
+
 int cl_xgq_apu_identify(struct cl_msg *msg);
 int cl_xgq_apu_download_xclbin(char *data, u32 size);
 
 #define TASK_STACK_DEPTH 0x10000 /* 64k * sizeof(word) = 256k */
 int flash_progress(void);
 int32_t VMC_SCFW_Program_Progress(void);
+void cl_start_vmc_tasks();
 
 #endif

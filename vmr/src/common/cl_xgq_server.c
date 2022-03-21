@@ -20,6 +20,8 @@
 
 #define MSG_ERR(fmt, arg...) \
 	CL_ERR(APP_XGQ, fmt, ##arg)
+#define MSG_WARN(fmt, arg...) \
+	CL_ERR(APP_XGQ, fmt, ##arg)
 #define MSG_LOG(fmt, arg...) \
 	CL_LOG(APP_XGQ, fmt, ##arg)
 #define MSG_DBG(fmt, arg...) \
@@ -544,10 +546,8 @@ static void vmr_status_service_start()
 
 static inline int service_can_start()
 {
-	for (int i = 0; i < ARRAY_SIZE(handles); i++) {
-		if (handles[i].msg_cb == NULL)
-			return 0;
-	}
+	if (!cl_rmgmt_is_ready())
+		return 0;
 
 	if (!service_is_started) {
 		service_is_started = true;
@@ -560,6 +560,7 @@ static inline int service_can_start()
 static void receiveTask(void *pvParameters)
 {
 	const TickType_t xBlockTime = pdMS_TO_TICKS(500);
+	bool received_first_cmd = false;
 
 	for( ;; ) {
 		uint64_t sq_slot_addr;
@@ -571,6 +572,14 @@ static void receiveTask(void *pvParameters)
 
 		if (xgq_consume(&rpu_xgq, &sq_slot_addr))
 			continue;
+
+		if (!received_first_cmd) {
+			received_first_cmd = true;
+
+			MSG_WARN("driver attached, notify VMC task to start");
+			/* VMC Task might stated after waiting time, start it anyway */
+			cl_start_vmc_tasks();
+		}
 
 		process_msg(sq_slot_addr);
 
@@ -644,6 +653,7 @@ static int init_xgq()
         MSG_DBG("================================================");
 
 	init_vmr_status(ring_len);
+
 	MSG_LOG("done.");
 	return 0;
 }

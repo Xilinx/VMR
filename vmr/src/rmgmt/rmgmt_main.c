@@ -20,6 +20,7 @@
 
 static TaskHandle_t xXGQTask;
 static struct rmgmt_handler rh = { 0 };
+static bool rmgmt_is_ready = false;
 msg_handle_t *pdi_hdl;
 msg_handle_t *xclbin_hdl;
 msg_handle_t *af_hdl;
@@ -753,11 +754,20 @@ static void pvXGQTask( void *pvParameters )
 		if (xgq_apu_control_flag == 0 && xgq_apu_channel_probe() == 0) {
 			RMGMT_LOG("apu is ready.");
 			xgq_apu_control_flag = 1;
+			/* all rmgmt callbacks are ready, sensor cb can be inited later */
+			rmgmt_is_ready = true;
 		}
 
 		RMGMT_DBG("free heap %d", xPortGetFreeHeapSize());
 	}
+	/* should never been here */
 	RMGMT_LOG("done");
+}
+
+int cl_rmgmt_is_ready()
+{
+	RMGMT_DBG("%s", rmgmt_is_ready ? "READY" : "NOT READY");
+	return rmgmt_is_ready;
 }
 
 static int rmgmt_create_tasks(void)

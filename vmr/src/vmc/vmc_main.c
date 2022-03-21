@@ -37,6 +37,10 @@ u8 Enable_DemoMenu(void);
 extern void VMC_SC_CommsTask(void *params);
 extern void SensorMonitorTask(void *params);
 
+void cl_start_vmc_tasks() {
+	xTaskNotifyGive(xVMCTask); 
+}
+
 static void pVMCTask(void *params)
 {
     /* Platform Init will Initialise I2C, GPIO, SPI, etc */
@@ -44,7 +48,15 @@ static void pVMCTask(void *params)
     s8 Status;
     XGpio Gpio;
 
-    VMC_LOG(" VMC launched \n\r");
+    VMC_LOG(" VMC is starting... ");
+
+    /*
+     * Cold boot case: wait 2 mins for bios to finish booting.
+     * Hot reset case: if driver attached, driver notify and continue immediately.
+     */
+    ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(1000 * 60 * 2));
+
+    VMC_LOG(" VMC start launching \n\r");
 
     I2CInit();
 
@@ -112,6 +124,7 @@ static void pVMCTask(void *params)
 	return ;
     }
 
+    VMC_LOG("VMC Launch done");
 
     vTaskSuspend(NULL);
 }
@@ -128,7 +141,6 @@ int VMC_Launch( void )
 	CL_LOG(APP_VMC,"Failed to Create VMC Task \n\r");
 	return -1;
     }
-
     return 0;
 }
 
