@@ -362,7 +362,7 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
     /* Get Record Count */
     *sdrMetaDataCount = (sizeof(snsrMetaData) / sizeof(snsrMetaData[0]));
 
-    *pMetaData = (Asdm_Sensor_MetaData_t *) malloc( sizeof(Asdm_Sensor_MetaData_t) * (*sdrMetaDataCount));
+    *pMetaData = (Asdm_Sensor_MetaData_t *) pvPortMalloc( sizeof(Asdm_Sensor_MetaData_t) * (*sdrMetaDataCount));
 
     if(*pMetaData != NULL)
     {
@@ -371,7 +371,7 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
     }
     else
     {
-	VMC_ERR(" malloc Failed\n\r");
+	VMC_ERR(" pvPortMalloc Failed\n\r");
 	return;
     }
 }
@@ -537,7 +537,7 @@ s8 Init_Asdm()
     if(pSdrMetaData != NULL)
     {
 	/* Allocate Memory for Number of Repo Type */
-	sdrInfo = (SDR_t *) malloc(MAX_SDR_REPO * sizeof(SDR_t));
+	sdrInfo = (SDR_t *) pvPortMalloc(MAX_SDR_REPO * sizeof(SDR_t));
 	if(sdrInfo == NULL)
 	{
 	    VMC_ERR("Failed to allocate Memory for SDR !!!\n\r");
@@ -555,7 +555,7 @@ s8 Init_Asdm()
 
 	    /* Based on Number of Records allocate memory of Sensor Records*/
 	    allocateSize = sizeof(Asdm_SensorRecord_t) * asdmHeaderInfo[sdrCount].no_of_records;
-	    sdrInfo[sdrCount].sensorRecord = (Asdm_SensorRecord_t *)malloc(allocateSize);
+	    sdrInfo[sdrCount].sensorRecord = (Asdm_SensorRecord_t *)pvPortMalloc(allocateSize);
 	    if(NULL == sdrInfo[sdrCount].sensorRecord)
 	    {
 		VMC_ERR("Failed to allocate Memory for SDR Record !!!\n\r");
@@ -600,7 +600,7 @@ s8 Init_Asdm()
 		tmp[idx].sensor_name_type_length = SENSOR_TYPE_ASCII | (snsrNameLen & LENGTH_BITMASK);
 		byteCount += sizeof(tmp[idx].sensor_name_type_length);
 
-		tmp[idx].sensor_name = (char8 *) malloc(snsrNameLen);
+		tmp[idx].sensor_name = (char8 *) pvPortMalloc(snsrNameLen);
 		if(NULL != tmp[idx].sensor_name)
 		{
 		    memset(tmp[idx].sensor_name, 0x00, snsrNameLen);
@@ -630,7 +630,7 @@ s8 Init_Asdm()
 
 
 		/* Only allocate the Memory, Value will be updated while Monitoring */
-		tmp[idx].sensor_value = (u8 *) malloc(snsrValueLen);
+		tmp[idx].sensor_value = (u8 *) pvPortMalloc(snsrValueLen);
 		if(NULL != tmp[idx].sensor_value)
 		{
 		    memset(tmp[idx].sensor_value, 0x00, snsrValueLen);
@@ -652,7 +652,7 @@ s8 Init_Asdm()
 		{
 		    baseUnitLen = (tmp[idx].sensor_base_unit_type_length & LENGTH_BITMASK);
 
-		    tmp[idx].sensor_base_unit = (u8 *) malloc(baseUnitLen);
+		    tmp[idx].sensor_base_unit = (u8 *) pvPortMalloc(baseUnitLen);
 		    if(NULL != tmp[idx].sensor_base_unit)
 		    {
 			memset(tmp[idx].sensor_base_unit, 0x00, baseUnitLen);
@@ -683,7 +683,7 @@ s8 Init_Asdm()
 			/* Allocate the Supported Thresholds */
 			if(tmp[idx].threshold_support_byte & Lower_Fatal_Threshold)
 			{
-				tmp[idx].lower_fatal_limit = (u8 *) malloc(snsrValueLen);
+				tmp[idx].lower_fatal_limit = (u8 *) pvPortMalloc(snsrValueLen);
 				if(NULL == tmp[idx].lower_fatal_limit)
 				{
 					/* LOG Error and return */
@@ -697,7 +697,7 @@ s8 Init_Asdm()
 
 			if(tmp[idx].threshold_support_byte & Lower_Critical_Threshold)
 			{
-				tmp[idx].lower_critical_limit = (u8 *) malloc(snsrValueLen);
+				tmp[idx].lower_critical_limit = (u8 *) pvPortMalloc(snsrValueLen);
 				if(NULL == tmp[idx].lower_critical_limit)
 				{
 					/* LOG Error and return */
@@ -711,7 +711,7 @@ s8 Init_Asdm()
 
 			if(tmp[idx].threshold_support_byte & Lower_Warning_Threshold)
 			{
-				tmp[idx].lower_warning_limit = (u8 *) malloc(snsrValueLen);
+				tmp[idx].lower_warning_limit = (u8 *) pvPortMalloc(snsrValueLen);
 				if(NULL == tmp[idx].lower_warning_limit)
 				{
 					/* LOG Error and return */
@@ -725,7 +725,7 @@ s8 Init_Asdm()
 
 			if(tmp[idx].threshold_support_byte & Upper_Fatal_Threshold)
 			{
-				tmp[idx].upper_fatal_limit = (u8 *) malloc(snsrValueLen);
+				tmp[idx].upper_fatal_limit = (u8 *) pvPortMalloc(snsrValueLen);
 				if(NULL == tmp[idx].upper_fatal_limit)
 				{
 					/* LOG Error and return */
@@ -739,7 +739,7 @@ s8 Init_Asdm()
 
 			if(tmp[idx].threshold_support_byte & Upper_Critical_Threshold)
 			{
-				tmp[idx].upper_critical_limit = (u8 *) malloc(snsrValueLen);
+				tmp[idx].upper_critical_limit = (u8 *) pvPortMalloc(snsrValueLen);
 				if(NULL == tmp[idx].upper_critical_limit)
 				{
 					/* LOG Error and return */
@@ -753,7 +753,7 @@ s8 Init_Asdm()
 
 			if(tmp[idx].threshold_support_byte & Upper_Warning_Threshold)
 			{
-				tmp[idx].upper_warning_limit = (u8 *) malloc(snsrValueLen);
+				tmp[idx].upper_warning_limit = (u8 *) pvPortMalloc(snsrValueLen);
 				if(NULL == tmp[idx].upper_warning_limit)
 				{
 					/* LOG Error and return */
@@ -776,7 +776,7 @@ s8 Init_Asdm()
 		/* Sample Count > 0, for only for Dynamic sensors */
 		if( pSdrMetaData[totalRecords].sampleCount > 0)
 		{
-		    tmp[idx].sensorMaxValue = (u8 *) malloc(snsrValueLen);
+		    tmp[idx].sensorMaxValue = (u8 *) pvPortMalloc(snsrValueLen);
 		    if(NULL == tmp[idx].sensorMaxValue)
 		    {
 			/* LOG Error and return */
@@ -786,7 +786,7 @@ s8 Init_Asdm()
 		    memset(tmp[idx].sensorMaxValue,0x00, snsrValueLen);
 		    byteCount += snsrValueLen;
 
-		    tmp[idx].sensorAverageValue = (u8 *) malloc(snsrValueLen);
+		    tmp[idx].sensorAverageValue = (u8 *) pvPortMalloc(snsrValueLen);
 		    if(NULL == tmp[idx].sensorAverageValue)
 		    {
 			/* LOG Error and return */
@@ -833,7 +833,7 @@ s8 Init_Asdm()
 	    sdrInfo[sdrCount].header.no_of_bytes = (byteCount/8);
 	}
 
-	free(pSdrMetaData);
+	vPortFree(pSdrMetaData);
     }
     else
     {

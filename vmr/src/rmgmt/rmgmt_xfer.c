@@ -178,9 +178,10 @@ int rmgmt_init_handler(struct rmgmt_handler *rh)
 	//rh->rh_base = OSPI_VERSAL_BASE;
 
 	rh->rh_max_size = BITSTREAM_SIZE; /* 32M */
-	rh->rh_data = (u8 *)malloc(rh->rh_max_size);
+	//rh->rh_data = (u8 *)malloc(rh->rh_max_size);
+	rh->rh_data = (u8 *)pvPortMalloc(rh->rh_max_size);
 	if (rh->rh_data == NULL) {
-		RMGMT_LOG("malloc %d bytes failed\r\n", rh->rh_data_size);
+		RMGMT_LOG("pvPortMalloc %d bytes failed\r\n", rh->rh_data_size);
 		return -1;
 	}
 
