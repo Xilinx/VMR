@@ -486,7 +486,7 @@ static u32 vmr_check_firewall(cl_msg_t *msg)
 		
 		RMGMT_ERR("tripped status: 0x%x", val);
 
-		if (msg->log_payload.size < sizeof(log_msg)) {
+		if (msg->log_payload.size < safe_size) {
 			RMGMT_ERR("log buffer %d is too small, log message %d is trunked",
 				msg->log_payload.size, sizeof(log_msg));
 			safe_size = msg->log_payload.size;
@@ -494,10 +494,13 @@ static u32 vmr_check_firewall(cl_msg_t *msg)
 
 		count = snprintf(log_msg, safe_size,
 			"AXI Firewall User is tripped, status: 0x%lx\n", val);
+		if (count > safe_size) 
+			RMGMT_WARN("log msg is trunked");
+
 		cl_memcpy_toio8(dst_addr, &log_msg, safe_size);
 
 		/* set correct size in result payload */
-		msg->log_payload.size = count;
+		msg->log_payload.size = safe_size;
 	}
 
 	return val;
