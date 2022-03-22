@@ -20,12 +20,14 @@
 typedef int (*tasks_register_t)(void); 
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof (*(x)))
+#define SHUTDOWN_LATCHED_STATUS 0x01
 
 int ospi_flash_init(void);
 int VMC_Launch(void);
 int RMGMT_Launch(void);
 int CL_MSG_launch(void);
 void cl_system_pre_init(void);
+u32 cl_check_clock_shutdown_status(void);
 
 struct cl_msg;
 

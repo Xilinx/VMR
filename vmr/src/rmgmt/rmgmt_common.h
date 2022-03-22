@@ -62,12 +62,12 @@ static void inline axigate_free()
 
 static void inline ucs_stop()
 {
-	IO_SYNC_WRITE32(0x0, VMR_EP_UCS_CONTROL);
+	IO_SYNC_WRITE32(0x0, VMR_EP_UCS_SHUTDOWN);
 }
 
 static void inline ucs_start()
 {
-	IO_SYNC_WRITE32(0x1, VMR_EP_UCS_CONTROL);
+	IO_SYNC_WRITE32(0x1, VMR_EP_UCS_SHUTDOWN);
 }
 
 #endif

@@ -15,6 +15,8 @@
 #include "cl_uart_rtos.h"
 #include "cl_flash.h"
 #include "cl_config.h"
+#include "cl_io.h"
+#include "vmr_common.h"
 #include "sysmon.h"
 
 uart_rtos_handle_t uart_log;
@@ -40,6 +42,16 @@ extern void vApplicationStackOverflowHook(TaskHandle_t xTask, char *pcTaskName)
 	 * identify which task has overflowed its stack.
 	 */
 	for (;;) { }
+}
+
+u32 cl_check_clock_shutdown_status(void)
+{
+	u32 shutdown_status = 0 ;
+
+	//offset to read shutdown status
+	shutdown_status = IO_SYNC_READ32(VMR_EP_UCS_CONTROL_STATUS_BASEADDR);
+
+	return (shutdown_status & SHUTDOWN_LATCHED_STATUS);
 }
 
 void cl_system_pre_init(void)
