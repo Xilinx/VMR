@@ -42,7 +42,7 @@ int32_t VMC_Start_SC_Update(void);
 static struct vmr_endpoints vmr_eps[] = {
 	{"VMR_EP_SYSTEM_DTB", VMR_EP_SYSTEM_DTB},
 	{"VMR_EP_PR_ISOLATION", VMR_EP_PR_ISOLATION},
-	{"VMR_EP_UCS_CONTROL", VMR_EP_UCS_CONTROL},
+	{"VMR_EP_UCS_SHUTDOWN", VMR_EP_UCS_SHUTDOWN},
 	{"VMR_EP_FIREWALL_USER_BASE", VMR_EP_FIREWALL_USER_BASE},
 	{"VMR_EP_GAPPING_DEMAND", VMR_EP_GAPPING_DEMAND},
 	{"VMR_EP_ACLK_KERNEL_0", VMR_EP_ACLK_KERNEL_0},
@@ -430,6 +430,16 @@ static inline u32 check_firewall()
 	return IS_FIRED(read_firewall());
 }
 
+static inline u32 check_clock_shutdown_status()
+{
+	u32 shutdown_status = 0 ;
+
+	//offset to read shutdown status
+	shutdown_status = IO_SYNC_READ32(VMR_EP_UCS_CONTROL_STATUS_BASEADDR);
+
+	return (shutdown_status & 0x01);
+}
+
 int cl_xgq_pl_is_ready()
 {
 	return !check_firewall();
@@ -505,7 +515,43 @@ static u32 vmr_check_firewall(cl_msg_t *msg)
 
 	return val;
 }
+static u32 vmr_log_clock_shutdown(cl_msg_t *msg)
+{
+	u32 val = cl_check_clock_shutdown_status();
 
+	/*
+	 * copy message back from log_msg to shared memory
+	 */
+	if (val) {
+		u32 safe_size = sizeof(log_msg);
+		u32 dst_addr = RPU_SHARED_MEMORY_ADDR(msg->log_payload.address);
+		u32 count = 0;
+
+		RMGMT_ERR("clock shutdown status: 0x%x", val);
+
+		if (msg->log_payload.size < sizeof(log_msg)) {
+			RMGMT_ERR("log buffer %d is too small, log message will be trunked %d bytes ",
+				msg->log_payload.size, sizeof(log_msg));
+			safe_size = msg->log_payload.size;
+		}
+
+		count = snprintf(log_msg, safe_size,
+			"Clock shutdown due to power or temperature value reaching Critical threshold, status: 0x%lx\n", val);
+		cl_memcpy_toio8(dst_addr, &log_msg, safe_size);
+
+		/* set correct size in result payload */
+		if(safe_size > count)
+		{
+			msg->log_payload.size = count;
+		}
+		else
+		{
+			msg->log_payload.size = safe_size;
+		}
+	}
+
+	return val;
+}
 static int vmr_load_firmware(cl_msg_t *msg)
 {
 	u32 dst_addr = 0;
@@ -544,6 +590,9 @@ static int xgq_log_page_cb(cl_msg_t *msg, void *arg)
 
 	switch (msg->log_payload.pid) {
 	case CL_LOG_AF_CHECK:
+		ret = vmr_log_clock_shutdown(msg);
+		if(ret)
+			break;
 		ret = vmr_check_firewall(msg);
 		break;
 	case CL_LOG_AF_CLEAR:

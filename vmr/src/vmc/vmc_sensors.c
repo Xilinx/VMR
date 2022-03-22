@@ -42,6 +42,8 @@ extern s8 Asdm_Process_Sensor_Request(u8 *req, u8 *resp, u16 *respSize);
 Versal_sensor_readings sensor_readings;
 u8 i2c_num = 1;  // LPD_I2C0
 #define LPD_I2C_0	0x1
+#define BITMASK_TO_CLEAR	0xFF00000F
+#define ENABLE_FORCE_SHUTDOWN	0x001B6320
 
 void clear_clock_shutdown_status()
 {
@@ -50,40 +52,37 @@ void clear_clock_shutdown_status()
      * The only way to clear shutdown state bit is by reloading the FPGA (Hot reset or cold reset)
      */
 
-    u32 shutdownSatus = IO_SYNC_READ32(XPAR_BLP_BLP_LOGIC_ULP_CLOCKING_GAPPING_DEMAND_GPIO_GAPPING_DEMAND_BASEADDR);
+    u32 shutdownSatus = IO_SYNC_READ32(VMR_EP_GAPPING_DEMAND);
     shutdownSatus = (shutdownSatus | (1 << 0xF));
-    IO_SYNC_WRITE32(shutdownSatus, XPAR_BLP_BLP_LOGIC_ULP_CLOCKING_GAPPING_DEMAND_GPIO_GAPPING_DEMAND_BASEADDR);
+    IO_SYNC_WRITE32(shutdownSatus, VMR_EP_GAPPING_DEMAND);
     shutdownSatus = (shutdownSatus &(~ (1 << 0xF)));
-    IO_SYNC_WRITE32(shutdownSatus, XPAR_BLP_BLP_LOGIC_ULP_CLOCKING_GAPPING_DEMAND_GPIO_GAPPING_DEMAND_BASEADDR);
+    IO_SYNC_WRITE32(shutdownSatus, VMR_EP_GAPPING_DEMAND);
     return;
 }
 
 void ucs_clock_shutdown()
 {
-    u32 shutdownSatus = 0 ;
+    u32 shutdown_status = 0 ;
 
     // offset for clock shutdown
-    u32 originalValue = IO_SYNC_READ32(VMR_EP_UCS_CONTROL);
+    u32 originalValue = IO_SYNC_READ32(VMR_EP_UCS_SHUTDOWN);
 
     // clear 23:4 bits
-    u32 triggerValue = originalValue & 0xFF00000F;
+    u32 triggerValue = originalValue & BITMASK_TO_CLEAR;
 
     //to trigger clock shutdown write 0x1B632 at [23:4] bits
-    triggerValue = triggerValue | 0x001B6320;
+    triggerValue = triggerValue | ENABLE_FORCE_SHUTDOWN;
 
      //the bits can be immediately cleared back to 0, as the shutdown state is latched by the hardware
-    IO_SYNC_WRITE32(triggerValue, VMR_EP_UCS_CONTROL) ;
-    IO_SYNC_WRITE32(originalValue, VMR_EP_UCS_CONTROL) ;
+    IO_SYNC_WRITE32(triggerValue, VMR_EP_UCS_SHUTDOWN) ;
+    IO_SYNC_WRITE32(originalValue, VMR_EP_UCS_SHUTDOWN) ;
 
     //offset to read shutdown status
-    shutdownSatus = IO_SYNC_READ32(XPAR_BLP_BLP_LOGIC_ULP_CLOCKING_UCS_CONTROL_STATUS_GPIO_UCS_CONTROL_STATUS_BASEADDR);
+    shutdown_status = IO_SYNC_READ32(VMR_EP_UCS_CONTROL_STATUS_BASEADDR);
 
-    if(shutdownSatus & 0x01)
-    	VMC_ERR("Clock shutdown due to power value reached to critical threshold \n\r");
+    if(shutdown_status & 0x01)
+    	VMC_ERR("Clock shutdown due to power or temperature value reaching Critical threshold \n\r");
 
-    /*
-     * To-DO : Log clock shutdown event to dmesg
-     */
    return;
 }
 
