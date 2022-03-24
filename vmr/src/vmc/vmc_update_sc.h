@@ -11,74 +11,92 @@
 #include <unistd.h>
 #include <stdbool.h>
 
-#define ULONG_MAX 						0xFFFFFFFFUL
+#define ULONG_MAX				0xFFFFFFFFUL
 
-#define DELAY_MS(x)   					((x)     /portTICK_PERIOD_MS )
-#define RCV_TIMEOUT_MS(x)  				((x)     /portTICK_PERIOD_MS )
+#define DELAY_MS(x)				((x)     /portTICK_PERIOD_MS )
+#define RCV_TIMEOUT_MS(x)			((x)     /portTICK_PERIOD_MS )
 
 #define SC_UPDATE_MAX_RETRY_COUNT		(10u)
 #define MODE_VER_MAX_RETRY_COUNT		(3u)
 
-#define BSL_VERSION_REQ					(0x06)
-#define BSL_VERSION_RESP				(0x11)
+#define BSL_VERSION_REQ				(0x06)
+#define BSL_VERSION_RESP			(0x11)
 #define BSL_REBOOT_RESET_REQ			(0x06)
-#define BSL_LOAD_PC_REQ					(0x0A)
-#define BSL_DATA_TX_32_RESP				(0x08)
-#define BSL_MASS_ERASE_REQ				(0x06)
-#define BSL_MASS_ERASE_RESP				(0x08)
+#define BSL_LOAD_PC_REQ				(0x0A)
+#define BSL_DATA_TX_32_RESP			(0x08)
+#define BSL_MASS_ERASE_REQ			(0x06)
+#define BSL_MASS_ERASE_RESP			(0x08)
 #define BSL_UNLOCK_PASSWORD_REQ			(0x3E)
 #define BSL_UNLOCK_PASSWORD_RESP		(0x08)
-#define BSL_SYNCED_REQ					(0x01)
-#define BSL_SYNCED_RESP					(0x01)
-#define BSL_CRC_RESQ					(0x0C)
-#define BSL_CRC_RESP					(0x09)
-#define BSL_DATA_WRITE_RESP_FIRST_CHAR	(0x3B)
-#define BSL_DATA_WRITE_RESP_SEC_CHAR	(0x00)
+#define BSL_SYNCED_REQ				(0x01)
+#define BSL_SYNCED_RESP				(0x01)
+#define BSL_CRC_RESQ				(0x0C)
+#define BSL_CRC_RESP				(0x09)
+#define BSL_RESP_CMD_CHAR			(0x3B)
+#define BSL_RESP_MSG_CHAR			(0x00)
 #define BSL_CRC_SUCCESS_RESP			(0x3A)
-#define BSL_SYNC_SUCCESS				(0x00)
-#define SC_BSL_SYNCED_REQ				(0x01)
-#define SC_BSL_SYNCED_RESP				(0x02)
+#define BSL_SYNC_REQ_CHAR			(0xFF)
+#define BSL_SYNC_SUCCESS			(0x00)
+#define SC_BSL_SYNCED_REQ			(0x01)
+#define SC_BSL_SYNCED_RESP			(0x0B)
 
-#define SC_ENABLE_BSL_REQ				(0x09)
-#define SC_ENABLE_BSL_RESP				(0x0A)
+#define SC_ENABLE_BSL_REQ			(0x09)
+#define SC_ENABLE_BSL_RESP			(0x0A)
 
 #define CMD_RX_DATA_BLOCK_32			(0x20)
-#define CMD_RX_PASSWORD					(0x21)
-#define CMD_MASS_ERASE					(0x15)
-#define CMD_REBOOT_RESET				(0x25)
-#define CMD_CRC_CHECK_32				(0x26)
-#define CMD_LOAD_PC_32					(0x27)
-#define CMD_MSP_GET_STATUS				(0x31)
-#define CMD_SC_ENABLE_BSL				(0x32)
-#define CMD_TX_BSL_VERSION				(0x19)
+#define CMD_RX_PASSWORD				(0x21)
+#define CMD_MASS_ERASE				(0x15)
+#define CMD_REBOOT_RESET			(0x25)
+#define CMD_CRC_CHECK_32			(0x26)
+#define CMD_LOAD_PC_32				(0x27)
+#define CMD_MSP_GET_STATUS			(0x31)
+#define CMD_SC_ENABLE_BSL			(0x32)
+#define CMD_TX_BSL_VERSION			(0x19)
 
-#define MSP_IN_SC_MODE					(0x02)
-#define MSP_IN_BSL_MODE					(0x01)
+#define MSP_IN_SC_MODE				(0x02)
+#define MSP_IN_BSL_MODE				(0x01)
 
-#define BSL_MSG_HEADER					(0x80)
+#define BSL_MSG_HEADER				(0x80)
+#define BSL_RESP_CMD_OFFSET			(4u)
+#define BSL_RESP_MSG_OFFSET			(5u)
+#define BSL_RESP_BUILD_ID_OFFSET_H		(13u)
+#define BSL_RESP_BUILD_ID_OFFSET_L		(14u)
+#define BSL_RESP_LEN_OFFSET_L			(2u)
+#define BSL_RESP_LEN_OFFSET_H			(3u)
+#define BSL_RESP_CAL_CHKSUM_H			(6u)
+#define BSL_RESP_CAL_CHKSUM_L			(5u)
 
-#define SECTION_START					(0x40)
+#define SECTION_START				(0x40)
 #define FILE_TERMINATION_CHAR			(0x71)
-#define SPACE							(0x20)
-#define NEW_LINE						(0x0A)
+#define SPACE					(0x20)
+#define NEW_LINE				(0x0A)
 
-#define MAJOR							(0x00)
-#define MINOR							(0x01)
-#define REVISION						(0x02)
+#define MAJOR					(0x00)
+#define MINOR					(0x01)
+#define REVISION				(0x02)
 
-#define UPDATE_REQUIRED					(0x01)
-#define NO_UPDATE_REQUIRED				(0x00)
+#define UPDATE_REQUIRED				(0x01)
+#define NO_UPDATE_REQUIRED			(0x00)
 
-#define BSL_MAX_DATA_SIZE				(266u)
+#define BSL_MAX_DATA_SIZE			(266u)
+#define BSL_MAX_RCV_DATA_SIZE			(32u)
+#define BSL_VERSION_BYTE_L			(0x0D)
+#define BSL_VERSION_BYTE_H			(0x00)
 
-#define SC_HEADER_SIZE					(0x0000000B)
-#define SC_RES_HEADER_SIZE	    		(0x00000005)
-#define SC_TOT_HEADER_SIZE				(SC_HEADER_SIZE + SC_RES_HEADER_SIZE)
-#define SC_HEADER_MSG					("VERSAL_SCFW")
+#define SC_HEADER_SIZE				(0x0000000B)
+#define SC_RES_HEADER_SIZE			(0x00000005)
+#define SC_TOT_HEADER_SIZE			(SC_HEADER_SIZE + SC_RES_HEADER_SIZE)
+#define SC_HEADER_MSG				("VERSAL_SCFW")
 
-#define BYTES_TO_READ					(0x01)
+#define BYTES_TO_READ				(0x01)
 #define BSL_DATA_PACKET_CRC_SIZE		(0x02)
 
+#define MAX_SC_VERSION_SIZE			(0x03)
+
+#define SC_VER_START_ADDR_WO_CHKSUM_BIN		(0x33)
+#define SC_VER_MAJ_START_ADDR			(0x7E000)
+#define SC_VER_MIN_START_ADDR			(0x7E002)
+#define SC_VER_REV_START_ADDR			(0x7E004)
 
 typedef struct efpt_sc
 {
@@ -93,6 +111,11 @@ typedef enum
 	PARSE_DATA
 }sc_parse_states;
 
+typedef enum
+{
+	VALID_SC = 0,
+	INVALID_SC
+}check_sc_t;
 
 typedef enum
 {
@@ -133,17 +156,13 @@ typedef enum scUpateError_e
 	SC_UPDATE_ERROR_INVALID_BSL_RESP,
 	SC_UPDATE_ERROR_NO_VALID_FPT_SC_FOUND,
 	SC_UPDATE_ERROR_FAILED_TO_GET_BSL_VERSION,
-	SC_UPDATE_ERROR_OPEARTION_TIMEDOUT
-}scUpateError_t;
+	SC_UPDATE_ERROR_OPEARTION_TIMEDOUT,
+	SC_UPDATE_ERROR_LOCK_CREATION_FAILED
+}upgrade_error_t;
 
 
 int32_t VMC_Start_SC_Update(void);
 void SC_Update_Task_Create(void);
-void VMC_Parse_Fpt_SC(u32 addr_location, u8 *bsl_send_data_pkt , u16 *pkt_length);
-void VMC_Parse_Fpt_SC_Version(u32 addr_location, u8 *bsl_send_data_pkt);
-bool VMC_Read_SC_FW(void);
-u8 Get_SC_Checksum(void);
-u8 Check_Received_SC_Header(void *ptr1, void *ptr2, u8 len);
-upgrade_status_t matchCRC_postWrite(unsigned int writeAdd);
+
 
 #endif /* SRC_VMC_VMC_UPDATE_SC_H_ */
