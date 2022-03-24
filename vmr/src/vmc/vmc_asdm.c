@@ -33,7 +33,7 @@
 #define QSFP_MAX_NUM    (2)
 
 #define ASDM_HEADER_VER     (0x1)
-#define NUM_BOARD_INFO_SENSORS  (13)
+#define NUM_BOARD_INFO_SENSORS  (12)
 #define NUM_TEMPERATURE_SENSORS  (5)
 #define NUM_SC_VOLTAGE_SENSORS  (6)
 #define NUM_SC_CURRENT_SENSORS  (4)
@@ -41,6 +41,15 @@
 #define CURRENT_SENSORS_INSTANCES (3)
 
 #define SNSRNAME_ACTIVE_SC_VER "Active SC Ver\0"
+/* Temp Sensor Names */
+#define TEMP_BOARD_NAME    "PCB\0"
+#define TEMP_ACAP_NAME     "device\0"
+#define TEMP_VCCINT_NAME   "vccint\0"
+#define TEMP_CAGE0_NAME    "cage_temp_0\0"
+#define TEMP_CAGE1_NAME    "cage_temp_1\0"
+
+/* Voltage and Current Sensor Name */
+#define VCCINT_NAME    "vccint\0"
 
 SDR_t *sdrInfo;
 SemaphoreHandle_t sdr_lock;
@@ -61,11 +70,11 @@ extern s8 PMBUS_SC_Vccint_Read(snsrRead_t *snsrData);
 
 Asdm_Sensor_Thresholds_t thresholds_limit_tbl[]= {
     /*  Name           LW   LC   LF    UW   UC  UF  */
-    { "Board Temp",	0,   0,  0,     80,  85, 95 },
-    { "ACAP Max Temp",	0,   0,  0,     88,  97, 107 },
-    { "VCCINT Temp",	0,   0,  0,     100, 110, 125 },
-    { "QSFP0 Temp",     0,   0,  0,     80,  85, 90 },
-    { "QSFP1 Temp",     0,   0,  0,     80,  85, 90 },
+    { TEMP_BOARD_NAME,	0,   0,  0,     80,  85, 95 },
+    { TEMP_ACAP_NAME,	0,   0,  0,     88,  97, 107 },
+    { TEMP_VCCINT_NAME,	0,   0,  0,     100, 110, 125 },
+    { TEMP_CAGE0_NAME,  0,   0,  0,     80,  85, 90 },
+    { TEMP_CAGE1_NAME,  0,   0,  0,     80,  85, 90 },
 
 };
 
@@ -88,9 +97,9 @@ void getCurrentNames(u8 index, char8* snsrName, u8 *sensorId)
     };
 
     struct sensorData snsrData[] =    {
-        { PEX_12V_I_IN,   "12V PEX\0"  },
-        { V12_IN_AUX0_I,  "12V AUX0\0" },
-        { V12_IN_AUX1_I,  "12V AUX1\0" },
+        { PEX_12V_I_IN,   "12v_pex\0"  },
+        { V12_IN_AUX0_I,  "12v_aux_0\0" },
+        { V12_IN_AUX1_I,  "12v_aux_1\0" },
     };
 
     if(NULL != snsrName)
@@ -113,12 +122,12 @@ void getVoltagesName(u8 index, char8* snsrName, u8 *sensorId)
 
     struct sensorData voltageData[] =
     {
-        { PEX_12V,    "12V PEX\0" },
-        { PEX_3V3,    "3V3 PEX\0" },
-        { AUX_3V3,     "3V3 AUX\0" },
-        { AUX_12V,     "12V AUX0\0" },
-        { AUX1_12V,    "12V AUX1\0" },
-        { VCCINT,      "VCCINT\0" },
+        { PEX_12V,    "12v_pex\0" },
+        { PEX_3V3,    "3v3_pex\0" },
+        { AUX_3V3,     "3v3_aux\0" },
+        { AUX_12V,     "12v_aux_0\0" },
+        { AUX1_12V,    "12v_aux_1\0" },
+        { VCCINT,      VCCINT_NAME },
     };
 
     if(NULL != snsrName)
@@ -141,8 +150,8 @@ void getQSFPName(u8 index, char8* snsrName, u8 *sensorId)
 
     struct sensorData qsfpData[] =
     {
-        { CAGE_TEMP0,  "QSFP0 TEMP\0" },
-        { CAGE_TEMP1,  "QSFP1 TEMP\0" }
+        { CAGE_TEMP0,  TEMP_CAGE0_NAME },
+        { CAGE_TEMP1,  TEMP_CAGE1_NAME }
     };
 
     if(NULL != snsrName)
@@ -187,33 +196,27 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
 	},
 	{
 	    .repoType = BoardInfoSDR,
-	    .sensorName = "Board Serial\0",
+	    .sensorName = "Serial Num\0",
 	    .snsrValTypeLength = SENSOR_TYPE_ASCII | sizeof(board_info.board_serial),
 	    .defaultValue = &board_info.board_serial[0],
 	},
 	{
 	    .repoType = BoardInfoSDR,
-	    .sensorName = "Board Part Num\0",
+	    .sensorName = "Part Num\0",
 	    .snsrValTypeLength = SENSOR_TYPE_ASCII | sizeof(board_info.board_part_num),
 	    .defaultValue = &board_info.board_part_num[0],
 	},
 	{
 	    .repoType = BoardInfoSDR,
-	    .sensorName = "Board Revision\0",
+	    .sensorName = "Revision\0",
 	    .snsrValTypeLength = SENSOR_TYPE_ASCII | sizeof(board_info.board_rev),
 	    .defaultValue = &board_info.board_rev[0],
 	},
 	{
 	    .repoType = BoardInfoSDR,
-	    .sensorName = "Board MFG Date\0",
+	    .sensorName = "MFG Date\0",
 	    .snsrValTypeLength = SENSOR_TYPE_NUM | sizeof(board_info.board_mfg_date),
 	    .defaultValue = &board_info.board_mfg_date[0],
-	},
-	{
-	    .repoType = BoardInfoSDR,
-	    .sensorName = "PCIE Info\0",
-	    .snsrValTypeLength = SENSOR_TYPE_NUM | sizeof(board_info.board_pcie_info),
-	    .defaultValue = &board_info.board_pcie_info[0],
 	},
 	{
 	    .repoType = BoardInfoSDR,
@@ -235,7 +238,7 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
         },
     {
         .repoType = BoardInfoSDR,
-        .sensorName = "Fan Presence\0",
+        .sensorName = "fpga_fan_1\0",
         .snsrValTypeLength = SENSOR_TYPE_ASCII | sizeof(board_info.board_act_pas),
         .defaultValue = &board_info.board_act_pas[0],
     },
@@ -281,7 +284,7 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
 */
 	{
 	    .repoType = TemperatureSDR,
-	    .sensorName = "Board Temp\0",
+	    .sensorName = TEMP_BOARD_NAME,
 	    .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_2B,
 	    .snsrUnitModifier = 0x0,
 	    .supportedThreshold = SNSR_MAX_VAL | SNSR_AVG_VAL | HAS_UPPER_THRESHOLDS,
@@ -291,7 +294,7 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
 	},
 	{
 	    .repoType = TemperatureSDR,
-	    .sensorName = "ACAP Max Temp\0",
+	    .sensorName = TEMP_ACAP_NAME,
 	    .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_2B,
 	    .snsrUnitModifier = 0x0,
 	    .supportedThreshold = SNSR_MAX_VAL | SNSR_AVG_VAL | HAS_UPPER_THRESHOLDS,
@@ -301,7 +304,7 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
 	},
 	{
 	    .repoType = TemperatureSDR,
-	    .sensorName = "VCCINT Temp\0",
+	    .sensorName = TEMP_VCCINT_NAME,
 	    .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_2B,
 	    .snsrUnitModifier = 0x0,
 	    .supportedThreshold = SNSR_MAX_VAL | SNSR_AVG_VAL | HAS_UPPER_THRESHOLDS,
@@ -319,16 +322,6 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
 	    .sensorInstance = QSFP_MAX_NUM,
 	    .monitorFunc = &Temperature_Read_QSFP,
 	},
-/*	{
-	    .repoType = TemperatureSDR,
-	    .sensorName = "Fan RPM\0",
-	    .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_2B,
-	    .supportedThreshold = SNSR_MAX_VAL | SNSR_AVG_VAL,
-	    .sampleCount = 0x1,
-	    .sesnorListTbl = FAN_SPEED,
-	    .monitorFunc = &Fan_RPM_Read,
-        },
-*/
 	{
 	    .repoType = VoltageSDR,
 	    .getSensorName = &getVoltagesName,
@@ -351,7 +344,7 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
 	},
 	{
 	    .repoType = CurrentSDR,
-	    .sensorName = "VCCINT\0",
+	    .sensorName = VCCINT_NAME,
 	    .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_4B,
 	    .snsrUnitModifier = -3,
 	    .supportedThreshold = SNSR_MAX_VAL | SNSR_AVG_VAL ,
