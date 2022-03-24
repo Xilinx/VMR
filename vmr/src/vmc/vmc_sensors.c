@@ -619,18 +619,22 @@ done:
 
 void SensorMonitorTask(void *params)
 {
+
     VMC_LOG(" Sensor Monitor Task Created !!!\n\r");
 
     if(Init_Asdm())
     {
          VMC_ERR(" ASDM Init Failed \n\r");
     }
-    
+
     if (xgq_sensor_flag == 0 &&
         cl_msg_handle_init(&sensor_hdl, CL_MSG_SENSOR, xgq_sensor_cb, NULL) == 0) {
         VMC_LOG("init sensor handle done.");
         xgq_sensor_flag = 1;
     }
+
+	/* Wait for notification from VMC_SC_CommsTask */
+	xTaskNotifyWait(ULONG_MAX, ULONG_MAX, NULL, portMAX_DELAY);
 
     for(;;)
     {

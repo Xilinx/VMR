@@ -4,7 +4,7 @@
  *******************************************************************************/
 
 #include "FreeRTOS.h"
-#include "timers.h"
+#include "semphr.h"
 #include "task.h"
 
 #include "vmc_api.h"
@@ -18,7 +18,6 @@ upgrade_status_t upgradeStatus = STATUS_SUCCESS;
 upgrade_state_t upgradeState = SC_STATE_IDLE;
 scUpateError_t upgradeError = SC_UPDATE_NO_ERROR;
 
-TimerHandle_t xSCUpdateTimeOutTimer = NULL;
 TaskHandle_t xSCUpdateTaskHandle = NULL;
 extern uart_rtos_handle_t uart_vmcsc_log;
 
@@ -63,6 +62,7 @@ u8 bslPasswd[BSL_UNLOCK_PASSWORD_REQ] = { 0x80, 0x39, 0x00, 0x21, 0x58, 0x41,
 extern void rmgmt_extension_fpt_query(struct cl_msg *msg);
 extern SemaphoreHandle_t vmc_sc_comms_lock;
 extern SemaphoreHandle_t vmc_sensor_monitoring_lock;
+
 
 
 int32_t VMC_SCFW_Program_Progress(void)
@@ -184,47 +184,14 @@ u8 Get_SC_Checksum(void)
 	/* Get the SC version and compare with the backup one and return accordingly */
 	u8 retVal = UPDATE_REQUIRED;
 
-	/* if (fpt_sc_version[MAJOR] > sc_version.scVersion[MAJOR]) {
-		retVal = UPDATE_REQUIRED;
-	} else if (fpt_sc_version[MAJOR] == sc_version.scVersion[MAJOR]) {
-		if (fpt_sc_version[MINOR] > sc_version.scVersion[MINOR]) {
-			retVal = UPDATE_REQUIRED;
-		} else if (fpt_sc_version[MINOR] == sc_version.scVersion[MINOR]) {
-			if (fpt_sc_version[REVISION] > sc_version.scVersion[REVISION]) {
-				retVal = UPDATE_REQUIRED;
-			} else if (fpt_sc_version[REVISION] == sc_version.scVersion[REVISION]) {
-				retVal = NO_UPDATE_REQUIRED;
-			} else {
-				retVal = UPDATE_REQUIRED;
-			}
-		} else {
-			retVal = UPDATE_REQUIRED;
-		}
-	} else {
-		retVal = UPDATE_REQUIRED;
-	} */
-
 	return retVal;
 }
 
-void xSCUpdateTimeOutTimerCallback(TimerHandle_t xTimer)
-{
-	/* Clean Up */
-	upgradeError = SC_UPDATE_ERROR_OPEARTION_TIMEDOUT;
-	update_progress = upgradeError;
-	upgradeStatus = STATUS_FAILURE;
-	upgradeState = SC_STATE_IDLE;
-
-	memset(receive_bufr,0x00,sizeof(receive_bufr));
-	receivedByteCount = 0;
-
-	VMC_LOG("\n\rSC Update Timeout.. \n\rERROR in SC Update. Retry... \r\n");
-}
 
 void VMC_Get_Fpt_SC_Version(cl_msg_t *msg)
 {
-	u8 read_buffer[SC_HEADER_SIZE] = {0};
-	u8 header[SC_HEADER_SIZE] = SC_HEADER_MSG;
+	u8 read_buffer[SC_TOT_HEADER_SIZE] = {0};
+	u8 header[] = SC_HEADER_MSG;
 	u8 retVal = 0x01;
 	data_ptr = 0x00;
 
@@ -237,9 +204,10 @@ void VMC_Get_Fpt_SC_Version(cl_msg_t *msg)
 	VMC_LOG("\n\rFpt SC Base Addr : 0x%x\r\n",fpt_sc_loc.start_address);
 	VMC_LOG("\n\rFpt SC size : 0x%x\r\n",fpt_sc_loc.size);
 
-	VMC_Read_Data32((u32 *) fpt_sc_loc.start_address, (u32 *)read_buffer, (SC_HEADER_SIZE+1)/4);
+	/* Data is read in 4-byte format. */
+	VMC_Read_Data32((u32 *) fpt_sc_loc.start_address, (u32 *)read_buffer, (SC_TOT_HEADER_SIZE)/4);
 
-	retVal = Check_Received_SC_Header(read_buffer,header,sizeof(read_buffer));
+	retVal = Check_Received_SC_Header(read_buffer,header,SC_HEADER_SIZE);
 	if(retVal == 0x00)
 	{
 		fptSCvalid = true;
@@ -250,12 +218,6 @@ void VMC_Get_Fpt_SC_Version(cl_msg_t *msg)
 		portEXIT_CRITICAL();
 
 		VMC_LOG("\n\rFpt SC version : v%d.%d.%d\r\n",fpt_sc_version[0], fpt_sc_version[1], fpt_sc_version[2]);
-
-		xSCUpdateTimeOutTimer = xTimerCreate("SC Update timeout timer", pdMS_TO_TICKS(1000 * 60), pdFALSE, NULL, xSCUpdateTimeOutTimerCallback);
-		if((xSCUpdateTimeOutTimer == NULL))
-		{
-			VMC_LOG("\n\rSC Update Timer creation failed.. !!\r\n");
-		}
 	}
 	else
 	{
@@ -268,20 +230,14 @@ int32_t VMC_Start_SC_Update(void)
 {
 	int32_t retVal = 0;
 
-	retVal = Get_SC_Checksum();
+	retVal = (s32)Get_SC_Checksum();
 	if(retVal && fptSCvalid)
 	{
 		VMC_LOG("\n\rSC Needs Update !!\r\n");
 
-		if(xTimerStart(xSCUpdateTimeOutTimer, pdMS_TO_TICKS(100)) != pdPASS)
-		{
-			VMC_ERR("\n\rFailed to start xSCUpdateTimeOutTimer \r\n");
-		}
-
 		if (xTaskNotify(xSCUpdateTaskHandle, 0, eNoAction) != pdPASS)
 		{
 			retVal = -1;
-			xTimerStop(xSCUpdateTimeOutTimer, pdMS_TO_TICKS(100));
 			VMC_ERR("Notification failed !!\r\n");
 		}
 	}
@@ -724,7 +680,7 @@ void SCUpdateTask(void * arg)
 						}
 					}
 
-					if(retryCount == SC_UPDATE_MAX_RETRY_COUNT)
+					if(retryCount >= SC_UPDATE_MAX_RETRY_COUNT)
 					{
 						retryCount = 0;
 						upgradeError = SC_UPDATE_ERROR_SC_BSL_SYNC_FAILED;
@@ -775,7 +731,7 @@ void SCUpdateTask(void * arg)
 						}
 					}
 
-					if(retryCount == SC_UPDATE_MAX_RETRY_COUNT)
+					if(retryCount >= SC_UPDATE_MAX_RETRY_COUNT)
 					{
 						retryCount = 0;
 						upgradeError = SC_UPDATE_ERROR_EN_BSL_FAILED;
@@ -830,7 +786,7 @@ void SCUpdateTask(void * arg)
 						}
 					}
 
-					if(retryCount == SC_UPDATE_MAX_RETRY_COUNT)
+					if(retryCount >= SC_UPDATE_MAX_RETRY_COUNT)
 					{
 						retryCount = 0;
 						upgradeError = SC_UPDATE_ERROR_VMC_BSL_SYNC_FAILED;
@@ -887,7 +843,7 @@ void SCUpdateTask(void * arg)
 						}
 					}
 
-					if(retryCount == SC_UPDATE_MAX_RETRY_COUNT)
+					if(retryCount >= SC_UPDATE_MAX_RETRY_COUNT)
 					{
 						retryCount = 0;
 						upgradeError = SC_UPDATE_ERROR_BSL_UNLOCK_PASSWORD_FAILED;
@@ -946,7 +902,7 @@ void SCUpdateTask(void * arg)
 						}
 					}
 
-					if(retryCount == SC_UPDATE_MAX_RETRY_COUNT)
+					if(retryCount >= SC_UPDATE_MAX_RETRY_COUNT)
 					{
 						retryCount = 0;
 						upgradeError = SC_UPDATE_ERROR_ERASE_FAILED;
@@ -1208,7 +1164,7 @@ void SCUpdateTask(void * arg)
 						}
 					}
 
-					if(retryCount == SC_UPDATE_MAX_RETRY_COUNT)
+					if(retryCount >= SC_UPDATE_MAX_RETRY_COUNT)
 					{
 						retryCount = 0;
 						upgradeError = SC_UPDATE_ERROR_FAILED_TO_GET_BSL_VERSION;
@@ -1243,17 +1199,13 @@ void SCUpdateTask(void * arg)
 		/* Waiting for 5Sec so that XRT will get the updated progress of SC update */
 		vTaskDelay(DELAY_MS(1000 * 5));
 
-		/* Stop timer as update completed (Pass/Fail) */
-		if(xTimerStop(xSCUpdateTimeOutTimer, pdMS_TO_TICKS(100)) != pdPASS)
-		{
-			VMC_ERR("\n\rFailed to stop xSCUpdateTimeOutTimer \r\n");
-		}
-
 		/* Reset progress variables */
 		update_progress = 0;
 		curr_prog = 0;
 		max_data_slot = 0;
 		upgradeError = SC_UPDATE_NO_ERROR;
+
+		vmc_set_sc_status(false);
 
 		/* Resume SC communication and monitoring */
 		xSemaphoreGive(vmc_sensor_monitoring_lock);

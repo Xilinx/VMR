@@ -71,8 +71,8 @@
 
 #define BSL_MAX_DATA_SIZE				(266u)
 
-#define SC_HEADER_SIZE					(0x0000000B)
-#define SC_RES_HEADER_SIZE	    		(0x00000005)
+#define SC_HEADER_SIZE					(0x0B)
+#define SC_RES_HEADER_SIZE				(0x05)
 #define SC_TOT_HEADER_SIZE				(SC_HEADER_SIZE + SC_RES_HEADER_SIZE)
 #define SC_HEADER_MSG					("VERSAL_SCFW")
 

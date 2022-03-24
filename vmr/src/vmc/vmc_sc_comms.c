@@ -6,6 +6,15 @@
 #include "vmc_update_sc.h"
 
 extern TaskHandle_t xVMCSCTask;
+extern TaskHandle_t xSensorMonTask;
+extern SemaphoreHandle_t vmc_sensor_monitoring_lock;
+
+
+#define SENSOR_MONITOR_TASK_NOTIFIED      (1)
+#define SENSOR_MONITOR_TASK_NOT_NOTIFIED  (0)
+#define SENSOR_MONITOR_LOCK_ACQUIRED      (1)
+#define SENSOR_MONITOR_LOCK_RELEASED      (0)
+#define SENSOR_MONITOR_TASK_MAX_NOTIFY_COUNT (3)
 
 SC_VMC_Data sc_vmc_data;
 
@@ -19,7 +28,7 @@ u16 g_scDataCount = 0;
 bool isPacketReceived;
 u8 scPayload[128] = {0};
 
-volatile bool isVMCActive ;
+static volatile bool isVMCActive  = false ;
 volatile bool isPowerModeActive ;
 volatile bool getSensorRespLen ;
 
@@ -28,7 +37,7 @@ extern uint8_t sc_update_flag;
 u8 VMC_SC_Comms_Msg[] = {
        MSP432_COMMS_VOLT_SNSR_REQ,
        MSP432_COMMS_POWER_SNSR_REQ,
-	   MSP432_COMMS_TEMP_SNSR_REQ,
+       MSP432_COMMS_TEMP_SNSR_REQ,
        MSP432_COMMS_VMC_SEND_I2C_SNSR_REQ,
 };
 
@@ -51,6 +60,16 @@ static uint16_t calculate_checksum(vmc_sc_uart_cmd *data)
     }
 
     return checksum;
+}
+
+bool vmc_get_sc_status()
+{
+	return isVMCActive;
+}
+
+void vmc_set_sc_status(bool value)
+{
+	isVMCActive = value;
 }
 
 u16 vmcU8ToU16(u8 *payload) {
@@ -80,7 +99,6 @@ void VMC_Update_Sensor_Length(u16 length,u8 *payload)
     }
 
 }
-
 void VMC_Update_Version_PowerMode(u16 length,u8 *payload)
 {
 	u16 i=0;
@@ -101,7 +119,6 @@ void VMC_Update_Version_PowerMode(u16 length,u8 *payload)
 				isActiveMSPVerUpdated = true;
 			}
 			break;
-
 		case TOTAL_POWER_AVAIL:
 			sc_vmc_data.availpower = payload[i+2];
 			break;
@@ -168,6 +185,7 @@ bool Parse_SCData(u8 *Payload)
 			VMC_Update_Sensors(Payload[PayloadLength], &Payload[COMMS_PAYLOAD_START_INDEX]);
 			break;
 		case MSP432_COMMS_VMC_VERSION_POWERMODE_RESP:
+			isPowerModeActive = true;
 			VMC_Update_Version_PowerMode(Payload[PayloadLength], &Payload[COMMS_PAYLOAD_START_INDEX]);
 			break;
 		case MSP432_COMMS_VMC_GET_RESP_SIZE_RESP:
@@ -177,6 +195,7 @@ bool Parse_SCData(u8 *Payload)
 			VMC_LOG("received error message  \r\n");
 			break;
 		case MSP432_COMMS_MSG_GOOD:
+			vmc_set_sc_status(true);
 			VMC_LOG("Received MSG_GOOD  \r\n");
 			break;
 		default :
@@ -392,7 +411,6 @@ void VMC_Fetch_SC_SensorData(u8 messageID)
             {
                 Parse_SCData(g_scData);
                 isPacketReceived = false;
-                isPowerModeActive = true;
             }
             memset(g_scData,0x00,MAX_VMC_SC_UART_BUF_SIZE);
             g_scDataCount = 0;
@@ -407,7 +425,6 @@ void VMC_Fetch_SC_SensorData(u8 messageID)
             {
                 Parse_SCData(g_scData);
                 isPacketReceived = false;
-                isVMCActive = true;
             }
             memset(g_scData,0x00,MAX_VMC_SC_UART_BUF_SIZE);
             g_scDataCount = 0;
@@ -444,34 +461,70 @@ void VMC_Mointor_SC_Sensors()
 
 void VMC_SC_CommsTask(void *params)
 {
+    u8 task_notify_cnt = 0;
+    u8 isSensorMonitorLockAquired = 0;
+    BaseType_t task_notified = SENSOR_MONITOR_TASK_NOT_NOTIFIED;
     VMC_LOG("VMC SC Comms Task Created !!!\n\r");
 
     for(;;)
     {
-    	/* Notify SC of VMC Presence */
     	if(xSemaphoreTake(vmc_sc_comms_lock, portMAX_DELAY) == pdTRUE)
     	{
-    		if(!isVMCActive)
+    		/* Notify SC of VMC Presence */
+    		if(!vmc_get_sc_status())
     		{
+    			if (task_notified == SENSOR_MONITOR_TASK_NOTIFIED ) {
+    				if(isSensorMonitorLockAquired == SENSOR_MONITOR_LOCK_RELEASED ) {
+    					if(xSemaphoreTake(vmc_sensor_monitoring_lock, portMAX_DELAY) == pdFALSE) {
+    						VMC_ERR(" Failed to acquire sensor monitor lock \r");
+    					} else {
+    						isSensorMonitorLockAquired = SENSOR_MONITOR_LOCK_ACQUIRED;
+    					}
+    				}
+    			}
     			VMC_Fetch_SC_SensorData(MSP432_COMMS_VMC_ACTIVE_REQ);
     		}
-    		/* Fetch the SC Version and Power Config  */
-    		if(!isPowerModeActive)
+    		else
     		{
-    			VMC_Fetch_SC_SensorData(MSP432_COMMS_VMC_VERSION_POWERMODE_REQ);
+    			if(task_notified == SENSOR_MONITOR_TASK_NOT_NOTIFIED )
+    			{
+    				task_notify_cnt++;
+    				/* Notify the Sensor monitor task to Poll I2c Sensors*/
+    				task_notified = xTaskNotify(xSensorMonTask, 0, eNoAction);
+    				if(task_notify_cnt > SENSOR_MONITOR_TASK_MAX_NOTIFY_COUNT) {
+    					VMC_LOG("TaskNotify failed for SensorMonTask \r\n");
+    					configASSERT(task_notified != SENSOR_MONITOR_TASK_NOT_NOTIFIED);
+    				}
+    			}
+    			if ( isSensorMonitorLockAquired == SENSOR_MONITOR_LOCK_ACQUIRED ) {
+
+    				if(xSemaphoreGive(vmc_sensor_monitoring_lock)) {
+    					xil_printf("semaphore lock released \r\n");
+    					isSensorMonitorLockAquired = SENSOR_MONITOR_LOCK_RELEASED ;
+    				}
+    				else {
+    					xil_printf("semaphore lock not released \r\n");
+    				}
+    				//isSensorMonitorLockAquired = SENSOR_MONITOR_LOCK_RELEASED ;
+    			}
+    			/* Fetch the SC Version and Power Config  */
+    			if(!isPowerModeActive)
+    			{
+    				VMC_Fetch_SC_SensorData(MSP432_COMMS_VMC_VERSION_POWERMODE_REQ);
+    			}
+    			/* Fetch the Volt & power Sensor length  */
+    			if( vmc_get_sc_status() &&  (!getSensorRespLen))
+    			{
+    				VMC_Fetch_SC_SensorData(MSP432_COMMS_VMC_GET_RESP_SIZE_REQ);
+    			}
+    			/*
+    			 *  Fetching Sensor values from SC
+    			 */
+    			VMC_Mointor_SC_Sensors();
     		}
-    		/* Fetch the Volt & power Sensor length  */
-    		if( isVMCActive &&  (!getSensorRespLen))
-    		{
-    			VMC_Fetch_SC_SensorData(MSP432_COMMS_VMC_GET_RESP_SIZE_REQ);
-    		}
-    		/*
-    		 *  Fetching Sensor values from SC
-    		 */
-    		VMC_Mointor_SC_Sensors();
     		xSemaphoreGive(vmc_sc_comms_lock);
-    		vTaskDelay(100);
     	}
+    	vTaskDelay(100);
     }
 
     vTaskSuspend(NULL);
