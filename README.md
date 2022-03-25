@@ -13,7 +13,7 @@
         1.3 A CR or Story number is required for every PR. And PR # should be updated back to CR/Story.
             > PR reviewer should not apporve any PR without a tracking number
 
-        1.4 Please address all code review commens prior to ask for code merge.
+        1.4 Please address all code review comments prior to ask for code merge.
 
 >       Failing to do so might end up with "git revert" due to "need more work".
 	
