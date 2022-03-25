@@ -12,6 +12,7 @@
 #include "event_groups.h"
 #include "portmacro.h"
 
+#include "cl_mem.h"
 #include "cl_uart_rtos.h"
 #include "cl_log.h"
 #include "cl_main.h"
@@ -193,7 +194,7 @@ static int32_t UART_RTOS_Init(uart_rtos_handle_t *handle, XScuGic *IntcInstPtr, 
 		return UART_ERROR_INIT;
 	}
 
-	memset(&handle->cb_msg,0,sizeof(handle->cb_msg));
+	Cl_SecureMemset(&handle->cb_msg,0,sizeof(handle->cb_msg));
 
 
 	ret = UART_Config(handle, &handle->uartPsv,DeviceId,UartIntrId);

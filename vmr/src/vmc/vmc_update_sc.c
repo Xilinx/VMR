@@ -7,6 +7,7 @@
 #include "semphr.h"
 #include "task.h"
 
+#include "cl_mem.h"
 #include "vmc_api.h"
 #include "cl_msg.h"
 #include "cl_uart_rtos.h"
@@ -186,7 +187,6 @@ u8 Get_SC_Checksum(void)
 
 	return retVal;
 }
-
 
 void VMC_Get_Fpt_SC_Version(cl_msg_t *msg)
 {
@@ -586,7 +586,7 @@ upgrade_status_t matchCRC_postWrite(unsigned int writeAdd)
 		}
 	}
 
-	memset(receive_bufr,0x00,sizeof(receive_bufr));
+	Cl_SecureMemset(receive_bufr,0x00,sizeof(receive_bufr));
 	receivedByteCount = 0;
 
 	return status;
@@ -637,7 +637,7 @@ void SCUpdateTask(void * arg)
 					static u8 ModeRetryCnt = 0;
 					static u8 retryCount = 0;
 					u8 sc_bsl_sync[SC_BSL_SYNCED_REQ] = {0xFF};
-					memset(receive_bufr,0xFF,sizeof(receive_bufr));
+					Cl_SecureMemset(receive_bufr,0xFF,sizeof(receive_bufr));
 
 					VMC_LOG("\n\rSend CMD : SC_BSL_SYNC \n\r");
 
@@ -691,7 +691,7 @@ void SCUpdateTask(void * arg)
 						VMC_ERR("\n\rUpdate failure. Retry.. \n\r");
 					}
 
-					memset(receive_bufr,0xFF,sizeof(receive_bufr));
+					Cl_SecureMemset(receive_bufr,0xFF,sizeof(receive_bufr));
 					receivedByteCount = 0;
 					vTaskDelay(DELAY_MS(1000));
 
@@ -742,7 +742,7 @@ void SCUpdateTask(void * arg)
 						VMC_ERR("\n\rUpdate failure. Retry.. \n\r");
 					}
 
-					memset(receive_bufr,0xFF,sizeof(receive_bufr));
+					Cl_SecureMemset(receive_bufr,0xFF,sizeof(receive_bufr));
 					receivedByteCount = 0;
 					vTaskDelay(DELAY_MS(1000));
 
@@ -797,7 +797,7 @@ void SCUpdateTask(void * arg)
 						VMC_ERR("\n\rUpdate failure. Retry.. \n\r");
 					}
 
-					memset(receive_bufr,0x00,sizeof(receive_bufr));
+					Cl_SecureMemset(receive_bufr,0x00,sizeof(receive_bufr));
 					receivedByteCount = 0;
 					vTaskDelay(DELAY_MS(1000));
 
@@ -854,7 +854,7 @@ void SCUpdateTask(void * arg)
 						VMC_ERR("\n\rUpdate failure. Retry.. \n\r");
 					}
 
-					memset(receive_bufr,0x00,sizeof(receive_bufr));
+					Cl_SecureMemset(receive_bufr,0x00,sizeof(receive_bufr));
 					receivedByteCount = 0;
 					vTaskDelay(DELAY_MS(1000));
 
@@ -913,7 +913,7 @@ void SCUpdateTask(void * arg)
 						VMC_ERR("\n\rUpdate failure. Retry.. \n\r");
 					}
 
-					memset(receive_bufr,0x00,sizeof(receive_bufr));
+					Cl_SecureMemset(receive_bufr,0x00,sizeof(receive_bufr));
 					receivedByteCount = 0;
 					vTaskDelay(DELAY_MS(20));
 
@@ -962,8 +962,8 @@ void SCUpdateTask(void * arg)
 
 						while(all_pkt_sent != true)
 						{
-							memset(bsl_send_data_pkt, 0x00, BSL_MAX_DATA_SIZE);
-							memset(receive_bufr, 0x00, sizeof(receive_bufr));
+							Cl_SecureMemset(bsl_send_data_pkt, 0x00, BSL_MAX_DATA_SIZE);
+							Cl_SecureMemset(receive_bufr, 0x00, sizeof(receive_bufr));
 							receivedByteCount = 0x00;
 
 							portENTER_CRITICAL();
@@ -1038,7 +1038,7 @@ void SCUpdateTask(void * arg)
 					curr_prog = 0;
 					max_data_slot = 0;
 					receivedByteCount = 0;
-					memset(receive_bufr, 0x00, sizeof(receive_bufr));
+					Cl_SecureMemset(receive_bufr, 0x00, sizeof(receive_bufr));
 					vTaskDelay(DELAY_MS(20));
 
 					upgradeState = BSL_LOAD_PC_32;
@@ -1077,7 +1077,7 @@ void SCUpdateTask(void * arg)
 						upgradeState = SC_STATE_IDLE;
 					}
 
-					memset(receive_bufr,0x00,sizeof(receive_bufr));
+					Cl_SecureMemset(receive_bufr,0x00,sizeof(receive_bufr));
 					receivedByteCount = 0;
 
 					break;
@@ -1115,7 +1115,7 @@ void SCUpdateTask(void * arg)
 						VMC_LOG("SuC BSL Rebooted !!\n\r");
 					}
 
-					memset(receive_bufr,0x00,sizeof(receive_bufr));
+					Cl_SecureMemset(receive_bufr,0x00,sizeof(receive_bufr));
 					receivedByteCount = 0;
 					vTaskDelay(DELAY_MS(1000));
 
@@ -1175,7 +1175,7 @@ void SCUpdateTask(void * arg)
 						VMC_ERR("\n\rFailed to get BSL version. Retry.. \n\r");
 					}
 
-					memset(receive_bufr,0x00,sizeof(receive_bufr));
+					Cl_SecureMemset(receive_bufr,0x00,sizeof(receive_bufr));
 					receivedByteCount = 0;
 
 					/* Reset the progress variables */

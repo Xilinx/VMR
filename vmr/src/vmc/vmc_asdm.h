@@ -175,11 +175,13 @@ typedef struct __attribute__((packed)) Asdm_EOR_s
     u8 EndOfRepoMarker[4];
 }Asdm_EOR_t;
 
+#define ASDM_EOR_MAX_SIZE		(4u)
+
 typedef struct __attribute__((packed)) SDR_s
 {
     Asdm_Header_t header;
     Asdm_SensorRecord_t *sensorRecord;
-    u8 asdmEOR[4];
+    u8 asdmEOR[ASDM_EOR_MAX_SIZE];
 
 }SDR_t;
 

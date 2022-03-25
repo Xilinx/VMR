@@ -9,6 +9,7 @@
 
 #include "cl_uart_rtos.h"
 #include "cl_log.h"
+#include "cl_mem.h"
 #include "cl_i2c.h"
 #include "sensors/inc/m24c128.h"
 #include <stdio.h>
@@ -95,7 +96,7 @@ void Debug_Printf(char *filename, u32 line, u8 log_level, const char *fmt, va_li
 		max_msg_size -= msg_idx;
 		vsnprintf(&LogBuf[msg_idx], max_msg_size, fmt, *argp);
 		UART_RTOS_Send(&uart_log, (u8 *)LogBuf, MAX_LOG_SIZE);
-		memset(LogBuf , '\0' , MAX_LOG_SIZE);
+		Cl_SecureMemset(LogBuf , '\0' , MAX_LOG_SIZE);
 		xSemaphoreGive(vmc_debug_logbuf_lock);
     }
     else
