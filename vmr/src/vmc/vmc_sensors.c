@@ -6,6 +6,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 
+#include "cl_mem.h"
 #include "cl_uart_rtos.h"
 #include "cl_i2c.h"
 #include "cl_log.h"
@@ -94,7 +95,7 @@ s8 Temperature_Read_Inlet(snsrRead_t *snsrData)
 	status = SE98A_ReadTemperature(LPD_I2C_0, SLAVE_ADDRESS_SE98A_0, &tempValue);
 	if (status == XST_SUCCESS)
 	{
-		memcpy(snsrData->snsrValue,&tempValue,sizeof(tempValue));
+		Cl_SecureMemcpy(snsrData->snsrValue,sizeof(tempValue),&tempValue,sizeof(tempValue));
 		snsrData->sensorValueSize = sizeof(tempValue);
 		snsrData->snsrSatus = Vmc_Snsr_State_Normal;
 	}
@@ -115,7 +116,7 @@ s8 Temperature_Read_Outlet(snsrRead_t *snsrData)
 	status = SE98A_ReadTemperature(LPD_I2C_0, SLAVE_ADDRESS_SE98A_1, &tempValue);
 	if (status == XST_SUCCESS)
 	{
-		memcpy(snsrData->snsrValue,&tempValue,sizeof(tempValue));
+		Cl_SecureMemcpy(snsrData->snsrValue,sizeof(tempValue),&tempValue,sizeof(tempValue));
 		snsrData->sensorValueSize = sizeof(tempValue);
 		snsrData->snsrSatus = Vmc_Snsr_State_Normal;
 	}
@@ -137,7 +138,7 @@ s8 Temperature_Read_Board(snsrRead_t *snsrData)
 	if (status == XST_SUCCESS)
 	{
 		u16 roundedOffVal = (TempReading > 0) ? TempReading : 0;
-		memcpy(&snsrData->snsrValue[0],&roundedOffVal,sizeof(roundedOffVal));
+		Cl_SecureMemcpy(&snsrData->snsrValue[0],sizeof(roundedOffVal),&roundedOffVal,sizeof(roundedOffVal));
 		snsrData->sensorValueSize = sizeof(roundedOffVal);
 		snsrData->snsrSatus = Vmc_Snsr_State_Normal;
 	}
@@ -161,7 +162,7 @@ s8 Temperature_Read_ACAP_Device_Sysmon(snsrRead_t *snsrData)
 	if (status == XST_SUCCESS)
 	{
 		u16 roundedOffVal = (TempReading > 0) ? TempReading : 0;
-		memcpy(&snsrData->snsrValue[0],&roundedOffVal,sizeof(roundedOffVal));
+		Cl_SecureMemcpy(&snsrData->snsrValue[0],sizeof(roundedOffVal),&roundedOffVal,sizeof(roundedOffVal));
 		snsrData->sensorValueSize = sizeof(roundedOffVal);
 		snsrData->snsrSatus = Vmc_Snsr_State_Normal;
 	}
@@ -206,7 +207,7 @@ s8 Fan_RPM_Read(snsrRead_t *snsrData)
 	avgFanRPM = (fanRPM1 + fanRPM2)/2;
 	if (status == XST_SUCCESS)
 	{
-		memcpy(snsrData->snsrValue,&avgFanRPM,sizeof(avgFanRPM));
+		Cl_SecureMemcpy(snsrData->snsrValue,sizeof(avgFanRPM),&avgFanRPM,sizeof(avgFanRPM));
 		snsrData->sensorValueSize = sizeof(avgFanRPM);
 		snsrData->snsrSatus = Vmc_Snsr_State_Normal;
 	}
@@ -227,7 +228,7 @@ s8 Temperature_Read_QSFP(snsrRead_t *snsrData)
 	status = QSFP_ReadTemperature(&TempReading, snsrData->sensorInstance);
 
 	u16 roundedOffVal = (TempReading > 0) ? TempReading : 0;
-	memcpy(&snsrData->snsrValue[0],&roundedOffVal,sizeof(roundedOffVal));
+	Cl_SecureMemcpy(&snsrData->snsrValue[0],sizeof(roundedOffVal),&roundedOffVal,sizeof(roundedOffVal));
 	snsrData->sensorValueSize = sizeof(roundedOffVal);
 
 	if (status == XST_SUCCESS)
@@ -277,15 +278,15 @@ s8 PMBUS_SC_Sensor_Read(snsrRead_t *snsrData)
 
 	if(sensorReading != 0)
 	{
-		memcpy(&snsrData->snsrValue[0],&sensorReading,sizeof(sensorReading));
-		snsrData->sensorValueSize = sizeof(sensorReading);
-		snsrData->snsrSatus = Vmc_Snsr_State_Normal;
+	    Cl_SecureMemcpy(&snsrData->snsrValue[0],sizeof(sensorReading),&sensorReading,sizeof(sensorReading));
+	    snsrData->sensorValueSize = sizeof(sensorReading);
+	    snsrData->snsrSatus = Vmc_Snsr_State_Normal;
 	}
 	else
 	{
-		memcpy(&snsrData->snsrValue[0],&sensorReading,sizeof(sensorReading));
-		snsrData->snsrSatus = Vmc_Snsr_State_Comms_failure;
-		VMC_DBG("MSP Sensor Id : %d Data read failed \n\r",snsrData->mspSensorIndex);
+	    Cl_SecureMemcpy(&snsrData->snsrValue[0],sizeof(sensorReading),&sensorReading,sizeof(sensorReading));
+	    snsrData->snsrSatus = Vmc_Snsr_State_Comms_failure;
+	    VMC_DBG("MSP Sensor Id : %d Data read failed \n\r",snsrData->mspSensorIndex);
 	}
 
 	return status;
@@ -358,7 +359,7 @@ s8 Power_Monitor(snsrRead_t *snsrData)
     if(totalPower != 0)
     {
 	u16 roundedOffVal = (totalPower > 0) ? totalPower : 0;
-        memcpy(&snsrData->snsrValue[0],&roundedOffVal,sizeof(roundedOffVal));
+        Cl_SecureMemcpy(&snsrData->snsrValue[0],sizeof(roundedOffVal),&roundedOffVal,sizeof(roundedOffVal));
         snsrData->sensorValueSize = sizeof(roundedOffVal);
         snsrData->snsrSatus = Vmc_Snsr_State_Normal;
     }

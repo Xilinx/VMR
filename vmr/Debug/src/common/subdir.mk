@@ -10,7 +10,8 @@ C_SRCS += \
 ../src/common/cl_ospi_polled.c \
 ../src/common/cl_uart_rtos.c \
 ../src/common/cl_xgq_client.c \
-../src/common/cl_xgq_server.c 
+../src/common/cl_xgq_server.c \
+../src/common/cl_mem.c 
 
 OBJS += \
 ./src/common/cl_i2c.o \
@@ -19,7 +20,8 @@ OBJS += \
 ./src/common/cl_ospi_polled.o \
 ./src/common/cl_uart_rtos.o \
 ./src/common/cl_xgq_client.o \
-./src/common/cl_xgq_server.o 
+./src/common/cl_xgq_server.o \
+./src/common/cl_mem.o
 
 C_DEPS += \
 ./src/common/cl_i2c.d \
@@ -28,7 +30,8 @@ C_DEPS += \
 ./src/common/cl_ospi_polled.d \
 ./src/common/cl_uart_rtos.d \
 ./src/common/cl_xgq_client.d \
-./src/common/cl_xgq_server.d 
+./src/common/cl_xgq_server.d \
+./src/common/cl_mem.d
 
 
 # Each subdirectory must supply rules for building sources it contributes

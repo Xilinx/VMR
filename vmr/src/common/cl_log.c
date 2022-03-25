@@ -7,6 +7,7 @@
 #include "task.h"
 #include "semphr.h"
 
+#include "cl_mem.h"
 #include "cl_log.h"
 #include "cl_io.h"
 #include "xgq_cmd_vmr.h"
@@ -76,9 +77,9 @@ static void cl_printf_impl(const char *name, uint32_t line, uint8_t log_level,
 		return;
 		
 	/* set buffers to 0 */
-	memset(buf, 0, sizeof(buf));
-	memset(log_buf, 0, sizeof(log_buf));
-	memset(&mem, 0, sizeof(mem));
+	Cl_SecureMemset(buf, 0, sizeof(buf));
+	Cl_SecureMemset(log_buf, 0, sizeof(log_buf));
+	Cl_SecureMemset(&mem, 0, sizeof(mem));
 
 	/* assembile log message into log_buf char array */
 	vsnprintf(buf, sizeof(buf), fmt, *argp);

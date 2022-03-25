@@ -2,6 +2,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 
+#include "cl_mem.h"
 #include "vmc_sc_comms.h"
 #include "vmc_update_sc.h"
 
@@ -219,9 +220,9 @@ bool VMC_send_packet(u8 Message_id , u8 Flags,u8 Payloadlength, u8 *Payload)
 	u16 checksum = 0;
     int32_t retVal ;
 
-    vmc_sc_uart_cmd pkt_framing;
+    vmc_sc_uart_cmd pkt_framing = {0};
 
-    memset(&pkt_framing,0x00,sizeof(vmc_sc_uart_cmd));
+    Cl_SecureMemset(&pkt_framing,0x00,sizeof(vmc_sc_uart_cmd));
 
 	pkt_framing.SOP[0] = ESCAPE_CHAR;
 	pkt_framing.SOP[1] = STX;
@@ -245,7 +246,7 @@ bool VMC_send_packet(u8 Message_id , u8 Flags,u8 Payloadlength, u8 *Payload)
 	pkt_framing.Checksum[0] = checksum & (0x00FF);
 	pkt_framing.Checksum[1] = (checksum >> 8);
 
-	(void)memcpy(&buf[0], &pkt_framing.SOP[0], SOP_SIZE);
+	(void)Cl_SecureMemcpy(&buf[0],SOP_SIZE, &pkt_framing.SOP[0], SOP_SIZE);
 	length += SOP_SIZE;
 
 	/* MessageID */
@@ -292,7 +293,7 @@ bool VMC_send_packet(u8 Message_id , u8 Flags,u8 Payloadlength, u8 *Payload)
 	}
 
 	/* Add EOP */
-	(void)memcpy(&buf[length], &pkt_framing.EOP[0], EOP_SIZE);
+	(void)Cl_SecureMemcpy(&buf[length], EOP_SIZE, &pkt_framing.EOP[0], EOP_SIZE);
 	length += EOP_SIZE;
 
 	retVal = UART_RTOS_Send(&uart_vmcsc_log,&buf[0],length);
@@ -311,7 +312,7 @@ void VMC_uart_receive(u8  Expected_Msg_Length)
 	{
 		if(receivedcount > 2 )   // condition to avoid negative indexing
 		{
-			memcpy(g_scData,Data,receivedcount);
+			Cl_SecureMemcpy(g_scData,receivedcount,Data,receivedcount);
 			if ((g_scData[receivedcount-1] == ETX) && (g_scData[receivedcount-2] == ESCAPE_CHAR))
 			{
 				isPacketReceived = true;
@@ -333,7 +334,7 @@ void Get_Sensor_Response_Length(u8 Data)
 		Parse_SCData(g_scData);
 		isPacketReceived = false;
 	}
-	memset(g_scData,0x00,MAX_VMC_SC_UART_BUF_SIZE);
+	Cl_SecureMemset(g_scData,0x00,MAX_VMC_SC_UART_BUF_SIZE);
 	g_scDataCount = 0;
 }
 
@@ -352,7 +353,7 @@ void VMC_Fetch_SC_SensorData(u8 messageID)
                 Parse_SCData(g_scData);
                 isPacketReceived = false;
             }
-            memset(g_scData,0x00,MAX_VMC_SC_UART_BUF_SIZE);
+            Cl_SecureMemset(g_scData,0x00,MAX_VMC_SC_UART_BUF_SIZE);
             g_scDataCount = 0;
             break;
         }
@@ -366,7 +367,7 @@ void VMC_Fetch_SC_SensorData(u8 messageID)
             	Parse_SCData(g_scData);
             	isPacketReceived = false;
             }
-            memset(g_scData,0x00,MAX_VMC_SC_UART_BUF_SIZE);
+            Cl_SecureMemset(g_scData,0x00,MAX_VMC_SC_UART_BUF_SIZE);
             g_scDataCount = 0;
             break;
         }
@@ -380,14 +381,14 @@ void VMC_Fetch_SC_SensorData(u8 messageID)
             	Parse_SCData(g_scData);
             	isPacketReceived = false;
             }
-            memset(g_scData,0x00,MAX_VMC_SC_UART_BUF_SIZE);
+            Cl_SecureMemset(g_scData,0x00,MAX_VMC_SC_UART_BUF_SIZE);
             g_scDataCount = 0;
             break;
         }
         case MSP432_COMMS_VMC_SEND_I2C_SNSR_REQ:
         {
             u8 payloadLength = 0;
-            memset(scPayload ,0x00,128);
+            Cl_SecureMemset(scPayload ,0x00,128);
             payloadLength = Asdm_Send_I2C_Sensors_SC(scPayload);
             VMC_send_packet(MSP432_COMMS_VMC_SEND_I2C_SNSR_REQ,
                             MSP432_COMMS_NO_FLAG,payloadLength,scPayload);
@@ -396,7 +397,7 @@ void VMC_Fetch_SC_SensorData(u8 messageID)
                 Parse_SCData(g_scData);
                 isPacketReceived = false;
             }
-            memset(g_scData,0x00,MAX_VMC_SC_UART_BUF_SIZE);
+            Cl_SecureMemset(g_scData,0x00,MAX_VMC_SC_UART_BUF_SIZE);
             g_scDataCount = 0;
             break;
         }
@@ -412,7 +413,7 @@ void VMC_Fetch_SC_SensorData(u8 messageID)
                 Parse_SCData(g_scData);
                 isPacketReceived = false;
             }
-            memset(g_scData,0x00,MAX_VMC_SC_UART_BUF_SIZE);
+            Cl_SecureMemset(g_scData,0x00,MAX_VMC_SC_UART_BUF_SIZE);
             g_scDataCount = 0;
             break;
         }
@@ -426,7 +427,7 @@ void VMC_Fetch_SC_SensorData(u8 messageID)
                 Parse_SCData(g_scData);
                 isPacketReceived = false;
             }
-            memset(g_scData,0x00,MAX_VMC_SC_UART_BUF_SIZE);
+            Cl_SecureMemset(g_scData,0x00,MAX_VMC_SC_UART_BUF_SIZE);
             g_scDataCount = 0;
             break;
         }

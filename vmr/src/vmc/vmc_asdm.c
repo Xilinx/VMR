@@ -8,6 +8,7 @@
 #include "cl_log.h"
 #include "vmc_api.h"
 #include "vmc_sc_comms.h"
+#include "cl_mem.h"
 #include <semphr.h>
 
 #define ASDM_GET_SDR_SIZE_REQ (0x00)
@@ -104,7 +105,8 @@ void getCurrentNames(u8 index, char8* snsrName, u8 *sensorId)
 
     if(NULL != snsrName)
     {
-        memcpy(snsrName,&snsrData[index].sensorName[0],SENSOR_NAME_MAX);
+        Cl_SecureMemcpy(snsrName,SENSOR_NAME_MAX,&snsrData[index].sensorName[0],SENSOR_NAME_MAX);
+
     }
     if(NULL != sensorId)
     {
@@ -132,7 +134,7 @@ void getVoltagesName(u8 index, char8* snsrName, u8 *sensorId)
 
     if(NULL != snsrName)
     {
-        memcpy(snsrName,&voltageData[index].sensorName[0],SENSOR_NAME_MAX);
+        Cl_SecureMemcpy(snsrName,SENSOR_NAME_MAX,&voltageData[index].sensorName[0],SENSOR_NAME_MAX);
     }
     if(NULL != sensorId)
     {
@@ -156,7 +158,7 @@ void getQSFPName(u8 index, char8* snsrName, u8 *sensorId)
 
     if(NULL != snsrName)
     {
-        memcpy(snsrName,&qsfpData[index].sensorName[0],SENSOR_NAME_MAX);
+        Cl_SecureMemcpy(snsrName,SENSOR_NAME_MAX,&qsfpData[index].sensorName[0],SENSOR_NAME_MAX);
     }
     if(NULL != sensorId)
     {
@@ -370,8 +372,8 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
 
     if(*pMetaData != NULL)
     {
-	memset(*pMetaData,0x00,sizeof(snsrMetaData));
-	memcpy(*pMetaData,snsrMetaData,sizeof(snsrMetaData));
+    	Cl_SecureMemset(*pMetaData,0x00,sizeof(snsrMetaData));
+    	Cl_SecureMemcpy(*pMetaData,sizeof(snsrMetaData),snsrMetaData,sizeof(snsrMetaData));
     }
     else
     {
@@ -385,7 +387,7 @@ u8 getThresholdIdx(u8 *threshIdx,char8 *snsrName,u8 snsrNameLen)
 	u8 i=0;
 	for(i=0; i<THRESHOLD_TBL_SIZE; i++)
 	{
-		if(!strncmp(snsrName,thresholds_limit_tbl[i].sensorName,snsrNameLen-2))
+		if(!Cl_SecureStrncmp(snsrName,snsrNameLen-2,thresholds_limit_tbl[i].sensorName,snsrNameLen-2))
 		{
 			*threshIdx = i;
 			break;
@@ -445,7 +447,9 @@ u8 Update_Sensor_Value(Asdm_RepositoryTypeEnum_t repoType, u8 sensorIdx, snsrRea
     {
 	if (xSemaphoreTake(sdr_lock, portMAX_DELAY))
 	{
-	    memcpy(sensorRecord->sensor_value,&snsrInfo->snsrValue[0],snsrInfo->sensorValueSize);
+	  if( (0 != snsrInfo->sensorValueSize) && (NULL != &sensorRecord->sensor_value) ){
+	    Cl_SecureMemcpy(sensorRecord->sensor_value,snsrInfo->sensorValueSize,&snsrInfo->snsrValue[0],snsrInfo->sensorValueSize);
+	  }
 	    /* Update only if the sensor is not Static */
 	    if(sensorRecord->sampleCount > 0)
 	    {
@@ -457,7 +461,7 @@ u8 Update_Sensor_Value(Asdm_RepositoryTypeEnum_t repoType, u8 sensorIdx, snsrRea
 			/* Update Max Sensor Value */
 			if ( *((float *)sensorRecord->sensor_value) > *((float *)sensorRecord->sensorMaxValue))
 			{
-			    memcpy(sensorRecord->sensorMaxValue,sensorRecord->sensor_value,
+				Cl_SecureMemcpy(sensorRecord->sensorMaxValue,snsrInfo->sensorValueSize,sensorRecord->sensor_value,
 				    snsrInfo->sensorValueSize);
 			}
 
@@ -471,7 +475,7 @@ u8 Update_Sensor_Value(Asdm_RepositoryTypeEnum_t repoType, u8 sensorIdx, snsrRea
 			/* Update Max Sensor Value */
 			if ( *((u16 *)sensorRecord->sensor_value) > *((u16 *)sensorRecord->sensorMaxValue))
 			{
-				memcpy(sensorRecord->sensorMaxValue,sensorRecord->sensor_value,
+				Cl_SecureMemcpy(sensorRecord->sensorMaxValue,snsrInfo->sensorValueSize,sensorRecord->sensor_value,
 						snsrInfo->sensorValueSize);
 			}
 
@@ -547,7 +551,7 @@ s8 Init_Asdm()
 	    VMC_ERR("Failed to allocate Memory for SDR !!!\n\r");
 	    return -1;
 	}
-	memset(sdrInfo,0x00,(MAX_SDR_REPO * sizeof(SDR_t)));
+	Cl_SecureMemset(sdrInfo,0x00,(MAX_SDR_REPO * sizeof(SDR_t)));
 
 	for(sdrCount = 0; sdrCount < MAX_SDR_REPO; sdrCount++)
 	{
@@ -566,7 +570,7 @@ s8 Init_Asdm()
 		return -1;
 	    }
 
-	    memset(sdrInfo[sdrCount].sensorRecord,0x00,allocateSize);
+	    Cl_SecureMemset(sdrInfo[sdrCount].sensorRecord,0x00,allocateSize);
 
 	    Asdm_SensorRecord_t *tmp = sdrInfo[sdrCount].sensorRecord;
 	    currentRepoType = asdmHeaderInfo[sdrCount].repository_type;
@@ -593,7 +597,7 @@ s8 Init_Asdm()
 		 */
 		if(totalSensorInstances > 1)
 		{
-		    memset(snsrName,0x00,SENSOR_NAME_MAX);
+		    Cl_SecureMemset(snsrName,0x00,SENSOR_NAME_MAX);
 		    pSdrMetaData[totalRecords].getSensorName(sensorInstance,snsrName, &tmp[idx].mspSensorId);
 		    snsrNameLen = strlen(snsrName) + 1;
 		}
@@ -607,14 +611,14 @@ s8 Init_Asdm()
 		tmp[idx].sensor_name = (char8 *) pvPortMalloc(snsrNameLen);
 		if(NULL != tmp[idx].sensor_name)
 		{
-		    memset(tmp[idx].sensor_name, 0x00, snsrNameLen);
+			Cl_SecureMemset(tmp[idx].sensor_name, 0x00, snsrNameLen);
 		    if(totalSensorInstances > 1)
 		    {
-		       memcpy(tmp[idx].sensor_name,snsrName,snsrNameLen);
+		    	Cl_SecureMemcpy(tmp[idx].sensor_name,SENSOR_NAME_MAX,snsrName,snsrNameLen);
 		    }
 		    else
 		    {
-		        memcpy(tmp[idx].sensor_name,
+		    	Cl_SecureMemcpy(tmp[idx].sensor_name,SENSOR_NAME_MAX,
 		            pSdrMetaData[totalRecords].sensorName, snsrNameLen);
 		    }
 		}
@@ -637,9 +641,11 @@ s8 Init_Asdm()
 		tmp[idx].sensor_value = (u8 *) pvPortMalloc(snsrValueLen);
 		if(NULL != tmp[idx].sensor_value)
 		{
-		    memset(tmp[idx].sensor_value, 0x00, snsrValueLen);
-		    /* Value */
-		    memcpy(tmp[idx].sensor_value,pSdrMetaData[totalRecords].defaultValue,snsrValueLen);
+			Cl_SecureMemset(tmp[idx].sensor_value, 0x00, snsrValueLen);
+			if(NULL != pSdrMetaData[totalRecords].defaultValue) {
+				/* Value */
+				Cl_SecureMemcpy(tmp[idx].sensor_value,snsrValueLen,pSdrMetaData[totalRecords].defaultValue,snsrValueLen);
+			}
 		}
 		else
 		{
@@ -659,8 +665,8 @@ s8 Init_Asdm()
 		    tmp[idx].sensor_base_unit = (u8 *) pvPortMalloc(baseUnitLen);
 		    if(NULL != tmp[idx].sensor_base_unit)
 		    {
-			memset(tmp[idx].sensor_base_unit, 0x00, baseUnitLen);
-			memcpy(tmp[idx].sensor_base_unit,
+		    	Cl_SecureMemset(tmp[idx].sensor_base_unit, 0x00, baseUnitLen);
+		    	Cl_SecureMemcpy(tmp[idx].sensor_base_unit,baseUnitLen,
 					sensor_unit_tbl[currentRepoType].baseUnit, baseUnitLen);
 		    }
 		    else
@@ -694,8 +700,8 @@ s8 Init_Asdm()
 					VMC_ERR("Failed to allocate Memory for lower_fatal_limit !!!\n\r");
 					return -1;
 				}
-				memset(tmp[idx].lower_fatal_limit,0x00, snsrValueLen);
-				memcpy(tmp[idx].lower_fatal_limit,&thresholds_limit_tbl[threshIdx].lowerFatalLimit,snsrValueLen);
+				Cl_SecureMemset(tmp[idx].lower_fatal_limit,0x00, snsrValueLen);
+				Cl_SecureMemcpy(tmp[idx].lower_fatal_limit,snsrValueLen,&thresholds_limit_tbl[threshIdx].lowerFatalLimit,snsrValueLen);
 				byteCount += snsrValueLen;
 			}
 
@@ -708,8 +714,8 @@ s8 Init_Asdm()
 					VMC_ERR("Failed to allocate Memory for lower_critical_limit !!!\n\r");
 					return -1;
 				}
-				memset(tmp[idx].lower_critical_limit,0x00, snsrValueLen);
-				memcpy(tmp[idx].lower_critical_limit,&thresholds_limit_tbl[threshIdx].lowerCritLimit,snsrValueLen);
+				Cl_SecureMemset(tmp[idx].lower_critical_limit,0x00, snsrValueLen);
+				Cl_SecureMemcpy(tmp[idx].lower_critical_limit,snsrValueLen,&thresholds_limit_tbl[threshIdx].lowerCritLimit,snsrValueLen);
 				byteCount += snsrValueLen;
 			}
 
@@ -722,8 +728,8 @@ s8 Init_Asdm()
 					VMC_ERR("Failed to allocate Memory for lower_warning_limit !!!\n\r");
 					return -1;
 				}
-				memset(tmp[idx].lower_warning_limit,0x00, snsrValueLen);
-				memcpy(tmp[idx].lower_warning_limit,&thresholds_limit_tbl[threshIdx].lowerWarnLimit,snsrValueLen);
+				Cl_SecureMemset(tmp[idx].lower_warning_limit,0x00, snsrValueLen);
+				Cl_SecureMemcpy(tmp[idx].lower_warning_limit,snsrValueLen,&thresholds_limit_tbl[threshIdx].lowerWarnLimit,snsrValueLen);
 				byteCount += snsrValueLen;
 			}
 
@@ -736,8 +742,8 @@ s8 Init_Asdm()
 					VMC_ERR("Failed to allocate Memory for upper_fatal_limit !!!\n\r");
 					return -1;
 				}
-				memset(tmp[idx].upper_fatal_limit,0x00, snsrValueLen);
-				memcpy(tmp[idx].upper_fatal_limit, &thresholds_limit_tbl[threshIdx].upperFatalLimit, snsrValueLen);
+				Cl_SecureMemset(tmp[idx].upper_fatal_limit,0x00, snsrValueLen);
+				Cl_SecureMemcpy(tmp[idx].upper_fatal_limit,snsrValueLen,&thresholds_limit_tbl[threshIdx].upperFatalLimit, snsrValueLen);
 				byteCount += snsrValueLen;
 			}
 
@@ -750,8 +756,8 @@ s8 Init_Asdm()
 					VMC_ERR("Failed to allocate Memory for upper_critical_limit !!!\n\r");
 					return -1;
 				}
-				memset(tmp[idx].upper_critical_limit,0x00, snsrValueLen);
-				memcpy(tmp[idx].upper_critical_limit, &thresholds_limit_tbl[threshIdx].upperCritLimit, snsrValueLen);
+				Cl_SecureMemset(tmp[idx].upper_critical_limit,0x00, snsrValueLen);
+				Cl_SecureMemcpy(tmp[idx].upper_critical_limit,snsrValueLen,&thresholds_limit_tbl[threshIdx].upperCritLimit, snsrValueLen);
 				byteCount += snsrValueLen;
 			}
 
@@ -764,8 +770,8 @@ s8 Init_Asdm()
 					VMC_ERR("Failed to allocate Memory for upper_warning_limit !!!\n\r");
 					return -1;
 				}
-				memset(tmp[idx].upper_warning_limit,0x00, snsrValueLen);
-				memcpy(tmp[idx].upper_warning_limit, &thresholds_limit_tbl[threshIdx].upperWarnLimit, snsrValueLen);
+				Cl_SecureMemset(tmp[idx].upper_warning_limit,0x00, snsrValueLen);
+				Cl_SecureMemcpy(tmp[idx].upper_warning_limit,snsrValueLen,&thresholds_limit_tbl[threshIdx].upperWarnLimit, snsrValueLen);
 				byteCount += snsrValueLen;
 			}
 		}
@@ -787,7 +793,7 @@ s8 Init_Asdm()
 			VMC_ERR("Failed to allocate Memory for sensorMaxValue !!!\n\r");
 			return -1;
 		    }
-		    memset(tmp[idx].sensorMaxValue,0x00, snsrValueLen);
+		    Cl_SecureMemset(tmp[idx].sensorMaxValue,0x00, snsrValueLen);
 		    byteCount += snsrValueLen;
 
 		    tmp[idx].sensorAverageValue = (u8 *) pvPortMalloc(snsrValueLen);
@@ -797,7 +803,7 @@ s8 Init_Asdm()
 			VMC_ERR("Failed to allocate Memory for sensorAverageValue !!!\n\r");
 			return -1;
 		    }
-		    memset(tmp[idx].sensorAverageValue,0x00, snsrValueLen);
+		    Cl_SecureMemset(tmp[idx].sensorAverageValue,0x00, snsrValueLen);
 		    byteCount += snsrValueLen;
 		}
 
@@ -824,7 +830,7 @@ s8 Init_Asdm()
 	    }
 
 	    /* Fill the EOR */
-	    memcpy(sdrInfo[sdrCount].asdmEOR,"END",sizeof(u8) * strlen("END"));
+	    Cl_SecureMemcpy(sdrInfo[sdrCount].asdmEOR,ASDM_EOR_MAX_SIZE,"END",sizeof(u8) * strlen("END"));
 	    byteCount += (sizeof(u8) * strlen("END"));
 
 	    /* Update the Byte Count for this record in Multiple of 8
@@ -893,7 +899,7 @@ s8 Asdm_Get_SDR_Size(u8 *req, u8 *resp, u16 *respSize)
     /* Fill the Size of the SDR */
     sdrSize = sizeof(Asdm_Header_t) + (sdrInfo[sdrIndex].header.no_of_bytes * 8)
     		 + sizeof(Asdm_EOR_t);
-    memcpy(&resp[2],&sdrSize, sizeof(sdrSize));
+    Cl_SecureMemcpy(&resp[2],sizeof(sdrSize),&sdrSize, sizeof(sdrSize));
 
     *respSize +=  sizeof(sdrSize);
 
@@ -926,7 +932,7 @@ s8 Asdm_Get_Sensor_Repository(u8 *req, u8 *resp, u16 *respSize)
 	/* Start from Offset 1 , 0 is for completion code, we fill it at the End */
 	respIndex = 1;
 	/* Populate the Header */
-	memcpy(&resp[respIndex], &sdrInfo[sdrIndex].header, sizeof(Asdm_Header_t));
+	Cl_SecureMemcpy(&resp[respIndex], sizeof(Asdm_Header_t), &sdrInfo[sdrIndex].header, sizeof(Asdm_Header_t));
 	respIndex += sizeof(Asdm_Header_t);
 
 	Asdm_SensorRecord_t *tmp = sdrInfo[sdrIndex].sensorRecord;
@@ -938,7 +944,7 @@ s8 Asdm_Get_Sensor_Repository(u8 *req, u8 *resp, u16 *respSize)
 
 	    /* Copy Sensor Name */
 	    snsrNameLen = (tmp[idx].sensor_name_type_length & LENGTH_BITMASK);
-	    memcpy(&resp[respIndex], tmp[idx].sensor_name, snsrNameLen);
+	    Cl_SecureMemcpy(&resp[respIndex],snsrNameLen, tmp[idx].sensor_name, snsrNameLen);
 	    respIndex += snsrNameLen;
 
 	    /*  Sensor Value */
@@ -947,7 +953,7 @@ s8 Asdm_Get_Sensor_Repository(u8 *req, u8 *resp, u16 *respSize)
 	    snsrValueLen = (tmp[idx].sensor_value_type_length & LENGTH_BITMASK);
 	    if(snsrValueLen != 0)
 	    {
-		memcpy(&resp[respIndex], tmp[idx].sensor_value, snsrValueLen);
+		Cl_SecureMemcpy(&resp[respIndex],snsrValueLen, tmp[idx].sensor_value, snsrValueLen);
 		respIndex += snsrValueLen;
 	    }
 
@@ -957,7 +963,7 @@ s8 Asdm_Get_Sensor_Repository(u8 *req, u8 *resp, u16 *respSize)
 	    baseUnitLen = (tmp[idx].sensor_base_unit_type_length & LENGTH_BITMASK);
 	    if(baseUnitLen != 0)
 	    {
-		memcpy(&resp[respIndex], tmp[idx].sensor_base_unit, baseUnitLen);
+		Cl_SecureMemcpy(&resp[respIndex],baseUnitLen, tmp[idx].sensor_base_unit, baseUnitLen);
 		respIndex += baseUnitLen;
 	    }
 
@@ -968,32 +974,32 @@ s8 Asdm_Get_Sensor_Repository(u8 *req, u8 *resp, u16 *respSize)
 
 	    if(tmp[idx].threshold_support_byte & Lower_Fatal_Threshold)
 	    {
-		memcpy(&resp[respIndex], tmp[idx].lower_fatal_limit,snsrValueLen);
+	    Cl_SecureMemcpy(&resp[respIndex],snsrValueLen, tmp[idx].lower_fatal_limit,snsrValueLen);
 		respIndex += snsrValueLen;
 	    }
 	    if(tmp[idx].threshold_support_byte & Lower_Critical_Threshold)
 	    {
-		memcpy(&resp[respIndex], tmp[idx].lower_critical_limit,snsrValueLen);
+		Cl_SecureMemcpy(&resp[respIndex], snsrValueLen,tmp[idx].lower_critical_limit,snsrValueLen);
 		respIndex += snsrValueLen;
 	    }
 	    if(tmp[idx].threshold_support_byte & Lower_Warning_Threshold)
 	    {
-		memcpy(&resp[respIndex], tmp[idx].lower_warning_limit,snsrValueLen);
+		Cl_SecureMemcpy(&resp[respIndex], snsrValueLen,tmp[idx].lower_warning_limit,snsrValueLen);
 		respIndex += snsrValueLen;
 	    }
 	    if(tmp[idx].threshold_support_byte & Upper_Fatal_Threshold)
 	    {
-		memcpy(&resp[respIndex], tmp[idx].upper_fatal_limit,snsrValueLen);
+		Cl_SecureMemcpy(&resp[respIndex],snsrValueLen,tmp[idx].upper_fatal_limit,snsrValueLen);
 		respIndex += snsrValueLen;
 	    }
 	    if(tmp[idx].threshold_support_byte & Upper_Critical_Threshold)
 	    {
-		memcpy(&resp[respIndex], tmp[idx].upper_critical_limit,snsrValueLen);
+		Cl_SecureMemcpy(&resp[respIndex], snsrValueLen,tmp[idx].upper_critical_limit,snsrValueLen);
 		respIndex += snsrValueLen;
 	    }
 	    if(tmp[idx].threshold_support_byte & Upper_Warning_Threshold)
 	    {
-		memcpy(&resp[respIndex], tmp[idx].upper_warning_limit,snsrValueLen);
+		Cl_SecureMemcpy(&resp[respIndex], snsrValueLen,tmp[idx].upper_warning_limit,snsrValueLen);
 		respIndex += snsrValueLen;
 	    }
 
@@ -1001,19 +1007,19 @@ s8 Asdm_Get_Sensor_Repository(u8 *req, u8 *resp, u16 *respSize)
 
 	    if(tmp[idx].threshold_support_byte & Sensor_Avg_Val_Support)
 	    {
-		memcpy(&resp[respIndex], tmp[idx].sensorAverageValue,snsrValueLen);
+		Cl_SecureMemcpy(&resp[respIndex], snsrValueLen,tmp[idx].sensorAverageValue,snsrValueLen);
 		respIndex += snsrValueLen;
 	    }
 
 	    if(tmp[idx].threshold_support_byte & Sensor_Max_Val_Support)
 	    {
-		memcpy(&resp[respIndex], tmp[idx].sensorMaxValue,snsrValueLen);
+		Cl_SecureMemcpy(&resp[respIndex], snsrValueLen,tmp[idx].sensorMaxValue,snsrValueLen);
 		respIndex += snsrValueLen;
 	    }
 	}
 
 	/* Populate the EOR "END" */
-	memcpy(&resp[respIndex], sdrInfo[sdrIndex].asdmEOR, (sizeof(u8) * strlen("END")));
+	Cl_SecureMemcpy(&resp[respIndex],ASDM_EOR_MAX_SIZE, sdrInfo[sdrIndex].asdmEOR, (sizeof(u8) * strlen("END")));
 	respIndex += (sizeof(u8) * strlen("END"));
 
 	/* Release the Lock */
@@ -1078,13 +1084,13 @@ s8 Asdm_Get_Sensor_Value(u8 *req, u8 *resp, u16 *respSize)
 	snsrStatusLen = sizeof(tmp[snsrIndex].sensor_status);
 	resp[respIndex++] = ( snsrValueLen * 3) + snsrStatusLen;
 
-	memcpy(&resp[respIndex],tmp[snsrIndex].sensor_value,snsrValueLen);
+	Cl_SecureMemcpy(&resp[respIndex],snsrValueLen,tmp[snsrIndex].sensor_value,snsrValueLen);
 	respIndex += snsrValueLen;
-	memcpy(&resp[respIndex],tmp[snsrIndex].sensorMaxValue,snsrValueLen);
+	Cl_SecureMemcpy(&resp[respIndex],snsrValueLen,tmp[snsrIndex].sensorMaxValue,snsrValueLen);
 	respIndex += snsrValueLen;
-	memcpy(&resp[respIndex],tmp[snsrIndex].sensorAverageValue,snsrValueLen);
+	Cl_SecureMemcpy(&resp[respIndex],snsrValueLen,tmp[snsrIndex].sensorAverageValue,snsrValueLen);
 	respIndex += snsrValueLen;
-	memcpy(&resp[respIndex],&tmp[snsrIndex].sensor_status,snsrStatusLen);
+	Cl_SecureMemcpy(&resp[respIndex],snsrStatusLen,&tmp[snsrIndex].sensor_status,snsrStatusLen);
 	respIndex += snsrStatusLen;
 
 	xSemaphoreGive(sdr_lock);
@@ -1161,16 +1167,16 @@ void Monitor_Sensors(void)
 					/* Check if a Monitor Function is registered for this sensor */
 					if(NULL != sensorRecord[idx].snsrReadFunc)
 					{
-					memset(&snsrData, 0x00, sizeof(snsrRead_t));
+						Cl_SecureMemset(&snsrData, 0x00, sizeof(snsrRead_t));
 
-					snsrData.sensorInstance = sensorRecord[idx].sensorInstance;
-					snsrData.mspSensorIndex = sensorRecord[idx].mspSensorId;
+						snsrData.sensorInstance = sensorRecord[idx].sensorInstance;
+						snsrData.mspSensorIndex = sensorRecord[idx].mspSensorId;
 
-					sensorRecord[idx].snsrReadFunc(&snsrData);
+						sensorRecord[idx].snsrReadFunc(&snsrData);
 
-						/* Update the Sensor Data in SDR records */
-					Update_Sensor_Value(sdrInfo[sdrIndex].header.repository_type,
-							sensorRecord[idx].sensor_id, &snsrData);
+							/* Update the Sensor Data in SDR records */
+						Update_Sensor_Value(sdrInfo[sdrIndex].header.repository_type,
+								sensorRecord[idx].sensor_id, &snsrData);
 
 					}
 				}
@@ -1183,7 +1189,7 @@ void Monitor_Sensors(void)
     }
     else
     {
-	VMC_ERR("ASDM not yet Initialized \n\r");
+    	VMC_ERR("ASDM not yet Initialized \n\r");
     }
 }
 
@@ -1294,7 +1300,7 @@ u8 Asdm_Send_I2C_Sensors_SC(u8 *scPayload)
 	    scPayload[dataIndex++] = sensorSize;
 
 	    // Add Sensor Value
-	    memcpy(&scPayload[dataIndex],sensorRecord[i].sensor_value,sensorSize);
+	    Cl_SecureMemcpy(&scPayload[dataIndex],sensorSize,sensorRecord[i].sensor_value,sensorSize);
 	    dataIndex += sensorSize;
 
 	}
@@ -1309,11 +1315,11 @@ void Asdm_Update_Active_MSP_sensor()
 	Asdm_SensorRecord_t *sensorRecord = sdrInfo[boardInfoSensorIdx].sensorRecord;
 	for(idx = sdrInfo[boardInfoSensorIdx].header.no_of_records -1 ; idx >= 0 ; idx--)
 	{
-		if(!memcmp(sensorRecord[idx].sensor_name,SNSRNAME_ACTIVE_SC_VER,strlen(SNSRNAME_ACTIVE_SC_VER)))
+		if(!Cl_SecureMemcmp(sensorRecord[idx].sensor_name,SENSOR_NAME_MAX,SNSRNAME_ACTIVE_SC_VER,strlen(SNSRNAME_ACTIVE_SC_VER)))
 		{
 			if (xSemaphoreTake(sdr_lock, portMAX_DELAY))
 			{
-				memcpy(sensorRecord[idx].sensor_value,
+				Cl_SecureMemcpy(sensorRecord[idx].sensor_value,sizeof(sc_vmc_data.scVersion),
 						&sc_vmc_data.scVersion[0],sizeof(sc_vmc_data.scVersion));
 				xSemaphoreGive(sdr_lock);
 				break;
