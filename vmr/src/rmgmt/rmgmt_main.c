@@ -624,7 +624,7 @@ static int rmgmt_init_pmc()
 	IO_SYNC_WRITE32(PMC_ERR_OUT1_EN_MASK, pmc_intr + PMC_REG_ERR_OUT1_EN);
 	val = IO_SYNC_READ32(pmc_intr + PMC_REG_ERR_OUT1_MASK);
 	if (val & PMC_ERR_OUT1_EN_MASK) {
-		RMGMT_LOG("mask 0x%x for PMC_REG_ERR_OUT1_MASK 0x%x "
+		RMGMT_ERR("mask 0x%x for PMC_REG_ERR_OUT1_MASK 0x%x "
 		    "should be 0.\n", PMC_ERR_OUT1_EN_MASK, val);
 		return -1;
 	}
@@ -632,25 +632,8 @@ static int rmgmt_init_pmc()
 	IO_SYNC_WRITE32(PMC_POR1_EN_MASK, pmc_intr + PMC_REG_POR1_EN);
 	val = IO_SYNC_READ32(pmc_intr + PMC_REG_POR1_MASK);
 	if (val & PMC_POR1_EN_MASK) {
-		RMGMT_LOG("mask 0x%x for PMC_REG_POR1_MASK 0x%x "
+		RMGMT_ERR("mask 0x%x for PMC_REG_POR1_MASK 0x%x "
 		    "should be 0.\n", PMC_POR1_EN_MASK, val);
-		return -1;
-	}
-
-	RMGMT_LOG("done");
-	return 0;
-}
-
-static int rmgmt_enable_boot_default()
-{
-	int ret = 0;
-
-	if (rmgmt_init_pmc())
-		return -1;
-
-	ret = rmgmt_enable_pl_reset();
-	if (ret && ret != -ENODEV) {
-		RMGMT_ERR("request reset failed %d", ret);
 		return -1;
 	}
 
@@ -668,10 +651,45 @@ static void rmgmt_enable_srst_por()
 
 static void rmgmt_set_multiboot(u32 offset)
 {
+	RMGMT_WARN("set to: 0x%x", offset);
 	IO_SYNC_WRITE32(offset, VMR_EP_PLM_MULTIBOOT);
 }
 
-static int rmgmt_enable_boot_backup()
+static void rmgmt_set_multiboot_to_default(cl_msg_t *msg)
+{
+	rmgmt_boot_fpt_query(msg);
+
+	rmgmt_set_multiboot(MULTIBOOT_OFF(msg->multiboot_payload.default_partition_offset));
+}
+
+static void rmgmt_set_multiboot_to_backup(cl_msg_t *msg)
+{
+	rmgmt_boot_fpt_query(msg);
+
+	rmgmt_set_multiboot(MULTIBOOT_OFF(msg->multiboot_payload.backup_partition_offset));
+}
+
+static int rmgmt_enable_boot_default(cl_msg_t *msg)
+{
+	int ret = 0;
+
+	if (rmgmt_init_pmc())
+		return -1;
+
+	rmgmt_enable_srst_por();
+	rmgmt_set_multiboot_to_default(msg);
+
+	ret = rmgmt_enable_pl_reset();
+	if (ret && ret != -ENODEV) {
+		RMGMT_ERR("request reset failed %d", ret);
+		return -1;
+	}
+
+	RMGMT_LOG("done");
+	return 0;
+}
+
+static int rmgmt_enable_boot_backup(cl_msg_t *msg)
 {
 	int ret = 0;
 
@@ -679,7 +697,7 @@ static int rmgmt_enable_boot_backup()
 		return -1;
 	
 	rmgmt_enable_srst_por();
-	rmgmt_set_multiboot(0xC00);
+	rmgmt_set_multiboot_to_backup(msg);
 
 	ret = rmgmt_enable_pl_reset();
 	if (ret && ret != -ENODEV) {
@@ -697,10 +715,10 @@ static int xgq_vmr_cb(cl_msg_t *msg, void *arg)
 
 	switch (msg->multiboot_payload.req_type) {
 	case CL_MULTIBOOT_DEFAULT:
-		ret = rmgmt_enable_boot_default();
+		ret = rmgmt_enable_boot_default(msg);
 		break;
 	case CL_MULTIBOOT_BACKUP:
-		ret = rmgmt_enable_boot_backup();
+		ret = rmgmt_enable_boot_backup(msg);
 		break;
 	case CL_VMR_QUERY:
 		rmgmt_fpt_query(msg);
@@ -748,6 +766,9 @@ static void pvXGQTask( void *pvParameters )
 	
 	/* try to clear any existign uncleared firewall before rmgmt launch */
 	vmr_clear_firewall();
+
+	/* init pmc power on reset (POR), so that hot reset will be engaged */
+	rmgmt_init_pmc();
 
 	for ( ;; )
 	{
