@@ -641,7 +641,7 @@ static int rmgmt_init_pmc()
 	return 0;
 }
 
-static void rmgmt_enable_srst_por()
+static inline void rmgmt_enable_srst_por()
 {
 	u32 pmc_intr = VMR_EP_PMC_REG;
 
@@ -649,7 +649,7 @@ static void rmgmt_enable_srst_por()
 	IO_SYNC_WRITE32(PMC_POR_ENABLE_BIT, pmc_intr + PMC_REG_SRST);
 }
 
-static void rmgmt_set_multiboot(u32 offset)
+static inline void rmgmt_set_multiboot(u32 offset)
 {
 	RMGMT_WARN("set to: 0x%x", offset);
 	IO_SYNC_WRITE32(offset, VMR_EP_PLM_MULTIBOOT);
@@ -759,6 +759,7 @@ static int xgq_apu_channel_probe()
 static void pvXGQTask( void *pvParameters )
 {
 	const TickType_t x1second = pdMS_TO_TICKS( 1000*1 );
+	cl_msg_t msg = { 0 };
 	int cnt = 0;
 
 	xSemaDownload = xSemaphoreCreateMutex();
@@ -768,7 +769,7 @@ static void pvXGQTask( void *pvParameters )
 	vmr_clear_firewall();
 
 	/* init pmc power on reset (POR), so that hot reset will be engaged */
-	rmgmt_init_pmc();
+	rmgmt_enable_boot_backup(&msg);
 
 	for ( ;; )
 	{
