@@ -402,6 +402,11 @@ int rmgmt_flash_rpu_pdi(struct rmgmt_handler *rh, struct cl_msg *msg)
 	u8 *pdi_data = NULL;
 	struct fpt_pdi_meta meta = { 0 };
 
+	if (rh->rh_already_flashed) {
+		RMGMT_ERR("PDI has been successfully flashed, cannot reflash before reboot");
+		return -EINVAL;
+	}
+
 	/* Sync data from cache to memory */
 	Xil_DCacheFlush();
 
@@ -414,13 +419,14 @@ int rmgmt_flash_rpu_pdi(struct rmgmt_handler *rh, struct cl_msg *msg)
 	len = pdi_size;
 
 	if (msg->data_payload.flash_to_legacy) {
-		RMGMT_ERR("WARN: force to flash back to legacy mode, PDI starts at 0x0");
+		RMGMT_WARN("WARN: force to flash back to legacy mode, PDI starts at 0x0");
 
 		offset = 0x0;
 		ret = ospi_flash_erase(CL_FLASH_BOOT, offset, len);
 		if (ret)
 			return ret;
-		return ospi_flash_write(CL_FLASH_BOOT, pdi_data, offset, len);
+		ret = ospi_flash_write(CL_FLASH_BOOT, pdi_data, offset, len);
+		goto done;
 	}
 
 	/* Always query latest fpt status first */
@@ -489,15 +495,18 @@ int rmgmt_flash_rpu_pdi(struct rmgmt_handler *rh, struct cl_msg *msg)
 	/* restore back to XLNX to enable boot */
 	PLM_BOOT_TAG(pdi_data) = plm_boot_tag;
 	ret = ospi_flash_write(CL_FLASH_BOOT, pdi_data, offset, OSPI_VERSAL_PAGESIZE);
-	if (ret) {
+	if (ret)
 		return ret;
-	}
 
 	/* finaly step, update metadata */
 	meta.fpt_pdi_size = len;
 	ret = rmgmt_fpt_pdi_meta_set(msg, FPT_TYPE_PDIMETA, &meta);
 	if (ret)
 		return ret;
-
+done:
+	if (!ret) {
+		RMGMT_WARN("set already_flashed to ture, need to reset/reboot to take effect.");
+		rh->rh_already_flashed = true;
+	}
 	return ret;
 }

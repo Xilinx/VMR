@@ -175,15 +175,14 @@ static int rmgmt_init_xfer_handler(struct rmgmt_handler *rh)
 
 int rmgmt_init_handler(struct rmgmt_handler *rh)
 {
-	//rh->rh_base = OSPI_VERSAL_BASE;
-
 	rh->rh_max_size = BITSTREAM_SIZE; /* 32M */
-	//rh->rh_data = (u8 *)malloc(rh->rh_max_size);
 	rh->rh_data = (u8 *)pvPortMalloc(rh->rh_max_size);
 	if (rh->rh_data == NULL) {
 		RMGMT_LOG("pvPortMalloc %d bytes failed\r\n", rh->rh_data_size);
 		return -1;
 	}
+	
+	rh->rh_already_flashed = false;
 
 	/* ospi flash should alreay be initialized */
 	RMGMT_LOG("done");

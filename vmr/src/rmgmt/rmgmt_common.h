@@ -47,7 +47,7 @@ struct rmgmt_handler {
 	u32 rh_max_size;
 	u32 rh_data_size;
 	u8  *rh_data; 	/* static malloc and never free */
-	bool rh_apu_is_ready;
+	bool rh_already_flashed; /* enforce reset/reboot after successfully flashed */
 };
 
 static void inline axigate_freeze()
