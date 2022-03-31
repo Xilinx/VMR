@@ -100,7 +100,8 @@ struct xgq_vmr_multiboot_payload {
 	uint16_t has_ext_scfw:1;
 	uint16_t has_ext_sysdtb:1;
 	uint16_t rsvd:7;
-	uint16_t multi_boot_offset;
+	uint16_t current_multi_boot_offset;
+	uint16_t boot_on_offset;
 	uint32_t default_partition_offset;
 	uint32_t default_partition_size;
 	uint32_t backup_partition_offset;

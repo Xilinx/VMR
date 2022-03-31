@@ -119,8 +119,10 @@ int cl_msg_handle_complete(cl_msg_t *msg)
 			msg->multiboot_payload.boot_on_backup;
 		cmd_cq->cq_vmr_payload.boot_on_recovery =
 			msg->multiboot_payload.boot_on_recovery;
-		cmd_cq->cq_vmr_payload.multi_boot_offset =
-			msg->multiboot_payload.multi_boot_offset;
+		cmd_cq->cq_vmr_payload.current_multi_boot_offset =
+			msg->multiboot_payload.current_multi_boot_offset;
+		cmd_cq->cq_vmr_payload.boot_on_offset =
+			msg->multiboot_payload.boot_on_offset;
 
 		cmd_cq->cq_vmr_payload.has_extfpt =
 			msg->multiboot_payload.has_extfpt;

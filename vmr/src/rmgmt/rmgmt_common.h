@@ -48,6 +48,7 @@ struct rmgmt_handler {
 	u32 rh_data_size;
 	u8  *rh_data; 	/* static malloc and never free */
 	bool rh_already_flashed; /* enforce reset/reboot after successfully flashed */
+	u32 rh_boot_on_offset;
 };
 
 static void inline axigate_freeze()
@@ -70,4 +71,5 @@ static void inline ucs_start()
 	IO_SYNC_WRITE32(0x1, VMR_EP_UCS_SHUTDOWN);
 }
 
+u32 rmgmt_boot_on_offset();
 #endif
