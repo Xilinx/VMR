@@ -90,6 +90,7 @@ static int rmgmt_fpt_pdi_meta_get(struct cl_msg *msg, int fpt_type,
 		return ret;
 
 	memcpy(meta, buf, sizeof(*meta));
+
 	return 0;
 }
 
@@ -513,5 +514,61 @@ done:
 		RMGMT_WARN("set already_flashed to ture, need to reset/reboot to take effect.");
 		rh->rh_already_flashed = true;
 	}
+	return ret;
+}
+
+/*
+ * Debug only API.
+ * Only set debug_type onto default pdi meta.
+ */
+int rmgmt_fpt_set_debug_type(struct cl_msg *msg)
+{
+	int ret = 0;
+	struct fpt_pdi_meta meta = { 0 };
+
+	/* Retrieve latest meta status */
+	rmgmt_boot_fpt_query(msg);
+
+	ret = rmgmt_fpt_pdi_meta_get(msg, FPT_TYPE_PDIMETA, &meta);
+	if (ret)
+		return ret;
+
+	RMGMT_DBG("before: debug_type %d", meta.fpt_pdi_debug_type);
+
+	meta.fpt_pdi_debug_type = msg->multiboot_payload.vmr_debug_type;
+
+	/* Note: always erase before write and no erase after write */
+	ret = rmgmt_fpt_pdi_meta_erase(msg, FPT_TYPE_PDIMETA);
+	if (ret)
+		return ret;
+
+	ret = rmgmt_fpt_pdi_meta_set(msg, FPT_TYPE_PDIMETA, &meta);
+	if (ret) {
+		RMGMT_ERR("failed: %d", ret);
+		return ret;
+	}
+
+	bzero(&meta, sizeof(meta));
+	ret = rmgmt_fpt_pdi_meta_get(msg, FPT_TYPE_PDIMETA, &meta);
+	RMGMT_DBG("after: debug_type %d", meta.fpt_pdi_debug_type);
+
+	return ret;
+}
+
+int rmgmt_fpt_get_debug_type(struct cl_msg *msg, u8 *debug_type)
+{
+	int ret = 0;
+	struct fpt_pdi_meta meta = { 0 };
+
+	/* Retrieve latest meta status */
+	rmgmt_boot_fpt_query(msg);
+
+	ret = rmgmt_fpt_pdi_meta_get(msg, FPT_TYPE_PDIMETA, &meta);
+	if (ret)
+		return ret;
+
+	*debug_type = meta.fpt_pdi_debug_type;
+
+	RMGMT_LOG("debug_type %d", meta.fpt_pdi_debug_type);
 	return ret;
 }

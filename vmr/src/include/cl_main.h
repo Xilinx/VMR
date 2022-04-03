@@ -25,7 +25,7 @@ typedef int (*tasks_register_t)(void);
 int ospi_flash_init(void);
 int VMC_Launch(void);
 int RMGMT_Launch(void);
-int CL_MSG_launch(void);
+int CL_MSG_Launch(void);
 void cl_system_pre_init(void);
 u32 cl_check_clock_shutdown_status(void);
 
@@ -33,6 +33,8 @@ struct cl_msg;
 
 u32 cl_rpu_status_query(struct cl_msg *msg, char *buf, u32 size);
 u32 cl_apu_status_query(struct cl_msg *msg, char *buf, u32 size);
+
+int cl_rmgmt_fpt_get_debug_type(struct cl_msg *msg, u8 *debug_type);
 
 int cl_xgq_client_probe(void);
 int cl_xgq_apu_is_ready(void);

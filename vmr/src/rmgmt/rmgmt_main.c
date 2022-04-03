@@ -189,6 +189,7 @@ static int xgq_clock_cb(cl_msg_t *msg, void *arg)
 	default:
 		RMGMT_ERR("ERROR: unknown req_type %d",
 			msg->clock_payload.ocl_req_type);
+		ret = -EINVAL;
 		break;
 	}
 
@@ -294,6 +295,11 @@ done:
 	RMGMT_DBG("complete msg id%d, ret %d", msg->hdr.cid, ret);
 	cl_msg_handle_complete(msg);
 	return 0;
+}
+
+int cl_rmgmt_fpt_get_debug_type(cl_msg_t *msg, u8 *debug_type)
+{
+	return rmgmt_fpt_get_debug_type((struct cl_msg *)msg, debug_type);
 }
 
 static u32 rmgmt_fpt_status_query(cl_msg_t *msg, char *buf, u32 size)
@@ -505,6 +511,7 @@ static u32 vmr_check_firewall(cl_msg_t *msg)
 
 	return val;
 }
+
 static u32 vmr_log_clock_shutdown(cl_msg_t *msg)
 {
 	u32 val = cl_check_clock_shutdown_status();
@@ -695,6 +702,9 @@ static int xgq_vmr_cb(cl_msg_t *msg, void *arg)
 			RMGMT_LOG("system busy, please try later");
 			ret = -1;
 		}
+		break;
+	case CL_VMR_DEBUG:
+		ret = rmgmt_fpt_set_debug_type(msg);
 		break;
 	default:
 		RMGMT_LOG("unknown type %d", msg->multiboot_payload.req_type);

@@ -53,6 +53,8 @@
 
 #define OSPI_ERR(fmt, arg...) \
 	CL_ERR(APP_MAIN, fmt, ##arg)
+#define OSPI_WARN(fmt, arg...) \
+	CL_ERR(APP_MAIN, fmt, ##arg)
 #define OSPI_LOG(fmt, arg...) \
 	CL_LOG(APP_MAIN, fmt, ##arg)
 #define OSPI_DBG(fmt, arg...) \
@@ -1348,9 +1350,13 @@ int ospi_flash_write(flash_area_t area, u8 *WriteBuffer, u32 offset, u32 len)
 	PAGE_COUNT = len / PAGE_SIZE;
 	if (len % PAGE_SIZE) {
 		PAGE_COUNT++;
-		OSPI_LOG("WARN: len %d is not page %d aligned", len, PAGE_SIZE);
+		OSPI_WARN("len %d is not page %d aligned", len, PAGE_SIZE);
 
 	}
+	if (offset % PAGE_SIZE) {
+		OSPI_WARN("offset %d is not page %d aligned", offset, PAGE_SIZE);
+	}
+
 	OSPI_DBG("Flashing... Page Count: %d, PageSize %d", PAGE_COUNT, PAGE_SIZE);
 
 	/* Write first, then read back and verify */

@@ -49,7 +49,14 @@ typedef enum cl_vmr_control_type {
 	CL_MULTIBOOT_DEFAULT	= 0x1,
 	CL_MULTIBOOT_BACKUP	= 0x2,
 	CL_PROGRAM_SC		= 0x3,
+	CL_VMR_DEBUG		= 0x4,
 } cl_vmr_control_type_t;
+
+typedef enum cl_vmr_debug_type {
+	CL_DBG_CLEAR		= 0x0,
+	CL_DBG_RMGMT		= 0x1,
+	CL_DBG_VMC		= 0x2,
+} cl_vmr_debug_type_t;
 
 struct xgq_vmr_data_payload {
 	uint32_t address;
@@ -116,6 +123,7 @@ struct xgq_vmr_multiboot_payload {
 	uint32_t pdimeta_size;
 	uint32_t pdimeta_backup_offset;
 	uint32_t pdimeta_backup_size;
+	uint8_t vmr_debug_type;
 };
 
 struct xgq_vmr_head {

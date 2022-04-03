@@ -20,6 +20,8 @@
 
 #define MSG_ERR(fmt, arg...) \
 	CL_ERR(APP_XGQ, fmt, ##arg)
+#define MSG_WARN(fmt, arg...) \
+	CL_ERR(APP_XGQ, fmt, ##arg)
 #define MSG_LOG(fmt, arg...) \
 	CL_LOG(APP_XGQ, fmt, ##arg)
 #define MSG_DBG(fmt, arg...) \
@@ -275,12 +277,35 @@ static cl_vmr_control_type_t convert_control_type(enum xgq_cmd_vmr_control_type 
 	case XGQ_CMD_PROGRAM_SC:
 		type = CL_PROGRAM_SC;
 		break;
+	case XGQ_CMD_VMR_DEBUG:
+		type = CL_VMR_DEBUG;
+		break;
 	case XGQ_CMD_VMR_QUERY:
 	default:
 		type = CL_VMR_QUERY;
 		break;
 	}
 
+
+	return type;
+}
+
+static cl_vmr_debug_type_t convert_debug_type(enum xgq_cmd_debug_type debug_type)
+{
+	cl_vmr_debug_type_t type = CL_DBG_CLEAR;
+
+	switch (debug_type) {
+	case XGQ_CMD_DBG_RMGMT:
+		type = CL_DBG_RMGMT;
+		break;
+	case XGQ_CMD_DBG_VMC:
+		type = CL_DBG_VMC;
+		break;
+	case XGQ_CMD_DBG_CLEAR:
+	default:
+		type = CL_DBG_CLEAR;
+		break;
+	}
 
 	return type;
 }
@@ -368,10 +393,12 @@ static int submit_to_queue(u32 sq_addr)
 		ret = dispatch_to_queue(&msg, TASK_SLOW);
 		break;
 	case CL_MSG_VMR_CONTROL:
-		msg.multiboot_payload.req_type =
-			convert_control_type(sq->vmr_control_payload.req_type);
 		/* we always set log level by this request */
 		cl_loglevel_set(sq->vmr_control_payload.debug_level);
+		msg.multiboot_payload.req_type =
+			convert_control_type(sq->vmr_control_payload.req_type);
+		msg.multiboot_payload.vmr_debug_type = 
+			convert_debug_type(sq->vmr_control_payload.debug_type);
 		ret = dispatch_to_queue(&msg, TASK_SLOW);
 		break;
 	case CL_MSG_CLOCK:
@@ -546,10 +573,24 @@ static void vmr_status_service_start()
 
 static inline int service_can_start()
 {
+	/*
+	 * as long as PDI/APUBIN flash are supported, xgq services can be started.
+	 * TODO: move critical and reliable functions into cl_xgq_server to 
+	 *       reduce dependency. The rmgmt/vmc should provide API to support this.
+	 */
+	bool found_pdi = false, found_apubin = false;
+
 	for (int i = 0; i < ARRAY_SIZE(handles); i++) {
-		if (handles[i].msg_cb == NULL)
-			return 0;
+		if (handles[i].msg_cb != NULL && handles[i].type == CL_MSG_PDI) {
+			found_pdi = true;
+		}
+		if (handles[i].msg_cb != NULL && handles[i].type == CL_MSG_APUBIN) {
+			found_apubin = true;
+		}
 	}
+	
+	if (!found_pdi || !found_apubin)
+		return 0;
 
 	if (!service_is_started) {
 		service_is_started = true;
@@ -747,7 +788,7 @@ static int cl_msg_service_start(void)
 	return 0;
 }
 
-int CL_MSG_launch(void)
+int CL_MSG_Launch(void)
 {
 	if (cl_msg_service_start() != 0) {
 		MSG_ERR("failed");
