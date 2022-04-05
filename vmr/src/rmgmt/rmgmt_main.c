@@ -430,16 +430,6 @@ static inline u32 check_firewall()
 	return IS_FIRED(read_firewall());
 }
 
-static inline u32 check_clock_shutdown_status()
-{
-	u32 shutdown_status = 0 ;
-
-	//offset to read shutdown status
-	shutdown_status = IO_SYNC_READ32(VMR_EP_UCS_CONTROL_STATUS_BASEADDR);
-
-	return (shutdown_status & 0x01);
-}
-
 int cl_xgq_pl_is_ready()
 {
 	return !check_firewall();
