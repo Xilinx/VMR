@@ -201,7 +201,8 @@ void rmgmt_boot_fpt_query(struct cl_msg *msg)
 	struct fpt_hdr hdr = { 0 };
 	struct fpt_pdi_meta meta = { 0 };
 	int ret = 0;
-	u32 multi_boot_offset = 0;
+	u32 current_multi_boot_offset = 0;
+	u32 boot_on_offset = 0;
 	
 	ret = ospi_flash_read(CL_FLASH_BOOT, (u8 *)&hdr, FPT_DEFAULT_OFFSET, sizeof(hdr));
 	if (ret)
@@ -265,8 +266,12 @@ void rmgmt_boot_fpt_query(struct cl_msg *msg)
 	RMGMT_DBG("hdr recovery magic %x", hdr.fpt_magic);
 	msg->multiboot_payload.has_fpt_recovery = (hdr.fpt_magic == FPT_MAGIC) ? 1 : 0;
 
-	multi_boot_offset = IO_SYNC_READ32(VMR_EP_PLM_MULTIBOOT);
-	msg->multiboot_payload.multi_boot_offset = multi_boot_offset;
+	/* This is the current multi_boot_offset, can be changed after reboot */
+	current_multi_boot_offset = IO_SYNC_READ32(VMR_EP_PLM_MULTIBOOT);
+	if (current_multi_boot_offset == 0)
+		RMGMT_WARN("WARN: current multi_boot_offset is 0x0");
+
+	msg->multiboot_payload.current_multi_boot_offset = current_multi_boot_offset;
 
 	RMGMT_LOG("A offset %x:%x, B offset %x:%x",
 		msg->multiboot_payload.default_partition_offset,
@@ -274,16 +279,16 @@ void rmgmt_boot_fpt_query(struct cl_msg *msg)
 		msg->multiboot_payload.backup_partition_offset,
 		MULTIBOOT_OFF(msg->multiboot_payload.backup_partition_offset));
 
-	if (!multi_boot_offset) {
-		RMGMT_LOG("multi_boot_offset is 0");
-		return;
-	}
 
-	if (multi_boot_offset ==
+	/* We should use the cached boot_offset saved right after boot */
+	boot_on_offset = rmgmt_boot_on_offset();
+	msg->multiboot_payload.boot_on_offset = boot_on_offset;
+
+	if (boot_on_offset ==
 		MULTIBOOT_OFF(msg->multiboot_payload.default_partition_offset))
 		msg->multiboot_payload.boot_on_default = 1;
 
-	if (multi_boot_offset ==
+	if (boot_on_offset ==
 		MULTIBOOT_OFF(msg->multiboot_payload.backup_partition_offset))
 		msg->multiboot_payload.boot_on_backup = 1;
 

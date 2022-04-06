@@ -609,44 +609,39 @@ static int xgq_log_page_cb(cl_msg_t *msg, void *arg)
 	return 0;
 }
 
-static int rmgmt_init_pmc()
+static inline void rmgmt_enable_srst_por()
 {
-	u32 val = 0;
 	u32 pmc_intr = VMR_EP_PMC_REG;
 
-	val = IO_SYNC_READ32(pmc_intr);
-
-	if (val & PMC_ERR1_STATUS_MASK) {
-		val &= ~PMC_ERR1_STATUS_MASK;
-		IO_SYNC_WRITE32(val, pmc_intr); 
-	}
-
-	IO_SYNC_WRITE32(PMC_ERR_OUT1_EN_MASK, pmc_intr + PMC_REG_ERR_OUT1_EN);
-	val = IO_SYNC_READ32(pmc_intr + PMC_REG_ERR_OUT1_MASK);
-	if (val & PMC_ERR_OUT1_EN_MASK) {
-		RMGMT_LOG("mask 0x%x for PMC_REG_ERR_OUT1_MASK 0x%x "
-		    "should be 0.\n", PMC_ERR_OUT1_EN_MASK, val);
-		return -1;
-	}
-
-	IO_SYNC_WRITE32(PMC_POR1_EN_MASK, pmc_intr + PMC_REG_POR1_EN);
-	val = IO_SYNC_READ32(pmc_intr + PMC_REG_POR1_MASK);
-	if (val & PMC_POR1_EN_MASK) {
-		RMGMT_LOG("mask 0x%x for PMC_REG_POR1_MASK 0x%x "
-		    "should be 0.\n", PMC_POR1_EN_MASK, val);
-		return -1;
-	}
-
-	RMGMT_LOG("done");
-	return 0;
+	IO_SYNC_WRITE32(PMC_POR_ENABLE_BIT, pmc_intr + PMC_REG_SRST);
 }
 
-static int rmgmt_enable_boot_default()
+static inline void rmgmt_set_multiboot(u32 offset)
+{
+	RMGMT_WARN("set to: 0x%x", offset);
+	IO_SYNC_WRITE32(offset, VMR_EP_PLM_MULTIBOOT);
+}
+
+static void rmgmt_set_multiboot_to_default(cl_msg_t *msg)
+{
+	rmgmt_boot_fpt_query(msg);
+
+	rmgmt_set_multiboot(MULTIBOOT_OFF(msg->multiboot_payload.default_partition_offset));
+}
+
+static void rmgmt_set_multiboot_to_backup(cl_msg_t *msg)
+{
+	rmgmt_boot_fpt_query(msg);
+
+	rmgmt_set_multiboot(MULTIBOOT_OFF(msg->multiboot_payload.backup_partition_offset));
+}
+
+static int rmgmt_enable_boot_default(cl_msg_t *msg)
 {
 	int ret = 0;
 
-	if (rmgmt_init_pmc())
-		return -1;
+	rmgmt_enable_srst_por();
+	rmgmt_set_multiboot_to_default(msg);
 
 	ret = rmgmt_enable_pl_reset();
 	if (ret && ret != -ENODEV) {
@@ -658,28 +653,12 @@ static int rmgmt_enable_boot_default()
 	return 0;
 }
 
-static void rmgmt_enable_srst_por()
-{
-	u32 pmc_intr = VMR_EP_PMC_REG;
-
-	IO_SYNC_WRITE32(PMC_POR_ENABLE_BIT, pmc_intr + PMC_REG_ACTION);
-	IO_SYNC_WRITE32(PMC_POR_ENABLE_BIT, pmc_intr + PMC_REG_SRST);
-}
-
-static void rmgmt_set_multiboot(u32 offset)
-{
-	IO_SYNC_WRITE32(offset, VMR_EP_PLM_MULTIBOOT);
-}
-
-static int rmgmt_enable_boot_backup()
+static int rmgmt_enable_boot_backup(cl_msg_t *msg)
 {
 	int ret = 0;
 
-	if (rmgmt_init_pmc())
-		return -1;
-	
 	rmgmt_enable_srst_por();
-	rmgmt_set_multiboot(0xC00);
+	rmgmt_set_multiboot_to_backup(msg);
 
 	ret = rmgmt_enable_pl_reset();
 	if (ret && ret != -ENODEV) {
@@ -697,10 +676,10 @@ static int xgq_vmr_cb(cl_msg_t *msg, void *arg)
 
 	switch (msg->multiboot_payload.req_type) {
 	case CL_MULTIBOOT_DEFAULT:
-		ret = rmgmt_enable_boot_default();
+		ret = rmgmt_enable_boot_default(msg);
 		break;
 	case CL_MULTIBOOT_BACKUP:
-		ret = rmgmt_enable_boot_backup();
+		ret = rmgmt_enable_boot_backup(msg);
 		break;
 	case CL_VMR_QUERY:
 		rmgmt_fpt_query(msg);
@@ -738,9 +717,15 @@ static int xgq_apu_channel_probe()
 	return 0;
 }
 
+u32 rmgmt_boot_on_offset()
+{
+	return rh.rh_boot_on_offset;
+}
+
 static void pvXGQTask( void *pvParameters )
 {
 	const TickType_t x1second = pdMS_TO_TICKS( 1000*1 );
+	cl_msg_t msg = { 0 };
 	int cnt = 0;
 
 	xSemaDownload = xSemaphoreCreateMutex();
@@ -748,6 +733,12 @@ static void pvXGQTask( void *pvParameters )
 	
 	/* try to clear any existign uncleared firewall before rmgmt launch */
 	vmr_clear_firewall();
+
+	rh.rh_boot_on_offset = IO_SYNC_READ32(VMR_EP_PLM_MULTIBOOT);
+	RMGMT_WARN("boot on 0x%x", rh.rh_boot_on_offset);
+
+	/* init pmc power on reset (POR), so that hot reset will be engaged */
+	rmgmt_enable_boot_backup(&msg);
 
 	for ( ;; )
 	{
