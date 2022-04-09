@@ -10,6 +10,7 @@ BUILD_XRT=0
 ROOT_DIR=`pwd`
 REAL_BSP=`realpath ../bsp/2021.2_stable/bsp`
 REAL_VMR=`realpath ../vmr`
+BUILD_CONF_FILE="build.json"
 
 check_result()
 {
@@ -24,11 +25,12 @@ check_result()
 
 default_env() {
 	echo -ne "no xsct, using version: "
-	if [ -z $TA ];then
+	if [ -z $BUILD_TA ];then
 		echo "$DEFAULT_VITIS"
+		BUILD_TA="${TOOL_VERSION}_daily_latest"
 	else
-		echo "$TA"
-		DEFAULT_VITIS="/proj/xbuilds/${TA}/installs/lin64/Vitis/HEAD/settings64.sh"
+		echo "$BUILD_TA"
+		DEFAULT_VITIS="/proj/xbuilds/${BUILD_TA}/installs/lin64/Vitis/HEAD/settings64.sh"
 	fi
 
 	ls ${DEFAULT_VITIS}
@@ -56,12 +58,61 @@ append_stable_bsp() {
 grep_file()
 {
 	typeset name="$1"
-	grep -w "$name" ${BUILD_VERSION_FILE} |grep -oP '".*?"'|tail -1|tr -d '"'
+	typeset file="$2"
+	grep -w "$name" ${file} |grep -oP '".*?"'|tail -1|tr -d '"'
 }
 
 grep_yes()
 {
 	grep -w "yes" ${PLATFORM_FILE} |grep -oP '".*"'|cut -d ":" -f1|tr -d '"'
+}
+
+load_build_info()
+{
+	if [ ! -f $BUILD_CONF_FILE ];then
+		echo "no $BUILD_CONF_FILE file"
+		return
+	fi
+	
+	if [ ! -z $BUILD_XSA ];then
+		echo "=== build from xsa, skip loading from $BUILD_CONF_FILE ==="
+		return
+	fi
+
+	if [ $NOT_STABLE == 0 ];then
+		echo "== build from stable bsp, skip loading from $BUILD_CONF_FILE ==="
+		return
+	fi
+
+	CONF_BUILD_TA=`grep_file "CONF_BUILD_TA" ${BUILD_CONF_FILE}`
+	if [ -z $BUILD_TA ];then
+		BUILD_TA=$CONF_BUILD_TA
+	fi
+
+	CONF_BUILD_XSA=`grep_file "CONF_BUILD_XSA" ${BUILD_CONF_FILE}`
+	if [ -z $BUILD_XSA ];then
+		BUILD_XSA=$CONF_BUILD_XSA
+	fi
+
+	CONF_BUILD_XSABIN=`grep_file "CONF_BUILD_XSABIN" ${BUILD_CONF_FILE}`
+	if [ -z $BUILD_XSABIN ];then
+		BUILD_XSABIN=$CONF_BUILD_XSABIN
+	fi
+
+	CONF_BUILD_PLATFORM=`grep_file "CONF_BUILD_PLATFORM" ${BUILD_CONF_FILE}`
+	if [ -z $PLATFORM_FILE ];then
+		PLATFORM_FILE=$CONF_BUILD_PLATFORM
+	fi
+
+	#enforce jtag mode for pipeline build
+	STDOUT_JTAG=1
+
+	echo "================================"
+	echo "BUILD_TA: $BUILD_TA"
+	echo "BUILD_XSA: $BUILD_XSA"
+	echo "BUILD_XSABIN: $BUILD_XSABIN"
+	echo "PLATFORM_FILE: $PLATFORM_FILE"
+	echo "================================"
 }
 
 make_version_h()
@@ -77,11 +128,11 @@ make_version_h()
 		VMR_BUILD_BRANCH=`git rev-parse --abbrev-ref HEAD`
 	else
 		echo "=== Loading version from ${BUILD_VERSION_FILE}"
-		VMR_VERSION_HASH=`grep_file "VERSION_HASH"` 
-		VMR_VERSION_HASH_DATE=`grep_file "VERSION_HASH_DATE"`
-		VMR_BUILD_VERSION=`grep_file "BUILD_VERSION"`
-		VMR_BUILD_VERSION_DATE=`grep_file "BUILD_VERSION_DATE"`
-		VMR_BUILD_BRANCH=`grep_file "BUILD_BRANCH"`
+		VMR_VERSION_HASH=`grep_file "VERSION_HASH" ${BUILD_VERSION_FILE}` 
+		VMR_VERSION_HASH_DATE=`grep_file "VERSION_HASH_DATE" ${BUILD_VERSION_FILE}`
+		VMR_BUILD_VERSION=`grep_file "BUILD_VERSION" ${BUILD_VERSION_FILE}`
+		VMR_BUILD_VERSION_DATE=`grep_file "BUILD_VERSION_DATE" ${BUILD_VERSION_FILE}`
+		VMR_BUILD_BRANCH=`grep_file "BUILD_BRANCH" ${BUILD_VERSION_FILE}`
 	fi
 
 	# NOTE: we only take git version, version date and branch for now
@@ -90,7 +141,7 @@ make_version_h()
 
 	echo "#ifndef _VMR_VERSION_" >> $CL_VERSION_H
 	echo "#define _VMR_VERSION_" >> $CL_VERSION_H
-	echo "#define VMR_TOOL_VERSION "\""$XSCT_VERSION"\" >> $CL_VERSION_H
+	echo "#define VMR_TOOL_VERSION "\""$BUILD_TA"\" >> $CL_VERSION_H
 	echo "#define VMR_GIT_HASH "\""$VMR_VERSION_HASH"\" >> $CL_VERSION_H
 	echo "#define VMR_GIT_BRANCH "\""$VMR_BUILD_BRANCH"\" >> $CL_VERSION_H
 	echo "#define VMR_GIT_HASH_DATE "\""$VMR_VERSION_HASH_DATE"\" >> $CL_VERSION_H
@@ -134,10 +185,23 @@ check_vmr() {
 	arm-none-eabi-strings $VMR_FILE |grep -E "VMR_GIT|VMR_TOOL"
 
 	echo "=== Build env info ==="
-	if [ $NOT_STABLE == 1 ];then
-		echo "BSP is daily latest"
+
+	if [ ! -z $CONF_BUILD_XSA ];then
+		echo "BUILD from config file: $BUILD_CONF_FILE"
 	else
-		echo "BSP is appended from $REAL_BSP"
+		echo "BUILD from user specified config"
+	fi
+
+	if [ $NOT_STABLE == 1 ];then
+		echo "BSP is built by xsct: $BUILD_TA"
+		echo "XSA is $BUILD_XSA"
+	else
+		echo "BSP and XSA are copied from: $REAL_BSP"
+	fi
+
+
+	if [ ! -z $PLATFORM_FILE ];then
+		echo "PLATFROM patch is: $PLATFORM_FILE"
 	fi
 
 	if [ $STDOUT_JTAG == 1 ];then
@@ -151,11 +215,11 @@ check_vmr() {
 	else
 		echo "Full Build"
 	fi
+
 	echo "=== Build vmr.elf ==="
 	cp $VMR_FILE $ROOT_DIR
 	realpath $ROOT_DIR/vmr.elf
 	echo "=== Build done. ==="
-
 }
 
 build_app_all() {
@@ -283,12 +347,22 @@ if [[ $BUILD_CLEAN == 1 ]];then
 	exit 0;
 fi
 
+#####################
+# load build.json to set options if the option is not explicitly set
+# this will make sure pipeline automation script pick up correct TA
+# submit PR to pipeline to move build.json forward.
+#####################
+load_build_info
+
 which xsct
 if [ $? -ne 0 ];then
 	default_env
+else
+	# use pre-sourced vitis TA, set to correct BUILD_TA
+	BUILD_TA=`which xsct|cut -f5 -d"/"`
 fi
 XSCT_VERSION=`which xsct|rev|cut -f3 -d"/"|rev`
-echo "using xsct: ${XSCT_VERSION} from env to build VMR"
+echo "Tools version: ${XSCT_VERSION}"
 
 # option1: only build app by vitis
 if [[ $BUILD_APP == 1 ]];then
@@ -307,7 +381,7 @@ fi
 #####################
 # build entire BSP  #
 #####################
-echo "=== Build BSP from xsa: $BUILD_XSA ==="
+echo "=== Build BSP from xsa: ==="
 ls $BUILD_XSA
 if [ $? -ne 0 ];then
 	echo "cannot find ${BUILD_XSA}"
@@ -326,7 +400,7 @@ check_result "Create vmr_platform" $?
 
 echo "=== (3) override freertos and recompile it"
 if [ $NOT_STABLE == 1 ];then
-	echo "=== Build BSP with daily_latest"
+	echo "=== Build BSP with $BUILD_TA"
 else
 	echo "=== Build BSP with stable version"
 	append_stable_bsp
