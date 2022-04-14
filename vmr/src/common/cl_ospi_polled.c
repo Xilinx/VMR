@@ -49,6 +49,9 @@
 #include "cl_log.h"
 #include "cl_main.h"
 #include "cl_flash.h"
+#include "cl_mem.h"
+#include "vmr_common.h"
+
 #include "xospipsv_flash_config.h"
 
 #define OSPI_ERR(fmt, arg...) \
@@ -100,16 +103,16 @@ static int FlashEnterExit4BAddMode(XOspiPsv *OspiPsvPtr, int Enable);
 static int FlashSetSDRDDRMode(XOspiPsv *OspiPsvPtr, int Mode);
 
 /************************** Variable Definitions *****************************/
-u8 TxBfrPtr;
+//static u8 TxBfrPtr;
 #ifdef __ICCARM__
 #pragma data_alignment = 4
-u8 ReadBfrPtr[8];
+static u8 ReadBfrPtr[8];
 #else
-u8 ReadBfrPtr[8]__attribute__ ((aligned(4)));
+static u8 ReadBfrPtr[8]__attribute__ ((aligned(4)));
 #endif
 
-u32 FlashMake;
-u32 FCTIndex;	/* Flash configuration table index */
+static u32 FlashMake;
+static u32 FCTIndex;	/* Flash configuration table index */
 
 /*
  * The instances to support the device drivers are global such that they
@@ -119,9 +122,10 @@ u32 FCTIndex;	/* Flash configuration table index */
 static XOspiPsv OspiPsvInstance;
 static XOspiPsv_Msg FlashMsg;
 
-u8 CmdBfr[8];
+static u8 CmdBfr[8];
 
 static int ospi_flash_percentage = 0;
+static u32 OspiSectorSize = 0;
 
 /*****************************************************************************/
 /**
@@ -1287,10 +1291,14 @@ int ospi_flash_init()
 
 	PAGE_SIZE = (Flash_Config_Table[FCTIndex].PageSize);
 	if (PAGE_SIZE != OSPI_VERSAL_PAGESIZE) {
-		OSPI_LOG("ERR: page size is: %d, expected: %d\r\n",
+		OSPI_ERR("ERR: page size is: %d, expected: %d\r\n",
 			PAGE_SIZE, OSPI_VERSAL_PAGESIZE);
 		return XST_FAILURE;
 	}
+
+	OspiSectorSize =  (Flash_Config_Table[FCTIndex]).SectSize;
+	OSPI_LOG("DONE: FCTINdex %d, OSPI page size %d, sector size %d",
+		FCTIndex, OSPI_VERSAL_PAGESIZE, OspiSectorSize);
 
 	return XST_SUCCESS;
 }
@@ -1436,7 +1444,7 @@ int ospi_flash_erase(flash_area_t area, u32 offset, u32 len)
 
 
 	if (baseAddress & OSPI_VERSAL_PAGESIZE) {
-		OSPI_LOG("base address is not %d aligned", OSPI_VERSAL_PAGESIZE); 
+		OSPI_WARN("base address is not %d aligned", OSPI_VERSAL_PAGESIZE); 
 	}
 
 	Status = FlashErase(OspiPsvInstancePtr, baseAddress, len, CmdBfr);
@@ -1471,6 +1479,83 @@ int ospi_flash_copy(flash_area_t area, u32 src, u32 tgt, u32 len)
 	ospi_flash_percentage = 100;
 	OSPI_DBG("src 0x%x, tgt 0x%x. done %d", src, tgt, ret);
 	return ret;
+}
+
+/*
+ * ospi_erase is based on sector size
+ * ospi_write is based on page size
+ * write only takes effect after an erase
+ * since sector size > page size
+ * a reliabe write should read sector back, change data,
+ * erase then write whole sector back.
+ */
+int ospi_flash_safe_write(flash_area_t area, u8 *WriteBuffer, u32 offset, u32 len)
+{
+	int ret = 0;
+	u8 *SectorBuffer = NULL;
+	u32 last_sector_off = 0;
+	u32 last_sector_addr = 0;
+
+	if (area != CL_FLASH_BOOT) {
+		OSPI_ERR("unsupported flash area type %d", area);
+		return -EINVAL;
+	}
+
+	/*
+	 * Check offset is page aligned
+	 */
+	if (offset & OSPI_VERSAL_PAGESIZE) {
+		OSPI_ERR("cannot write on not page %s size aligned address 0x%x",
+			OSPI_VERSAL_PAGESIZE, offset);
+		return -EINVAL;
+	}
+
+	/*
+	 * Always perform erase on sector size and write on page size
+	 * Note: for versal, the page size is 256, sector size is 131072 (128k)
+	 * so for last erase, we read whole sector back, update data, erase and rewrite
+	 */
+	if (len % OspiSectorSize) {
+		OSPI_WARN("len %d is not OSPI Sector %d aligned", len, OspiSectorSize);
+
+		SectorBuffer = pvPortMalloc(OspiSectorSize);
+		if (SectorBuffer == NULL) {
+			OSPI_ERR("no enable memory from pvPortMalloc");
+			return -ENOMEM;
+		}
+		
+		last_sector_off = len - len % OspiSectorSize;
+		last_sector_addr = offset + last_sector_off;
+		ret = ospi_flash_read(CL_FLASH_BOOT, SectorBuffer, last_sector_addr, OspiSectorSize);	
+		if (ret)
+			return ret;
+
+		Cl_SecureMemcpy(SectorBuffer, OspiSectorSize,
+				WriteBuffer + last_sector_off, len % OspiSectorSize);
+
+		OSPI_WARN("cached one sector %d data start from offset 0x%x",
+			OspiSectorSize, last_sector_addr);
+	}
+
+	/* Note: this will erase the last sector as well, but we catched it in the SectorBuffer */
+	ret = ospi_flash_erase(CL_FLASH_BOOT, offset, len);
+	if (ret)
+		return ret;
+
+	ret = ospi_flash_write(CL_FLASH_BOOT, WriteBuffer, offset, len);
+	if (ret)
+		return ret;
+
+	if (SectorBuffer) {
+		OSPI_WARN("rewrite cached one sector data");
+		ret = ospi_flash_write(CL_FLASH_BOOT, SectorBuffer, last_sector_addr, OspiSectorSize);
+		vPortFree(SectorBuffer);
+		if (ret)
+			return ret;
+	}
+
+	OSPI_LOG("done");
+	return 0;
 }
 
 int ospi_flash_progress()

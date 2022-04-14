@@ -17,6 +17,7 @@
 #include "cl_config.h"
 #include "cl_io.h"
 #include "cl_msg.h"
+#include "cl_rmgmt.h"
 #include "vmr_common.h"
 #include "sysmon.h"
 
@@ -136,14 +137,14 @@ static void vmrMainTask(void *task_params)
 	u8 debug_type = CL_DBG_CLEAR;
 
 	cl_rmgmt_fpt_get_debug_type(&msg, &debug_type);
-	CL_LOG(APP_MAIN, "task debug type %d", debug_type);
 
 	for (int i = 0; i < ARRAY_SIZE(task_handlers); i++) {
-		if (task_handlers[i].task_index == debug_type) {
-			CL_ERR(APP_MAIN, "skip loading task %s", task_handlers[i].task_name);
+		if (debug_type != 0 &&
+		    task_handlers[i].task_index == debug_type) {
+			CL_ERR(APP_MAIN, "task [ %s ] - skipped", task_handlers[i].task_name);
 			continue;
 		}
-		CL_LOG(APP_MAIN, "launch task %s", task_handlers[i].task_name);
+		CL_LOG(APP_MAIN, "task [ %s ] - starting", task_handlers[i].task_name);
 		configASSERT(task_handlers[i].task_hdl() == 0);
 	}
 
@@ -157,7 +158,7 @@ int main( void )
 	cl_logbuf_lock = xSemaphoreCreateMutex();
 	configASSERT(cl_logbuf_lock != NULL);
 
-	CL_LOG(APP_MAIN, "\r\n=== VMR Starts  ===");
+	CL_LOG(APP_MAIN, "\r\n=== VMR Starts ===");
 
 	cl_system_pre_init();
 

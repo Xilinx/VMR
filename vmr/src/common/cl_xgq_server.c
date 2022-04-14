@@ -14,6 +14,7 @@
 #include "cl_msg.h"
 #include "cl_main.h"
 #include "cl_flash.h"
+#include "cl_rmgmt.h"
 #include "xgq_cmd_vmr.h"
 #include "cl_xgq_server_plat.h"
 #include "vmr_common.h"
@@ -571,25 +572,22 @@ static void vmr_status_service_start()
 		mem.vmr_data_end);
 }
 
+/*
+ * Once minimum services started, we can start providing services. 
+ * TODO: move critical functions into cl_xgq_server. OSPI, SCFW program.
+ */
 static inline int service_can_start()
 {
-	/*
-	 * as long as PDI/APUBIN flash are supported, xgq services can be started.
-	 * TODO: move critical and reliable functions into cl_xgq_server to 
-	 *       reduce dependency. The rmgmt/vmc should provide API to support this.
-	 */
-	bool found_pdi = false, found_apubin = false;
+	bool found_vmr_op = false;
 
 	for (int i = 0; i < ARRAY_SIZE(handles); i++) {
-		if (handles[i].msg_cb != NULL && handles[i].type == CL_MSG_PDI) {
-			found_pdi = true;
-		}
-		if (handles[i].msg_cb != NULL && handles[i].type == CL_MSG_APUBIN) {
-			found_apubin = true;
+		if (handles[i].msg_cb != NULL && handles[i].type == CL_MSG_VMR_CONTROL) {
+			found_vmr_op = true;
+			break;
 		}
 	}
-	
-	if (!found_pdi || !found_apubin)
+
+	if (!found_vmr_op)
 		return 0;
 
 	if (!service_is_started) {
@@ -657,11 +655,45 @@ static void init_vmr_status(uint32_t ring_len)
 	IO_SYNC_WRITE32(0x0, RPU_SHARED_MEMORY_ADDR(mem.vmr_status_off));	
 }
 
+typedef int (*vmr_op_handler)(cl_msg_t *msg);
+struct xgq_vmr_op {
+	int op_req_type;
+	char *op_name;
+	vmr_op_handler handle;
+} xgq_vmr_op_table[] = {
+	{ CL_MULTIBOOT_DEFAULT, "MULTIBOOT_DEFAULT", cl_rmgmt_enable_boot_default },
+	{ CL_MULTIBOOT_BACKUP, "MULTIBOOT_BACKUP", cl_rmgmt_enable_boot_backup },
+	{ CL_VMR_QUERY, "VMR_QUERY", cl_rmgmt_fpt_query },
+	{ CL_PROGRAM_SC, "PROGRAM_SC", cl_rmgmt_program_sc },
+	{ CL_VMR_DEBUG, "VMR_DEBUG", cl_rmgmt_fpt_debug },
+};
+
+static int xgq_vmr_op_cb(cl_msg_t *msg, void *arg)
+{
+	int ret = 0;
+
+	for (int i = 0; i < ARRAY_SIZE(xgq_vmr_op_table); i++) {
+		if (xgq_vmr_op_table[i].op_req_type == msg->multiboot_payload.req_type) {
+			ret = xgq_vmr_op_table[i].handle(msg);
+			goto done;
+		}
+	}
+
+	MSG_ERR("unknown type %d", msg->multiboot_payload.req_type);
+	ret = -EINVAL;
+done:
+	msg->hdr.rcode = ret;
+	cl_msg_handle_complete(msg);
+	MSG_DBG("complete msg id %d, ret %d", msg->hdr.cid, ret);
+	return 0;
+}
+
 static int init_xgq()
 {
 	int ret = 0;
 	size_t ring_len = RPU_RING_BUFFER_LEN;
 	uint64_t flags = 0;
+	msg_handle_t *vmr_hdl = NULL;
 
 	/* Reset ring buffer */
 	cl_memset_io8(VMR_EP_RPU_RING_BUFFER_BASE, 0, ring_len);
@@ -687,6 +719,12 @@ static int init_xgq()
         MSG_DBG("================================================");
 
 	init_vmr_status(ring_len);
+	
+	/* start basic vmr services */
+	ret = cl_msg_handle_init(&vmr_hdl, CL_MSG_VMR_CONTROL, xgq_vmr_op_cb, NULL);
+	if (ret)
+		return ret;
+	
 	MSG_LOG("done.");
 	return 0;
 }
@@ -755,13 +793,13 @@ static void fini_queue()
 
 static int init_queue()
 {
-	quickTaskQueue = xQueueCreate(32, sizeof (cl_msg_t));
+	quickTaskQueue = xQueueCreate(8, sizeof (cl_msg_t));
 	if (quickTaskQueue == NULL) {
 		MSG_ERR("FATAL: quickTaskQueue creation failed");
 		return -1;
 	}
 
-	slowTaskQueue = xQueueCreate(32, sizeof (cl_msg_t));
+	slowTaskQueue = xQueueCreate(8, sizeof (cl_msg_t));
 	if (slowTaskQueue == NULL) {
 		MSG_ERR("FATAL: slowTaskQueue creation failed");
 		fini_queue();

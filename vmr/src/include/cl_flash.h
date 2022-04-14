@@ -17,6 +17,7 @@ int ospi_flash_write(flash_area_t area, u8 *buffer, u32 offset, u32 len);
 int ospi_flash_copy(flash_area_t area, u32 src, u32 tgt, u32 len);
 int ospi_flash_erase(flash_area_t area, u32 offset, u32 len);
 
+int ospi_flash_safe_write(flash_area_t area, u8 *buffer, u32 offset, u32 len);
 /* get static progress percentage for read,write, etc operations */
 int ospi_flash_progress();
 

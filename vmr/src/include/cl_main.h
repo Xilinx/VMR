@@ -34,8 +34,6 @@ struct cl_msg;
 u32 cl_rpu_status_query(struct cl_msg *msg, char *buf, u32 size);
 u32 cl_apu_status_query(struct cl_msg *msg, char *buf, u32 size);
 
-int cl_rmgmt_fpt_get_debug_type(struct cl_msg *msg, u8 *debug_type);
-
 int cl_xgq_client_probe(void);
 int cl_xgq_apu_is_ready(void);
 int cl_xgq_pl_is_ready(void);

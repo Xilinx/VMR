@@ -110,7 +110,7 @@ static int rmgmt_fpt_pdi_meta_set(struct cl_msg *msg, int fpt_type,
 
 	memcpy(buf, meta, sizeof(*meta));
 
-	ret = ospi_flash_write(CL_FLASH_BOOT, (u8 *)buf, base_addr, sizeof(buf));
+	ret = ospi_flash_safe_write(CL_FLASH_BOOT, (u8 *)buf, base_addr, sizeof(buf));
 	if (ret)
 		return ret;
 
@@ -378,6 +378,7 @@ static int rmgmt_copy_default_to_backup(struct cl_msg *msg)
 
 	/* finally update the tgt meta with updated size */
 	meta.fpt_pdi_size = src_size;
+	meta.fpt_pdi_debug_type = CL_DBG_CLEAR;
 	ret = rmgmt_fpt_pdi_meta_set(msg, FPT_TYPE_PDIMETA_BACKUP, &meta);
 	if (ret)
 		return ret;
@@ -506,6 +507,7 @@ int rmgmt_flash_rpu_pdi(struct rmgmt_handler *rh, struct cl_msg *msg)
 
 	/* finaly step, update metadata */
 	meta.fpt_pdi_size = len;
+	meta.fpt_pdi_debug_type = CL_DBG_CLEAR;
 	ret = rmgmt_fpt_pdi_meta_set(msg, FPT_TYPE_PDIMETA, &meta);
 	if (ret)
 		return ret;
@@ -533,14 +535,8 @@ int rmgmt_fpt_set_debug_type(struct cl_msg *msg)
 	if (ret)
 		return ret;
 
-	RMGMT_DBG("before: debug_type %d", meta.fpt_pdi_debug_type);
-
+	RMGMT_LOG("get debug_type %d", meta.fpt_pdi_debug_type);
 	meta.fpt_pdi_debug_type = msg->multiboot_payload.vmr_debug_type;
-
-	/* Note: always erase before write and no erase after write */
-	ret = rmgmt_fpt_pdi_meta_erase(msg, FPT_TYPE_PDIMETA);
-	if (ret)
-		return ret;
 
 	ret = rmgmt_fpt_pdi_meta_set(msg, FPT_TYPE_PDIMETA, &meta);
 	if (ret) {
@@ -550,7 +546,7 @@ int rmgmt_fpt_set_debug_type(struct cl_msg *msg)
 
 	bzero(&meta, sizeof(meta));
 	ret = rmgmt_fpt_pdi_meta_get(msg, FPT_TYPE_PDIMETA, &meta);
-	RMGMT_DBG("after: debug_type %d", meta.fpt_pdi_debug_type);
+	RMGMT_WARN("set debug_type %d", meta.fpt_pdi_debug_type);
 
 	return ret;
 }
