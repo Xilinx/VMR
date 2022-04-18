@@ -54,6 +54,8 @@ struct fpt_pdi_meta {
 	uint32_t	fpt_pdi_version;
 	uint32_t	fpt_pdi_size;
 	uint32_t	fpt_pdi_checksum;
+	uint32_t	fpt_pdi_debug_type:8;
+	uint32_t	fpt_pdi_rsvd0:24;
 };
 
 void rmgmt_fpt_query(struct cl_msg *msg);
@@ -66,4 +68,7 @@ int rmgmt_fpt_get_xsabin(struct cl_msg *msg, u32 *addr, u32 *size);
 int rmgmt_fpt_get_scfw(struct cl_msg *msg, u32 *addr, u32 *size);
 int rmgmt_fpt_get_systemdtb(struct cl_msg *msg, u32 *addr, u32 *size);
 
+/* Debug APIs */
+int rmgmt_fpt_set_debug_type(struct cl_msg *msg);
+int rmgmt_fpt_get_debug_type(struct cl_msg *msg, u8 *debug_type);
 #endif

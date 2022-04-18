@@ -25,13 +25,11 @@ msg_handle_t *xclbin_hdl;
 msg_handle_t *af_hdl;
 msg_handle_t *clock_hdl;
 msg_handle_t *apubin_hdl;
-msg_handle_t *vmr_hdl;
 int xgq_pdi_flag = 0;
 int xgq_xclbin_flag = 0;
 int xgq_log_page_flag = 0;
 int xgq_clock_flag = 0;
 int xgq_apubin_flag = 0;
-int xgq_vmr_control_flag = 0;
 int xgq_apu_control_flag = 0;
 char log_msg[1024] = { 0 };
 
@@ -189,6 +187,7 @@ static int xgq_clock_cb(cl_msg_t *msg, void *arg)
 	default:
 		RMGMT_ERR("ERROR: unknown req_type %d",
 			msg->clock_payload.ocl_req_type);
+		ret = -EINVAL;
 		break;
 	}
 
@@ -505,6 +504,7 @@ static u32 vmr_check_firewall(cl_msg_t *msg)
 
 	return val;
 }
+
 static u32 vmr_log_clock_shutdown(cl_msg_t *msg)
 {
 	u32 val = cl_check_clock_shutdown_status();
@@ -670,44 +670,6 @@ static int rmgmt_enable_boot_backup(cl_msg_t *msg)
 	return 0;
 }
 
-static int xgq_vmr_cb(cl_msg_t *msg, void *arg)
-{
-	int ret = 0;
-
-	switch (msg->multiboot_payload.req_type) {
-	case CL_MULTIBOOT_DEFAULT:
-		ret = rmgmt_enable_boot_default(msg);
-		break;
-	case CL_MULTIBOOT_BACKUP:
-		ret = rmgmt_enable_boot_backup(msg);
-		break;
-	case CL_VMR_QUERY:
-		rmgmt_fpt_query(msg);
-		break;
-	case CL_PROGRAM_SC:
-		/* calling into vmc_update APIs, we check progress separately */
-		if (acquire_download_sema()) {
-			RMGMT_LOG("start programing SC ...");
-			VMC_Start_SC_Update();
-			RMGMT_LOG("end programing SC ...");
-			release_download_sema();
-		} else {
-			RMGMT_LOG("system busy, please try later");
-			ret = -1;
-		}
-		break;
-	default:
-		RMGMT_LOG("unknown type %d", msg->multiboot_payload.req_type);
-		ret = -1;
-		break;
-	}
-
-	msg->hdr.rcode = ret;
-	cl_msg_handle_complete(msg);
-	RMGMT_DBG("complete msg id %d, ret %d", msg->hdr.cid, ret);
-	return 0;
-}
-
 static int xgq_apu_channel_probe()
 {
 	if (cl_xgq_client_probe() != 0) {
@@ -720,6 +682,47 @@ static int xgq_apu_channel_probe()
 u32 rmgmt_boot_on_offset()
 {
 	return rh.rh_boot_on_offset;
+}
+
+int cl_rmgmt_enable_boot_default(cl_msg_t *msg)
+{
+	return rmgmt_enable_boot_default(msg);
+}
+
+int cl_rmgmt_enable_boot_backup(cl_msg_t *msg)
+{
+	return rmgmt_enable_boot_backup(msg);
+}
+
+int cl_rmgmt_fpt_query(cl_msg_t *msg)
+{
+	rmgmt_fpt_query(msg);
+	return 0;
+}
+
+int cl_rmgmt_program_sc(cl_msg_t *msg)
+{
+	/* calling into vmc_update APIs, we check progress separately */
+	if (acquire_download_sema()) {
+		RMGMT_LOG("start programing SC ...");
+		VMC_Start_SC_Update();
+		RMGMT_LOG("end programing SC ...");
+		release_download_sema();
+		return 0;
+	} 
+
+	RMGMT_LOG("system busy, please try later");
+	return -EBUSY;
+}
+
+int cl_rmgmt_fpt_get_debug_type(cl_msg_t *msg, u8 *debug_type)
+{
+	return rmgmt_fpt_get_debug_type((struct cl_msg *)msg, debug_type);
+}
+
+int cl_rmgmt_fpt_debug(cl_msg_t *msg)
+{
+	return rmgmt_fpt_set_debug_type(msg);
 }
 
 static void pvXGQTask( void *pvParameters )
@@ -775,12 +778,6 @@ static void pvXGQTask( void *pvParameters )
 		    cl_msg_handle_init(&apubin_hdl, CL_MSG_APUBIN, xgq_apubin_cb, NULL) == 0) {
 			RMGMT_LOG("init apubin handle done.");
 			xgq_apubin_flag = 1;
-		}
-
-		if (xgq_vmr_control_flag == 0 &&
-		    cl_msg_handle_init(&vmr_hdl, CL_MSG_VMR_CONTROL, xgq_vmr_cb, NULL) == 0) {
-			RMGMT_LOG("init vmr control handle done.");
-			xgq_vmr_control_flag = 1;
 		}
 
 		if (xgq_apu_control_flag == 0 && xgq_apu_channel_probe() == 0) {

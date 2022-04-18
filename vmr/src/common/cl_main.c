@@ -16,6 +16,8 @@
 #include "cl_flash.h"
 #include "cl_config.h"
 #include "cl_io.h"
+#include "cl_msg.h"
+#include "cl_rmgmt.h"
 #include "vmr_common.h"
 #include "sysmon.h"
 
@@ -25,14 +27,16 @@ XSysMonPsv InstancePtr;
 XScuGic IntcInst;
 SemaphoreHandle_t cl_logbuf_lock;
 
-static tasks_register_t handler[] = {
-#ifndef VMR_BUILD_VMC_ONLY
-	CL_MSG_launch, /* make sure CL MSG launched first */
-	RMGMT_Launch,
-#endif
-#ifndef VMR_BUILD_XRT_ONLY
-	VMC_Launch,	
-#endif
+struct task_handler {
+	tasks_register_t task_hdl;
+	char 		 *task_name;
+	int 		 task_dbg_index;
+};
+
+static struct task_handler task_handlers[] = {
+	{CL_MSG_Launch, "Common Layer", CL_DBG_CLEAR},
+	{RMGMT_Launch, "Rmgmt Service", CL_DBG_DISABLE_RMGMT},
+	{VMC_Launch, "VMC Service", CL_DBG_DISABLE_VMC},
 };
 
 extern void vApplicationStackOverflowHook(TaskHandle_t xTask, char *pcTaskName)
@@ -126,17 +130,46 @@ int flash_progress() {
 		VMC_SCFW_Program_Progress() : ospi_flash_progress();
 }
 
+static TaskHandle_t vmrMainTask_handle = NULL;
+static void vmrMainTask(void *task_params)
+{
+	cl_msg_t msg = { 0 };
+	u8 debug_type = CL_DBG_CLEAR;
+
+	cl_rmgmt_fpt_get_debug_type(&msg, &debug_type);
+
+	for (int i = 0; i < ARRAY_SIZE(task_handlers); i++) {
+		if (debug_type != CL_DBG_CLEAR &&
+		    task_handlers[i].task_dbg_index == debug_type) {
+			CL_ERR(APP_MAIN, "task [ %s ] - skipped", task_handlers[i].task_name);
+			continue;
+		}
+		CL_LOG(APP_MAIN, "task [ %s ] - starting", task_handlers[i].task_name);
+		configASSERT(task_handlers[i].task_hdl() == 0);
+	}
+
+
+	CL_LOG(APP_MAIN, "main task finished job.");
+	vTaskDelete(NULL);
+}
+
 int main( void )
 {
 	cl_logbuf_lock = xSemaphoreCreateMutex();
 	configASSERT(cl_logbuf_lock != NULL);
 
-	CL_LOG(APP_MAIN, "\r\n=== VMR Starts  ===");
+	CL_LOG(APP_MAIN, "\r\n=== VMR Starts ===");
 
 	cl_system_pre_init();
 
-	for (int i = 0; i < ARRAY_SIZE(handler); i++) {
-		configASSERT(handler[i]() == 0);
+	if (xTaskCreate( vmrMainTask,
+			(const char *) "VMR Main Task",
+			TASK_STACK_DEPTH,
+			NULL,
+			tskIDLE_PRIORITY + 1,
+			&vmrMainTask_handle) != pdPASS) {
+		CL_ERR(APP_MAIN, "Failed to create VMR Main Task");
+		return -1;
 	}
 
 	vTaskStartScheduler();
