@@ -297,10 +297,10 @@ static cl_vmr_debug_type_t convert_debug_type(enum xgq_cmd_debug_type debug_type
 
 	switch (debug_type) {
 	case XGQ_CMD_DBG_RMGMT:
-		type = CL_DBG_RMGMT;
+		type = CL_DBG_DISABLE_RMGMT;
 		break;
 	case XGQ_CMD_DBG_VMC:
-		type = CL_DBG_VMC;
+		type = CL_DBG_DISABLE_VMC;
 		break;
 	case XGQ_CMD_DBG_CLEAR:
 	default:

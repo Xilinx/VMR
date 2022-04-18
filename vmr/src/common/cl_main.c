@@ -30,13 +30,13 @@ SemaphoreHandle_t cl_logbuf_lock;
 struct task_handler {
 	tasks_register_t task_hdl;
 	char 		 *task_name;
-	int 		 task_index;
+	int 		 task_dbg_index;
 };
 
 static struct task_handler task_handlers[] = {
-	{CL_MSG_Launch, "Common Layer", 0},
-	{RMGMT_Launch, "Rmgmt Service", 1},
-	{VMC_Launch, "VMC Service", 2},
+	{CL_MSG_Launch, "Common Layer", CL_DBG_CLEAR},
+	{RMGMT_Launch, "Rmgmt Service", CL_DBG_DISABLE_RMGMT},
+	{VMC_Launch, "VMC Service", CL_DBG_DISABLE_VMC},
 };
 
 extern void vApplicationStackOverflowHook(TaskHandle_t xTask, char *pcTaskName)
@@ -139,8 +139,8 @@ static void vmrMainTask(void *task_params)
 	cl_rmgmt_fpt_get_debug_type(&msg, &debug_type);
 
 	for (int i = 0; i < ARRAY_SIZE(task_handlers); i++) {
-		if (debug_type != 0 &&
-		    task_handlers[i].task_index == debug_type) {
+		if (debug_type != CL_DBG_CLEAR &&
+		    task_handlers[i].task_dbg_index == debug_type) {
 			CL_ERR(APP_MAIN, "task [ %s ] - skipped", task_handlers[i].task_name);
 			continue;
 		}

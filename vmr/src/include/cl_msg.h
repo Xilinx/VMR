@@ -54,8 +54,8 @@ typedef enum cl_vmr_control_type {
 
 typedef enum cl_vmr_debug_type {
 	CL_DBG_CLEAR		= 0x0,
-	CL_DBG_RMGMT		= 0x1,
-	CL_DBG_VMC		= 0x2,
+	CL_DBG_DISABLE_RMGMT	= 0x1,
+	CL_DBG_DISABLE_VMC	= 0x2,
 } cl_vmr_debug_type_t;
 
 struct xgq_vmr_data_payload {
