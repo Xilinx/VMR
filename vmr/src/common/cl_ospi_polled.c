@@ -1556,8 +1556,10 @@ int ospi_flash_safe_write(flash_area_t area, u8 *WriteBuffer, u32 offset, u32 le
 			goto done;
 	}
 done:
-	if (SectorBuffer)
+	if (SectorBuffer) {
 		vPortFree(SectorBuffer);
+		SectorBuffer = NULL;
+	}
 
 	OSPI_LOG("done");
 	return ret;
