@@ -28,6 +28,8 @@
 #define MSG_DBG(fmt, arg...) \
 	CL_DBG(APP_XGQ, fmt, ##arg)
 
+#define XGQ_XQUEUE_LENGTH	8
+
 static void receiveTask( void *pvParameters );
 static TaskHandle_t receiveTaskHandle = NULL;
 
@@ -793,13 +795,13 @@ static void fini_queue()
 
 static int init_queue()
 {
-	quickTaskQueue = xQueueCreate(8, sizeof (cl_msg_t));
+	quickTaskQueue = xQueueCreate(XGQ_XQUEUE_LENGTH, sizeof (cl_msg_t));
 	if (quickTaskQueue == NULL) {
 		MSG_ERR("FATAL: quickTaskQueue creation failed");
 		return -1;
 	}
 
-	slowTaskQueue = xQueueCreate(8, sizeof (cl_msg_t));
+	slowTaskQueue = xQueueCreate(XGQ_XQUEUE_LENGTH, sizeof (cl_msg_t));
 	if (slowTaskQueue == NULL) {
 		MSG_ERR("FATAL: slowTaskQueue creation failed");
 		fini_queue();

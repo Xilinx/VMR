@@ -104,11 +104,14 @@ static int FlashSetSDRDDRMode(XOspiPsv *OspiPsvPtr, int Mode);
 
 /************************** Variable Definitions *****************************/
 //static u8 TxBfrPtr;
+#define OSPI_READ_BUFFER_SIZE 8
+#define OSPI_DATA_ALIGNMENT 8
+
 #ifdef __ICCARM__
-#pragma data_alignment = 4
-static u8 ReadBfrPtr[8];
+#pragma data_alignment = OSPI_DATA_ALIGNMENT
+static u8 ReadBfrPtr[OSPI_READ_BUFFER_SIZE];
 #else
-static u8 ReadBfrPtr[8]__attribute__ ((aligned(4)));
+static u8 ReadBfrPtr[OSPI_READ_BUFFER_SIZE]__attribute__ ((aligned(OSPI_DATA_ALIGNMENT)));
 #endif
 
 static u32 FlashMake;
@@ -1528,7 +1531,7 @@ int ospi_flash_safe_write(flash_area_t area, u8 *WriteBuffer, u32 offset, u32 le
 		last_sector_addr = offset + last_sector_off;
 		ret = ospi_flash_read(CL_FLASH_BOOT, SectorBuffer, last_sector_addr, OspiSectorSize);	
 		if (ret)
-			return ret;
+			goto done;
 
 		Cl_SecureMemcpy(SectorBuffer, OspiSectorSize,
 				WriteBuffer + last_sector_off, len % OspiSectorSize);
@@ -1540,22 +1543,24 @@ int ospi_flash_safe_write(flash_area_t area, u8 *WriteBuffer, u32 offset, u32 le
 	/* Note: this will erase the last sector as well, but we catched it in the SectorBuffer */
 	ret = ospi_flash_erase(CL_FLASH_BOOT, offset, len);
 	if (ret)
-		return ret;
+		goto done;
 
 	ret = ospi_flash_write(CL_FLASH_BOOT, WriteBuffer, offset, len);
 	if (ret)
-		return ret;
+		goto done;
 
 	if (SectorBuffer) {
 		OSPI_WARN("rewrite cached one sector data");
 		ret = ospi_flash_write(CL_FLASH_BOOT, SectorBuffer, last_sector_addr, OspiSectorSize);
-		vPortFree(SectorBuffer);
 		if (ret)
-			return ret;
+			goto done;
 	}
+done:
+	if (SectorBuffer)
+		vPortFree(SectorBuffer);
 
 	OSPI_LOG("done");
-	return 0;
+	return ret;
 }
 
 int ospi_flash_progress()
