@@ -807,7 +807,7 @@ s8 Init_Asdm()
 		    byteCount += snsrValueLen;
 		}
 
-		tmp[idx].sensorInstance = pSdrMetaData[totalRecords].sensorInstance;
+		tmp[idx].sensorInstance = sensorInstance;
 		/* Assign the Sensor ID Mapped to external  MSP (Internal)*/
 		if(totalSensorInstances > 1)
 		{

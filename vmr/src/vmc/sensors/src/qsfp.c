@@ -48,7 +48,7 @@ u8 QSFP_ReadTemperature(float *TemperatureValue, u8 sensorInstance)
 		bit 22 INT_L    QSFP1
 		bit 23 LPMODE   QSFP1  */
 
-	QSFP_bits = (MIO >> (14 + ((sensorInstance-1) * 5))) & 0x1F;
+	QSFP_bits = (MIO >> (14 + (sensorInstance * 5))) & 0x1F;
 
 	/* check for QSFP module presence */
 
@@ -56,7 +56,7 @@ u8 QSFP_ReadTemperature(float *TemperatureValue, u8 sensorInstance)
 	{
 		//CL_LOG (APP_VMC ,"QSFP_%d module present",i);
 
-		MIO = MIO & ~(1 << (14 + ((sensorInstance-1) * 5))); // clear MODSEL to select QSFP 0 or 1 based on QSFP index
+		MIO = MIO & ~(1 << (14 + (sensorInstance * 5))); // clear MODSEL to select QSFP 0 or 1 based on QSFP index
 
 		Xil_Out32(wr_Address,MIO);
 
@@ -131,7 +131,7 @@ u8 QSFP_ReadTemperature(float *TemperatureValue, u8 sensorInstance)
 			*TemperatureValue = (QSFP_MAX_NEGETIVE_TEMP - TemperatureHexValue ) * QSFP_TEMPERATURE_RESOLUTION * (-1);
 		}
 
-		MIO = MIO | (1 << (14 + ((sensorInstance-1) * 5))); //set MODSEL to de-select QSFP 0 or 1 based on QSFP index
+		MIO = MIO | (1 << (14 + (sensorInstance * 5))); //set MODSEL to de-select QSFP 0 or 1 based on QSFP index
 
 		Xil_Out32(wr_Address,MIO);
 	}
