@@ -27,77 +27,27 @@
 
 >       Failing to do so might end up with "git revert" if serious regression found. 
 
-# === The following sections will be removed before open source the VMR github ===
+# === The internal links below will be removed before open source the VMR github ===
 
-# VMR Build
+# Build VMR and shell
 
-## System Requirements
+## Install all following pkgs from TA
 
-	Xlinx linux which can run 2021.2 or 2022.1 Vitis software.
-	do not support hw emulation, like qemu.
+	XRT: 		/proj/xbuilds/2022.1_daily_latest/xbb/xrt/packages/
+	Shell-base: 	/proj/xbuilds/2022.1_daily_latest/xbb/packages/internal_platforms/vck5000/gen4x8_xdma/base/
+	Shell-dev: 	/proj/xbuilds/2022.1_daily_latest/xbb/packages/internal_platforms/vck5000/gen4x8_xdma/1-202120-1-dev/
+	APU: 		/proj/xbuilds/2022.1_daily_latest/internal_platforms/sw/versal/apu_packages/versal/
 
-## TA location 2022.1
+## Build VMR
 
-	XRT: 	/proj/xbuilds/2022.1_daily_latest/xbb/xrt/packages/
-	Shell: 	/proj/xbuilds/2022.1_daily_latest/xbb/packages/internal_platforms/vck5000/gen4x8_xdma/base/
-	XSA: 	/proj/xbuilds/2022.1_daily_latest/xbb/packages/internal_platforms/vck5000/gen4x8_xdma/1-202120-1-dev/
-	APU: 	/proj/xbuilds/2022.1_daily_latest/internal_platforms/sw/versal/apu_packages/versal/
+### Build VMR against xsa from TA
+    on the server with TA Shell-dev pkgs
+        root# <VMR>/build/build.sh -xsa xsa=/opt/xilinx/platforms/xilinx_vck5000_gen4x8_xdma_2_202210_1/hw/xilinx_vck5000_gen4x8_xdma_2_202210_1.xsa
 
-### 1. Preparation:
+### Build VMR with stable cached BSP (experienced developer only)
+    on any machine
+        $ <VMR>build/build.sh -stable
 
-#### get xsa from TA
-
-	rpm2cpio /proj/xbuilds/2022.1_daily_latest/xbb/packages/internal_platforms/vck5000/gen4x8_xdma/1-202120-1-dev/<xxx>.noarch.rpm |cpio -idmv
-	cp ./opt/xilinx/platforms/xilinx_vck5000_gen4x8_xdma_1_202120_1/hw/xilinx_vck5000_gen4x8_xdma_1_202120_1.xsa <your own dir>
-
-	Example:
-	rpm2cpio /proj/xbuilds/2022.1_daily_latest/xbb/packages/internal_platforms/vck5000/gen4x8_xdma/1-202120-1-dev/xilinx-vck5000-gen4x8-xdma-1-202120-1-dev-1-3394490.noarch.rpm |cpio -idmv
-	cp ./opt/xilinx/platforms/xilinx_vck5000_gen4x8_xdma_1_202120_1/hw/xilinx_vck5000_gen4x8_xdma_1_202120_1.xsa <your own dir>
-
-### 2. Build:
-
-#### build from xsa
-
-	cd build
-	export FORCE_MARK_AS_EDGE_XSA=1
-	./build.sh -xsa <your own dir>/xilinx_vck5000_gen4x8_xdma_1_202120_1.xsa
-
- 	Example:
- 	./build.sh -xsa /proj/rdi/staff/davidzha/share/xgq/xilinx_vck5000_gen4x8_xdma_1_202120_1.xsa
-
-#### build vmr.elf without rebuilding VITIS platform
-
-	cd build
-	./build.sh -app
-
-## Build shell PDI 
-
-### 1. Preparation:
-### collect partition.pdi
-
-	rpm2cpio /proj/xbuilds/2022.1_daily_latest/xbb/packages/internal_platforms/vck5000/gen4x8_xdma/base/<xxx>.noarch.rpm |cpio -idmv
-	xclbinutil -i ./lib/firmware/xilinx/<uuid>/partition.xsabin --dump-section PDI:RAW:partition.pdi
-	cp ./partition.pdi <your own dir>
-
-	Example:
-	rpm2cpio /proj/xbuilds/2022.1_daily_latest/xbb/packages/internal_platforms/vck5000/gen4x8_xdma/base/xilinx-vck5000-gen4x8-xdma-base-1-3394490.noarch.rpm |cpio -idmv
-	xclbinutil -i ./lib/firmware/xilinx/3bc1b9162e6d8c76849419b33c259de3/partition.xsabin --dump-section PDI:RAW:partition.pdi
-	cp ./partition.pdi <your own dir>
-
-### 2. Build:
-#### make rpu.bif
-
-	$ cat rpu.bif 
-	all:
-	{
-	    image {
-		{ type=bootimage, file=partition.pdi }
-	    }
-	    image {
-		id = 0x1c000000, name=rpu_subsystem
-		{ core=r5-0, file=vmr.elf }
-	    }
-	}
-
-#### generate rpu.pdi
-	bootgen -arch versal -padimageheader=0 -log trace -w -o rpu.pdi -image rpu.bif
+## Build shell
+    on the server with TA Shell-base, Shell-dev pkgs
+        root# <VMR>build/regen_pdi.sh -v <vmr.elf>
