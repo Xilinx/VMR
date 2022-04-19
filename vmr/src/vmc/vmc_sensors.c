@@ -227,12 +227,11 @@ s8 Temperature_Read_QSFP(snsrRead_t *snsrData)
 	static bool is_qsfp_critical_threshold_reached = false;
 	status = QSFP_ReadTemperature(&TempReading, snsrData->sensorInstance);
 
-	u16 roundedOffVal = (TempReading > 0) ? TempReading : 0;
-	Cl_SecureMemcpy(&snsrData->snsrValue[0],sizeof(roundedOffVal),&roundedOffVal,sizeof(roundedOffVal));
-	snsrData->sensorValueSize = sizeof(roundedOffVal);
-
 	if (status == XST_SUCCESS)
 	{
+		u16 roundedOffVal = (TempReading > 0) ? TempReading : 0;
+		Cl_SecureMemcpy(&snsrData->snsrValue[0],sizeof(roundedOffVal),&roundedOffVal,sizeof(roundedOffVal));
+		snsrData->sensorValueSize = sizeof(roundedOffVal);
 		snsrData->snsrSatus = Vmc_Snsr_State_Normal;
 	}
 	else if (status == XST_FAILURE)
@@ -243,7 +242,7 @@ s8 Temperature_Read_QSFP(snsrRead_t *snsrData)
 	else
 	{
 		snsrData->snsrSatus = Vmc_Snsr_State_Unavailable;
-		VMC_DBG("QSFP_%d module not present \n\r",(snsrData->sensorInstance-1));
+		VMC_DBG("QSFP_%d module not present \n\r",(snsrData->sensorInstance));
 	}
 
 	if (TempReading >= TEMP_QSFP_CRITICAL_THRESHOLD)
@@ -518,19 +517,21 @@ void qsfp_monitor(void)
 	float TemperatureValue = 0;
 	u8 status = XST_FAILURE;
 
-	for (snsrIndex = 1 ; snsrIndex <= QSFP_TEMPERATURE_SENSOR_NUM ; snsrIndex++)
+	for (snsrIndex = 0; snsrIndex < QSFP_TEMPERATURE_SENSOR_NUM; snsrIndex++)
 	{
 		status = QSFP_ReadTemperature(&TemperatureValue,snsrIndex);
 
-		sensor_readings.qsfp_temp[snsrIndex-1] = TemperatureValue;
-
+		if (status == XST_SUCCESS)
+		{
+			sensor_readings.qsfp_temp[snsrIndex] = TemperatureValue;
+		}
 		if (status == XST_FAILURE)
 		{
-			VMC_PRNT("\n\r Failed to read QSFP_%d temp \n\r",(snsrIndex-1));
+			VMC_PRNT("\n\r Failed to read QSFP_%d temp \n\r", snsrIndex);
 		}
 		if (status == XST_DEVICE_NOT_FOUND)
 		{
-			//VMC_PRNT("QSFP_%d module not present",(snsrIndex-1));
+			//VMC_PRNT("QSFP_%d module not present", snsrIndex);
 		}
 
 	}
