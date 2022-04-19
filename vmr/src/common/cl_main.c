@@ -93,17 +93,26 @@ u32 cl_rpu_status_query(struct cl_msg *msg, char *buf, u32 size)
 		CL_ERR(APP_MAIN, "msg is truncated");
 		return size;
 	}
-	size = size - count;
 
 #ifdef _VMR_VERSION_
 	CL_LOG(APP_MAIN, "vitis version: %s", VMR_TOOL_VERSION);
 	CL_LOG(APP_MAIN, "git hash: %s", VMR_GIT_HASH);
 	CL_LOG(APP_MAIN, "git branch: %s", VMR_GIT_BRANCH);
 	CL_LOG(APP_MAIN, "git hash date: %s", VMR_GIT_HASH_DATE);
+	CL_LOG(APP_MAIN, "vmr build date: %s", VMR_BUILD_VERSION_DATE);
+	CL_LOG(APP_MAIN, "vmr build version: %s", VMR_BUILD_VERSION);
 
-	count += snprintf(buf + count, size,
+	count += snprintf(buf + count, size - count,
 		"vitis version: %s\ngit hash: %s\ngit branch: %s\ngit hash date: %s\n",
 		VMR_TOOL_VERSION, VMR_GIT_HASH, VMR_GIT_BRANCH, VMR_GIT_HASH_DATE);
+	if (count > size) {
+		CL_ERR(APP_MAIN, "msg is truncated");
+		return size;
+	}
+
+	count += snprintf(buf + count, size - count,
+		"vmr build date: %s\nvmr build version: %s\n",
+		VMR_BUILD_VERSION_DATE, VMR_BUILD_VERSION);
 	if (count > size) {
 		CL_ERR(APP_MAIN, "msg is truncated");
 		return size;

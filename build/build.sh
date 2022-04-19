@@ -123,17 +123,24 @@ make_version_h()
 		echo "=== WARN: No build version is specified, trying to load local git version."
 		VMR_VERSION_HASH=`git rev-parse --verify HEAD`
 		VMR_VERSION_HASH_DATE=`git log -1 --pretty=format:%cD`
-		VMR_BUILD_VERSION="1.0.0"
-		VMR_BUILD_VERSION_DATE=`date`
 		VMR_BUILD_BRANCH=`git rev-parse --abbrev-ref HEAD`
+		VMR_VERSION_RELEASE="0"
+		VMR_VERSION_MAJOR="0"
+		VMR_VERSION_MINOR="0"
+		VMR_VERSION_PATCH="0"
 	else
 		echo "=== Loading version from ${BUILD_VERSION_FILE}"
 		VMR_VERSION_HASH=`grep_file "VERSION_HASH" ${BUILD_VERSION_FILE}` 
 		VMR_VERSION_HASH_DATE=`grep_file "VERSION_HASH_DATE" ${BUILD_VERSION_FILE}`
-		VMR_BUILD_VERSION=`grep_file "BUILD_VERSION" ${BUILD_VERSION_FILE}`
-		VMR_BUILD_VERSION_DATE=`grep_file "BUILD_VERSION_DATE" ${BUILD_VERSION_FILE}`
 		VMR_BUILD_BRANCH=`grep_file "BUILD_BRANCH" ${BUILD_VERSION_FILE}`
+		VMR_VERSION_RELEASE=`grep_file "VMR_VERSION_RELEASE" ${BUILD_VERSION_FILE}`
+		VMR_VERSION_MAJOR=`grep_file "VMR_VERSION_MAJOR" ${BUILD_VERSION_FILE}`
+		VMR_VERSION_MINOR=`grep_file "VMR_VERSION_MINOR" ${BUILD_VERSION_FILE}`
+		VMR_VERSION_PATCH=`grep_file "VMR_VERSION_PATCH" ${BUILD_VERSION_FILE}`
+
 	fi
+	VMR_BUILD_VERSION_DATE=`date`
+	VMR_BUILD_VERSION="$VMR_VERSION_RELEASE.$VMR_VERSION_MAJOR.$VMR_VERSION_MINOR.$VMR_VERSION_PATCH"
 
 	# NOTE: we only take git version, version date and branch for now
 
@@ -145,6 +152,8 @@ make_version_h()
 	echo "#define VMR_GIT_HASH "\""$VMR_VERSION_HASH"\" >> $CL_VERSION_H
 	echo "#define VMR_GIT_BRANCH "\""$VMR_BUILD_BRANCH"\" >> $CL_VERSION_H
 	echo "#define VMR_GIT_HASH_DATE "\""$VMR_VERSION_HASH_DATE"\" >> $CL_VERSION_H
+	echo "#define VMR_BUILD_VERSION_DATE "\""$VMR_BUILD_VERSION_DATE"\" >> $CL_VERSION_H
+	echo "#define VMR_BUILD_VERSION "\""$VMR_BUILD_VERSION"\" >> $CL_VERSION_H
 
 	if [[ $BUILD_XRT == 1 ]];then
 		echo "=== XRT only build ==="
@@ -183,6 +192,9 @@ check_vmr() {
 
 	echo "=== VMR github info ==="
 	arm-none-eabi-strings $VMR_FILE |grep -E "VMR_GIT|VMR_TOOL"
+
+	echo "=== Build version info ==="
+	arm-none-eabi-strings $VMR_FILE |grep -E "VMR_BUILD_VERSION"
 
 	echo "=== Build env info ==="
 
