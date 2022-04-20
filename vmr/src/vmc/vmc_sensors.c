@@ -38,7 +38,7 @@ static u8 xgq_sensor_flag = 0;
 msg_handle_t *sensor_hdl;
 extern s8 Asdm_Process_Sensor_Request(u8 *req, u8 *resp, u16 *respSize);
 
-#define MAX6639_FAN_TACHO_TO_RPM(x) (8000*60)/(x*2)
+#define MAX6639_FAN_TACHO_TO_RPM(x) (8000*60)/(x)
 
 Versal_sensor_readings sensor_readings;
 u8 i2c_num = 1;  // LPD_I2C0
