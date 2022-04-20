@@ -456,21 +456,21 @@ u8 Update_Sensor_Value(Asdm_RepositoryTypeEnum_t repoType, u8 sensorIdx, snsrRea
 		/* Update Sensor Status */
 		sensorRecord->sensor_status = snsrInfo->snsrSatus;
 
-		if(snsrInfo->sensorValueSize >= sizeof(float))
+		if(snsrInfo->sensorValueSize == sizeof(u32))
 		{
 			/* Update Max Sensor Value */
-			if ( *((float *)sensorRecord->sensor_value) > *((float *)sensorRecord->sensorMaxValue))
+			if ( *((u32 *)sensorRecord->sensor_value) > *((u32 *)sensorRecord->sensorMaxValue))
 			{
 				Cl_SecureMemcpy(sensorRecord->sensorMaxValue,snsrInfo->sensorValueSize,sensorRecord->sensor_value,
 				    snsrInfo->sensorValueSize);
 			}
 
 			/* Calculate and Update Average Value */
-			*((float *)sensorRecord->sensorAverageValue) = *((float *)sensorRecord->sensorAverageValue)
-			    				- (*((float *)sensorRecord->sensorAverageValue)/sensorRecord->sampleCount)
-			    				+ (*((float *)sensorRecord->sensor_value)/sensorRecord->sampleCount);
+			*((u32 *)sensorRecord->sensorAverageValue) = *((u32 *)sensorRecord->sensorAverageValue)
+			    				- (*((u32 *)sensorRecord->sensorAverageValue)/sensorRecord->sampleCount)
+			    				+ (*((u32 *)sensorRecord->sensor_value)/sensorRecord->sampleCount);
 		}
-		else
+		else if(snsrInfo->sensorValueSize == sizeof(u16))
 		{
 			/* Update Max Sensor Value */
 			if ( *((u16 *)sensorRecord->sensor_value) > *((u16 *)sensorRecord->sensorMaxValue))
@@ -483,6 +483,20 @@ u8 Update_Sensor_Value(Asdm_RepositoryTypeEnum_t repoType, u8 sensorIdx, snsrRea
 			*((u16 *)sensorRecord->sensorAverageValue) = (*((u16 *)sensorRecord->sensorAverageValue)
 					    				- (*((u16 *)sensorRecord->sensorAverageValue)/sensorRecord->sampleCount))
 									+ (*((u16 *)sensorRecord->sensor_value)/sensorRecord->sampleCount);
+		}
+		else if(snsrInfo->sensorValueSize == sizeof(u8))
+		{
+			/* Update Max Sensor Value */
+			if ( *((u8 *)sensorRecord->sensor_value) > *((u8 *)sensorRecord->sensorMaxValue))
+			{
+				Cl_SecureMemcpy(sensorRecord->sensorMaxValue,snsrInfo->sensorValueSize,sensorRecord->sensor_value,
+						snsrInfo->sensorValueSize);
+			}
+
+			/* Calculate and Update Average Value */
+			*((u8 *)sensorRecord->sensorAverageValue) = (*((u8 *)sensorRecord->sensorAverageValue)
+					    				- (*((u8 *)sensorRecord->sensorAverageValue)/sensorRecord->sampleCount))
+									+ (*((u8 *)sensorRecord->sensor_value)/sensorRecord->sampleCount);
 		}
 		/* Increment the Sample Count after a Successful read*/
 		sensorRecord->sampleCount++;
