@@ -2,14 +2,17 @@
 * Copyright (C) 2020 Xilinx, Inc.  All rights reserved.
 * SPDX-License-Identifier: MIT
 *******************************************************************************/
+/* system level includes */
+#include <stdbool.h>
+
 /* FreeRTOS includes */
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
 #include "timers.h"
+#include "semphr.h"
 
-#include <stdbool.h>
-
+/* Common Layer includes */
 #include "cl_log.h"
 #include "cl_msg.h"
 #include "cl_main.h"
@@ -45,20 +48,25 @@ static int xgq_io_hdl = 0;
 
 static bool service_is_started = false;
 
+static SemaphoreHandle_t xSemaHandleTask;
+static void xgqHandleTask( void *pvParameters );
+static TaskHandle_t xgqHandleTaskHandle = NULL;
+static QueueHandle_t requestHandleQueue = NULL;
+
 enum task_level {
 	TASK_SLOW = 0,
 	TASK_QUICK,
 };
 
 static msg_handle_t handles[] = {
-	{ .type = CL_MSG_PDI, .name = "PDI", },
-	{ .type = CL_MSG_XCLBIN, .name = "XCLBIN", },
-	{ .type = CL_MSG_LOG_PAGE, .name = "LOG_PAGE", },
-	{ .type = CL_MSG_CLOCK, .name = "CLOCK", },
-	{ .type = CL_MSG_APUBIN, .name = "API_BIN", },
-	{ .type = CL_MSG_VMR_CONTROL, .name = "VMR_CONTROL", },
+	{ .type = CL_MSG_PDI, .name = "PDI", .can_wait = true, },
+	{ .type = CL_MSG_XCLBIN, .name = "XCLBIN", .can_wait = true, },
+	{ .type = CL_MSG_APUBIN, .name = "API_BIN", .can_wait = true, },
+	{ .type = CL_MSG_LOG_PAGE, .name = "LOG_PAGE", .can_wait = false, },
+	{ .type = CL_MSG_CLOCK, .name = "CLOCK", .can_wait = false, },
+	{ .type = CL_MSG_VMR_CONTROL, .name = "VMR_CONTROL", .can_wait = false, },
 #ifndef VMR_BUILD_XRT_ONLY
-	{ .type = CL_MSG_SENSOR, .name = "SENSOR", },
+	{ .type = CL_MSG_SENSOR, .name = "SENSOR", .can_wait = false, },
 #endif
 };
 
@@ -156,6 +164,7 @@ int cl_msg_handle_complete(cl_msg_t *msg)
 	return 0;
 }
 
+#if 0
 static int dispatch_to_queue(cl_msg_t *msg, int task_level)
 {
 	switch (task_level) {
@@ -312,7 +321,253 @@ static cl_vmr_debug_type_t convert_debug_type(enum xgq_cmd_debug_type debug_type
 
 	return type;
 }
+#endif
 
+struct xgq_cmd_cl_map {
+	u32	xgq_request_type;
+	u32	common_request_type;
+};
+
+static struct xgq_cmd_cl_map xgq_cmd_clock_map[] = {
+	{XGQ_CMD_CLOCK_WIZARD, CL_CLOCK_WIZARD},
+	{XGQ_CMD_CLOCK_COUNTER, CL_CLOCK_COUNTER},
+	{XGQ_CMD_CLOCK_SCALE, CL_CLOCK_SCALE},
+};
+
+static struct xgq_cmd_cl_map xgq_cmd_vmr_control_map[] = {
+	{XGQ_CMD_BOOT_DEFAULT, CL_MULTIBOOT_DEFAULT},
+	{XGQ_CMD_BOOT_BACKUP, CL_MULTIBOOT_BACKUP},
+	{XGQ_CMD_PROGRAM_SC, CL_PROGRAM_SC},
+	{XGQ_CMD_VMR_DEBUG, CL_VMR_DEBUG},
+	{XGQ_CMD_VMR_QUERY, CL_VMR_QUERY},
+};
+
+static struct xgq_cmd_cl_map xgq_cmd_vmr_debug_map[] = {
+	{XGQ_CMD_DBG_RMGMT, CL_DBG_DISABLE_RMGMT},
+	{XGQ_CMD_DBG_VMC, CL_DBG_DISABLE_VMC},
+	{XGQ_CMD_DBG_CLEAR, CL_DBG_CLEAR},
+};
+
+static struct xgq_cmd_cl_map xgq_cmd_log_page_map[] = {
+	{XGQ_CMD_LOG_AF_CHECK, CL_LOG_AF_CHECK},
+	{XGQ_CMD_LOG_AF_CLEAR, CL_LOG_AF_CLEAR},
+	{XGQ_CMD_LOG_FW, CL_LOG_FW},
+	{XGQ_CMD_LOG_INFO, CL_LOG_INFO},
+	{XGQ_CMD_LOG_ENDPOINT, CL_LOG_ENDPOINT},
+};
+
+static struct xgq_cmd_cl_map xgq_cmd_sensor_map[] = {
+	{XGQ_CMD_SENSOR_SID_GET_SIZE, CL_SENSOR_GET_SIZE},
+	{XGQ_CMD_SENSOR_SID_BDINFO, CL_SENSOR_BDINFO},
+	{XGQ_CMD_SENSOR_SID_TEMP, CL_SENSOR_TEMP},
+	{XGQ_CMD_SENSOR_SID_VOLTAGE, CL_SENSOR_VOLTAGE},
+	{XGQ_CMD_SENSOR_SID_CURRENT, CL_SENSOR_CURRENT},
+	{XGQ_CMD_SENSOR_SID_POWER, CL_SENSOR_POWER},
+	{XGQ_CMD_SENSOR_SID_QSFP, CL_SENSOR_QSFP},
+	{XGQ_CMD_SENSOR_SID_ALL, CL_SENSOR_ALL},
+};
+
+static inline int convert_cl_type(u32 xgq_type, u32 *cl_type,
+	struct xgq_cmd_cl_map *map, int map_size)
+{
+	for (int i = 0; i < map_size; i++) {
+		if (map[i].xgq_request_type == xgq_type) {
+			*cl_type = map[i].common_request_type;
+			return 0;
+		}
+	}
+
+	MSG_ERR("unknown type %d", xgq_type);
+	return -EINVAL;
+}
+
+
+int xclbin_handle(cl_msg_t *msg, struct xgq_cmd_sq *sq)
+{
+	msg->data_payload.address = (u32)sq->xclbin_payload.address;
+	msg->data_payload.size = (u32)sq->xclbin_payload.size;
+	return 0;
+}
+
+int pdi_handle(cl_msg_t *msg, struct xgq_cmd_sq *sq)
+{
+	msg->data_payload.address = (u32)sq->pdi_payload.address;
+	msg->data_payload.size = (u32)sq->pdi_payload.size;
+
+	switch (sq->pdi_payload.flash_type) {
+	case XGQ_CMD_FLASH_NO_BACKUP:
+		msg->data_payload.flash_no_backup = 1;
+		break;
+	case XGQ_CMD_FLASH_TO_LEGACY:
+		msg->data_payload.flash_to_legacy = 1;
+		break;
+	case XGQ_CMD_FLASH_DEFAULT:
+	default:
+		break;
+	}
+
+	return 0;
+}
+
+int log_page_handle(cl_msg_t *msg, struct xgq_cmd_sq *sq)
+{
+	int ret = 0;
+	u32 pid = CL_LOG_UNKNOWN;
+
+	ret = convert_cl_type(sq->log_payload.pid, &pid,
+		xgq_cmd_log_page_map, ARRAY_SIZE(xgq_cmd_log_page_map));
+	if (ret)
+		return ret;
+
+	MSG_LOG("pid %d", pid);
+
+	msg->log_payload.pid = pid;
+	msg->log_payload.address = (u32)sq->log_payload.address;
+	msg->log_payload.size = (u32)sq->log_payload.size;
+
+	return 0;
+}
+
+int clock_handle(cl_msg_t *msg, struct xgq_cmd_sq *sq)
+{
+	int num_clock = 0;
+	int ret = 0;
+
+	ret = convert_cl_type(sq->clock_payload.ocl_req_type, &msg->clock_payload.ocl_req_type,
+		xgq_cmd_clock_map, ARRAY_SIZE(xgq_cmd_clock_map));
+	if (ret)
+		return ret;
+
+	msg->clock_payload.ocl_region = sq->clock_payload.ocl_region;
+	msg->clock_payload.ocl_req_id = sq->clock_payload.ocl_req_id;
+	msg->clock_payload.ocl_req_num = sq->clock_payload.ocl_req_num;
+	num_clock = msg->clock_payload.ocl_req_num;
+	MSG_DBG("req_type %d, req_id %d, req_num %d",
+		sq->clock_payload.ocl_req_type,
+		sq->clock_payload.ocl_req_id,
+		sq->clock_payload.ocl_req_num);
+
+	if (num_clock > ARRAY_SIZE(msg->clock_payload.ocl_req_freq)) {
+		MSG_ERR("num_clock %d out of range", num_clock);
+		return -EINVAL;
+	}
+
+	/* deep copy freq requests */
+	for (int i = 0; i < num_clock; i++) {
+		msg->clock_payload.ocl_req_freq[i] =
+			sq->clock_payload.ocl_req_freq[i];
+	}
+
+	return 0;
+}
+
+int sensor_handle(cl_msg_t *msg, struct xgq_cmd_sq *sq)
+{
+	int ret = 0;
+	u32 sid = CL_SENSOR_ALL;
+
+	ret = convert_cl_type(sq->sensor_payload.sid, &sid,
+		xgq_cmd_sensor_map, ARRAY_SIZE(xgq_cmd_sensor_map));
+	if (ret)
+		return ret;
+
+	msg->sensor_payload.sid = sid;
+	msg->sensor_payload.address = (u32)sq->sensor_payload.address;
+	msg->sensor_payload.size = (u32)sq->sensor_payload.size;
+	msg->sensor_payload.aid = (u8) sq->sensor_payload.aid;
+
+	return 0;
+}
+
+int vmr_control_handle(cl_msg_t *msg, struct xgq_cmd_sq *sq)
+{
+	int ret = 0;
+	u32 vmr_debug_type = CL_DBG_CLEAR;
+
+	/* we always set log level by this request */
+	cl_loglevel_set(sq->vmr_control_payload.debug_level);
+
+	ret = convert_cl_type(sq->vmr_control_payload.req_type, &msg->multiboot_payload.req_type,
+		xgq_cmd_vmr_control_map, ARRAY_SIZE(xgq_cmd_vmr_control_map));
+	if (ret)
+		return ret;
+
+	ret = convert_cl_type(sq->vmr_control_payload.debug_type, &vmr_debug_type,
+		xgq_cmd_vmr_debug_map, ARRAY_SIZE(xgq_cmd_vmr_debug_map));
+	if (ret)
+		return ret;
+
+	msg->multiboot_payload.vmr_debug_type = vmr_debug_type;
+
+	return 0;
+}
+
+struct xgq_cmd_handler {
+	uint16_t	opcode;			/* xgq cmd opcode */
+	uint16_t	msg_type;		/* common layer internal msg type */
+	char		*name;			/* handler name */
+	int (*msg_handle)(cl_msg_t *msg, struct xgq_cmd_sq *sq); /* handler callback */
+};
+
+static struct xgq_cmd_handler xgq_cmd_handlers[] = {
+	{XGQ_CMD_OP_LOAD_XCLBIN, CL_MSG_XCLBIN, "LOAD XCLBIN", xclbin_handle},
+	{XGQ_CMD_OP_DOWNLOAD_PDI, CL_MSG_PDI, "LOAD BASE PDI", pdi_handle},
+	{XGQ_CMD_OP_LOAD_APUBIN, CL_MSG_APUBIN, "LOAD APU PDI", pdi_handle},
+	{XGQ_CMD_OP_GET_LOG_PAGE, CL_MSG_LOG_PAGE, "LOG PAGE", log_page_handle},
+	{XGQ_CMD_OP_CLOCK, CL_MSG_CLOCK, "CLOCK", clock_handle},
+	{XGQ_CMD_OP_VMR_CONTROL, CL_MSG_VMR_CONTROL, "VMR_CONTROL", vmr_control_handle},
+	{XGQ_CMD_OP_SENSOR, CL_MSG_SENSOR, "SENSOR", sensor_handle},
+};
+
+/*
+ * run-to-complete for each command
+ * 1. parse the xgq com to internal cl_msg_t
+ * 2. send cl_msg_t to xgqHandleTask via message queue (xQueueSend)
+ * 3. wait xgqHandleTask complete the command.
+ * Future: xgq cmd complete will be handled by xgq_receive task.
+ */
+static int submit_to_queue(u32 sq_addr)
+{	
+	struct xgq_sub_queue_entry *cmd = (struct xgq_sub_queue_entry *)sq_addr;
+	struct xgq_cmd_sq *sq = (struct xgq_cmd_sq *)sq_addr;
+	int ret = 0;
+	cl_msg_t msg = { 0 };
+
+	/* Sync data from cache to memory */
+	Xil_DCacheFlush();
+
+	msg.hdr.cid = cmd->hdr.cid;
+	MSG_DBG("get cid %d opcode 0x%x", cmd->hdr.cid, cmd->hdr.opcode);
+	MSG_LOG("get cid %d opcode 0x%x", cmd->hdr.cid, cmd->hdr.opcode);
+
+	for (int i = 0; i < ARRAY_SIZE(xgq_cmd_handlers); i++) {
+		if (xgq_cmd_handlers[i].opcode == cmd->hdr.opcode) {
+
+			MSG_DBG("handle msg %s", xgq_cmd_handlers[i].name);
+			MSG_LOG("handle msg %s", xgq_cmd_handlers[i].name);
+			msg.hdr.type = xgq_cmd_handlers[i].msg_type;
+			ret = xgq_cmd_handlers[i].msg_handle(&msg, sq);
+			if (ret)
+				return ret;
+
+			if (acquire_handle_sema(xgq_cmd_handlers[i].can_wait)) {
+				/* pending till send to handle task */
+			MSG_LOG("send");
+				xQueueSend(requestHandleQueue, &msg, portMAX_DELAY);
+			MSG_LOG("sent done, wait for next...");
+				return 0;
+			} else {
+				MSG_WARN("handle task is busy, please retry later");
+				return -EBUSY;
+			}
+		}
+	}
+
+	MSG_ERR("Unhandled opcode: 0x%x", cmd->hdr.opcode);
+	return -EINVAL;
+}
+
+#if 0
 /*
  * submit dispatch msg to different software queues based on msg_type.
  * The quickTask only handles commands should be complished very fast.
@@ -452,28 +707,38 @@ static int submit_to_queue(u32 sq_addr)
 
 	return ret;
 }
+#endif
 
-static void abort_msg(u32 sq_addr)
+static void abort_msg(u32 sq_addr, int rcode)
 {
 	struct xgq_cmd_sq_hdr *cmd = (struct xgq_cmd_sq_hdr *)sq_addr;
 	cl_msg_t msg = { 0 };
 
 	msg.hdr.cid = cmd->cid;
-	msg.hdr.rcode = -EINVAL;
+	msg.hdr.rcode = rcode;
 
-	MSG_LOG("cid %d", cmd->cid);
+	MSG_WARN("cid %d rcode %d", cmd->cid, rcode);
 	cl_msg_handle_complete(&msg);
 }
 
 static void inline process_msg(u32 sq_slot_addr)
 {
-	
-	if (submit_to_queue(sq_slot_addr)) {
-		abort_msg(sq_slot_addr);
-	}
+	int ret = 0;	
+
+	ret = submit_to_queue(sq_slot_addr);
+	if (ret)
+		abort_msg(sq_slot_addr, ret);
 
 	return;
 }
+
+static bool acuquire_handle_sema(bool can_wait)
+{
+	TickType_t waitTime = can_wait ? portMAX_DELAY : pdMS_TO_TICKS( 1000 * 10);
+	
+	return (xSemaphoreTake(xSemaHandleTask, waitTime) == pdTRUE);
+}
+
 
 /*
  * Note: we don't need lock here yet.
@@ -484,22 +749,38 @@ static void process_from_queue(cl_msg_t *msg)
 {
 	msg_handle_t *hdl;
 
+	MSG_LOG("here");
 	for (int i = 0; i < ARRAY_SIZE(handles); i++) {
 		hdl = &handles[i];
-		if (hdl->type == msg->hdr.type) {
-			if (hdl->msg_cb == NULL) {
-				MSG_ERR("no handle for msg type %d", msg->hdr.type);
-				break;
-			}
-			hdl->msg_cb(msg, hdl->arg);
-			return;
+		if (hdl->type != msg->hdr.type)
+			continue;
+
+		if (hdl->msg_cb == NULL) {
+			MSG_ERR("no msg_cb for msg type %d", msg->hdr.type);
+			break;
 		}
+
+		hdl->msg_cb(msg, hdl->arg);
+		release_handle_sema();
+		return;
 	}
 
 	/* complete unhandled msg too */
 	MSG_ERR("unhandled msg type %d", msg->hdr.type);
 	msg->hdr.rcode = -EINVAL;
 	cl_msg_handle_complete(msg);
+	release_handle_sema();
+}
+
+static void xgqHandleTask (void *pvParameters )
+{
+	cl_msg_t msg;
+
+	for( ;; ) {
+		MSG_DBG("Block to wait for receiveTask to notify ");
+		xQueueReceive(requestHandleQueue, &msg, portMAX_DELAY);
+		process_from_queue(&msg);
+	}
 }
 
 static void quickTask (void *pvParameters )
@@ -780,6 +1061,18 @@ static int init_task()
 		return -1;
 	}
 
+	if (xTaskCreate( xgqHandleTask,
+		( const char *) "XGQ handle Task",
+		TASK_STACK_DEPTH,
+		NULL,
+		tskIDLE_PRIORITY + 1,
+		&xgqHandleTaskHandle) != pdPASS) {
+
+		MSG_ERR("FATAL: xgqHandleTask creation failed");
+		fini_task();
+		return -1;
+	}
+
 	MSG_LOG("done.");
 	return 0;
 }
@@ -808,12 +1101,23 @@ static int init_queue()
 		return -1;
 	}
 
+	requestHandleQueue = xQueueCreate(XGQ_XQUEUE_LENGTH, sizeof (cl_msg_t));
+	if (requestHandleQueue == NULL) {
+		MSG_ERR("FATAL: requestHandleQueue creation failed");
+		fini_queue();
+		return -1;
+	}
+
 	MSG_LOG("done.");
 	return 0;
 }
 
 static int cl_msg_service_start(void)
 {
+	
+	xSemaHandleTask = xSemaphoreCreateMutex();
+	configASSERT(xSemaHandleTask != NULL);
+
 	if (init_xgq())
 		return -1;
 

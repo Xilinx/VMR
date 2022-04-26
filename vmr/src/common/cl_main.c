@@ -26,12 +26,15 @@ uart_rtos_handle_t uart_log;
 XSysMonPsv InstancePtr;
 XScuGic IntcInst;
 SemaphoreHandle_t cl_logbuf_lock;
+static TaskHandle_t vmrMainTask_handle = NULL;
 
 struct task_handler {
 	tasks_register_t task_hdl;
 	char 		 *task_name;
 	int 		 task_dbg_index;
 };
+
+int32_t VMC_SCFW_Program_Progress(void);
 
 static struct task_handler task_handlers[] = {
 	{CL_MSG_Launch, "Common Layer", CL_DBG_CLEAR},
@@ -132,14 +135,11 @@ u32 cl_apu_status_query(struct cl_msg *msg, char *buf, u32 size)
 	return count;
 }
 
-int32_t VMC_SCFW_Program_Progress(void);
-
 int flash_progress() {
 	return VMC_SCFW_Program_Progress() ?
 		VMC_SCFW_Program_Progress() : ospi_flash_progress();
 }
 
-static TaskHandle_t vmrMainTask_handle = NULL;
 static void vmrMainTask(void *task_params)
 {
 	cl_msg_t msg = { 0 };

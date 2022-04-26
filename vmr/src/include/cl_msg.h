@@ -150,11 +150,24 @@ typedef struct cl_msg {
 
 typedef int (*process_msg_cb)(cl_msg_t *msg, void *arg);
 
+/*
+ * Note: if can_wait is true, the callback of this handler will
+ * wait until the resource is available to run. Thus it might wait
+ * for a very long time (PDI download can take up to 2-3 minutes).
+ * We should NOT put any high frequency ops into long time wait,
+ * because those requests will be queued and eventually cause the XGQ
+ * queue full. For the high frequency ops, we should return -EBUSY
+ * if the resouce is alreay taken by the critical actions, like base PDI
+ * download, xclbin download, APU PDI download. Those actions won't
+ * happen at the same time, we can wait and it is safer to wait and
+ * queue them one by one.
+ */
 typedef struct msg_handle {
 	cl_msg_type_t 	type;
 	process_msg_cb 	msg_cb;
 	void 		*arg;
 	const char	*name;
+	bool		can_wait;
 } msg_handle_t;
 
 int cl_msg_handle_init(msg_handle_t **hdl, cl_msg_type_t type,
