@@ -67,49 +67,49 @@ static void pVMCTask(void *params)
     /* Retry till fan controller is programmed */
     while (max6639_init(1, 0x2E));  // only for vck5000
 
-    /* Create SC update task */
-    SC_Update_Task_Create();
-
-	/* vmc_sensor_monitoring_lock */
+    /* vmc_sensor_monitoring_lock */
     vmc_sensor_monitoring_lock = xSemaphoreCreateMutex();
-	if(vmc_sensor_monitoring_lock == NULL){
-		VMC_ERR("vmc_sensor_monitoring_lock creation failed \n\r");
-	}
-
-    /* Start Sensor Monitor task */
-
-    if (xTaskCreate( SensorMonitorTask,
-		( const char * ) "Sensor_Monitor",
-		TASK_STACK_DEPTH,
-		NULL,
-		tskIDLE_PRIORITY + 1,
-		&xSensorMonTask
-		) != pdPASS) {
-	CL_LOG(APP_VMC,"Failed to Create Sensor Monitor Task \n\r");
-	return ;
+    if(vmc_sensor_monitoring_lock == NULL){
+        VMC_ERR("vmc_sensor_monitoring_lock creation failed \n\r");
     }
 
     /* vmc_sc_lock */
     vmc_sc_lock = xSemaphoreCreateMutex();
     if(vmc_sc_lock == NULL){
-    VMC_ERR("vmc_sc_lock creation failed \n\r");
+	VMC_ERR("vmc_sc_lock creation failed \n\r");
     }
 
-	/* vmc_sc_comms_lock */
+    /* vmc_sc_comms_lock */
     vmc_sc_comms_lock = xSemaphoreCreateMutex();
-	if(vmc_sc_comms_lock == NULL){
-		VMC_ERR("vmc_sc_comms_lock creation failed \n\r");
-	}
+    if(vmc_sc_comms_lock == NULL){
+	VMC_ERR("vmc_sc_comms_lock creation failed \n\r");
+    }
+
+    /* Create SC update task */
+    SC_Update_Task_Create();
+
+    /* Start Sensor Monitor task */
+
+    if (xTaskCreate( SensorMonitorTask,
+	( const char * ) "Sensor_Monitor",
+	TASK_STACK_DEPTH,
+	NULL,
+	tskIDLE_PRIORITY + 1,
+	&xSensorMonTask
+	) != pdPASS) {
+		CL_LOG(APP_VMC,"Failed to Create Sensor Monitor Task \n\r");
+		return ;
+    }
 
     if (xTaskCreate( VMC_SC_CommsTask,
-		( const char * ) "VMC_SC_Comms",
-		TASK_STACK_DEPTH,
-		NULL,
-		tskIDLE_PRIORITY + 1,
-		&xVMCSCTask
-		) != pdPASS) {
-	CL_LOG(APP_VMC,"Failed to Create VMCSC Monitor Task \n\r");
-	return ;
+	( const char * ) "VMC_SC_Comms",
+	TASK_STACK_DEPTH,
+	NULL,
+	tskIDLE_PRIORITY + 1,
+	&xVMCSCTask
+	) != pdPASS) {
+		CL_LOG(APP_VMC,"Failed to Create VMCSC Monitor Task \n\r");
+		return ;
     }
 
 
@@ -119,14 +119,14 @@ static void pVMCTask(void *params)
 int VMC_Launch( void )
 {
     if (xTaskCreate( pVMCTask,
-		( const char * ) "VMC",
-		TASK_STACK_DEPTH,
-		NULL,
-		tskIDLE_PRIORITY + 1,
-		&xVMCTask
-		) != pdPASS) {
-	CL_LOG(APP_VMC,"Failed to Create VMC Task \n\r");
-	return -1;
+	( const char * ) "VMC",
+	TASK_STACK_DEPTH,
+	NULL,
+	tskIDLE_PRIORITY + 1,
+	&xVMCTask
+	) != pdPASS) {
+		CL_LOG(APP_VMC,"Failed to Create VMC Task \n\r");
+		return -1;
     }
 
     return 0;

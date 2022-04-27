@@ -27,6 +27,7 @@ typedef enum _UART_STATUS{
 	UART_ERROR_INIT = -1,
 	UART_ERROR_SEMAPHORE = -2,
 	UART_ERROR_EVENT = -3,
+	UART_ERROR_TIMEOUT = -4,
 	UART_ERROR_GENERIC = -100,
 }UART_STATUS;
 
@@ -45,6 +46,7 @@ typedef struct _uart_rtos_handle_t{
 	EventGroupHandle_t 	rxEvent;
 	EventGroupHandle_t 	txEvent;
 	uart_rtos_cb_t 		cb_msg;
+	u8			uart_IRQ_ID;
 }uart_rtos_handle_t;
 
 typedef struct _uart_rtos_config_t{
