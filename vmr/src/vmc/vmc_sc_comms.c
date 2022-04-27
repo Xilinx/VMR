@@ -154,21 +154,25 @@ void VMC_Update_Sensors(u16 length,u8 *payload)
 
     for(i=0; i<length;)
     {
+	if (payload[i + 1] == 1)
+	{
+	    VMC_StoreSensor_Value(payload[i], (uint32_t)payload[i + 2]);
+	}
+	else if(payload[i + 1] == 2)
+	{
+	    VMC_StoreSensor_Value(payload[i], (uint32_t)vmcU8ToU16((uint8_t*)&payload[i + 2]));
+	}
+	else if (payload[i + 1] == 4)
+	{
+	    VMC_StoreSensor_Value(payload[i], (uint32_t)vmcU8ToU32((uint8_t*)&payload[i + 2]));
+	}
+	else {
+	    VMC_ERR("Unknown Message size ignoring the packet \r\n");
+	    break;
+	}
 
-    	 if (payload[i + 1] == 1)
-    	 {
-    		 VMC_StoreSensor_Value(payload[i], (uint32_t)payload[i + 2]);
-    	 }
-    	 else if(payload[i + 1] == 2)
-    	 {
-    		 VMC_StoreSensor_Value(payload[i], (uint32_t)vmcU8ToU16((uint8_t*)&payload[i + 2]));
-    	 }
-    	 else if (payload[i + 1] == 4)
-    	 {
-    		 VMC_StoreSensor_Value(payload[i], (uint32_t)vmcU8ToU32((uint8_t*)&payload[i + 2]));
-    	 }
-        i = i + 2 + payload[i + 1];
-    }
+	    i = i + 2 + payload[i + 1];
+	}
 
 }
 
@@ -212,17 +216,18 @@ bool Parse_SCData(u8 *Payload)
 return true;
 }
 
-bool VMC_send_packet(u8 Message_id , u8 Flags,u8 Payloadlength, u8 *Payload)
+bool VMC_send_packet(u8 Message_id , u8 Flags, u8 Payloadlength, u8 *Payload)
 {
-	u8 buf[MAX_VMC_SC_UART_BUF_SIZE] = {0x00};
+	static u8 buf[MAX_VMC_SC_UART_BUF_SIZE] = {0x00};
 	u8 i = 0;
 	u8 length = 0;
 	u16 checksum = 0;
-    int32_t retVal ;
+	int32_t retVal;
 
-    vmc_sc_uart_cmd pkt_framing = {0};
+	vmc_sc_uart_cmd pkt_framing = {0};
 
-    Cl_SecureMemset(&pkt_framing,0x00,sizeof(vmc_sc_uart_cmd));
+	Cl_SecureMemset(buf, 0x00, MAX_VMC_SC_UART_BUF_SIZE);
+	Cl_SecureMemset(&pkt_framing,0x00,sizeof(vmc_sc_uart_cmd));
 
 	pkt_framing.SOP[0] = ESCAPE_CHAR;
 	pkt_framing.SOP[1] = STX;
@@ -306,13 +311,16 @@ bool VMC_send_packet(u8 Message_id , u8 Flags,u8 Payloadlength, u8 *Payload)
 void VMC_uart_receive(u8  Expected_Msg_Length)
 {
 	u32 receivedcount = 0 ;
-	u8 Data[MAX_VMC_SC_UART_BUF_SIZE] = {0x00};
+	static u8 data[MAX_VMC_SC_UART_BUF_SIZE] = {0x00};
 
-	if(UART_RTOS_Receive(&uart_vmcsc_log, Data, Expected_Msg_Length ,&receivedcount,0x104) == UART_SUCCESS)
+	Cl_SecureMemset(data,0x00,MAX_VMC_SC_UART_BUF_SIZE);
+
+	if(UART_RTOS_Receive(&uart_vmcsc_log, data, Expected_Msg_Length ,&receivedcount,RCV_TIMEOUT_MS(500)) == UART_SUCCESS)
 	{
-		if(receivedcount > 2 )   // condition to avoid negative indexing
+		configASSERT(receivedcount <= MAX_VMC_SC_UART_BUF_SIZE);
+		if(receivedcount > 2)   // condition to avoid negative indexing
 		{
-			Cl_SecureMemcpy(g_scData,receivedcount,Data,receivedcount);
+			Cl_SecureMemcpy(g_scData,receivedcount,data,receivedcount);
 			if ((g_scData[receivedcount-1] == ETX) && (g_scData[receivedcount-2] == ESCAPE_CHAR))
 			{
 				isPacketReceived = true;
@@ -323,7 +331,7 @@ void VMC_uart_receive(u8  Expected_Msg_Length)
 
 void Get_Sensor_Response_Length(u8 Data)
 {
-	u8  Expected_Msg_Length = 11;
+	u8 Expected_Msg_Length = 11;
 	u8 payloadLength = 1;
 
 	scPayload[0] = Data ;
@@ -456,7 +464,7 @@ void VMC_Mointor_SC_Sensors()
     for(msgId=0; msgId < MAX_MSGID_COUNT; msgId++)
     {
         VMC_Fetch_SC_SensorData(VMC_SC_Comms_Msg[msgId]);
-        vTaskDelay(20);
+        vTaskDelay(DELAY_MS(200));
     }
 }
 
@@ -525,7 +533,7 @@ void VMC_SC_CommsTask(void *params)
     		}
     		xSemaphoreGive(vmc_sc_comms_lock);
     	}
-    	vTaskDelay(100);
+    	vTaskDelay(DELAY_MS(1000));
     }
 
     vTaskSuspend(NULL);

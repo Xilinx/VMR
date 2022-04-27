@@ -289,6 +289,8 @@ static int32_t UART_Config(uart_rtos_handle_t *handle, XUartPsv *UartInstPtr, ui
 	 * */
 	XUartPsv_SetOperMode(UartInstPtr, XUARTPSV_OPER_MODE_NORMAL);
 
+	handle->uart_IRQ_ID = UartIntrId;
+
 	/*
 	 * Assign interrupt handler and enable interrupt.
 	 * */
@@ -451,8 +453,14 @@ int32_t UART_RTOS_Receive(uart_rtos_handle_t *handle, uint8_t *buf, uint32_t siz
 		return UART_ERROR_SEMAPHORE;
 	}
 
+	/* To avoid messing up remaining/requested bytes variables and buffer pointer if RX hardware interrupt triggers in the mean time. */
 
+	vPortDisableInterrupt(handle->uart_IRQ_ID);
+	portNOP();
+	portNOP();
 	XUartPsv_Recv(&handle->uartPsv, buf, size);
+	vPortEnableInterrupt(handle->uart_IRQ_ID);
+
 	ev = xEventGroupWaitBits(handle->rxEvent, UART_RTOS_COMPLETE | UART_RTOS_RX_ERROR, pdTRUE, pdFALSE,(const TickType_t)timeout);
 	if((ev & UART_RTOS_COMPLETE))
 	{
@@ -462,6 +470,11 @@ int32_t UART_RTOS_Receive(uart_rtos_handle_t *handle, uint8_t *buf, uint32_t siz
 	{
 		*received = 0;
 		retVal = UART_ERROR_EVENT;
+	}
+	else
+	{
+		retVal = UART_ERROR_TIMEOUT;
+		xil_printf("\n\rCL_ERR: UART_RTOS_RX timed-out!\n\r");
 	}
 
 	if(pdFALSE == xSemaphoreGive(handle->rxSem))
