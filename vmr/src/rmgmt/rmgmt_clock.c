@@ -8,6 +8,10 @@
 #include "rmgmt_clock.h"
 #include "rmgmt_common.h"
 
+#define CLOCK_ERR(fmt, arg...) \
+	CL_ERR(APP_RMGMT, fmt, ##arg)
+#define CLOCK_WARN(fmt, arg...) \
+	CL_ERR(APP_RMGMT, fmt, ##arg)
 #define CLOCK_LOG(fmt, arg...) \
 	CL_LOG(APP_RMGMT, fmt, ##arg)
 #define CLOCK_DBG(fmt, arg...) \
@@ -28,7 +32,7 @@ u32 clock_counter_bases[] = {
 	VMR_EP_ACLK_FREQ_K1_K2,
 };
 
-static inline int clock_wiz_busy(int idx, int cycle, int interval)
+static int clock_wiz_busy(int idx, int cycle, int interval)
 {
         u32 val = 0;
         int count;
@@ -39,12 +43,18 @@ static inline int clock_wiz_busy(int idx, int cycle, int interval)
                 val = IO_SYNC_READ32(clock_wiz_bases[idx] + OCL_CLKWIZ_STATUS_OFFSET);
         }
         if (val != 1) {
-                CLOCK_LOG("clockwiz(%d) is (%u) busy after %d ms",
+                CLOCK_ERR("clockwiz(%d) is (%u) busy after %d ms",
                     idx, val, cycle * interval);
                 return -1;
         }
 
         return 0;
+}
+
+static inline void clock_wiz_reset(int idx)
+{
+	CLOCK_WARN("resetting clockwiz(%d)", idx);
+	IO_SYNC_WRITE32(OCL_CLKWIZ_RESET_ENABLE, clock_wiz_bases[idx] + OCL_CLKWIZ_RESET_OFFSET);
 }
 
 static inline unsigned int floor_acap_o(int freq)
@@ -82,11 +92,20 @@ static int rmgmt_clock_freq_scaling_impl(struct cl_msg *msg)
 		if (freq == 0)
 			continue;
 
-		CLOCK_LOG("Clock: %d, New: %d Mhz", i, freq);
+		CLOCK_LOG("Clock: %d, New freq: %d Mhz", i, freq);
 
-                err = clock_wiz_busy(i, 20, 50);
-                if (err)
-                        break;
+		if (freq == rmgmt_clock_get_freq(i, RMGMT_CLOCK_COUNTER)) {
+			CLOCK_WARN("current freq %d and new freq are the same, skip updating", freq);
+			continue;
+		}
+
+                err = clock_wiz_busy(i, 10, 50);
+                if (err) {
+			clock_wiz_reset(i);
+			err = clock_wiz_busy(i, 10, 50);
+			if (err)
+                        	break;
+		}
                 /*
                  * Simplified formula for ACAP clock wizard.
                  * 1) Set DIVCLK_EDGE, DIVCLK_LT and DIVCLK_HT to 0;
@@ -209,6 +228,6 @@ uint32_t rmgmt_clock_get_freq(int idx, enum clock_ip ip)
 		}
 	}
 
-	CLOCK_DBG("idx %d freq %d", idx, freq);
+	CLOCK_LOG("idx %d freq %d", idx, freq);
 	return freq;
 }

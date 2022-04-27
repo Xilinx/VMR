@@ -9,6 +9,9 @@
 #define CLOCK_COUNTER_MAX_RES		4
 #define CLOCK_WIZ_MAX_RES		4
 
+#define OCL_CLKWIZ_RESET_OFFSET         0x0
+#define OCL_CLKWIZ_RESET_ENABLE         0xA
+
 #define OCL_CLKWIZ_STATUS_OFFSET        0x4
 #define OCL_CLKWIZ_STATUS_MASK          0xffff
 #define OCL_CLKWIZ_STATUS_MEASURE_START 0x1
