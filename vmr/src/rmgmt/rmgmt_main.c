@@ -740,8 +740,8 @@ static void pvXGQTask( void *pvParameters )
 	rh.rh_boot_on_offset = IO_SYNC_READ32(VMR_EP_PLM_MULTIBOOT);
 	RMGMT_WARN("boot on 0x%x", rh.rh_boot_on_offset);
 
-	/* init pmc power on reset (POR), so that hot reset will be engaged */
-	rmgmt_enable_boot_backup(&msg);
+	/* enforce next boot to default image */
+	rmgmt_enable_boot_default(&msg);
 
 	for ( ;; )
 	{
