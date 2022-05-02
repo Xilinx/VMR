@@ -19,7 +19,7 @@
 #include "cl_msg.h"
 #include "cl_rmgmt.h"
 #include "vmr_common.h"
-#include "sysmon.h"
+#include "xsysmonpsv.h"
 
 uart_rtos_handle_t uart_log;
 
