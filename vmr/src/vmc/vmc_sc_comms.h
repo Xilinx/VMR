@@ -7,7 +7,7 @@
 #include "task.h"
 
 
-#include "sysmon.h"
+#include "xsysmonpsv.h"
 #include "cl_uart_rtos.h"
 #include "vmc_api.h"
 
@@ -208,7 +208,7 @@ typedef enum
     VCC1V2_BTM,
     PEX_12V_I_IN,
     AUX_12V_I_IN,
-    VCCINT,
+	VCCINT_SC, //Dummy sensor in enum just to keep the ordering.
     VCCINT_I,
     FPGA_TEMP,
     FAN_TEMP,

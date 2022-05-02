@@ -17,7 +17,7 @@
 #include "sensors/inc/qsfp.h"
 #include "vmc_sensors.h"
 #include "vmc_asdm.h"
-#include "sysmon.h"
+#include "xsysmonpsv.h"
 #include "vmc_sc_comms.h"
 #include "vmc_update_sc.h"
 #include "vmr_common.h"
@@ -158,7 +158,7 @@ s8 Temperature_Read_ACAP_Device_Sysmon(snsrRead_t *snsrData)
 
 	static bool is_sysmon_critical_threshold_reached = false;
 
-	status = XSysMonPsv_ReadTempProcessed(&InstancePtr, SYSMONPSV_TEMP_MAX, &TempReading);
+	status = XSysMonPsv_ReadTempProcessed(&InstancePtr, XSYSMONPSV_TEMP_MAX, &TempReading);
 	if (status == XST_SUCCESS)
 	{
 		u16 roundedOffVal = (TempReading > 0) ? TempReading : 0;
@@ -169,7 +169,7 @@ s8 Temperature_Read_ACAP_Device_Sysmon(snsrRead_t *snsrData)
 	else
 	{
 		snsrData->snsrSatus = Vmc_Snsr_State_Comms_failure;
-		VMC_DBG("Failed to read Sysmon : %d \n\r",SYSMONPSV_TEMP_MAX);
+		VMC_DBG("Failed to read Sysmon : %d \n\r",XSYSMONPSV_TEMP_MAX);
 	}
 
 	if (TempReading >= TEMP_FPGA_CRITICAL_THRESHOLD)
@@ -183,6 +183,31 @@ s8 Temperature_Read_ACAP_Device_Sysmon(snsrRead_t *snsrData)
 	{
 		clear_clock_shutdown_status();
 		is_sysmon_critical_threshold_reached = false;
+	}
+
+	return status;
+}
+
+s8 VCCINT_Read_ACAP_Device_Sysmon(snsrRead_t *snsrData)
+{
+	s8 status = XST_FAILURE;
+	float VCCINT_reading = 0.0;
+	u32 VCCINT_mv = 0;
+
+	status = XSysMonPsv_ReadSupplyProcessed(&InstancePtr, VCCINT, &VCCINT_reading);
+	VCCINT_mv = VCCINT_reading *1000;
+
+	if(VCCINT_mv != 0)
+	{
+		Cl_SecureMemcpy(&snsrData->snsrValue[0], (sizeof(u8)*4), &VCCINT_mv,sizeof(VCCINT_mv));
+		snsrData->sensorValueSize = sizeof(VCCINT_mv);
+		snsrData->snsrSatus = Vmc_Snsr_State_Normal;
+	}
+	else
+	{
+		Cl_SecureMemcpy(&snsrData->snsrValue[0], (sizeof(u8)*4), &VCCINT_mv,sizeof(VCCINT_mv));
+		snsrData->snsrSatus = Vmc_Snsr_State_Comms_failure;
+		VMC_DBG("MSP Sensor Id : %d Data read failed \n\r",snsrData->mspSensorIndex);
 	}
 
 	return status;
@@ -501,7 +526,7 @@ void sysmon_monitor(void)
 {
 
 	float TempReading = 0.0;
-	if (XSysMonPsv_ReadTempProcessed(&InstancePtr, SYSMONPSV_TEMP_MAX, &TempReading))
+	if (XSysMonPsv_ReadTempProcessed(&InstancePtr, XSYSMONPSV_TEMP_MAX, &TempReading))
 	{
 		CL_LOG(APP_VMC, "Failed to read sysmon temperature \n\r");
 		sensor_readings.sysmon_max_temp = -1.0;

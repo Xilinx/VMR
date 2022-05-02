@@ -36,7 +36,8 @@
 #define ASDM_HEADER_VER     (0x1)
 #define NUM_BOARD_INFO_SENSORS  (12)
 #define NUM_TEMPERATURE_SENSORS  (5)
-#define NUM_SC_VOLTAGE_SENSORS  (6)
+#define NUM_SC_VOLTAGE_SENSORS  (5)
+#define NUM_SYSMON_VOLTAGE_SENSORS	(1)
 #define NUM_SC_CURRENT_SENSORS  (4)
 #define NUM_POWER_SENSORS       (1)
 #define CURRENT_SENSORS_INSTANCES (3)
@@ -69,6 +70,7 @@ extern s8 Temperature_Read_QSFP(snsrRead_t *snsrData);
 extern s8 PMBUS_SC_Sensor_Read(snsrRead_t *snsrData);
 extern s8 Power_Monitor(snsrRead_t *snsrData);
 extern s8 PMBUS_SC_Vccint_Read(snsrRead_t *snsrData);
+extern s8 VCCINT_Read_ACAP_Device_Sysmon(snsrRead_t *snsrData);
 
 Asdm_Sensor_Thresholds_t thresholds_limit_tbl[]= {
     /*  Name           LW   LC   LF    UW   UC  UF  */
@@ -129,8 +131,7 @@ void getVoltagesName(u8 index, char8* snsrName, u8 *sensorId)
         { PEX_3V3,    "3v3_pex\0" },
         { AUX_3V3,     "3v3_aux\0" },
         { AUX_12V,     "12v_aux_0\0" },
-        { AUX1_12V,    "12v_aux_1\0" },
-        { VCCINT,      VCCINT_NAME },
+        { AUX1_12V,    "12v_aux_1\0" }
     };
 
     if(NULL != snsrName)
@@ -171,7 +172,7 @@ Asdm_Header_t asdmHeaderInfo[] = {
     /* Record Type	| Hdr Version | Record Count | NumBytes */
     {BoardInfoSDR ,  	ASDM_HEADER_VER  ,  NUM_BOARD_INFO_SENSORS, 	0x7f},
     {TemperatureSDR, 	ASDM_HEADER_VER  ,  NUM_TEMPERATURE_SENSORS,	0x7f},
-    {VoltageSDR,  	ASDM_HEADER_VER  ,  NUM_SC_VOLTAGE_SENSORS, 	0x7f},
+    {VoltageSDR,  	ASDM_HEADER_VER  ,  NUM_SC_VOLTAGE_SENSORS+NUM_SYSMON_VOLTAGE_SENSORS, 	0x7f},
     {CurrentSDR, 	ASDM_HEADER_VER  ,  NUM_SC_CURRENT_SENSORS,    0x7f},
     {PowerSDR, 		ASDM_HEADER_VER  ,  NUM_POWER_SENSORS,	        0x7f},
 };
@@ -334,6 +335,16 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
 	    .sampleCount = 0x1,
 	    .sensorInstance = NUM_SC_VOLTAGE_SENSORS,
 	    .monitorFunc = &PMBUS_SC_Sensor_Read,
+	},
+	{
+		.repoType = VoltageSDR,
+		.sensorName = VCCINT_NAME,
+		.snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_4B,
+		.snsrUnitModifier = -3,
+		.supportedThreshold = SNSR_MAX_VAL | SNSR_AVG_VAL ,
+		.sampleCount = 0x1,
+		.sesnorListTbl = VCCINT,
+		.monitorFunc = &VCCINT_Read_ACAP_Device_Sysmon,
 	},
 	{
 	    .repoType = CurrentSDR,

@@ -15,7 +15,7 @@
 #include "sensors/inc/max6639.h"
 #include "vmc_asdm.h"
 
-#include "sysmon.h"
+#include "xsysmonpsv.h"
 #include "vmc_sc_comms.h"
 #include "vmc_update_sc.h"
 #include "xgpio.h"
