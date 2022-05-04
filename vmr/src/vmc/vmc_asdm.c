@@ -53,12 +53,13 @@
 #define VCCINT_NAME    "vccint\0"
 
 SDR_t *sdrInfo;
-SemaphoreHandle_t sdr_lock;
+extern SemaphoreHandle_t sdr_lock;
 static u8 asdmInitSuccess = false;
 extern Versal_BoardInfo board_info;
 extern SC_VMC_Data sc_vmc_data;
 extern u8 fpt_sc_version[3];
 
+void Asdm_Update_Active_MSP_sensor();
 extern s8 Temperature_Read_Inlet(snsrRead_t *snsrData);
 extern s8 Temperature_Read_Outlet(snsrRead_t *snsrData);
 extern s8 Temperature_Read_Board(snsrRead_t *snsrData);
@@ -866,14 +867,6 @@ s8 Init_Asdm()
 	return -1;
     }
 
-    /* sdr_lock */
-    sdr_lock = xSemaphoreCreateMutex();
-    if(sdr_lock == NULL){
-	VMC_ERR("sdr_lock creation failed \n\r");
-	return XST_FAILURE;
-    }
-
-
     asdmInitSuccess = true;
     VMC_LOG("ASDM Init success !!\n\r");
 
@@ -1170,6 +1163,9 @@ void Monitor_Sensors(void)
 
     if(asdmInitSuccess == true)
     {
+        /* Update the MSP FW version */
+        Asdm_Update_Active_MSP_sensor();
+
 		for(sdrIndex = 0; sdrIndex < MAX_SDR_REPO ; sdrIndex++)
 		{
 			Asdm_SensorRecord_t *sensorRecord = sdrInfo[sdrIndex].sensorRecord;
@@ -1298,7 +1294,13 @@ u8 Asdm_Send_I2C_Sensors_SC(u8 *scPayload)
 	    return 0;
 	}
 
-	 Asdm_SensorRecord_t *sensorRecord = sdrInfo[tempSensorIdx].sensorRecord;
+	if(false == asdmInitSuccess)
+	{
+	    VMC_ERR("Asdm not yet Initialized !! \n\r");
+	    return 0;
+	}
+
+	Asdm_SensorRecord_t *sensorRecord = sdrInfo[tempSensorIdx].sensorRecord;
 	/* We need to Send all the Temperature sensors to SC for OOB */
 	for(i = 0 ; i< sdrInfo[tempSensorIdx].header.no_of_records; i++)
 	{

@@ -624,11 +624,6 @@ void SensorMonitorTask(void *params)
 
     VMC_LOG(" Sensor Monitor Task Created !!!\n\r");
 
-    if(Init_Asdm())
-    {
-         VMC_ERR(" ASDM Init Failed \n\r");
-    }
-
     if (xgq_sensor_flag == 0 &&
         cl_msg_handle_init(&sensor_hdl, CL_MSG_SENSOR, xgq_sensor_cb, NULL) == 0) {
         VMC_LOG("init sensor handle done.");
