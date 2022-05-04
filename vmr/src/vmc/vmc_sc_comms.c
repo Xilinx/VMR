@@ -29,11 +29,9 @@ u16 g_scDataCount = 0;
 bool isPacketReceived;
 u8 scPayload[128] = {0};
 
-static volatile bool isVMCActive  = false ;
-volatile bool isPowerModeActive ;
-volatile bool getSensorRespLen ;
-
-extern uint8_t sc_update_flag;
+static volatile bool is_SC_active  = false ;
+volatile bool isPowerModeActive = false;
+volatile bool getSensorRespLen = false;
 
 u8 VMC_SC_Comms_Msg[] = {
        MSP432_COMMS_VOLT_SNSR_REQ,
@@ -45,7 +43,6 @@ u8 VMC_SC_Comms_Msg[] = {
 #define MAX_MSGID_COUNT     (sizeof(VMC_SC_Comms_Msg)/sizeof(VMC_SC_Comms_Msg[0]))
 
 extern u8 Asdm_Send_I2C_Sensors_SC(u8 *scPayload);
-extern void Asdm_Update_Active_MSP_sensor();
 
 static uint16_t calculate_checksum(vmc_sc_uart_cmd *data)
 {
@@ -65,12 +62,12 @@ static uint16_t calculate_checksum(vmc_sc_uart_cmd *data)
 
 bool vmc_get_sc_status()
 {
-	return isVMCActive;
+	return is_SC_active;
 }
 
 void vmc_set_sc_status(bool value)
 {
-	isVMCActive = value;
+	is_SC_active = value;
 }
 
 u16 vmcU8ToU16(u8 *payload) {
@@ -103,23 +100,18 @@ void VMC_Update_Sensor_Length(u16 length,u8 *payload)
 void VMC_Update_Version_PowerMode(u16 length,u8 *payload)
 {
 	u16 i=0;
-	static u8 isActiveMSPVerUpdated = false;
+
 	for(i=0; i<length;)
 	{
 		switch(payload[i])
 		{
+		
 		case BMC_VERSION:
 			sc_vmc_data.scVersion[0] = payload[i+2];  // fw_version
 			sc_vmc_data.scVersion[1] = payload[i+3];  // fw_rev_major
 			sc_vmc_data.scVersion[2] = payload[i+4];  // fw_rev_minor
-			/* Update the ASDM Active MSP Version */
-			if((isActiveMSPVerUpdated == false) &&
-					(sc_vmc_data.scVersion[0] != 0))
-			{
-				Asdm_Update_Active_MSP_sensor();
-				isActiveMSPVerUpdated = true;
-			}
 			break;
+		
 		case TOTAL_POWER_AVAIL:
 			sc_vmc_data.availpower = payload[i+2];
 			break;
