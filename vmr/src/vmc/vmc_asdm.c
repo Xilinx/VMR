@@ -1287,7 +1287,10 @@ u8 Asdm_Send_I2C_Sensors_SC(u8 *scPayload)
 {
 	u8 i = 0;
 	u8 dataIndex = 0;
-	u8 sensorSize = 0;
+	/* Fix for CR-1129775 */
+	u16 sensorVal = 0;
+	float temp_value = 0.0;
+	u8 sensorSize = sizeof(float);
 	s8 tempSensorIdx = getSDRIndex(TemperatureSDR);
 	if(tempSensorIdx < 0)
 	{
@@ -1299,6 +1302,7 @@ u8 Asdm_Send_I2C_Sensors_SC(u8 *scPayload)
 	/* We need to Send all the Temperature sensors to SC for OOB */
 	for(i = 0 ; i< sdrInfo[tempSensorIdx].header.no_of_records; i++)
 	{
+	    temp_value = 0.0;
 	    /* We do not need send VCCINT_TEMP to SC,
  	       as we are receiving it from SC
 	    */
@@ -1310,11 +1314,17 @@ u8 Asdm_Send_I2C_Sensors_SC(u8 *scPayload)
 	    scPayload[dataIndex++] = sensorRecord[i].mspSensorId;
 
 	    //Add Size of the Sensor
-	    sensorSize = (sensorRecord[i].sensor_value_type_length & LENGTH_BITMASK);
+	    //sensorSize = (sensorRecord[i].sensor_value_type_length & LENGTH_BITMASK);
 	    scPayload[dataIndex++] = sensorSize;
 
 	    // Add Sensor Value
-	    Cl_SecureMemcpy(&scPayload[dataIndex],sensorSize,sensorRecord[i].sensor_value,sensorSize);
+	    Cl_SecureMemcpy(&sensorVal,sizeof(u16),sensorRecord[i].sensor_value,
+	                    (sensorRecord[i].sensor_value_type_length & LENGTH_BITMASK));
+	    
+	    /* SC v4.4.33 expects sensors in float. */
+	    temp_value = sensorVal;
+	    Cl_SecureMemcpy(&scPayload[dataIndex],sensorSize,&temp_value,sensorSize);
+
 	    dataIndex += sensorSize;
 
 	}
