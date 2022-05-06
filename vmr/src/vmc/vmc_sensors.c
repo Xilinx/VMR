@@ -344,9 +344,9 @@ s8 Power_Monitor(snsrRead_t *snsrData)
     if (xSemaphoreTake(vmc_sc_lock, portMAX_DELAY))
     {
     	power_mode =  sc_vmc_data.availpower;
-    	pexPower = ((sc_vmc_data.sensor_values[PEX_12V]/1000) * (sc_vmc_data.sensor_values[PEX_12V_I_IN])/1000);
-    	aux0Power = ((sc_vmc_data.sensor_values[AUX_12V]/1000) * (sc_vmc_data.sensor_values[V12_IN_AUX0_I])/1000); //2x4 AUX
-    	aux1Power = ((sc_vmc_data.sensor_values[AUX1_12V]/1000) * (sc_vmc_data.sensor_values[V12_IN_AUX1_I])/1000); //2x3 AUX
+    	pexPower = ((sc_vmc_data.sensor_values[PEX_12V]/1000.0) * (sc_vmc_data.sensor_values[PEX_12V_I_IN])/1000.0);
+    	aux0Power = ((sc_vmc_data.sensor_values[AUX_12V]/1000.0) * (sc_vmc_data.sensor_values[V12_IN_AUX0_I])/1000.0); //2x4 AUX
+    	aux1Power = ((sc_vmc_data.sensor_values[AUX1_12V]/1000.0) * (sc_vmc_data.sensor_values[V12_IN_AUX1_I])/1000.0); //2x3 AUX
     	totalPower = (pexPower + aux0Power +aux1Power);
     	xSemaphoreGive(vmc_sc_lock);
     }
@@ -357,7 +357,8 @@ s8 Power_Monitor(snsrRead_t *snsrData)
 
     if(totalPower != 0)
     {
-	u16 roundedOffVal = (totalPower > 0) ? totalPower : 0;
+    	/* Adding 0.5 to round off the totalPower to nearest integer.*/
+        u16 roundedOffVal = (totalPower + 0.5);
         Cl_SecureMemcpy(&snsrData->snsrValue[0],sizeof(roundedOffVal),&roundedOffVal,sizeof(roundedOffVal));
         snsrData->sensorValueSize = sizeof(roundedOffVal);
         snsrData->snsrSatus = Vmc_Snsr_State_Normal;
