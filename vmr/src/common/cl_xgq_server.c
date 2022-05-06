@@ -402,7 +402,7 @@ static int submit_to_queue(u32 sq_addr)
 			convert_control_type(sq->vmr_control_payload.req_type);
 		msg.multiboot_payload.vmr_debug_type = 
 			convert_debug_type(sq->vmr_control_payload.debug_type);
-		ret = dispatch_to_queue(&msg, TASK_SLOW);
+		ret = dispatch_to_queue(&msg, TASK_QUICK);
 		break;
 	case CL_MSG_CLOCK:
 		msg.clock_payload.ocl_region = sq->clock_payload.ocl_region;
