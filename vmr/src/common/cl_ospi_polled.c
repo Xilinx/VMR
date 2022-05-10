@@ -1380,16 +1380,15 @@ int ospi_flash_write(flash_area_t area, u8 *WriteBuffer, u32 offset, u32 len)
 	} else {
 		OSPI_DBG("WriteCmd: 0x%x \n\r", (u8)Flash_Config_Table[FCTIndex].WriteCmd);
 		for (Page = 0; Page < PAGE_COUNT; Page++) {
-			u32 offset = (Page * Flash_Config_Table[FCTIndex].PageSize);
+			u32 write_offset = (Page * Flash_Config_Table[FCTIndex].PageSize);
 
 			ospi_flash_percentage = (Page*100/PAGE_COUNT);
 
 			xil_printf("\r%d", ospi_flash_percentage);
 			fflush(stdout);
 
-			Status = FlashIoWrite(OspiPsvInstancePtr,
-			offset + baseAddress,
-			((Flash_Config_Table[FCTIndex].PageSize)), WriteBuffer + offset);
+			Status = FlashIoWrite(OspiPsvInstancePtr, baseAddress + write_offset,
+				((Flash_Config_Table[FCTIndex].PageSize)), WriteBuffer + write_offset);
 			if (Status != XST_SUCCESS) {
 				OSPI_ERR("ERR: write failed: %d\r\n", Status);
 				return XST_FAILURE;
