@@ -63,7 +63,7 @@ static void pVMCTask(void *params)
 #endif
 
     /* Read the EEPROM */
-    Versal_EEPROM_ReadBoardIno();
+    Versal_EEPROM_ReadBoardInfo();
 
     /* Retry till fan controller is programmed */
     while (max6639_init(1, 0x2E));  // only for vck5000
