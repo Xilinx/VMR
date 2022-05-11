@@ -51,7 +51,7 @@ static void vmr_log_collect(uint32_t msg_index_addr, uint32_t msg_buf_addr,
 	struct vmr_log log;
 	uint32_t log_idx = IO_SYNC_READ32(msg_index_addr);
 
-	strncpy(log.log_buf, buf, sizeof(log.log_buf));
+	(void) strlcpy(log.log_buf, buf, sizeof(log.log_buf));
 
 	/* update log into shared memory */
 	cl_memcpy_toio32(msg_buf_addr + sizeof(log) * log_idx, &log, sizeof(log));

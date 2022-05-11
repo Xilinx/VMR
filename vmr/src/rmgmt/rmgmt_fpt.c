@@ -226,6 +226,10 @@ void rmgmt_boot_fpt_query(struct cl_msg *msg)
 		struct fpt_entry entry;
 		ret = ospi_flash_read(CL_FLASH_BOOT, (u8 *)&entry,
 			hdr.fpt_entry_size * i, sizeof(entry));
+		if (ret) {
+			RMGMT_ERR("read fpt entry %d failed", i);
+			return;
+		}
 
 		if (entry.partition_type == FPT_TYPE_BOOT) {
 			msg->multiboot_payload.default_partition_offset =
