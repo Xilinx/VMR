@@ -1336,7 +1336,7 @@ u8 Asdm_Send_I2C_Sensors_SC(u8 *scPayload)
 void Asdm_Update_Active_MSP_sensor()
 {
 	s8 boardInfoSensorIdx = getSDRIndex(BoardInfoSDR);
-	u8 idx = 0;
+	s8 idx = 0;
 
 	Asdm_SensorRecord_t *sensorRecord = sdrInfo[boardInfoSensorIdx].sensorRecord;
 	for(idx = sdrInfo[boardInfoSensorIdx].header.no_of_records -1 ; idx >= 0 ; idx--)

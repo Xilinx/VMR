@@ -194,6 +194,6 @@ void EepromDump(void);
 * @note None
 **
 ******************************************************************************/
-u8 Versal_EEPROM_ReadBoardIno(void);
+u8 Versal_EEPROM_ReadBoardInfo(void);
 
 #endif /* INC_VMC_API_H_ */

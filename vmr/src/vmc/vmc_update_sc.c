@@ -362,6 +362,7 @@ void VMC_Parse_Fpt_SC_Version(u32 addr_location, u8 *versionbuff)
 			break;
 
 		default:
+			VMC_ERR("\n\rMust not come here.\r\n");
 			break;
 
 		}
@@ -513,6 +514,7 @@ void VMC_Parse_Fpt_SC(u32 addr_location, u8 *bsl_send_data_pkt, u16 *pkt_length)
 			break;
 
 		default:
+			VMC_ERR("\n\rMust not come here.\r\n");
 			break;
 
 		}

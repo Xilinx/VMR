@@ -58,7 +58,7 @@ s32 VMC_User_Input_Read(char *ReadChar, u32 *receivedBytes)
     {
     	if(UART_RTOS_Receive(&uart_log, (u8 *)ReadChar, 1, receivedBytes,portMAX_DELAY) ==  UART_SUCCESS)
     	{
-    		return UART_SUCCESS;
+  	    return UART_SUCCESS;
     	}
     }
     else
@@ -73,6 +73,7 @@ s32 VMC_User_Input_Read(char *ReadChar, u32 *receivedBytes)
 
 void Debug_Printf(char *filename, u32 line, u8 log_level, const char *fmt, va_list *argp)
 {
+    s8 uart_rtos_status = UART_ERROR_GENERIC;
     u8 msg_idx = 0;
     u16 max_msg_size = MAX_LOG_SIZE;
     if (log_level < logging_level)
@@ -83,21 +84,27 @@ void Debug_Printf(char *filename, u32 line, u8 log_level, const char *fmt, va_li
     if (xSemaphoreTake(vmc_debug_logbuf_lock, portMAX_DELAY))
     {
         if ((logging_level == VMC_LOG_LEVEL_VERBOSE) && (log_level != VMC_LOG_LEVEL_DEMO_MENU))
-		{
-			for ( ; (filename[msg_idx] != '\0') && (msg_idx < MAX_FILE_NAME_SIZE); msg_idx++)
-			{
-				LogBuf[msg_idx] = filename[msg_idx];
-			}
-			LogBuf[msg_idx++] = '-';
-			snprintf(&LogBuf[msg_idx], 4, "%d", (int)line);
-			msg_idx+= 4;
-			LogBuf[msg_idx++] = ':';
-		}
-		max_msg_size -= msg_idx;
-		vsnprintf(&LogBuf[msg_idx], max_msg_size, fmt, *argp);
-		UART_RTOS_Send(&uart_log, (u8 *)LogBuf, MAX_LOG_SIZE);
-		Cl_SecureMemset(LogBuf , '\0' , MAX_LOG_SIZE);
-		xSemaphoreGive(vmc_debug_logbuf_lock);
+	{
+    	    for ( ; (filename[msg_idx] != '\0') && (msg_idx < MAX_FILE_NAME_SIZE); msg_idx++)
+   	    {
+	        LogBuf[msg_idx] = filename[msg_idx];
+	    }
+
+	    LogBuf[msg_idx++] = '-';
+	    snprintf(&LogBuf[msg_idx], 4, "%d", (int)line);
+	    msg_idx+= 4;
+	    LogBuf[msg_idx++] = ':';
+	}
+
+	max_msg_size -= msg_idx;
+	vsnprintf(&LogBuf[msg_idx], max_msg_size, fmt, *argp);
+
+        if((uart_rtos_status = UART_RTOS_Send(&uart_log, (u8 *)LogBuf, MAX_LOG_SIZE)) != UART_SUCCESS){
+            xil_printf("Failed to send UART_RTOS: %d \n\r", uart_rtos_status);
+        }
+
+	Cl_SecureMemset(LogBuf , '\0' , MAX_LOG_SIZE);
+	xSemaphoreGive(vmc_debug_logbuf_lock);
     }
     else
     {
@@ -207,9 +214,9 @@ void EepromDump(void)
 	VMC_DBG("\n\rTBD: EEPROM data will be dumped out here! %d\n\r", 2000);
 }
 
-u8 Versal_EEPROM_ReadBoardIno(void)
+u8 Versal_EEPROM_ReadBoardInfo(void)
 {
-	u8 i			= 0;
+	s8 i			= 0;
 	u16 offset		= 0x00;
 	u8  status              = 0;
 	u8  MAC_ID[6] 	        = {0};
