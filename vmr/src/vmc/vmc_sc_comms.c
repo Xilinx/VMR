@@ -10,7 +10,7 @@ extern TaskHandle_t xVMCSCTask;
 extern TaskHandle_t xSensorMonTask;
 extern SemaphoreHandle_t vmc_sensor_monitoring_lock;
 
-
+#define MAX_RETRY_TO_CHK_SC_ACTIVE	  (10u)
 #define SENSOR_MONITOR_TASK_NOTIFIED      (1)
 #define SENSOR_MONITOR_TASK_NOT_NOTIFIED  (0)
 #define SENSOR_MONITOR_LOCK_ACQUIRED      (1)
@@ -28,6 +28,8 @@ u8 g_scData[MAX_VMC_SC_UART_BUF_SIZE] = {0x00};
 u16 g_scDataCount = 0;
 bool isPacketReceived;
 u8 scPayload[128] = {0};
+
+static u8 vmc_active_resp_len = MSP432_COMMS_MSG_GOOD_LEN;
 
 static volatile bool is_SC_active  = false ;
 volatile bool isPowerModeActive = false;
@@ -58,6 +60,16 @@ static uint16_t calculate_checksum(vmc_sc_uart_cmd *data)
     }
 
     return checksum;
+}
+
+u8 vmc_get_active_resp_len()
+{
+	return vmc_active_resp_len;
+}
+
+void vmc_set_active_resp_len(u8 value)
+{
+	vmc_active_resp_len = value;
 }
 
 bool vmc_get_sc_status()
@@ -419,7 +431,7 @@ void VMC_Fetch_SC_SensorData(u8 messageID)
         }
         case MSP432_COMMS_VMC_ACTIVE_REQ:
         {
-            u8  Expected_Msg_Length = 10;
+            u8 Expected_Msg_Length = vmc_get_active_resp_len();
             VMC_send_packet(MSP432_COMMS_VMC_ACTIVE_REQ,MSP432_COMMS_NO_FLAG,0x00,buf);
             VMC_uart_receive(Expected_Msg_Length);
             if(isPacketReceived)
@@ -463,6 +475,7 @@ void VMC_Mointor_SC_Sensors()
 void VMC_SC_CommsTask(void *params)
 {
     u8 task_notify_cnt = 0;
+    u8 checking_sc_active_retry_cnt = 0;
     u8 isSensorMonitorLockAquired = 0;
     BaseType_t task_notified = SENSOR_MONITOR_TASK_NOT_NOTIFIED;
     VMC_LOG("VMC SC Comms Task Created !!!\n\r");
@@ -483,10 +496,27 @@ void VMC_SC_CommsTask(void *params)
     					}
     				}
     			}
+			/* 
+			 * This condition is to check whether we are communicating with unsupported or Discovery SC.
+			 * We retry max 10 times for the active flag with an expectation that SC responds
+			 * with a message GOOD of length 10 bytes. 
+			 * If we still do not receive an expected response from SC, 
+			 * we consider it as an unsupported SC FW and we expect an ERROR response of length 11 bytes from SC.
+			 * With this, it will be able to handle responses from both supported and unsupported SC FW.
+			 * Without this condition, in the case of unsupported SC, 
+			 * COMMS requests would continuously time out after every 500 mSec because VMC expects 
+			 * a message GOOD response for each request, which legacy SC does not support.
+			 */
+    			if(checking_sc_active_retry_cnt < MAX_RETRY_TO_CHK_SC_ACTIVE) {
+			    checking_sc_active_retry_cnt++;
+			} else {
+			    vmc_set_active_resp_len(MSP432_COMMS_MSG_ERR_LEN);
+			}
     			VMC_Fetch_SC_SensorData(MSP432_COMMS_VMC_ACTIVE_REQ);
     		}
     		else
     		{
+			checking_sc_active_retry_cnt = 0;
     			if(task_notified == SENSOR_MONITOR_TASK_NOT_NOTIFIED )
     			{
     				task_notify_cnt++;
