@@ -37,7 +37,8 @@
 #define BSL_CRC_SUCCESS_RESP			(0x3A)
 #define BSL_SYNC_SUCCESS				(0x00)
 #define SC_BSL_SYNCED_REQ				(0x01)
-#define SC_BSL_SYNCED_RESP				(0x02)
+/* Size of comms error message response */
+#define SC_BSL_SYNCED_RESP				(0x0B)
 
 #define SC_ENABLE_BSL_REQ				(0x09)
 #define SC_ENABLE_BSL_RESP				(0x0A)

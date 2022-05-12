@@ -62,6 +62,9 @@ extern uart_rtos_handle_t uart_vmcsc_log;
 #define MSP432_COMMS_MSG_GOOD           (0xFE)
 #define MSP432_COMMS_MSG_ERR            (0xFF)
 
+#define MSP432_COMMS_MSG_GOOD_LEN       (0x0A)
+#define MSP432_COMMS_MSG_ERR_LEN        (0x0B)
+
 #define MSP432_COMMS_OEM_CMD_REQ        (0x6F)
 #define MSP432_COMMS_OEM_CMD_RESP       (0xEF)
 #define PAYLOAD_SIZE_OEM_ID_RESP        (0x04)
