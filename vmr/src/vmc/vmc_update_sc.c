@@ -562,7 +562,7 @@ upgrade_status_t matchCRC_postWrite(unsigned int writeAdd)
 	}
 	else
 	{
-		if( UART_RTOS_Receive(&uart_vmcsc_log, &receive_bufr[0], BSL_CRC_RESP, &receivedByteCount,RCV_TIMEOUT_MS(200)) != UART_SUCCESS )
+		if( UART_RTOS_Receive(&uart_vmcsc_log, &receive_bufr[0], BSL_CRC_RESP, &receivedByteCount,RCV_TIMEOUT_MS(500)) != UART_SUCCESS )
 		{
 			VMC_ERR("Uart Receive Failure \r\n");
 		}
@@ -649,7 +649,7 @@ void SCUpdateTask(void * arg)
 					}
 					else
 					{
-						if( UART_RTOS_Receive(&uart_vmcsc_log, &receive_bufr[0], SC_BSL_SYNCED_RESP, &receivedByteCount, RCV_TIMEOUT_MS(200)) != UART_SUCCESS )
+						if( UART_RTOS_Receive(&uart_vmcsc_log, &receive_bufr[0], SC_BSL_SYNCED_RESP, &receivedByteCount, RCV_TIMEOUT_MS(500)) != UART_SUCCESS )
 						{
 							retryCount +=1;
 							VMC_ERR("Uart Receive Failure.. Retrying !! \r\n");
@@ -713,7 +713,7 @@ void SCUpdateTask(void * arg)
 					}
 					else
 					{
-						if( UART_RTOS_Receive(&uart_vmcsc_log, &receive_bufr[0], SC_ENABLE_BSL_RESP, &receivedByteCount, RCV_TIMEOUT_MS(200)) != UART_SUCCESS )
+						if( UART_RTOS_Receive(&uart_vmcsc_log, &receive_bufr[0], SC_ENABLE_BSL_RESP, &receivedByteCount, RCV_TIMEOUT_MS(500)) != UART_SUCCESS )
 						{
 							retryCount +=1;
 							VMC_ERR("Uart Receive Failure.. Retrying !! \r\n");
@@ -764,7 +764,7 @@ void SCUpdateTask(void * arg)
 					}
 					else
 					{
-						if( UART_RTOS_Receive(&uart_vmcsc_log, &receive_bufr[0], BSL_SYNCED_RESP, &receivedByteCount,RCV_TIMEOUT_MS(100)) != UART_SUCCESS )
+						if( UART_RTOS_Receive(&uart_vmcsc_log, &receive_bufr[0], BSL_SYNCED_RESP, &receivedByteCount,RCV_TIMEOUT_MS(500)) != UART_SUCCESS )
 						{
 							retryCount +=1;
 							VMC_ERR("Uart Receive Failure.. Retrying !! \r\n");
@@ -817,7 +817,7 @@ void SCUpdateTask(void * arg)
 					}
 					else
 					{
-						if( UART_RTOS_Receive(&uart_vmcsc_log, &receive_bufr[0], BSL_UNLOCK_PASSWORD_RESP, &receivedByteCount,RCV_TIMEOUT_MS(200)) != UART_SUCCESS )
+						if( UART_RTOS_Receive(&uart_vmcsc_log, &receive_bufr[0], BSL_UNLOCK_PASSWORD_RESP, &receivedByteCount,RCV_TIMEOUT_MS(500)) != UART_SUCCESS )
 						{
 							retryCount +=1;
 							VMC_ERR("Uart Receive Failure.. Retrying !! \r\n");
@@ -876,7 +876,7 @@ void SCUpdateTask(void * arg)
 					}
 					else
 					{
-						if( UART_RTOS_Receive(&uart_vmcsc_log, &receive_bufr[0], BSL_MASS_ERASE_RESP, &receivedByteCount,RCV_TIMEOUT_MS(200)) != UART_SUCCESS )
+						if( UART_RTOS_Receive(&uart_vmcsc_log, &receive_bufr[0], BSL_MASS_ERASE_RESP, &receivedByteCount,RCV_TIMEOUT_MS(500)) != UART_SUCCESS )
 						{
 							retryCount +=1;
 							VMC_ERR("Uart Receive Failure \r\n");
@@ -978,7 +978,7 @@ void SCUpdateTask(void * arg)
 							}
 							else
 							{
-								if( UART_RTOS_Receive(&uart_vmcsc_log, &receive_bufr[0], BSL_DATA_TX_32_RESP, &receivedByteCount,RCV_TIMEOUT_MS(200)) != UART_SUCCESS )
+								if( UART_RTOS_Receive(&uart_vmcsc_log, &receive_bufr[0], BSL_DATA_TX_32_RESP, &receivedByteCount,RCV_TIMEOUT_MS(500)) != UART_SUCCESS )
 								{
 									VMC_ERR("Uart Receive Failure \r\n");
 								}
@@ -1137,7 +1137,7 @@ void SCUpdateTask(void * arg)
 					}
 					else
 					{
-						if( UART_RTOS_Receive(&uart_vmcsc_log, &receive_bufr[0], BSL_VERSION_RESP, &receivedByteCount,RCV_TIMEOUT_MS(200)) != UART_SUCCESS )
+						if( UART_RTOS_Receive(&uart_vmcsc_log, &receive_bufr[0], BSL_VERSION_RESP, &receivedByteCount,RCV_TIMEOUT_MS(500)) != UART_SUCCESS )
 						{
 							retryCount +=1;
 							VMC_ERR("Uart Receive Failure \r\n");
