@@ -1,7 +1,5 @@
 #!/bin/bash
 
-source ./utils.sh
-
 TOOL_VERSION="2022.1"
 DEFAULT_VITIS="/proj/xbuilds/${TOOL_VERSION}_daily_latest/installs/lin64/Vitis/HEAD/settings64.sh"
 STDOUT_JTAG=0
@@ -69,18 +67,25 @@ grep_yes()
 
 load_build_info()
 {
-	if [ ! -f $BUILD_CONF_FILE ];then
-		echo "no $BUILD_CONF_FILE file"
-		return
+	if [ ! -z "$1" ];then
+		echo "=== set build conf file to $1"
+		BUILD_CONF_FILE="$1"
 	fi
-	
+
+	if [ -f $BUILD_CONF_FILE ];then
+		echo "=== build conf file is $BUILD_CONF_FILE"
+	else
+		echo "=== cannot find $BUILD_CONF_FILE"
+		exit 1	
+	fi
+
 	if [ ! -z $BUILD_XSA ];then
 		echo "=== build from xsa, skip loading from $BUILD_CONF_FILE ==="
 		return
 	fi
 
 	if [ $NOT_STABLE == 0 ];then
-		echo "== build from stable bsp, skip loading from $BUILD_CONF_FILE ==="
+		echo "=== build from stable bsp, skip loading from $BUILD_CONF_FILE ==="
 		return
 	fi
 
@@ -205,8 +210,9 @@ check_vmr() {
 	fi
 
 	if [ $NOT_STABLE == 1 ];then
-		echo "BSP is built by xsct: $BUILD_TA"
-		echo "XSA is $BUILD_XSA"
+		echo "xsct: $BUILD_TA"
+		echo "XSA: $BUILD_XSA"
+		echo "XSA_PLATFORM_NAME: $XSA_PLATFORM_NAME"
 	else
 		echo "BSP and XSA are copied from: $REAL_BSP"
 	fi
@@ -235,6 +241,9 @@ check_vmr() {
 }
 
 build_app_all() {
+	# workaround to set correct platform name for vitis to create applications
+	export XSA_PLATFORM_NAME=`ls vmr_platform/vmr_platform/export`
+
 	xsct ./create_app.tcl
 	check_result "Create App" $?
 
@@ -301,6 +310,11 @@ do
                 -help)
                         usage 0
                         ;;
+
+                -config)
+			shift
+                        BUILD_CONFIG=$1
+                        ;;
                 -xsa)
 			shift
                         BUILD_XSA=$1
@@ -364,7 +378,7 @@ fi
 # this will make sure pipeline automation script pick up correct TA
 # submit PR to pipeline to move build.json forward.
 #####################
-load_build_info
+load_build_info $BUILD_CONFIG
 
 which xsct
 if [ $? -ne 0 ];then
