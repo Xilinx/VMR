@@ -265,6 +265,8 @@ build_app_incremental() {
 }
 
 build_bsp_stable() {
+	echo "=== since 2022.1 release, do not support build -stable anymore, exit";exit 0;
+
 	echo "make build_tmp_dir"
 	mkdir build_tmp_dir
 	echo "rsync and make BSP"
