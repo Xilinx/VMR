@@ -9,8 +9,8 @@ STDOUT_JTAG=0
 NOT_STABLE=1
 BUILD_XRT=0
 ROOT_DIR=`pwd`
-REAL_BSP=`realpath ../bsp/2021.2_stable/bsp`
-REAL_VMR=`realpath ../vmr`
+#REAL_BSP=`realpath ../bsp/2021.2_stable/bsp`
+#REAL_VMR=`realpath ../vmr`
 BUILD_CONF_FILE="build.json"
 
 check_result()
