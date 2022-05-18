@@ -3,4 +3,4 @@
 
 setws .
 puts "build app"
-app build -name vmr 
+app build -name vmr_app 
