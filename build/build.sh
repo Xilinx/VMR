@@ -2,7 +2,6 @@
 
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (C) 2018-2022 Xilinx, Inc. All rights reserved.
-# Copyright (C) 2022 Advanced Micro Devices, Inc. All rights reserved.
 
 TOOL_VERSION="2022.1"
 DEFAULT_VITIS="/proj/xbuilds/${TOOL_VERSION}_daily_latest/installs/lin64/Vitis/HEAD/settings64.sh"
@@ -10,8 +9,8 @@ STDOUT_JTAG=0
 NOT_STABLE=1
 BUILD_XRT=0
 ROOT_DIR=`pwd`
-REAL_BSP=`realpath ../bsp/2021.2_stable/bsp`
-REAL_VMR=`realpath ../vmr`
+#REAL_BSP=`realpath ../bsp/2021.2_stable/bsp`
+#REAL_VMR=`realpath ../vmr`
 BUILD_CONF_FILE="build.json"
 
 check_result()
