@@ -301,7 +301,7 @@ build_shell()
 
 	bash $REGEN_SHELL -v $ROOT_DIR/vmr.elf -x $BUILD_XSA -y $BUILD_XSABIN >> $BUILD_LOG 2>&1
 	if [ $? -eq 0 ];then
-		ls -lh rebuilt.xsabin
+		realpath rebuilt.xsabin
 	else
 		echo "Build Shell failed, see $BUILD_LOG for more info."
 	fi
