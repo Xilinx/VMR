@@ -126,6 +126,14 @@ load_build_info()
 	echo "================================"
 }
 
+check_file_exists()
+{
+	typeset FILE="$1"
+	if [ -z $FILE ] || [ ! -f $FILE ];then
+		echo "ERROR: $FILE doesn't exist";exit 1;
+	fi
+}
+
 make_version_h()
 {
 	typeset C_DIR="$1"
@@ -141,6 +149,7 @@ make_version_h()
 		VMR_VERSION_PATCH="0"
 	else
 		echo "=== Loading version from ${BUILD_VERSION_FILE}"
+		check_file_exists "${BUILD_VERSION_FILE}"
 		VMR_VERSION_HASH=`grep_file "VERSION_HASH" ${BUILD_VERSION_FILE}` 
 		VMR_VERSION_HASH_DATE=`grep_file "VERSION_HASH_DATE" ${BUILD_VERSION_FILE}`
 		VMR_BUILD_BRANCH=`grep_file "BUILD_BRANCH" ${BUILD_VERSION_FILE}`
@@ -156,6 +165,7 @@ make_version_h()
 	# NOTE: we only take git version, version date and branch for now
 
 	CL_VERSION_H="${C_DIR}/src/include/cl_version.h"
+	check_file_exists "$CL_VERSION_H"
 
 	echo "#ifndef _VMR_VERSION_" >> $CL_VERSION_H
 	echo "#define _VMR_VERSION_" >> $CL_VERSION_H
@@ -180,6 +190,7 @@ make_version_h()
 		echo "=== NOTE: No platform specific resources."
 	else
 		echo "=== NOTE: enable $PLATFORM_FILE specific resources."
+		check_file_exists "$PLATFORM_FILE"
 		for MACRO in `grep_yes`
 		do
 			echo "===    enable: $MACRO"
@@ -252,14 +263,18 @@ build_app_all() {
 
 	cp config_app.tcl $BUILD_DIR
 	cp make_app.tcl $BUILD_DIR
+
 	cd $BUILD_DIR
-
 	xsct ./config_app.tcl >> $BUILD_LOG 2>&1
-	make_version_h "vmr_app"
 
+	cd $ROOT_DIR
+	make_version_h "$BUILD_DIR/vmr_app"
+
+	cd $BUILD_DIR
 	xsct ./make_app.tcl >> $BUILD_LOG 2>&1
 
-	check_vmr "vmr_app"
+	cd $ROOT_DIR
+	check_vmr "$BUILD_DIR/vmr_app"
 }
 
 build_app_incremental() {
@@ -274,9 +289,11 @@ build_app_incremental() {
 	xsct ./make_app.tcl
 	echo "=== Make App Took: $((SECONDS - start_seconds)) S"
 
-	check_vmr "vmr_app"
+	cd $ROOT_DIR
+	check_vmr "$BUILD_DIR/vmr_app"
 }
 
+# Obsolated since 2022.1 #
 build_bsp_stable() {
 	echo "=== since 2022.1 release, do not support build -stable anymore, exit";exit 0;
 
