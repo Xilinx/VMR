@@ -6,7 +6,6 @@
 TOOL_VERSION="2022.1"
 DEFAULT_VITIS="/proj/xbuilds/${TOOL_VERSION}_daily_latest/installs/lin64/Vitis/HEAD/settings64.sh"
 STDOUT_JTAG=0
-NOT_STABLE=1
 BUILD_XRT=0
 ROOT_DIR=`pwd`
 #REAL_BSP=`realpath ../bsp/2021.2_stable/bsp`
@@ -14,6 +13,7 @@ ROOT_DIR=`pwd`
 BUILD_CONF_FILE="build.json"
 BUILD_DIR="build_dir"
 BUILD_LOG="build.log"
+REGEN_SHELL="regen_pdi.sh"
 
 check_result()
 {
@@ -90,11 +90,6 @@ load_build_info()
 		return
 	fi
 
-	if [ $NOT_STABLE == 0 ];then
-		echo "=== build from stable bsp, skip loading from $BUILD_CONF_FILE ==="
-		return
-	fi
-
 	CONF_BUILD_TA=`grep_file "CONF_BUILD_TA" ${BUILD_CONF_FILE}`
 	if [ -z $BUILD_TA ];then
 		BUILD_TA=$CONF_BUILD_TA
@@ -114,6 +109,12 @@ load_build_info()
 	if [ -z $PLATFORM_FILE ];then
 		PLATFORM_FILE=$CONF_BUILD_PLATFORM
 	fi
+
+	CONF_BUILD_SHELL=`grep_file "CONF_BUILD_SHELL" ${BUILD_CONF_FILE}`
+	if [ -z $BUILD_SHELL ];then
+		BUILD_SHELL=$CONF_BUILD_SHELL
+	fi
+
 
 	#enforce jtag mode for pipeline build
 	STDOUT_JTAG=1
@@ -226,14 +227,9 @@ check_vmr() {
 		echo "BUILD from user specified config"
 	fi
 
-	if [ $NOT_STABLE == 1 ];then
-		echo "xsct: $BUILD_TA"
-		echo "XSA: $BUILD_XSA"
-		echo "XSA_PLATFORM_NAME: $XSA_PLATFORM_NAME"
-	else
-		echo "BSP and XSA are copied from: $REAL_BSP"
-	fi
-
+	echo "xsct: $BUILD_TA"
+	echo "XSA: $BUILD_XSA"
+	echo "XSA_PLATFORM_NAME: $XSA_PLATFORM_NAME"
 
 	if [ ! -z $PLATFORM_FILE ];then
 		echo "PLATFROM patch is: $PLATFORM_FILE"
@@ -293,6 +289,24 @@ build_app_incremental() {
 	check_vmr "$BUILD_DIR/vmr_app"
 }
 
+build_shell()
+{
+	cd $ROOT_DIR
+	if [ -z $BUILD_SHELL ] || [ ! $BUILD_SHELL = "yes" ] || [ ! -f $REGEN_SHELL ];then
+		echo "Skip Build Shell";exit 0;
+	fi
+
+	cp $REGEN_SHELL $BUILD_DIR
+	cd $BUILD_DIR
+
+	bash $REGEN_SHELL -v $ROOT_DIR/vmr.elf -x $BUILD_XSA -y $BUILD_XSABIN >> $BUILD_LOG 2>&1
+	if [ $? -eq 0 ];then
+		ls -lh rebuilt.xsabin
+	else
+		echo "Build Shell failed, see $BUILD_LOG for more info."
+	fi
+}
+
 # Obsolated since 2022.1 #
 build_bsp_stable() {
 	echo "=== since 2022.1 release, do not support build -stable anymore, exit";exit 0;
@@ -320,18 +334,16 @@ usage() {
     echo "Instruction: PLEASE READ!!!"
     echo "Usage:"
     echo 
+    echo "-config                    config json instead of using default build.json"  
     echo "-clean                     Remove build directories"  
     echo "-xsa                       XSA file"  
     echo "-app                       Re-build Application only"  
     echo "-config_VMR                Update VMR project too edit in Vitis GUI"
     echo "-XRT                       Build XRT only"
-    echo "-TA                        TA exact version, default is [${TOOL_VERSION}_daily_latest]."
     echo "                           Note: only take effect when env has no Vitis env"
     echo "-version                   version.json file"
     echo "-platform                  platform.json file for enable platform specific resources"
     echo "-jtag                      build VMR stdout to jtag"
-    echo "-daily_latest              build VMR from daily latest bsp (this is enabled by default)"
-    echo "-stable                    build VMR from cached stable bsp (this is not enabled by default)"
     echo "-help"
     exit $1
 }
@@ -367,10 +379,6 @@ do
 		-XRT)
 			BUILD_XRT=1
 			;;
-		-TA)
-			shift
-			TA=$1
-			;;
 		-version)
 			shift
 			BUILD_VERSION_FILE=$1
@@ -382,11 +390,8 @@ do
 		-jtag)
 			STDOUT_JTAG=1
 			;;
-		-daily_latest)
-			NOT_STABLE=1
-			;;
 		-stable)
-			NOT_STABLE=0
+			echo "bypass, obsolated"
 			;;
                 * | --* | -*)
                         echo "Invalid argument: $1"
@@ -468,3 +473,8 @@ echo "=== (3) Build entire project "
 start_seconds=$SECONDS
 build_app_all
 echo "=== Make App Took: $((SECONDS - start_seconds)) S"
+
+echo "=== (4) Build shell "
+start_seconds=$SECONDS
+build_shell
+echo "=== Build Shell Took: $((SECONDS - start_seconds)) S"
