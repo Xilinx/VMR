@@ -4,6 +4,6 @@
 setws .
 puts "=== config app"
 puts "=== add include"
-app config -name vmr -add include-path ../src/include
+app config -name vmr_app -add include-path ../src/include
 puts "=== set warnings as errors"
-app config -name vmr -add compiler-misc -Werror
+app config -name vmr_app -add compiler-misc -Werror

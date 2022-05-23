@@ -6,12 +6,14 @@
 TOOL_VERSION="2022.1"
 DEFAULT_VITIS="/proj/xbuilds/${TOOL_VERSION}_daily_latest/installs/lin64/Vitis/HEAD/settings64.sh"
 STDOUT_JTAG=0
-NOT_STABLE=1
 BUILD_XRT=0
 ROOT_DIR=`pwd`
 #REAL_BSP=`realpath ../bsp/2021.2_stable/bsp`
 #REAL_VMR=`realpath ../vmr`
 BUILD_CONF_FILE="build.json"
+BUILD_DIR="build_dir"
+BUILD_LOG="build.log"
+REGEN_SHELL="regen_pdi.sh"
 
 check_result()
 {
@@ -48,6 +50,7 @@ build_clean() {
 	echo "=== Remove build directories ==="
 	rm -rf xsa .metadata vmr_platform vmr_system vmr 
 	rm -rf build_tmp_dir
+	rm -rf $BUILD_DIR
 }
 
 append_stable_bsp() {
@@ -87,11 +90,6 @@ load_build_info()
 		return
 	fi
 
-	if [ $NOT_STABLE == 0 ];then
-		echo "=== build from stable bsp, skip loading from $BUILD_CONF_FILE ==="
-		return
-	fi
-
 	CONF_BUILD_TA=`grep_file "CONF_BUILD_TA" ${BUILD_CONF_FILE}`
 	if [ -z $BUILD_TA ];then
 		BUILD_TA=$CONF_BUILD_TA
@@ -112,6 +110,12 @@ load_build_info()
 		PLATFORM_FILE=$CONF_BUILD_PLATFORM
 	fi
 
+	CONF_BUILD_SHELL=`grep_file "CONF_BUILD_SHELL" ${BUILD_CONF_FILE}`
+	if [ -z $BUILD_SHELL ];then
+		BUILD_SHELL=$CONF_BUILD_SHELL
+	fi
+
+
 	#enforce jtag mode for pipeline build
 	STDOUT_JTAG=1
 
@@ -121,6 +125,14 @@ load_build_info()
 	echo "BUILD_XSABIN: $BUILD_XSABIN"
 	echo "PLATFORM_FILE: $PLATFORM_FILE"
 	echo "================================"
+}
+
+check_file_exists()
+{
+	typeset FILE="$1"
+	if [ -z $FILE ] || [ ! -f $FILE ];then
+		echo "ERROR: $FILE doesn't exist";exit 1;
+	fi
 }
 
 make_version_h()
@@ -138,6 +150,7 @@ make_version_h()
 		VMR_VERSION_PATCH="0"
 	else
 		echo "=== Loading version from ${BUILD_VERSION_FILE}"
+		check_file_exists "${BUILD_VERSION_FILE}"
 		VMR_VERSION_HASH=`grep_file "VERSION_HASH" ${BUILD_VERSION_FILE}` 
 		VMR_VERSION_HASH_DATE=`grep_file "VERSION_HASH_DATE" ${BUILD_VERSION_FILE}`
 		VMR_BUILD_BRANCH=`grep_file "BUILD_BRANCH" ${BUILD_VERSION_FILE}`
@@ -152,7 +165,8 @@ make_version_h()
 
 	# NOTE: we only take git version, version date and branch for now
 
-	CL_VERSION_H="${C_DIR}/vmr/src/include/cl_version.h"
+	CL_VERSION_H="${C_DIR}/src/include/cl_version.h"
+	check_file_exists "$CL_VERSION_H"
 
 	echo "#ifndef _VMR_VERSION_" >> $CL_VERSION_H
 	echo "#define _VMR_VERSION_" >> $CL_VERSION_H
@@ -177,6 +191,7 @@ make_version_h()
 		echo "=== NOTE: No platform specific resources."
 	else
 		echo "=== NOTE: enable $PLATFORM_FILE specific resources."
+		check_file_exists "$PLATFORM_FILE"
 		for MACRO in `grep_yes`
 		do
 			echo "===    enable: $MACRO"
@@ -188,7 +203,7 @@ make_version_h()
 
 check_vmr() {
 	typeset C_DIR="$1"
-	typeset VMR_FILE="${C_DIR}/vmr/Debug/vmr.elf"
+	typeset VMR_FILE="${C_DIR}/Debug/vmr_app.elf"
 
 	if [[ ! -f "${VMR_FILE}" ]];then
 		echo "Build failed, cannot find $VMR_FILE"
@@ -212,14 +227,9 @@ check_vmr() {
 		echo "BUILD from user specified config"
 	fi
 
-	if [ $NOT_STABLE == 1 ];then
-		echo "xsct: $BUILD_TA"
-		echo "XSA: $BUILD_XSA"
-		echo "XSA_PLATFORM_NAME: $XSA_PLATFORM_NAME"
-	else
-		echo "BSP and XSA are copied from: $REAL_BSP"
-	fi
-
+	echo "xsct: $BUILD_TA"
+	echo "XSA: $BUILD_XSA"
+	echo "XSA_PLATFORM_NAME: $XSA_PLATFORM_NAME"
 
 	if [ ! -z $PLATFORM_FILE ];then
 		echo "PLATFROM patch is: $PLATFORM_FILE"
@@ -238,35 +248,66 @@ check_vmr() {
 	fi
 
 	echo "=== Build vmr.elf ==="
-	cp $VMR_FILE $ROOT_DIR
+	cp $VMR_FILE $ROOT_DIR/vmr.elf
 	realpath $ROOT_DIR/vmr.elf
 	echo "=== Build done. ==="
 }
 
 build_app_all() {
-	# workaround to set correct platform name for vitis to create applications
-	export XSA_PLATFORM_NAME=`ls vmr_platform/vmr_platform/export`
+	cd $ROOT_DIR
+	rsync -a ../vmr/src $BUILD_DIR/vmr_app --exclude cmc
 
-	xsct ./create_app.tcl
-	check_result "Create App" $?
+	cp config_app.tcl $BUILD_DIR
+	cp make_app.tcl $BUILD_DIR
 
-	rsync -av ../vmr/src vmr --exclude cmc
-	xsct ./config_app.tcl
-	make_version_h "."
-	xsct ./make_app.tcl
-	check_vmr "."
+	cd $BUILD_DIR
+	xsct ./config_app.tcl >> $BUILD_LOG 2>&1
+
+	cd $ROOT_DIR
+	make_version_h "$BUILD_DIR/vmr_app"
+
+	cd $BUILD_DIR
+	xsct ./make_app.tcl >> $BUILD_LOG 2>&1
+
+	cd $ROOT_DIR
+	check_vmr "$BUILD_DIR/vmr_app"
 }
 
 build_app_incremental() {
-	rm -r vmr/src
-	rm -r vmr/Debug/vmr.elf
+	cd $ROOT_DIR/$BUILD_DIR
+	rm -r vmr_app/src
+	rm -r vmr_app/Debug/vmr.elf
 
-	rsync -av ../vmr/src vmr --exclude cmc --exclude *.swp
-	make_version_h "."
+	rsync -av ../../vmr/src vmr_app --exclude cmc --exclude *.swp
+	make_version_h "vmr_app"
+
+	start_seconds=$SECONDS
 	xsct ./make_app.tcl
-	check_vmr "."
+	echo "=== Make App Took: $((SECONDS - start_seconds)) S"
+
+	cd $ROOT_DIR
+	check_vmr "$BUILD_DIR/vmr_app"
 }
 
+build_shell()
+{
+	cd $ROOT_DIR
+	if [ -z $BUILD_SHELL ] || [ ! $BUILD_SHELL = "yes" ] || [ ! -f $REGEN_SHELL ];then
+		echo "Skip Build Shell";exit 0;
+	fi
+
+	cp $REGEN_SHELL $BUILD_DIR
+	cd $BUILD_DIR
+
+	bash $REGEN_SHELL -v $ROOT_DIR/vmr.elf -x $BUILD_XSA -y $BUILD_XSABIN >> $BUILD_LOG 2>&1
+	if [ $? -eq 0 ];then
+		realpath rebuilt.xsabin
+	else
+		echo "Build Shell failed, see $BUILD_LOG for more info."
+	fi
+}
+
+# Obsolated since 2022.1 #
 build_bsp_stable() {
 	echo "=== since 2022.1 release, do not support build -stable anymore, exit";exit 0;
 
@@ -293,18 +334,16 @@ usage() {
     echo "Instruction: PLEASE READ!!!"
     echo "Usage:"
     echo 
+    echo "-config                    config json instead of using default build.json"  
     echo "-clean                     Remove build directories"  
     echo "-xsa                       XSA file"  
     echo "-app                       Re-build Application only"  
     echo "-config_VMR                Update VMR project too edit in Vitis GUI"
     echo "-XRT                       Build XRT only"
-    echo "-TA                        TA exact version, default is [${TOOL_VERSION}_daily_latest]."
     echo "                           Note: only take effect when env has no Vitis env"
     echo "-version                   version.json file"
     echo "-platform                  platform.json file for enable platform specific resources"
     echo "-jtag                      build VMR stdout to jtag"
-    echo "-daily_latest              build VMR from daily latest bsp (this is enabled by default)"
-    echo "-stable                    build VMR from cached stable bsp (this is not enabled by default)"
     echo "-help"
     exit $1
 }
@@ -340,10 +379,6 @@ do
 		-XRT)
 			BUILD_XRT=1
 			;;
-		-TA)
-			shift
-			TA=$1
-			;;
 		-version)
 			shift
 			BUILD_VERSION_FILE=$1
@@ -355,11 +390,8 @@ do
 		-jtag)
 			STDOUT_JTAG=1
 			;;
-		-daily_latest)
-			NOT_STABLE=1
-			;;
 		-stable)
-			NOT_STABLE=0
+			echo "bypass, obsolated"
 			;;
                 * | --* | -*)
                         echo "Invalid argument: $1"
@@ -412,6 +444,8 @@ fi
 #####################
 # build entire BSP  #
 #####################
+echo "=== build log =="
+echo "tail -f $ROOT_DIR/$BUILD_DIR/$BUILD_LOG"
 echo "=== Build BSP from xsa: ==="
 ls $BUILD_XSA
 if [ $? -ne 0 ];then
@@ -419,32 +453,28 @@ if [ $? -ne 0 ];then
 	exit 1;
 fi
 
-echo "=== (1) always perform build clean for a clean build env"
+echo "=== (1) Build clean and preparation ..."
 build_clean
-mkdir xsa
-cp $BUILD_XSA xsa/vmr.xsa
+mkdir $BUILD_DIR
+cp $BUILD_XSA $BUILD_DIR/vmr.xsa
 check_result "copy $BUILD_XSA" $?
 
-echo "=== (2) using xsct to create bsp with jtag flag"
-xsct ./create_bsp.tcl $STDOUT_JTAG $NOT_STABLE
+
+echo "=== (2) Create entire project, including platform BSP and application  "
+cp create_bsp.tcl $BUILD_DIR
+cd $BUILD_DIR
+start_seconds=$SECONDS
+xsct ./create_bsp.tcl $STDOUT_JTAG > $BUILD_LOG 2>&1
 check_result "Create vmr_platform" $?
+echo "=== Create BSP Took: $((SECONDS - start_seconds)) S"
 
-echo "=== (3) override freertos and recompile it"
-if [ $NOT_STABLE == 1 ];then
-	echo "=== Build BSP with $BUILD_TA"
-else
-	echo "=== Build BSP with stable version"
-	append_stable_bsp
-	xsct ./rebuild_bsp.tcl
-	check_result "Rebuild BSP" $?
 
-#       cd $BSP_DIR
-#	make clean; make all
-#	check_result "make stable bsp: $BSP_DIR" $?
-#	cd $ROOT_DIR
-
-	echo "=== Build BSP with stable version done"
-fi
-
-echo "=== (4) build vmr application after platform bsp is built done"
+echo "=== (3) Build entire project "
+start_seconds=$SECONDS
 build_app_all
+echo "=== Make App Took: $((SECONDS - start_seconds)) S"
+
+echo "=== (4) Build shell "
+start_seconds=$SECONDS
+build_shell
+echo "=== Build Shell Took: $((SECONDS - start_seconds)) S"

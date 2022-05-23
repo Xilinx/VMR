@@ -46,7 +46,7 @@ skip_plm=0
 ############################################################
 
 # Get the options
-while getopts ":hsv:" option; do
+while getopts ":hsv:x:y:" option; do
    case $option in
       h) # display Help
          Help
@@ -57,6 +57,12 @@ while getopts ":hsv:" option; do
       v) # VMR.elf location
          vmr=$OPTARG
          echo "  vmr chosen: $vmr";;
+      x)
+         xsa=$OPTARG
+	 echo " xsa: $xsa";;
+      y)
+         xsabin=$OPTARG
+	 echo " xsabin: $xsabin";;
      \?) # Invalid option
          echo "ERROR: Invalid option. See help below..."
          Help
