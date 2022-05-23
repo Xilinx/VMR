@@ -1,19 +1,7 @@
 All VMR code is released under the terms of either Apache License, Version 2.0,
-or alternatively under the terms of the GNU General Public License or MIT.
+or alternatively under the terms of the MIT.
 
 Copyright (C) 2016-2022 Xilinx, Inc.
-
-This software is licensed under the terms of the GNU General Public
-License version 2, as published by the Free Software Foundation, and
-may be copied, distributed, and modified under those terms.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You may use the Linux kernel driver code according to either of these
-licenses as is most appropriate for your project on a case-by-case basis.
 
 The full text for both licenses is included for reference below.
 
