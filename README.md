@@ -3,7 +3,7 @@
 ## Overview
     This repository contains VMR (Versal Management Runtime) firmware. The
     firmware contains management software for Versal based hardware, such as
-    card management and card seasor reporting. It is corss-compiled by ARM-R5 C
+    card management and card sensor reporting. It is cross-compiled by ARM-R5 C
     compiler and running as a FreeRTOS application.
 
 ## Code Review procedure
