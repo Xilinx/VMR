@@ -1,4 +1,10 @@
-# VMR Code
+# User Guide
+
+## Overview
+    This repository contains VMR (Versal Management Runtime) firmware. The
+    firmware contains management software for Versal based hardware, such as
+    card management and card seasor reporting. It is corss-compiled by ARM-R5 C
+    compiler and running as a FreeRTOS application.
 
 ## Code Review procedure
 
@@ -7,11 +13,11 @@
         1.1 Will this change potentially stop VMR running? 
             > If yes, please explain more details.
 
-        1.2 Is coding style aligned with FreeRTOS code style?
-            > https://www.freertos.org/FreeRTOS-Coding-Standard-and-Style-Guide.html#StyleGuide
+	1.2 Is coding style aligned with FreeRTOS code style?
 
-        1.3 A CR or Story number is required for every PR. And PR # should be updated back to CR/Story.
-            > PR reviewer should not apporve any PR without a tracking number
+	1.3 A CR or Story number is required for every PR. And PR # should be
+	    updated back to CR/Story.
+	    > PR reviewer should not apporve any PR without a tracking number
 
         1.4 Please address all code review comments prior to ask for code merge.
 
