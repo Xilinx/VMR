@@ -252,6 +252,11 @@ int fpga_pdi_download(UINTPTR data, UINTPTR size, int has_pl)
 	return ret;
 }
 
+static inline int pdi_download(UINTPTR data, UINTPTR size, int has_pl)
+{
+	return fpga_pdi_download(data, size, has_pl);
+}
+
 static int rmgmt_fpga_download(struct rmgmt_handler *rh, u32 len)
 {
 	int ret = 0;
