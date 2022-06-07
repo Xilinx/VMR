@@ -1,11 +1,12 @@
 /******************************************************************************
- * Copyright (C) 2020 Xilinx, Inc.  All rights reserved.
+ * Copyright (C) 2020-2022 Xilinx, Inc.  All rights reserved.
  * SPDX-License-Identifier: MIT
  *******************************************************************************/
 
 #include "FreeRTOS.h"
 #include "task.h"
 
+#include "cl_vmc.h"
 #include "cl_mem.h"
 #include "cl_uart_rtos.h"
 #include "cl_i2c.h"
@@ -22,20 +23,14 @@
 #include "vmc_update_sc.h"
 #include "vmr_common.h"
 
-extern TaskHandle_t xSensorMonTask;
 extern XSysMonPsv InstancePtr;
 extern XScuGic IntcInst;
 extern SemaphoreHandle_t vmc_sc_lock;
-extern SemaphoreHandle_t vmc_sensor_monitoring_lock;
-
 
 extern SC_VMC_Data sc_vmc_data;
 
 extern uint8_t sc_update_flag;
 
-/*Xgq Msg Handle */
-static u8 xgq_sensor_flag = 0;
-msg_handle_t *sensor_hdl;
 extern s8 Asdm_Process_Sensor_Request(u8 *req, u8 *resp, u16 *respSize);
 
 #define MAX6639_FAN_TACHO_TO_RPM(x) (8000*60)/(x)
@@ -602,81 +597,54 @@ static int validate_sensor_payload(struct xgq_vmr_sensor_payload *payload)
 	return 0;
 }
 
-static int xgq_sensor_cb(cl_msg_t *msg, void *arg)
+int cl_vmc_sensor(cl_msg_t *msg)
 {
-    u32 address = RPU_SHARED_MEMORY_ADDR(msg->sensor_payload.address);
-    u32 size = msg->sensor_payload.size;
-    u8 reqBuffer[2] = {0};
-    u8 respBuffer[SENSOR_RESP_BUFFER_SIZE] = {0};
-    u16 respSize = 0;
-    s32 ret = 0;
+	u32 address = RPU_SHARED_MEMORY_ADDR(msg->sensor_payload.address);
+	u32 size = msg->sensor_payload.size;
+	u8 reqBuffer[2] = {0};
+	u8 respBuffer[SENSOR_RESP_BUFFER_SIZE] = {0};
+	u16 respSize = 0;
+	s32 ret = 0;
 
-    reqBuffer[0] = msg->sensor_payload.aid;
-    reqBuffer[1] = msg->sensor_payload.sid;
+	reqBuffer[0] = msg->sensor_payload.aid;
+	reqBuffer[1] = msg->sensor_payload.sid;
 
-    ret = validate_sensor_payload(&msg->sensor_payload);
-    if (ret)
-	goto done;
+	ret = validate_sensor_payload(&msg->sensor_payload);
+	if (ret)
+		goto done;
 
-    if(Asdm_Process_Sensor_Request(&reqBuffer[0], &respBuffer[0], &respSize))
-    {
-        VMC_ERR("ERROR: Failed to Process Sensor Request %d 0x%x",
+	/* Read All Sensors from cached data */
+	if(Asdm_Process_Sensor_Request(&reqBuffer[0], &respBuffer[0], &respSize)) {
+		VMC_ERR("ERROR: Failed to Process Sensor Request %d 0x%x",
 			msg->sensor_payload.aid, msg->sensor_payload.sid);
-        ret = -1;
-    }
-    else
-    {
-        if(size < respSize)
-        {
-            VMC_ERR("ERROR: Expected Size %d Actual Size: %d", size, respSize);
-            ret = -1;
-        }
-        else
-        {
-            cl_memcpy_toio8(address, &respBuffer[0], respSize);
-        }
-    }
+		ret = -EINVAL;
+	} else {
+		if(size < respSize) {
+			VMC_ERR("ERROR: Expected Size %d Actual Size: %d", size, respSize);
+			ret = -EINVAL;
+		} else {
+			cl_memcpy_toio8(address, &respBuffer[0], respSize);
+		}
+	}
 
 done:
 
-    msg->hdr.rcode = ret;
-    VMC_DBG("complete msg id%d, ret %d", msg->hdr.cid, ret);
-    cl_msg_handle_complete(msg);
-    return 0;
+	VMC_DBG("msg cid%d, ret %d", msg->hdr.cid, ret);
+	return ret;
 }
 
-void SensorMonitorTask(void *params)
+void cl_vmc_monitor_sensors()
 {
+	if (!cl_vmc_sc_is_ready())
+		return;
 
-    VMC_LOG(" Sensor Monitor Task Created !!!\n\r");
-
-    if (xgq_sensor_flag == 0 &&
-        cl_msg_handle_init(&sensor_hdl, CL_MSG_SENSOR, xgq_sensor_cb, NULL) == 0) {
-        VMC_LOG("init sensor handle done.");
-        xgq_sensor_flag = 1;
-    }
-
-	/* Wait for notification from VMC_SC_CommsTask */
-	xTaskNotifyWait(ULONG_MAX, ULONG_MAX, NULL, portMAX_DELAY);
-
-    for(;;)
-    {
-        /* Read All Sensors */
-    	if(xSemaphoreTake(vmc_sensor_monitoring_lock, portMAX_DELAY) == pdTRUE)
-    	{
-    		Monitor_Sensors();
-    		Monitor_Thresholds();
+    	Monitor_Thresholds();
+    	Monitor_Sensors();
 
 #ifdef VMC_TEST
-    		se98a_monitor();
-    		max6639_monitor();
-    		sysmon_monitor();
-    		qsfp_monitor ();
+    	se98a_monitor();
+    	max6639_monitor();
+    	sysmon_monitor();
+    	qsfp_monitor ();
 #endif
-    		xSemaphoreGive(vmc_sensor_monitoring_lock);
-    		vTaskDelay(200);
-    	}
-    }
-
-    vTaskSuspend(NULL);
 }

@@ -1,5 +1,5 @@
 /******************************************************************************
-* Copyright (C) 2020 Xilinx, Inc.  All rights reserved.
+* Copyright (C) 2020-2022 Xilinx, Inc.  All rights reserved.
 * SPDX-License-Identifier: MIT
 *******************************************************************************/
 /* FreeRTOS includes */
@@ -18,172 +18,319 @@
 #include "cl_io.h"
 #include "cl_msg.h"
 #include "cl_rmgmt.h"
+#include "cl_vmc.h"
 #include "vmr_common.h"
 #include "xsysmonpsv.h"
 
-uart_rtos_handle_t uart_log;
+#define XGQ_XQUEUE_LENGTH	8
+#define XGQ_XQUEUE_WAIT_MS	10
+/* Depth "number of words" of the stack. depth (64k) * sizeof(word) = total size (256k) */
+#define TASK_STACK_DEPTH 	0x10000
 
+/*
+ * VMR (Versal Management Runtime) design diagram.
+ *
+ * 1) VMR start diagram
+ * cl_main_task -+
+ *               |
+ *               +---> cl_platform_init
+ *               +---> cl_rmgmt_init
+ *               +---> cl_vmc_init
+ *               |
+ *               +---> cl_queue_create(xgq_programe)
+ *               +---> cl_queue_create(xgq_opcode)
+ *               +---> cl_queue_create(xgq_scfw)
+ *               |
+ *               +---> cl_task_create(xgq_receive)
+ *               +---> cl_task_create(xgq_program)
+ *               +---> cl_task_create(xgq_opcode)
+ *               +---> cl_task_create(vmc_sensors_monitor) //this one cannot be blocked, 100ms (producer)
+ *               +---> cl_task_create(vmc_sc_comms) //this one can block forever, platform dependet
+ *               |
+ *               +---> check_apu_is_ready
+ *               +---> fully started.
+ *
+ * 2) VMR communication diagram
+ * Host Driver ----> cl_xgq_receive task --+
+ *                                         |
+ *                   +----  xgq opcode   <-+
+ *                   |
+ *                   +----> cl_xgq_program queue -> cl_xgq_program task
+ *                   |      each request will be put into FIFO queue. Host Driver
+ *                   |      will use semaphore (1 resource) to exclusively send
+ *                   |      long standing operations in parallel. Including,
+ *                   |      PDI flash, xclbin download, APUPDI download, SCFW program.
+ *                   |
+ *                   +----> cl_xgq_opcode queue -> cl_xgq_opcode task
+ *                          request might be sent to FIFO queue at the same time.
+ *                          If requests need shared memory, it is protected by a
+ *                          semaphore. All requests should be done very quick,
+ *                          including clock config, firewall check, vmr_status_query etc.
+ *
+ * 3) VMR xgq alloc server init diagram
+ * cl_xgq_receive ---> vmr_xgq_init ---+
+ *                                     +---> xgq_alloc()
+ *                                     +---> init_vmr_status()
+ *                                     |     iowrite32 shared memory metadata
+ *                                     |
+ *                                     +---> vmr_status_service_start()
+ *                                           iowrite32 shared memory vmr is ready bit
+ *                                           Host Driver will wait till vmr is ready
+ *
+ * 4) Cocurrency handling
+ *    4.1) xgq receive is a single task, no race condition;
+ *    4.2) xgq program handles long standing request and exclusively keep shared memory
+ *         for data till one request is finished;
+ *    4.3) xgq opcode handles other quick requests. Those request may not or may reserve
+ *         the shared memory for log.
+ *    4.4) hardware monitor periodically collect sensor data from SC and cache it into
+ *         local cache. There is a lock (sdr_lock) to protect local cache update and
+ *         sensor data request.
+ */
+
+/*
+ * Global variable for sysmon.
+ * workaround: sysmon cannot be inited after vTaskSchedulerStart for 2022.1 release
+ * AI: find the root cause of this issue and add comments.
+ */
 XSysMonPsv InstancePtr;
 XScuGic IntcInst;
-SemaphoreHandle_t cl_logbuf_lock;
 
-struct task_handler {
-	tasks_register_t task_hdl;
-	char 		 *task_name;
-	int 		 task_dbg_index;
-};
+static TaskHandle_t cl_main_task_handle = NULL;
 
-static struct task_handler task_handlers[] = {
-	{CL_MSG_Launch, "Common Layer", CL_DBG_CLEAR},
-	{RMGMT_Launch, "Rmgmt Service", CL_DBG_DISABLE_RMGMT},
-	{VMC_Launch, "VMC Service", CL_DBG_DISABLE_VMC},
-};
+static TaskHandle_t cl_xgq_receive_handle = NULL;
+static TaskHandle_t cl_xgq_program_handle = NULL;
+static TaskHandle_t cl_xgq_opcode_handle = NULL;
+static TaskHandle_t cl_vmc_sensor_handle = NULL;
+static TaskHandle_t cl_vmc_sc_comms_handle = NULL;
+#ifdef VMC_DEBUG
+static TaskHandle_t cl_uart_demo_handle = NULL;
+#endif
+
+static QueueHandle_t cl_xgq_program_queue = NULL;
+static QueueHandle_t cl_xgq_opcode_queue = NULL;
+static QueueHandle_t cl_vmc_sc_queue = NULL;
 
 extern void vApplicationStackOverflowHook(TaskHandle_t xTask, char *pcTaskName)
 {
-	CL_ERR(APP_MAIN, "stack overflow %x %s\r\n", &xTask, (portCHAR *)pcTaskName);
+	VMR_ERR("stack overflow %x %s\r\n", &xTask, (portCHAR *)pcTaskName);
 	/* If the parameters have been corrupted then inspect pxCurrentTCB to
 	 * identify which task has overflowed its stack.
 	 */
 	for (;;) { }
 }
 
-u32 cl_check_clock_shutdown_status(void)
+struct cl_task_handle {
+	app_type_t	cl_task_type;
+	int (*cl_task_init)(void);
+	void (*cl_task_func)(void *task_args);
+	const char 	*cl_task_name;
+	void 		*cl_task_arg;
+	TaskHandle_t	*cl_task_handle;
+} task_handles[] = {
+	{APP_VMR, cl_xgq_receive_init, cl_xgq_receive_func,
+		"XGQ Receive", NULL, &cl_xgq_receive_handle},
+	{APP_VMR,  cl_xgq_program_init, cl_xgq_program_func,
+		"XGQ Program", NULL, &cl_xgq_program_handle},
+	{APP_VMR, cl_xgq_opcode_init, cl_xgq_opcode_func,
+		"XGQ Operation", NULL, &cl_xgq_opcode_handle},
+	{APP_VMC, cl_vmc_sensor_init, cl_vmc_sensor_func,
+		"Sensor Monitor", NULL, &cl_vmc_sensor_handle},
+	{APP_VMC, cl_vmc_sc_comms_init, cl_vmc_sc_comms_func,
+		"SC Common Handler", NULL, &cl_vmc_sc_comms_handle},
+#ifdef VMC_DEBUG
+	{APP_VMC, cl_uart_demo_init, cl_uart_demo_func,
+		"Uart Demo", NULL, &cl_uart_demo_handle},
+#endif
+};
+
+struct cl_queue_handle {
+	enum cl_queue_id cl_queue_qid;
+	const char	*cl_queue_name;
+	QueueHandle_t	*cl_queue_handle;
+} queue_handles[] = {
+	{CL_QUEUE_PROGRAM, "XGQ Program", &cl_xgq_program_queue},
+	{CL_QUEUE_OPCODE, "XGQ Opcode", &cl_xgq_opcode_queue},
+	{CL_QUEUE_SC, "SCFW", &cl_vmc_sc_queue},
+};
+
+/*
+ * all init work should be done in task_handle->cl_task_init()
+ * prior to create task and running.
+ */
+static int cl_task_create(struct cl_task_handle *task_handle)
 {
-	u32 shutdown_status = 0 ;
+	int ret = 0;
 
-	//offset to read shutdown status
-	shutdown_status = IO_SYNC_READ32(VMR_EP_UCS_CONTROL_STATUS_BASEADDR);
+	if (task_handle && task_handle->cl_task_init) {
+		ret = task_handle->cl_task_init();
+		if (ret)
+			return ret;
+	}
 
-	return (shutdown_status & SHUTDOWN_LATCHED_STATUS);
+	ret = xTaskCreate( task_handle->cl_task_func,
+			task_handle->cl_task_name,
+			TASK_STACK_DEPTH,
+			task_handle->cl_task_arg,
+			tskIDLE_PRIORITY + 1,
+			task_handle->cl_task_handle);
+	if (ret != pdPASS) {
+		VMR_ERR("Failed to create %s Task.", task_handle->cl_task_name);
+		return -EINVAL;
+	}
+
+	VMR_LOG("Successfully create %s Task.", task_handle->cl_task_name);
+	return 0;
 }
 
-void cl_system_pre_init(void)
+static int cl_queue_create(struct cl_queue_handle *queue_handle)
 {
-	/* Init flash device */
-	ospi_flash_init();
+	QueueHandle_t queueHandle = NULL;
+	
+	configASSERT(queue_handle->cl_queue_handle != NULL);
+	
+	queueHandle = xQueueCreate(XGQ_XQUEUE_LENGTH, sizeof(cl_msg_t)); 
+	if (queueHandle == NULL) {
+		VMR_ERR("Failed to create %s Queue", queue_handle->cl_queue_name);
+		return -EINVAL;
+	}
+	*(queue_handle->cl_queue_handle) = queueHandle;
 
-#ifndef VMR_BUILD_XRT_ONLY
-#ifdef VMC_DEBUG
-	/* Enable FreeRTOS Debug UART */
-	UART_RTOS_Debug_Enable(&uart_log);
-#endif
+	VMR_LOG("Successfully create %s Queue", queue_handle->cl_queue_name);
+	return 0;
+}
+
+int cl_send_to_queue(struct cl_msg *msg, enum cl_queue_id qid)
+{
+	for (int i = 0; i < ARRAY_SIZE(queue_handles); i++) {
+		if (queue_handles[i].cl_queue_qid == qid) {
+			if (xQueueSend(*(queue_handles[i].cl_queue_handle), msg,
+				pdMS_TO_TICKS(XGQ_XQUEUE_WAIT_MS)) == pdPASS) {
+				return 0;
+			}
+
+			VMR_ERR("failed to send msg %d to qid %d", msg->hdr.cid, qid);
+			return -EIO;
+		}
+	}
+
+	VMR_ERR("unhandled qid %d", qid);
+	return -EINVAL;
+}
+
+int cl_recv_from_queue(struct cl_msg *msg, enum cl_queue_id qid)
+{
+	for (int i = 0; i < ARRAY_SIZE(queue_handles); i++) {
+		if (queue_handles[i].cl_queue_qid == qid) {
+			xQueueReceive(*(queue_handles[i].cl_queue_handle), msg, portMAX_DELAY);
+			return 0;
+		}
+	}
+
+	VMR_ERR("unhandled qid %d", qid);
+	return -EINVAL;
+}
+
+int cl_recv_from_queue_nowait(struct cl_msg *msg, enum cl_queue_id qid)
+{
+	for (int i = 0; i < ARRAY_SIZE(queue_handles); i++) {
+		if (queue_handles[i].cl_queue_qid == qid) {
+			if (xQueueReceive(*(queue_handles[i].cl_queue_handle), msg,
+				(TickType_t)0) == pdPASS) {
+				return 0;
+			}
+
+			return -ENOENT;
+		}
+	}
+
+	VMR_ERR("unhandled qid %d", qid);
+	return -EINVAL;
+}
+
+static int cl_main_task_init(void)
+{
+	cl_log_init();
+	VMR_WARN("=== VMR Service Starting ... ===");
 
 	if (XSysMonPsv_Init(&InstancePtr, &IntcInst) != XST_SUCCESS)
 	{
-		CL_LOG(APP_VMC, "Failed to init sysmon \n\r");
+		VMR_WARN("Failed to init sysmon \n\r");
 	}
-#endif
-
+	return 0;
 }
 
-u32 cl_rpu_status_query(struct cl_msg *msg, char *buf, u32 size)
+static int cl_platform_init()
 {
-	u32 count = 0;
-
-#ifdef VMR_BUILD_XRT_ONLY
-	CL_LOG(APP_MAIN, "Build flags: -XRT");
-	count = snprintf(buf, size, "Build flags: -XRT\n");
-#else
-	CL_LOG(APP_MAIN, "Build flags: default full build");
-	count = snprintf(buf, size, "Build flags: default full build\n");
-#endif
-
-	if (count > size) {
-		CL_ERR(APP_MAIN, "msg is truncated");
-		return size;
-	}
-
-#ifdef _VMR_VERSION_
-	CL_LOG(APP_MAIN, "vitis version: %s", VMR_TOOL_VERSION);
-	CL_LOG(APP_MAIN, "git hash: %s", VMR_GIT_HASH);
-	CL_LOG(APP_MAIN, "git branch: %s", VMR_GIT_BRANCH);
-	CL_LOG(APP_MAIN, "git hash date: %s", VMR_GIT_HASH_DATE);
-	CL_LOG(APP_MAIN, "vmr build date: %s", VMR_BUILD_VERSION_DATE);
-	CL_LOG(APP_MAIN, "vmr build version: %s", VMR_BUILD_VERSION);
-
-	count += snprintf(buf + count, size - count,
-		"vitis version: %s\ngit hash: %s\ngit branch: %s\ngit hash date: %s\n",
-		VMR_TOOL_VERSION, VMR_GIT_HASH, VMR_GIT_BRANCH, VMR_GIT_HASH_DATE);
-	if (count > size) {
-		CL_ERR(APP_MAIN, "msg is truncated");
-		return size;
-	}
-
-	count += snprintf(buf + count, size - count,
-		"vmr build date: %s\nvmr build version: %s\n",
-		VMR_BUILD_VERSION_DATE, VMR_BUILD_VERSION);
-	if (count > size) {
-		CL_ERR(APP_MAIN, "msg is truncated");
-		return size;
-	}
-#endif
-
-	return count;
+	return 0;
 }
 
-u32 cl_apu_status_query(struct cl_msg *msg, char *buf, u32 size)
+static void cl_main_task_func(void *task_args)
 {
-	u32 count = 0;
+	/*
+	 * TODO for multi-platform support.
+	 */
+	(void) cl_platform_init();
 
-	//cl_xgq_apu_identify(msg);
-	count = snprintf(buf, size, "is PS ready: %d\n", cl_xgq_apu_is_ready());
+	/*
+	 * If rmgmt is not ready, cl_rmgmt_is_ready will return false.
+	 * We still continue to start xgq receiving tasks so that host driver
+	 * can query debugging logs.
+	 */
+	(void) cl_rmgmt_init();
 
-	return count;
-}
+	/*
+	 * If vmc is not ready, cl_vmc_is_ready will return false.
+	 * We stop creating vmc task and report error via xgq receiving task.
+	 * TODO: In the future, we create and pause vmc tasks, then retry till vmc becomes ready.
+	 */
+	(void) cl_vmc_init();
 
-int32_t VMC_SCFW_Program_Progress(void);
+	/*
+	 * Make sure queue is created prior to being used.
+         */
+	for (int i = 0; i < ARRAY_SIZE(queue_handles); i++) {
+		configASSERT(cl_queue_create(&queue_handles[i]) == 0);
+	}
 
-int flash_progress() {
-	return VMC_SCFW_Program_Progress() ?
-		VMC_SCFW_Program_Progress() : ospi_flash_progress();
-}
-
-static TaskHandle_t vmrMainTask_handle = NULL;
-static void vmrMainTask(void *task_params)
-{
-	cl_msg_t msg = { 0 };
-	u8 debug_type = CL_DBG_CLEAR;
-
-	cl_rmgmt_fpt_get_debug_type(&msg, &debug_type);
-
-	for (int i = 0; i < ARRAY_SIZE(task_handlers); i++) {
-		if (debug_type != CL_DBG_CLEAR &&
-		    task_handlers[i].task_dbg_index == debug_type) {
-			CL_ERR(APP_MAIN, "task [ %s ] - skipped", task_handlers[i].task_name);
+	for (int i = 0; i < ARRAY_SIZE(task_handles); i++) {
+		if (task_handles[i].cl_task_type == APP_VMC &&
+			cl_vmc_is_ready() == false) {
+			VMR_ERR("vmc init failed, skip create vmc tasks");
 			continue;
 		}
-		CL_LOG(APP_MAIN, "task [ %s ] - starting", task_handlers[i].task_name);
-		configASSERT(task_handlers[i].task_hdl() == 0);
+		configASSERT(cl_task_create(&task_handles[i]) == 0);
 	}
 
 
-	CL_LOG(APP_MAIN, "main task finished job.");
+	while (1) {
+		/* check APU status every second */
+		vTaskDelay(pdMS_TO_TICKS(1000));
+
+		if (cl_rmgmt_apu_channel_probe() == 0)
+			break;
+	}
+
+	VMR_LOG("\r\n=== VMR Services fully started. ===");
 	vTaskDelete(NULL);
 }
 
 int main( void )
 {
-	cl_logbuf_lock = xSemaphoreCreateMutex();
-	configASSERT(cl_logbuf_lock != NULL);
+	struct cl_task_handle mainTask = {
+		.cl_task_init = cl_main_task_init,
+		.cl_task_func = cl_main_task_func,
+		.cl_task_name = "Main Task",
+		.cl_task_arg = NULL,
+		.cl_task_handle = &cl_main_task_handle,
+	};
 
-	CL_LOG(APP_MAIN, "\r\n=== VMR Starts ===");
-
-	cl_system_pre_init();
-
-	if (xTaskCreate( vmrMainTask,
-			(const char *) "VMR Main Task",
-			TASK_STACK_DEPTH,
-			NULL,
-			tskIDLE_PRIORITY + 1,
-			&vmrMainTask_handle) != pdPASS) {
-		CL_ERR(APP_MAIN, "Failed to create VMR Main Task");
+	if (cl_task_create(&mainTask))
 		return -1;
-	}
 
 	vTaskStartScheduler();
 
 	/* Should never go here unless there is not enough memory */
-	CL_LOG(APP_MAIN, "not enough memory, exit.");
+	VMR_LOG("not enough memory, exit.");
 }
 

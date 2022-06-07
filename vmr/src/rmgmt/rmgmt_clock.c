@@ -1,5 +1,5 @@
 /******************************************************************************
-* Copyright (C) 2020 Xilinx, Inc.  All rights reserved.
+* Copyright (C) 2020-2022 Xilinx, Inc.  All rights reserved.
 * SPDX-License-Identifier: MIT
 *******************************************************************************/
 
@@ -7,12 +7,6 @@
 #include "cl_msg.h"
 #include "rmgmt_clock.h"
 #include "rmgmt_common.h"
-
-#define CLOCK_LOG(fmt, arg...) \
-	CL_LOG(APP_RMGMT, fmt, ##arg)
-#define CLOCK_DBG(fmt, arg...) \
-	CL_DBG(APP_RMGMT, fmt, ##arg)
-
 
 u32 clock_wiz_bases[] = {
 	VMR_EP_ACLK_KERNEL_0,
@@ -39,7 +33,7 @@ static inline int clock_wiz_busy(int idx, int cycle, int interval)
                 val = IO_SYNC_READ32(clock_wiz_bases[idx] + OCL_CLKWIZ_STATUS_OFFSET);
         }
         if (val != 1) {
-                CLOCK_LOG("clockwiz(%d) is (%u) busy after %d ms",
+                VMR_WARN("clockwiz(%d) is (%u) busy after %d ms",
                     idx, val, cycle * interval);
                 return -1;
         }
@@ -82,7 +76,7 @@ static int rmgmt_clock_freq_scaling_impl(struct cl_msg *msg)
 		if (freq == 0)
 			continue;
 
-		CLOCK_LOG("Clock: %d, New: %d Mhz", i, freq);
+		VMR_LOG("Clock: %d, New: %d Mhz", i, freq);
 
                 err = clock_wiz_busy(i, 20, 50);
                 if (err)
@@ -160,7 +154,7 @@ static int rmgmt_clock_freq_scaling_impl(struct cl_msg *msg)
                         break;
         }
 
-        CLOCK_LOG("num_clock %d, returns %d", num_clock, err);
+        VMR_LOG("num_clock %d, returns %d", num_clock, err);
         return err;
 }
 
@@ -209,6 +203,6 @@ uint32_t rmgmt_clock_get_freq(int idx, enum clock_ip ip)
 		}
 	}
 
-	CLOCK_DBG("idx %d freq %d", idx, freq);
+	VMR_DBG("idx %d freq %d", idx, freq);
 	return freq;
 }

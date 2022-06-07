@@ -1,5 +1,5 @@
 /******************************************************************************
-* Copyright (C) 2018 - 2020 Xilinx, Inc.  All rights reserved.
+* Copyright (C) 2018 - 2022 Xilinx, Inc.  All rights reserved.
 * SPDX-License-Identifier: MIT
 *******************************************************************************/
 
@@ -53,15 +53,6 @@
 #include "vmr_common.h"
 
 #include "xospipsv_flash_config.h"
-
-#define OSPI_ERR(fmt, arg...) \
-	CL_ERR(APP_MAIN, fmt, ##arg)
-#define OSPI_WARN(fmt, arg...) \
-	CL_ERR(APP_MAIN, fmt, ##arg)
-#define OSPI_LOG(fmt, arg...) \
-	CL_LOG(APP_MAIN, fmt, ##arg)
-#define OSPI_DBG(fmt, arg...) \
-	CL_DBG(APP_MAIN, fmt, ##arg)
 
 /* default ospi device */
 #define OSPIPSV_DEVICE_ID		XPAR_XOSPIPSV_0_DEVICE_ID /* from xparameters.h */
@@ -169,13 +160,13 @@ static int pollTransfer(XOspiPsv *OspiPsvPtr, XOspiPsv_Msg *flashMsg) {
 
 	Status = XOspiPsv_PollTransfer(OspiPsvPtr, flashMsg);
 	while (Status != XST_SUCCESS && i++ < 10) {
-		xil_printf("retry...%d\r\n", i);
+		VMR_LOG("retry...%d", i);
 		vTaskDelay( x1second );
 		Status = XOspiPsv_PollTransfer(OspiPsvPtr, flashMsg);
 	}
 
 	if (Status != 0)
-		xil_printf("retry failed\r\n");
+		VMR_ERR("retry failed");
 	return Status;
 }
 
@@ -434,7 +425,7 @@ int FlashIoWrite(XOspiPsv *OspiPsvPtr, u32 Address, u32 ByteCount,
 
 		Status = XOspiPsv_PollTransfer(OspiPsvPtr, &FlashMsg);
 		if (Status != XST_SUCCESS) {
-			xil_printf("poll transfer0 failed\r\n");
+			VMR_ERR("poll transfer0 failed");
 			return XST_FAILURE;
 		}
 
@@ -462,7 +453,7 @@ int FlashIoWrite(XOspiPsv *OspiPsvPtr, u32 Address, u32 ByteCount,
 		}
 		Status = XOspiPsv_PollTransfer(OspiPsvPtr, &FlashMsg);
 		if (Status != XST_SUCCESS) {
-			xil_printf("poll transfer1 failed\r\n");
+			VMR_ERR("poll transfer1 failed");
 			return XST_FAILURE;
 		}
 
@@ -488,7 +479,7 @@ int FlashIoWrite(XOspiPsv *OspiPsvPtr, u32 Address, u32 ByteCount,
 
 			Status = XOspiPsv_PollTransfer(OspiPsvPtr, &FlashMsg);
 			if (Status != XST_SUCCESS) {
-				xil_printf("poll transfer n failed\r\n");
+				VMR_ERR("poll transfer n failed");
 				return XST_FAILURE;
 			}
 
@@ -747,7 +738,7 @@ int FlashRead(XOspiPsv *OspiPsvPtr, u32 Address, u32 ByteCount,
 
 		Status = XOspiPsv_PollTransfer(OspiPsvPtr, &FlashMsg);
 		if (Status != XST_SUCCESS) {
-			xil_printf("FlashRead fail: %d\r\n", Status);
+			VMR_ERR("FlashRead fail: %d", Status);
 			return XST_FAILURE;
 		}
 
@@ -1294,13 +1285,13 @@ int ospi_flash_init()
 
 	PAGE_SIZE = (Flash_Config_Table[FCTIndex].PageSize);
 	if (PAGE_SIZE != OSPI_VERSAL_PAGESIZE) {
-		OSPI_ERR("ERR: page size is: %d, expected: %d\r\n",
+		VMR_ERR("ERR: page size is: %d, expected: %d",
 			PAGE_SIZE, OSPI_VERSAL_PAGESIZE);
 		return XST_FAILURE;
 	}
 
 	OspiSectorSize =  (Flash_Config_Table[FCTIndex]).SectSize;
-	OSPI_LOG("DONE: FCTINdex %d, OSPI page size %d, sector size %d",
+	VMR_LOG("DONE: FCTINdex %d, OSPI page size %d, sector size %d",
 		FCTIndex, OSPI_VERSAL_PAGESIZE, OspiSectorSize);
 
 	return XST_SUCCESS;
@@ -1313,7 +1304,7 @@ static inline u32 getBaseAddress(flash_area_t area) {
 	case (CL_FLASH_APU) :
 		return APU_PDI_ADDRESS;
 	default:
-		OSPI_LOG("unknown flash area %d, fail.", area);
+		VMR_ERR("unknown flash area %d, fail.", area);
 		break;
 	}
 
@@ -1328,16 +1319,16 @@ int ospi_flash_read(flash_area_t area, u8 *buffer, u32 offset, u32 len)
 	baseAddress += offset;
 	XOspiPsv *OspiPsvInstancePtr = &OspiPsvInstance;
 
-	OSPI_DBG("0x%x len %d", baseAddress, len);
+	VMR_DBG("0x%x len %d", baseAddress, len);
 
 	bzero(buffer, len);
 	Status = FlashRead(OspiPsvInstancePtr, baseAddress, len, CmdBfr, buffer);
 	if (Status != XST_SUCCESS) {
-		OSPI_ERR("ERR: Read failed:%d\r\n", Status);
+		VMR_ERR("ERR: Read failed:%d", Status);
 		return XST_FAILURE;
 	}
 
-	OSPI_DBG("done");
+	VMR_DBG("done");
 	return 0;
 }
 
@@ -1356,29 +1347,29 @@ int ospi_flash_write(flash_area_t area, u8 *WriteBuffer, u32 offset, u32 len)
 	baseAddress += offset;
 	XOspiPsv *OspiPsvInstancePtr = &OspiPsvInstance;
 
-	OSPI_DBG("0x%x, len %d", baseAddress, len);
+	VMR_DBG("0x%x, len %d", baseAddress, len);
 
 	PAGE_COUNT = len / PAGE_SIZE;
 	if (len % PAGE_SIZE) {
 		PAGE_COUNT++;
-		OSPI_WARN("len %d is not page %d aligned", len, PAGE_SIZE);
+		VMR_WARN("len %d is not page %d aligned", len, PAGE_SIZE);
 
 	}
 	if (offset % PAGE_SIZE) {
-		OSPI_WARN("offset %d is not page %d aligned", offset, PAGE_SIZE);
+		VMR_WARN("offset %d is not page %d aligned", offset, PAGE_SIZE);
 	}
 
-	OSPI_DBG("Flashing... Page Count: %d, PageSize %d", PAGE_COUNT, PAGE_SIZE);
+	VMR_DBG("Flashing... Page Count: %d, PageSize %d", PAGE_COUNT, PAGE_SIZE);
 
 	/* Write first, then read back and verify */
 	if (XOspiPsv_GetOptions(OspiPsvInstancePtr) == XOSPIPSV_DAC_EN_OPTION) {
-		OSPI_DBG("WriteCmd: 0x%x \n\r", (u8)(Flash_Config_Table[FCTIndex].WriteCmd >> 8));
+		VMR_DBG("WriteCmd: 0x%x \n\r", (u8)(Flash_Config_Table[FCTIndex].WriteCmd >> 8));
 		Status = FlashLinearWrite(OspiPsvInstancePtr, baseAddress,
 		(Flash_Config_Table[FCTIndex].PageSize * PAGE_COUNT), WriteBuffer);
 		if (Status != XST_SUCCESS)
 			return XST_FAILURE;
 	} else {
-		OSPI_DBG("WriteCmd: 0x%x \n\r", (u8)Flash_Config_Table[FCTIndex].WriteCmd);
+		VMR_DBG("WriteCmd: 0x%x \n\r", (u8)Flash_Config_Table[FCTIndex].WriteCmd);
 		for (Page = 0; Page < PAGE_COUNT; Page++) {
 			u32 write_offset = (Page * Flash_Config_Table[FCTIndex].PageSize);
 
@@ -1390,14 +1381,14 @@ int ospi_flash_write(flash_area_t area, u8 *WriteBuffer, u32 offset, u32 len)
 			Status = FlashIoWrite(OspiPsvInstancePtr, baseAddress + write_offset,
 				((Flash_Config_Table[FCTIndex].PageSize)), WriteBuffer + write_offset);
 			if (Status != XST_SUCCESS) {
-				OSPI_ERR("ERR: write failed: %d\r\n", Status);
+				VMR_ERR("ERR: write failed: %d", Status);
 				return XST_FAILURE;
 			}
 		}
 	}
 
 	/* read back: check some pages numbers */
-	OSPI_DBG("write done. read back to verify.");
+	VMR_DBG("write done. read back to verify.");
 	bzero(ReadBuffer, sizeof (ReadBuffer));
 	for (Count = 0; Count < len; Count += PAGE_SIZE ) {
 		if (Count != 0 && (Count % (PAGE_COUNT / 10)))
@@ -1406,33 +1397,37 @@ int ospi_flash_write(flash_area_t area, u8 *WriteBuffer, u32 offset, u32 len)
 		Status = FlashRead(OspiPsvInstancePtr, baseAddress + Count, PAGE_SIZE,
 			CmdBfr, ReadBuffer);
 		if (Status != XST_SUCCESS) {
-			OSPI_ERR("ERR: Read failed:%d", Status);
+			VMR_ERR("ERR: Read failed:%d", Status);
 			return XST_FAILURE;
 		}
 		
 		for (int i = 0; i < PAGE_SIZE; i++) {
+			int max_idx = 16;
 			if (*((u32 *)ReadBuffer) != -1 ||
 			    (Count + i) >= len ||
 			    ReadBuffer[i] == WriteBuffer[Count+i])
 				continue;
 
-			for (int idx = 0; idx < 16; idx++) {
-				OSPI_LOG("%02x ", ReadBuffer[idx]);
+			/*
+			 * When mis-match only compare the first 16 bytes
+			 */
+			for (int idx = 0; idx < max_idx; idx++) {
+				VMR_LOG("%02x ", ReadBuffer[idx]);
 			}
-			OSPI_ERR(" <= data in ospi");
-			for (int idx = 0; idx < 16; idx++) {
-				OSPI_LOG("%02x ", WriteBuffer[Count+idx]);
+			VMR_ERR(" <= data in ospi");
+			for (int idx = 0; idx < max_idx; idx++) {
+				VMR_LOG("%02x ", WriteBuffer[Count+idx]);
 			}
-			OSPI_ERR(" <= data from pdi");
+			VMR_ERR(" <= data from pdi");
 
-			OSPI_ERR("mis-match offset: %d, read 0x%x: pdi 0x%x",
+			VMR_ERR("mis-match offset: %d, read 0x%x: pdi 0x%x",
 				Count+i, ReadBuffer[i], WriteBuffer[Count+i]);
 			return XST_FAILURE;
 		}
 	}
 
 	ospi_flash_percentage = 100;
-	OSPI_DBG("done.");
+	VMR_DBG("done.");
 	return 0;
 }
 
@@ -1446,12 +1441,12 @@ int ospi_flash_erase(flash_area_t area, u32 offset, u32 len)
 
 
 	if (baseAddress & OSPI_VERSAL_PAGESIZE) {
-		OSPI_WARN("base address is not %d aligned", OSPI_VERSAL_PAGESIZE); 
+		VMR_WARN("base address is not %d aligned", OSPI_VERSAL_PAGESIZE); 
 	}
 
 	Status = FlashErase(OspiPsvInstancePtr, baseAddress, len, CmdBfr);
 
-	OSPI_LOG("0x%x, len: %d, ret: %d", baseAddress, len, Status);
+	VMR_LOG("0x%x, len: %d, ret: %d", baseAddress, len, Status);
 	return Status;
 }
 
@@ -1462,7 +1457,7 @@ int ospi_flash_copy(flash_area_t area, u32 src, u32 tgt, u32 len)
 	u32 idx = 0;
 	int ret = 0;
 
-	OSPI_DBG("src 0x%x, tgt 0x%x. start", src, tgt);
+	VMR_DBG("src 0x%x, tgt 0x%x. start", src, tgt);
 
 	ospi_flash_percentage = 0;
 	/* copy enough (len + 1) page size from srouce to target */
@@ -1479,7 +1474,7 @@ int ospi_flash_copy(flash_area_t area, u32 src, u32 tgt, u32 len)
 	}
 
 	ospi_flash_percentage = 100;
-	OSPI_DBG("src 0x%x, tgt 0x%x. done %d", src, tgt, ret);
+	VMR_DBG("src 0x%x, tgt 0x%x. done %d", src, tgt, ret);
 	return ret;
 }
 
@@ -1499,7 +1494,7 @@ int ospi_flash_safe_write(flash_area_t area, u8 *WriteBuffer, u32 offset, u32 le
 	u32 last_sector_addr = 0;
 
 	if (area != CL_FLASH_BOOT) {
-		OSPI_ERR("unsupported flash area type %d", area);
+		VMR_ERR("unsupported flash area type %d", area);
 		return -EINVAL;
 	}
 
@@ -1507,7 +1502,7 @@ int ospi_flash_safe_write(flash_area_t area, u8 *WriteBuffer, u32 offset, u32 le
 	 * Check offset is page aligned
 	 */
 	if (offset & OSPI_VERSAL_PAGESIZE) {
-		OSPI_ERR("cannot write on not page %s size aligned address 0x%x",
+		VMR_ERR("cannot write on not page %s size aligned address 0x%x",
 			OSPI_VERSAL_PAGESIZE, offset);
 		return -EINVAL;
 	}
@@ -1518,11 +1513,11 @@ int ospi_flash_safe_write(flash_area_t area, u8 *WriteBuffer, u32 offset, u32 le
 	 * so for last erase, we read whole sector back, update data, erase and rewrite
 	 */
 	if (len % OspiSectorSize) {
-		OSPI_WARN("len %d is not OSPI Sector %d aligned", len, OspiSectorSize);
+		VMR_WARN("len %d is not OSPI Sector %d aligned", len, OspiSectorSize);
 
 		SectorBuffer = pvPortMalloc(OspiSectorSize);
 		if (SectorBuffer == NULL) {
-			OSPI_ERR("no enable memory from pvPortMalloc");
+			VMR_ERR("no enable memory from pvPortMalloc");
 			return -ENOMEM;
 		}
 		
@@ -1535,7 +1530,7 @@ int ospi_flash_safe_write(flash_area_t area, u8 *WriteBuffer, u32 offset, u32 le
 		Cl_SecureMemcpy(SectorBuffer, OspiSectorSize,
 				WriteBuffer + last_sector_off, len % OspiSectorSize);
 
-		OSPI_WARN("cached one sector %d data start from offset 0x%x",
+		VMR_WARN("cached one sector %d data start from offset 0x%x",
 			OspiSectorSize, last_sector_addr);
 	}
 
@@ -1549,7 +1544,7 @@ int ospi_flash_safe_write(flash_area_t area, u8 *WriteBuffer, u32 offset, u32 le
 		goto done;
 
 	if (SectorBuffer) {
-		OSPI_WARN("rewrite cached one sector data");
+		VMR_WARN("rewrite cached one sector data");
 		ret = ospi_flash_write(CL_FLASH_BOOT, SectorBuffer, last_sector_addr, OspiSectorSize);
 		if (ret)
 			goto done;
@@ -1560,7 +1555,7 @@ done:
 		SectorBuffer = NULL;
 	}
 
-	OSPI_LOG("done");
+	VMR_LOG("done");
 	return ret;
 }
 

@@ -43,7 +43,7 @@ XIicPs IicInstance[3] = {
 
 -------------------------------------------------------------------------------------------------*/
 
-u8 I2CInit(void)
+u8 cl_I2CInit(void)
 {
     xil_printf("Initialize I2C0...");
     XIicPs_CfgInitialize(&IicInstance[0], &engines[0],engines[0].BaseAddress);

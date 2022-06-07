@@ -23,17 +23,22 @@ struct cl_msg_dbg {
 	u32	tick;
 	char	msg_dbg_buf[CL_MSG_DBG_MAX_SIZE];
 };
-
-/* semaphore lock should be inited by cl_main.c */
-extern SemaphoreHandle_t cl_logbuf_lock;
-
-static uint8_t log_level_gl = CL_LOG_LEVEL_LOG;
-u32 cl_msg_idx = 0;
 struct cl_msg_dbg msg_dbg_log[CL_MSG_DBG_MAX_RECS];
 
-char buf[MAX_LOG_LEN] = { 0 };
-char log_buf[MAX_BUF_LEN] = { 0 };
-struct vmr_shared_mem mem = { 0 };
+static uint8_t log_level_gl = CL_LOG_LEVEL_LOG;
+static u32 cl_msg_idx = 0;
+static char buf[MAX_LOG_LEN] = { 0 };
+static char log_buf[MAX_BUF_LEN] = { 0 };
+static struct vmr_shared_mem mem = { 0 };
+
+static SemaphoreHandle_t cl_logbuf_lock = NULL;
+
+void cl_log_init()
+{
+	cl_logbuf_lock = xSemaphoreCreateMutex();
+	configASSERT(cl_logbuf_lock != NULL);
+	VMR_WARN("done");
+}
 
 void cl_loglevel_set(uint8_t log_level)
 {

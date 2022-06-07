@@ -12,7 +12,7 @@ rmgmt_xclbin_get_section_hdr(const struct axlf *xclbin,
 {
 	int i = 0;
 
-	RMGMT_DBG("looking for kind %d \r\n", kind);
+	VMR_DBG("looking for kind %d \r\n", kind);
 
 	/* Sanity check. */
 	if (xclbin->m_header.m_numSections > XCLBIN_MAX_NUM_SECTION)
@@ -20,12 +20,12 @@ rmgmt_xclbin_get_section_hdr(const struct axlf *xclbin,
 
 	for (i = 0; i < xclbin->m_header.m_numSections; i++) {
 		if (xclbin->m_sections[i].m_sectionKind == kind) {
-			RMGMT_DBG("found kind[%d]= %d\r\n", i, kind);
+			VMR_DBG("found kind[%d]= %d\r\n", i, kind);
 			return &xclbin->m_sections[i];
 		}
 	}
 
-	RMGMT_DBG("did not find kind %d from %d sections\r\n",
+	VMR_DBG("did not find kind %d from %d sections\r\n",
 		kind, xclbin->m_header.m_numSections);
 	return NULL;
 }
@@ -46,7 +46,7 @@ rmgmt_xclbin_section_info(const struct axlf *xclbin, enum axlf_section_kind kind
         uint64_t xclbin_len;
         int err = 0;
 
-        RMGMT_DBG("magic %s\r\n", xclbin->m_magic);
+        VMR_DBG("magic %s\r\n", xclbin->m_magic);
 
         memHeader = rmgmt_xclbin_get_section_hdr(xclbin, kind);
         if (!memHeader)
@@ -55,16 +55,16 @@ rmgmt_xclbin_section_info(const struct axlf *xclbin, enum axlf_section_kind kind
         xclbin_len = xclbin->m_header.m_length;
         err = rmgmt_xclbin_check_section_hdr(memHeader, xclbin_len);
         if (err) {
-        	RMGMT_DBG("check section header failed, len%d\r\n", xclbin_len);
+        	VMR_DBG("check section header failed, len%d\r\n", xclbin_len);
         	return err;
         }
 
         *offset = memHeader->m_sectionOffset;
         *size = memHeader->m_sectionSize;
 
-	RMGMT_LOG("%lld, %lld\r\n", memHeader->m_sectionOffset, memHeader->m_sectionSize);
+	VMR_LOG("%lld, %lld\r\n", memHeader->m_sectionOffset, memHeader->m_sectionSize);
 
-        RMGMT_DBG("Found section offset: %lld, size: %lld\r\n", *offset, *size);
+        VMR_DBG("Found section offset: %lld, size: %lld\r\n", *offset, *size);
         return 0;
 }
 
@@ -83,7 +83,7 @@ int rmgmt_xclbin_get_section(const struct axlf *xclbin, enum axlf_section_kind k
 
         section = malloc(size);
         if (section == NULL) {
-        	RMGMT_DBG("get section failed, no memory size%lld\r\n", size);
+        	VMR_DBG("get section failed, no memory size%lld\r\n", size);
                 return -1;
 	}
 

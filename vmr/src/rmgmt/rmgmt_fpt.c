@@ -1,5 +1,5 @@
 /******************************************************************************
-* Copyright (C) 2020 Xilinx, Inc.  All rights reserved.
+* Copyright (C) 2020-2022 Xilinx, Inc.  All rights reserved.
 * SPDX-License-Identifier: MIT
 *******************************************************************************/
 
@@ -13,6 +13,7 @@
 #include "cl_io.h"
 #include "cl_msg.h"
 #include "cl_flash.h"
+#include "cl_rmgmt.h"
 
 static inline bool rmgmt_boot_has_fpt(struct cl_msg *msg)
 {
@@ -47,7 +48,7 @@ static u32 rmgmt_fpt_pdi_get_base(struct cl_msg *msg, int fpt_type)
 	case FPT_TYPE_PDIMETA_BACKUP:
 		return msg->multiboot_payload.pdimeta_backup_offset;
 	default:
-		RMGMT_ERR("Warn: unhandled fpt_type 0x%x", fpt_type);
+		VMR_ERR("Warn: unhandled fpt_type 0x%x", fpt_type);
 		break;
 	}
 
@@ -60,11 +61,11 @@ static int rmgmt_fpt_pdi_meta_erase(struct cl_msg *msg, int fpt_type)
 	int ret = 0;
 
 	if (base_addr == 0) {
-		RMGMT_ERR("base addr of fpt_type 0x%x cannot be 0", fpt_type);
+		VMR_ERR("base addr of fpt_type 0x%x cannot be 0", fpt_type);
 		return -1;
 	}
 
-	RMGMT_LOG("reseting 0x%x metdata", fpt_type); 
+	VMR_LOG("reseting 0x%x metdata", fpt_type); 
 
 	ret = ospi_flash_erase(CL_FLASH_BOOT, base_addr, OSPI_VERSAL_PAGESIZE);
 
@@ -79,11 +80,11 @@ static int rmgmt_fpt_pdi_meta_get(struct cl_msg *msg, int fpt_type,
 	int ret = 0;
 
 	if (base_addr == 0) {
-		RMGMT_ERR("base addr of fpt_type 0x%x cannot be 0", fpt_type);
+		VMR_ERR("base addr of fpt_type 0x%x cannot be 0", fpt_type);
 		return -1;
 	}
 
-	RMGMT_LOG("fpt_type 0x%x", fpt_type);
+	VMR_LOG("fpt_type 0x%x", fpt_type);
 
 	ret = ospi_flash_read(CL_FLASH_BOOT, (u8 *)buf, base_addr, sizeof(buf));
 	if (ret)
@@ -102,11 +103,11 @@ static int rmgmt_fpt_pdi_meta_set(struct cl_msg *msg, int fpt_type,
 	int ret = 0;
 
 	if (base_addr == 0) {
-		RMGMT_ERR("base addr of fpt_type 0x%x cannot be 0", fpt_type);
+		VMR_ERR("base addr of fpt_type 0x%x cannot be 0", fpt_type);
 		return -1;
 	}
 
-	RMGMT_LOG("fpt_type 0x%x", fpt_type);
+	VMR_LOG("fpt_type 0x%x", fpt_type);
 
 	memcpy(buf, meta, sizeof(*meta));
 
@@ -128,11 +129,11 @@ void rmgmt_extension_fpt_query(struct cl_msg *msg)
 
 	msg->multiboot_payload.has_extfpt = (hdr.fpt_magic == FPT_MAGIC) ? 1 : 0;
 
-	RMGMT_DBG("magic %x fpt_magic %x", hdr.fpt_magic, FPT_MAGIC);
-	RMGMT_DBG("version %x", hdr.fpt_version);
-	RMGMT_DBG("hdr size %x", hdr.fpt_header_size);
-	RMGMT_DBG("entry size %x", hdr.fpt_entry_size);
-	RMGMT_DBG("num entries %x", hdr.fpt_num_entries);
+	VMR_DBG("magic %x fpt_magic %x", hdr.fpt_magic, FPT_MAGIC);
+	VMR_DBG("version %x", hdr.fpt_version);
+	VMR_DBG("hdr size %x", hdr.fpt_header_size);
+	VMR_DBG("entry size %x", hdr.fpt_entry_size);
+	VMR_DBG("num entries %x", hdr.fpt_num_entries);
 
 	if (!msg->multiboot_payload.has_extfpt)
 		return;
@@ -159,10 +160,10 @@ void rmgmt_extension_fpt_query(struct cl_msg *msg)
 
 		}
 		
-		RMGMT_DBG("type %x", entry.partition_type);
-		RMGMT_DBG("base %x", entry.partition_base_addr);
-		RMGMT_DBG("size %x", entry.partition_size);
-		RMGMT_DBG("flags %x", entry.partition_flags);
+		VMR_DBG("type %x", entry.partition_type);
+		VMR_DBG("base %x", entry.partition_base_addr);
+		VMR_DBG("size %x", entry.partition_size);
+		VMR_DBG("flags %x", entry.partition_flags);
 	}
 }
 
@@ -171,7 +172,7 @@ int rmgmt_fpt_get_xsabin(struct cl_msg *msg, u32 *offset, u32 *size)
 	rmgmt_extension_fpt_query(msg);
 
 	if (!msg->multiboot_payload.has_ext_xsabin) {
-		RMGMT_ERR("no xsabin metadata");
+		VMR_ERR("no xsabin metadata");
 		return -1;
 	}
 
@@ -185,7 +186,7 @@ int rmgmt_fpt_get_systemdtb(struct cl_msg *msg, u32 *offset, u32 *size)
 	rmgmt_extension_fpt_query(msg);
 
 	if (!msg->multiboot_payload.has_ext_sysdtb) {
-		RMGMT_ERR("no system.dtb metadata");
+		VMR_ERR("no system.dtb metadata");
 		return -1;
 	}
 
@@ -211,14 +212,14 @@ void rmgmt_boot_fpt_query(struct cl_msg *msg)
 
 	msg->multiboot_payload.has_fpt = (hdr.fpt_magic == FPT_MAGIC) ? 1 : 0;
 
-	RMGMT_DBG("magic %x fpt_magic %x", hdr.fpt_magic, FPT_MAGIC);
-	RMGMT_DBG("version %x", hdr.fpt_version);
-	RMGMT_DBG("hdr size %x", hdr.fpt_header_size);
-	RMGMT_DBG("entry size %x", hdr.fpt_entry_size);
-	RMGMT_DBG("num entries %x", hdr.fpt_num_entries);
+	VMR_DBG("magic %x fpt_magic %x", hdr.fpt_magic, FPT_MAGIC);
+	VMR_DBG("version %x", hdr.fpt_version);
+	VMR_DBG("hdr size %x", hdr.fpt_header_size);
+	VMR_DBG("entry size %x", hdr.fpt_entry_size);
+	VMR_DBG("num entries %x", hdr.fpt_num_entries);
 
 	if (!msg->multiboot_payload.has_fpt) {
-		RMGMT_ERR("invalid fpt magic %x", hdr.fpt_magic);
+		VMR_ERR("invalid fpt magic %x", hdr.fpt_magic);
 		return;
 	}
 
@@ -227,7 +228,7 @@ void rmgmt_boot_fpt_query(struct cl_msg *msg)
 		ret = ospi_flash_read(CL_FLASH_BOOT, (u8 *)&entry,
 			hdr.fpt_entry_size * i, sizeof(entry));
 		if (ret) {
-			RMGMT_ERR("read fpt entry %d failed", i);
+			VMR_ERR("read fpt entry %d failed", i);
 			return;
 		}
 
@@ -255,30 +256,30 @@ void rmgmt_boot_fpt_query(struct cl_msg *msg)
 				entry.partition_base_addr;
 		}
 
-		RMGMT_DBG("type %x", entry.partition_type);
-		RMGMT_DBG("base %x", entry.partition_base_addr);
-		RMGMT_DBG("size %x", entry.partition_size);
-		RMGMT_DBG("flags %x", entry.partition_flags);
+		VMR_DBG("type %x", entry.partition_type);
+		VMR_DBG("base %x", entry.partition_base_addr);
+		VMR_DBG("size %x", entry.partition_size);
+		VMR_DBG("flags %x", entry.partition_flags);
 	}
 
 	bzero(&hdr, sizeof(hdr));
 	ret = ospi_flash_read(CL_FLASH_BOOT, (u8 *)&hdr, FPT_BACKUP_OFFSET, sizeof(hdr));
 	if (ret) {
-		RMGMT_ERR("no backup fpt");
+		VMR_ERR("no backup fpt");
 		return;
 	}
 
-	RMGMT_DBG("hdr recovery magic %x", hdr.fpt_magic);
+	VMR_DBG("hdr recovery magic 0x%x", hdr.fpt_magic);
 	msg->multiboot_payload.has_fpt_recovery = (hdr.fpt_magic == FPT_MAGIC) ? 1 : 0;
 
 	/* This is the current multi_boot_offset, can be changed after reboot */
 	current_multi_boot_offset = IO_SYNC_READ32(VMR_EP_PLM_MULTIBOOT);
 	if (current_multi_boot_offset == 0)
-		RMGMT_WARN("WARN: current multi_boot_offset is 0x0");
+		VMR_WARN("WARN: current multi_boot_offset is 0x0");
 
 	msg->multiboot_payload.current_multi_boot_offset = current_multi_boot_offset;
 
-	RMGMT_LOG("A offset %x:%x, B offset %x:%x",
+	VMR_LOG("A offset 0x%x:0x%x, B offset 0x%x:0x%x",
 		msg->multiboot_payload.default_partition_offset,
 		MULTIBOOT_OFF(msg->multiboot_payload.default_partition_offset),
 		msg->multiboot_payload.backup_partition_offset,
@@ -286,7 +287,7 @@ void rmgmt_boot_fpt_query(struct cl_msg *msg)
 
 
 	/* We should use the cached boot_offset saved right after boot */
-	boot_on_offset = rmgmt_boot_on_offset();
+	boot_on_offset = cl_rmgmt_boot_on_offset();
 	msg->multiboot_payload.boot_on_offset = boot_on_offset;
 
 	if (boot_on_offset ==
@@ -311,7 +312,7 @@ void rmgmt_boot_fpt_query(struct cl_msg *msg)
 		msg->multiboot_payload.pdimeta_backup_size = meta.fpt_pdi_size;
 	}
 
-	RMGMT_LOG("A size %x, B size %x", msg->multiboot_payload.pdimeta_size,
+	VMR_LOG("A size 0x%x, B size 0x%x", msg->multiboot_payload.pdimeta_size,
 		msg->multiboot_payload.pdimeta_backup_size);
 }
 
@@ -325,13 +326,13 @@ static int rmgmt_copy_default_to_backup(struct cl_msg *msg)
 	int ret = 0;
 
 	if (rmgmt_boot_from_backup(msg)) {
-		RMGMT_ERR("if booted from backup, the default image might be "
+		VMR_ERR("if booted from backup, the default image might be "
 			"corrupted. Cannot copy default over to backup");
 		return -1;
 	}
 
 	if (src == 0 || tgt == 0) {
-		RMGMT_ERR("addresses cannot be 0: src 0x%x, tgt 0x%x", src, tgt);
+		VMR_ERR("addresses cannot be 0: src 0x%x, tgt 0x%x", src, tgt);
 		return -1;
 	}
 
@@ -339,19 +340,19 @@ static int rmgmt_copy_default_to_backup(struct cl_msg *msg)
 	if (ret)
 		return ret;
 	if (meta.fpt_pdi_magic != FPT_PDIMETA_MAGIC) {
-		RMGMT_ERR("invalid default pdi meta magic: %x, size: %x",
+		VMR_ERR("invalid default pdi meta magic: 0x%x, size: 0x%x",
 			meta.fpt_pdi_magic, meta.fpt_pdi_size);
 		return -1;
 	}
 
 	src_size = meta.fpt_pdi_size;
 	if (src_size == 0) {
-		RMGMT_ERR("src size cannot be 0");
+		VMR_ERR("src size cannot be 0");
 		return -1;
 	}
 
 	if (src_size > tgt_capacity) {
-		RMGMT_ERR("backup partition size %d is smaller than source size %d",
+		VMR_ERR("backup partition size %d is smaller than source size %d",
 			tgt_capacity, src_size);
 		return -1;
 	}
@@ -366,7 +367,7 @@ static int rmgmt_copy_default_to_backup(struct cl_msg *msg)
 	
 	/* always reset backup pdi metadata if it is invalid */
 	if (meta.fpt_pdi_magic != FPT_PDIMETA_MAGIC) {
-		RMGMT_ERR("WARN: reset invalid meta magic: %x, size: %x",
+		VMR_ERR("WARN: reset invalid meta magic: 0x%x, size: 0x%x",
 			meta.fpt_pdi_magic, meta.fpt_pdi_size);
 		meta.fpt_pdi_magic = FPT_PDIMETA_MAGIC;
 	}
@@ -414,7 +415,7 @@ int rmgmt_flash_rpu_pdi(struct rmgmt_handler *rh, struct cl_msg *msg)
 	struct fpt_pdi_meta meta = { 0 };
 
 	if (rh->rh_already_flashed) {
-		RMGMT_ERR("PDI has been successfully flashed, cannot reflash before reboot");
+		VMR_ERR("PDI has been successfully flashed, cannot reflash before reboot");
 		return -EINVAL;
 	}
 
@@ -423,14 +424,14 @@ int rmgmt_flash_rpu_pdi(struct rmgmt_handler *rh, struct cl_msg *msg)
 
 	ret = rmgmt_xclbin_section_info(axlf, PDI, &pdi_offset, &pdi_size);
 	if (ret) {
-		RMGMT_ERR("get PDI from xsabin failed %d", ret);
+		VMR_ERR("get PDI from xsabin failed %d", ret);
 		return ret;
 	}
 	pdi_data = (u8 *)axlf + pdi_offset;
 	len = pdi_size;
 
 	if (msg->data_payload.flash_to_legacy) {
-		RMGMT_WARN("WARN: force to flash back to legacy mode, PDI starts at 0x0");
+		VMR_WARN("WARN: force to flash back to legacy mode, PDI starts at 0x0");
 
 		offset = 0x0;
 		ret = ospi_flash_erase(CL_FLASH_BOOT, offset, len);
@@ -443,7 +444,7 @@ int rmgmt_flash_rpu_pdi(struct rmgmt_handler *rh, struct cl_msg *msg)
 	/* Always query latest fpt status first */
 	rmgmt_fpt_query(msg);
 	if (!rmgmt_boot_has_fpt(msg)) {
-		RMGMT_ERR("cannot read fpt table");
+		VMR_ERR("cannot read fpt table");
 		return -1;
 	}
 
@@ -457,16 +458,16 @@ int rmgmt_flash_rpu_pdi(struct rmgmt_handler *rh, struct cl_msg *msg)
 	}
 
 	if (len > msg->multiboot_payload.default_partition_size) {
-		RMGMT_ERR("default partition size %d is smaller than requested PDI size %d",
+		VMR_ERR("default partition size %d is smaller than requested PDI size %d",
 			msg->multiboot_payload.default_partition_size, len);
 		return -1;
 	}
 	offset = msg->multiboot_payload.default_partition_offset;
 	if (offset == 0) {
-		RMGMT_ERR("default partition offset cannot be 0");
+		VMR_ERR("default partition offset cannot be 0");
 		return -1;
 	}
-	RMGMT_LOG("flash %d data to offset %x", len, offset);
+	VMR_LOG("flash %d data to offset 0x%x", len, offset);
 
 	/* TODO: validte pdi, authentication pdi */
 
@@ -477,8 +478,8 @@ int rmgmt_flash_rpu_pdi(struct rmgmt_handler *rh, struct cl_msg *msg)
 		return ret;
 
 	if (meta.fpt_pdi_magic != FPT_PDIMETA_MAGIC) {
-		RMGMT_ERR("Invalid PDIMETA magic: %x", meta.fpt_pdi_magic);
-		RMGMT_ERR("WARN: enforce to flash pdi onto default partition");
+		VMR_ERR("Invalid PDIMETA magic: 0x%x", meta.fpt_pdi_magic);
+		VMR_ERR("WARN: enforce to flash pdi onto default partition");
 
 		/* Note: always erase before write and no erase after write */
 		ret = rmgmt_fpt_pdi_meta_erase(msg, FPT_TYPE_PDIMETA);
@@ -517,7 +518,7 @@ int rmgmt_flash_rpu_pdi(struct rmgmt_handler *rh, struct cl_msg *msg)
 		return ret;
 done:
 	if (!ret) {
-		RMGMT_WARN("set already_flashed to ture, need to reset/reboot to take effect.");
+		VMR_WARN("set already_flashed to ture, need to reset/reboot to take effect.");
 		rh->rh_already_flashed = true;
 	}
 	return ret;
@@ -539,18 +540,18 @@ int rmgmt_fpt_set_debug_type(struct cl_msg *msg)
 	if (ret)
 		return ret;
 
-	RMGMT_LOG("get debug_type %d", meta.fpt_pdi_debug_type);
+	VMR_LOG("get debug_type %d", meta.fpt_pdi_debug_type);
 	meta.fpt_pdi_debug_type = msg->multiboot_payload.vmr_debug_type;
 
 	ret = rmgmt_fpt_pdi_meta_set(msg, FPT_TYPE_PDIMETA, &meta);
 	if (ret) {
-		RMGMT_ERR("failed: %d", ret);
+		VMR_ERR("failed: %d", ret);
 		return ret;
 	}
 
 	bzero(&meta, sizeof(meta));
 	ret = rmgmt_fpt_pdi_meta_get(msg, FPT_TYPE_PDIMETA, &meta);
-	RMGMT_WARN("set debug_type %d", meta.fpt_pdi_debug_type);
+	VMR_WARN("set debug_type %d", meta.fpt_pdi_debug_type);
 
 	return ret;
 }
@@ -569,6 +570,6 @@ int rmgmt_fpt_get_debug_type(struct cl_msg *msg, u8 *debug_type)
 
 	*debug_type = meta.fpt_pdi_debug_type;
 
-	RMGMT_LOG("debug_type %d", meta.fpt_pdi_debug_type);
+	VMR_LOG("debug_type %d", meta.fpt_pdi_debug_type);
 	return ret;
 }

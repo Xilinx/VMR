@@ -15,6 +15,7 @@ typedef enum cl_msg_type {
 	CL_MSG_SENSOR,
 	CL_MSG_APUBIN,
 	CL_MSG_VMR_CONTROL,
+	CL_MSG_PROGRAM_SCFW,
 } cl_msg_type_t;
 
 typedef enum cl_sensor_type {

@@ -10,7 +10,7 @@
 
 #include "xil_types.h"
 
-u8 I2CInit(void);
+u8 cl_I2CInit(void);
 u8 i2c_send(u8 i2c_num, unsigned char i2c_addr, unsigned char * i2c_data, long int data_length);
 u8 i2c_recv(u8 i2c_num, unsigned char i2c_addr, unsigned char * i2c_read_buff, long int i2c_CRS);
 u8 i2c_send_rs_recv(u8 i2c_num,

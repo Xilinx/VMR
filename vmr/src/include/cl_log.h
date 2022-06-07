@@ -24,10 +24,8 @@
  * Application type id for logging, mem signature etc.
  */
 typedef enum app_type {
-	APP_MAIN = 0,
-	APP_RMGMT,
+	APP_VMR = 0,
 	APP_VMC,
-	APP_XGQ,
 } app_type_t;
 
 /**
@@ -35,10 +33,8 @@ typedef enum app_type {
  */
 __attribute__((unused))
 static const char *app_type_name[] = {
-	"MAIN",
-	"RMGMT",
+	"VMR",
 	"VMC",
-	"XGQ",
 };
 
 typedef enum cl_log_level {
@@ -99,5 +95,16 @@ void cl_uart_printf(const char *name, uint32_t line, uint8_t log_level,
 #define CL_UART_DBG(app, fmt, arg...)
 #define CL_UART_DMO(app, fmt, arg...)
 #define CL_UART_PRNT(app, fmt, arg...)
+
+#define VMR_ERR(fmt, arg...) \
+        CL_ERR(APP_VMR, fmt, ##arg)
+#define VMR_WARN(fmt, arg...) \
+        CL_ERR(APP_VMR, fmt, ##arg)
+#define VMR_LOG(fmt, arg...) \
+        CL_LOG(APP_VMR, fmt, ##arg)
+#define VMR_DBG(fmt, arg...) \
+        CL_DBG(APP_VMR, fmt, ##arg)
+
+void cl_log_init();
 
 #endif
