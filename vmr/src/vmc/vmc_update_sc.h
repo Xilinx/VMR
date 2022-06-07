@@ -10,8 +10,10 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <stdbool.h>
+#include "cl_msg.h"
 
-#define ULONG_MAX 						0xFFFFFFFFUL
+#define ULONG_MAX 					0xFFFFFFFFUL
+#define FW_UPDATE_TRIGGER_0				( 0x01UL )
 
 #define DELAY_MS(x)   					((x)     /portTICK_PERIOD_MS )
 #define RCV_TIMEOUT_MS(x)  				((x)     /portTICK_PERIOD_MS )
@@ -146,5 +148,7 @@ bool VMC_Read_SC_FW(void);
 u8 Get_SC_Checksum(void);
 u8 Check_Received_SC_Header(void *ptr1, void *ptr2, u8 len);
 upgrade_status_t matchCRC_postWrite(unsigned int writeAdd);
+void UpdateSCFW();
+void VMC_Get_Fpt_SC_Version(cl_msg_t *msg);
 
 #endif /* SRC_VMC_VMC_UPDATE_SC_H_ */

@@ -18,7 +18,6 @@
 #include "xsysmonpsv.h"
 #include "vmc_sc_comms.h"
 #include "vmc_update_sc.h"
-#include "xgpio.h"
 
 /* Task Handles */
 static TaskHandle_t xVMCTask;
@@ -28,7 +27,6 @@ TaskHandle_t xVMCTaskMonitor;
 
 SemaphoreHandle_t sdr_lock;
 SemaphoreHandle_t vmc_sc_lock;
-SemaphoreHandle_t vmc_sc_comms_lock;
 SemaphoreHandle_t vmc_sensor_monitoring_lock;
 
 uart_rtos_handle_t uart_vmcsc_log;
@@ -67,16 +65,9 @@ static void pVMCTask(void *params)
     vmc_sc_lock = xSemaphoreCreateMutex();
     configASSERT(vmc_sc_lock != NULL);
 
-    /* vmc_sc_comms_lock */
-    vmc_sc_comms_lock = xSemaphoreCreateMutex();
-    configASSERT(vmc_sc_comms_lock != NULL);
-
     /* sdr_lock */
     sdr_lock = xSemaphoreCreateMutex();
     configASSERT(sdr_lock != NULL);
-
-    /* Create SC update task */
-    SC_Update_Task_Create();
 
     /* Init ASDM */
     if(Init_Asdm()) 
