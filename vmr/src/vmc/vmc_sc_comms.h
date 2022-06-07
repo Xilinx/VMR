@@ -290,4 +290,8 @@ bool Parse_SCData(u8 *Payload);
 bool VMC_send_packet(u8 Message_id , u8 Flags,u8 Payloadlength, u8 *Payload);
 bool vmc_get_sc_status();
 void vmc_set_sc_status(bool value);
+bool vmc_get_power_mode_status();
+void vmc_set_power_mode_status(bool value);
+bool vmc_get_snsr_resp_status();
+void vmc_set_snsr_resp_status(bool value);
 

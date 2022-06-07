@@ -21,10 +21,10 @@ scUpateError_t upgradeError = SC_UPDATE_NO_ERROR;
 
 TaskHandle_t xSCUpdateTaskHandle = NULL;
 extern uart_rtos_handle_t uart_vmcsc_log;
+extern EventGroupHandle_t xScUpdateEvent;
 
 /* Global structures */
 SC_VMC_Data sc_version;
-cl_msg_t fpt_sc_offsets;
 efpt_sc_t fpt_sc_loc;
 
 /* Variables for SC update data packets */
@@ -40,9 +40,6 @@ u8 msg[1] = {0x00};
 u8 fpt_sc_version[3] = {0x00};
 bool all_pkt_sent = false;
 bool fptSCvalid = false;
-
-/* Variable to keep track whether SC update is going on or not */
-u8 sc_update_flag = 0x00;
 
 /* Variables will keep track of SC update progress */
 int32_t update_progress = 0;
@@ -61,7 +58,6 @@ u8 bslPasswd[BSL_UNLOCK_PASSWORD_REQ] = { 0x80, 0x39, 0x00, 0x21, 0x58, 0x41,
 
 
 extern void rmgmt_extension_fpt_query(struct cl_msg *msg);
-extern SemaphoreHandle_t vmc_sc_comms_lock;
 extern SemaphoreHandle_t vmc_sensor_monitoring_lock;
 
 
@@ -195,6 +191,8 @@ void VMC_Get_Fpt_SC_Version(cl_msg_t *msg)
 	u8 retVal = 0x01;
 	data_ptr = 0x00;
 
+	xScUpdateEvent = xEventGroupCreate();
+	configASSERT(xScUpdateEvent != NULL);
 
 	rmgmt_extension_fpt_query(msg);
 
@@ -229,16 +227,17 @@ void VMC_Get_Fpt_SC_Version(cl_msg_t *msg)
 int32_t VMC_Start_SC_Update(void)
 {
 	int32_t retVal = 0;
+	EventBits_t uxBits;
 
 	retVal = (s32)Get_SC_Checksum();
 	if(retVal && fptSCvalid)
 	{
 		VMC_LOG("\n\rSC Needs Update !!\r\n");
 
-		if (xTaskNotify(xSCUpdateTaskHandle, 0, eNoAction) != pdPASS)
-		{
+		uxBits = xEventGroupSetBits( xScUpdateEvent, FW_UPDATE_TRIGGER_0 );
+		if((uxBits & FW_UPDATE_TRIGGER_0) == 0) {
 			retVal = -1;
-			VMC_ERR("Notification failed !!\r\n");
+			VMC_ERR("SC Update trigger failed !!");
 		}
 	}
 	else
@@ -594,32 +593,15 @@ upgrade_status_t matchCRC_postWrite(unsigned int writeAdd)
 	return status;
 }
 
-
-void SCUpdateTask(void * arg)
+void UpdateSCFW()
 {
-	VMC_LOG(" SC Update Task Created !!!\n\r");
+	EventBits_t uxBits;
 
-	/* After Bootup, this function validates fpt SC image and the version */
-	VMC_Get_Fpt_SC_Version(&fpt_sc_offsets);
-
-
-    while(1)
-    {
-    	/* Wait for notification */
-        xTaskNotifyWait(ULONG_MAX, ULONG_MAX, NULL, portMAX_DELAY);
-
-        if(xSemaphoreTake(vmc_sc_comms_lock, portMAX_DELAY) == pdFALSE)
-        {
-        	VMC_ERR("\n\r Failed to take vmc_sc_comms_lock \n\r");
-			continue;
-        }
-
-        if(xSemaphoreTake(vmc_sensor_monitoring_lock, portMAX_DELAY) == pdFALSE)
-        {
-			xSemaphoreGive(vmc_sc_comms_lock);
+		if(xSemaphoreTake(vmc_sensor_monitoring_lock, portMAX_DELAY) == pdFALSE)
+		{
         	VMC_ERR("\n\r Failed to take vmc_sensor_monitoring_lock \n\r");
-			continue;
-        }
+        	return;
+		}
 
 		if ((upgradeState == SC_STATE_IDLE)
 				&& (upgradeStatus == STATUS_SUCCESS
@@ -1207,27 +1189,19 @@ void SCUpdateTask(void * arg)
 		max_data_slot = 0;
 		upgradeError = SC_UPDATE_NO_ERROR;
 
+		/* Reset every VMC -> SC flags to re-initialize comms */
 		vmc_set_sc_status(false);
+		vmc_set_power_mode_status(false);
+		vmc_set_snsr_resp_status(false);
 
-		/* Resume SC communication and monitoring */
+		/* Resume sensor monitoring */
 		xSemaphoreGive(vmc_sensor_monitoring_lock);
-		xSemaphoreGive(vmc_sc_comms_lock);
-    }
 
-    vTaskSuspend(NULL);
+		/* Clear the event and get ready for the next update trigger from XGQ */
+		uxBits = xEventGroupClearBits( xScUpdateEvent, FW_UPDATE_TRIGGER_0 );
+		if( (uxBits & FW_UPDATE_TRIGGER_0) != 0 ) {
+			VMC_LOG("Comms Re-Init !! ");
+		}
 }
 
-void SC_Update_Task_Create(void)
-{
-    /* Create SC update task */
-    if (xTaskCreate(SCUpdateTask,
-    		        (const char *) "SC_Update_Task",
-					TASK_STACK_DEPTH,
-					NULL,
-					tskIDLE_PRIORITY + 1,
-					&xSCUpdateTaskHandle) != pdPASS)
-    {
-    	CL_LOG(APP_VMC,"Failed to Create SC Update Task \n\r");
-    	return ;
-	}
-}
+
