@@ -253,7 +253,7 @@ typedef enum
     V12_IN_I,
     V12_IN_AUX0_I,
     V12_IN_AUX1_I,
-    VCCAUX,
+    VCCAUX_SC,
     VCCAUX_PMC,
     VCCRAM,
     POWER_GOOD = 0x46,
