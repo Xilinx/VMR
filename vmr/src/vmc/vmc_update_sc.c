@@ -5,11 +5,11 @@
 
 #include "FreeRTOS.h"
 #include "semphr.h"
-#include "task.h"
 
 #include "cl_mem.h"
-#include "vmc_api.h"
+#include "cl_vmc.h"
 #include "cl_msg.h"
+#include "vmc_api.h"
 #include "cl_uart_rtos.h"
 #include "vmc_update_sc.h"
 #include "vmc_sc_comms.h"
@@ -19,7 +19,6 @@ upgrade_status_t upgradeStatus = STATUS_SUCCESS;
 upgrade_state_t upgradeState = SC_STATE_IDLE;
 scUpateError_t upgradeError = SC_UPDATE_NO_ERROR;
 
-TaskHandle_t xSCUpdateTaskHandle = NULL;
 extern uart_rtos_handle_t uart_vmcsc_log;
 extern EventGroupHandle_t xScUpdateEvent;
 
@@ -58,11 +57,11 @@ u8 bslPasswd[BSL_UNLOCK_PASSWORD_REQ] = { 0x80, 0x39, 0x00, 0x21, 0x58, 0x41,
 
 
 extern void rmgmt_extension_fpt_query(struct cl_msg *msg);
-extern SemaphoreHandle_t vmc_sensor_monitoring_lock;
+//extern SemaphoreHandle_t vmc_sensor_monitoring_lock;
 
 
 
-int32_t VMC_SCFW_Program_Progress(void)
+int cl_vmc_scfw_program_progress(void)
 {
 	return update_progress;
 }
@@ -595,6 +594,7 @@ upgrade_status_t matchCRC_postWrite(unsigned int writeAdd)
 
 void UpdateSCFW()
 {
+#if 0
 	EventBits_t uxBits;
 
 		if(xSemaphoreTake(vmc_sensor_monitoring_lock, portMAX_DELAY) == pdFALSE)
@@ -602,6 +602,7 @@ void UpdateSCFW()
         	VMC_ERR("\n\r Failed to take vmc_sensor_monitoring_lock \n\r");
         	return;
 		}
+#endif
 
 		if ((upgradeState == SC_STATE_IDLE)
 				&& (upgradeStatus == STATUS_SUCCESS
@@ -1194,6 +1195,7 @@ void UpdateSCFW()
 		vmc_set_power_mode_status(false);
 		vmc_set_snsr_resp_status(false);
 
+#if 0
 		/* Resume sensor monitoring */
 		xSemaphoreGive(vmc_sensor_monitoring_lock);
 
@@ -1202,6 +1204,22 @@ void UpdateSCFW()
 		if( (uxBits & FW_UPDATE_TRIGGER_0) != 0 ) {
 			VMC_LOG("Comms Re-Init !! ");
 		}
+#endif
 }
 
 
+int cl_vmc_scfw_program(cl_msg_t *msg)
+{
+	UpdateSCFW();
+
+	return 0;
+}
+
+int cl_vmc_scfw_init()
+{
+	cl_msg_t msg;
+
+	VMC_Get_Fpt_SC_Version(&msg);
+
+	return 0;
+}

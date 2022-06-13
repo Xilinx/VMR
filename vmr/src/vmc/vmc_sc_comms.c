@@ -6,12 +6,7 @@
 #include "vmc_sc_comms.h"
 #include "vmc_update_sc.h"
 
-
 EventGroupHandle_t xScUpdateEvent = NULL;
-
-extern TaskHandle_t xVMCSCTask;
-extern TaskHandle_t xSensorMonTask;
-extern SemaphoreHandle_t vmc_sensor_monitoring_lock;
 
 #define MAX_RETRY_TO_CHK_SC_ACTIVE	  (10u)
 #define SENSOR_MONITOR_TASK_NOTIFIED      (1)
@@ -494,6 +489,7 @@ void VMC_Mointor_SC_Sensors()
     }
 }
 
+#if 0
 void VMC_SC_CommsTask(void *params)
 {
     EventBits_t xEventGroupValue;
@@ -584,8 +580,61 @@ void VMC_SC_CommsTask(void *params)
     		}
     		/* Fetching Sensor values from SC */
     		VMC_Mointor_SC_Sensors();
-    	}
 	}
 
 	vTaskSuspend(NULL);
+}
+#endif
+
+static void cl_vmc_sc_active()
+{
+	for (int i = 0; i < MAX_RETRY_TO_CHK_SC_ACTIVE; i++) {
+		if (vmc_get_sc_status()) 
+			return;
+
+		vTaskDelay(pdMS_TO_TICKS(1000));
+		vmc_set_active_resp_len(MSP432_COMMS_MSG_GOOD_LEN);
+		VMC_Fetch_SC_SensorData(MSP432_COMMS_VMC_ACTIVE_REQ);
+	}
+
+
+	/*
+	 * Still not getting SENSOR_GOOD, it is an unsupported SC, set correct
+	 * len for reporting error.
+	 */
+	if (!vmc_get_sc_status()) {
+		vmc_set_active_resp_len(MSP432_COMMS_MSG_ERR_LEN);
+		VMC_Fetch_SC_SensorData(MSP432_COMMS_VMC_ACTIVE_REQ);
+		VMC_ERR("vmc_sc is not ready yet.");
+	}
+}
+
+int cl_vmc_sc_is_ready()
+{
+	cl_vmc_sc_active();
+
+	return (vmc_get_sc_status() == true);
+}
+
+void cl_vmc_sc_update()
+{
+	if (!cl_vmc_sc_is_ready())
+		return;
+
+	/* Fetch the SC Version and Power Config  */
+	if(!isPowerModeActive)
+	{
+		VMC_Fetch_SC_SensorData(MSP432_COMMS_VMC_VERSION_POWERMODE_REQ);
+	}
+
+	/* Fetch the Volt & power Sensor length  */
+	if( vmc_get_sc_status() &&  (!getSensorRespLen))
+	{
+		VMC_Fetch_SC_SensorData(MSP432_COMMS_VMC_GET_RESP_SIZE_REQ);
+	}
+
+	/*
+	 *  Fetching Sensor values from SC
+	 */
+	VMC_Mointor_SC_Sensors();
 }

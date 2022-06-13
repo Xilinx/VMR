@@ -90,6 +90,12 @@ load_build_info()
 		return
 	fi
 
+	if [ ! -z $BUILD_APP ];then
+		echo "=== build app, skip loading from $BUILD_CONF_FILE ==="
+		return
+	fi
+
+
 	CONF_BUILD_TA=`grep_file "CONF_BUILD_TA" ${BUILD_CONF_FILE}`
 	if [ -z $BUILD_TA ];then
 		BUILD_TA=$CONF_BUILD_TA
@@ -275,12 +281,16 @@ build_app_all() {
 
 build_app_incremental() {
 	cd $ROOT_DIR/$BUILD_DIR
+	# Remove source and elf file
 	rm -r vmr_app/src
-	rm -r vmr_app/Debug/vmr.elf
+	rm -r vmr_app/Debug/vmr_app.elf
 
-	rsync -av ../../vmr/src vmr_app --exclude cmc --exclude *.swp
-	make_version_h "vmr_app"
+	# copy new source file
+	cd $ROOT_DIR
+	rsync -a ../vmr/src "$BUILD_DIR/vmr_app" --exclude cmc --exclude *.swp
+	make_version_h "$BUILD_DIR/vmr_app"
 
+	cd $BUILD_DIR
 	start_seconds=$SECONDS
 	xsct ./make_app.tcl
 	echo "=== Make App Took: $((SECONDS - start_seconds)) S"

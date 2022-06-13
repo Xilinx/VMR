@@ -1,5 +1,5 @@
 /******************************************************************************
-* Copyright (C) 2021 Xilinx, Inc.  All rights reserved.
+* Copyright (C) 2021-2022 Xilinx, Inc.  All rights reserved.
 * SPDX-License-Identifier: MIT
 *******************************************************************************/
 
@@ -30,15 +30,6 @@
 #include "cl_io.h"
 
 #include "vmr_common.h"
-
-#define RMGMT_ERR(fmt, arg...)	\
-	CL_ERR(APP_RMGMT, fmt, ##arg)
-#define RMGMT_WARN(fmt, arg...)	\
-	CL_ERR(APP_RMGMT, fmt, ##arg)
-#define RMGMT_LOG(fmt, arg...)	\
-	CL_LOG(APP_RMGMT, fmt, ##arg)
-#define RMGMT_DBG(fmt, arg...)	\
-	CL_DBG(APP_RMGMT, fmt, ##arg)
 
 #define MDELAY(n) vTaskDelay( pdMS_TO_TICKS(n) )
 

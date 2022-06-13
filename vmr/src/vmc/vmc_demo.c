@@ -1,5 +1,5 @@
 /******************************************************************************
-* Copyright (C) 2020 Xilinx, Inc.  All rights reserved.
+* Copyright (C) 2020-2022 Xilinx, Inc.  All rights reserved.
 * SPDX-License-Identifier: MIT
 *******************************************************************************/
 
@@ -11,6 +11,7 @@
 #include "task.h"
 
 #include "cl_uart_rtos.h"
+#include "cl_main.h"
 
 /* VMC Header files */
 #include "vmc_api.h"
@@ -77,8 +78,6 @@ TestMenu TestsMenu[] =
     {NULL, NULL, NULL}
 };
 
-static bool isDemoMenuEnabled = false;
-
 static void App_SetLogLevel(void)
 {
     u8 EntryIndex = 0;
@@ -125,7 +124,7 @@ static void App_SetLogLevel(void)
 /*
  *  ======== Menu Task ========
  */
-static void DemoMenuTask(void *arg0)
+void cl_uart_demo_func(void *arg0)
 {
     u8 TestIndex = 0;
     u8 MenuLevel = 0;
@@ -251,25 +250,9 @@ static void DemoMenuTask(void *arg0)
     return;
 }
 
-u8 Enable_DemoMenu(void)
+int cl_uart_demo(void)
 {
-
-	u8 retc = 0;
-
-    /* Return, if already enabled */
-    if ( isDemoMenuEnabled )
-    {
-        return 0;
-    }
-
-
-    if ( (retc = xTaskCreate(DemoMenuTask, "DemoMenu_Task", TASK_STACK_DEPTH, NULL, demoMenu_task_PRIORITY, NULL)) != pdPASS)
-	{
-    	xil_printf("Task creation failed!.\r\n");
-		return retc;
-	}
-
-    isDemoMenuEnabled = true;
-    return retc;
+	return 0;
 }
+
 

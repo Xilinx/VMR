@@ -7,6 +7,7 @@
 #define VMR_COMMON_H
 
 /* compatible with linux OS error codes */
+#define ENOENT	2	
 #define EIO	5
 #define ENOMEM	12
 #define EBUSY	16
@@ -143,6 +144,8 @@
 #define RPU_SHARED_MEMORY_ADDR(offset) (VMR_EP_RPU_SHARED_MEMORY_START + (u32)offset)
 #define APU_SHARED_MEMORY_ADDR(offset) (VMR_EP_APU_SHARED_MEMORY_START + (u32)offset)
 
+#define SHUTDOWN_LATCHED_STATUS	0x01
+
 struct vmr_endpoints {
 	char *vmr_ep_name;
 	u32  vmr_ep_address;
@@ -151,6 +154,7 @@ struct vmr_endpoints {
 /*
  * Start platform dependent MACROs
  */
+
 #if defined(CONFIG_FORCE_RESET)
 #define VMR_EP_FORCE_RESET		XPAR_BLP_BLP_LOGIC_BASE_CLOCKING_FORCE_RESET_GPIO_BASEADDR
 static inline int rmgmt_enable_pl_reset()

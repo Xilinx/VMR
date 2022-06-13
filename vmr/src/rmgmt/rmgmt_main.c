@@ -17,25 +17,19 @@
 #include "cl_msg.h"
 #include "cl_flash.h"
 #include "cl_main.h"
-
-static TaskHandle_t xXGQTask;
-static struct rmgmt_handler rh = { 0 };
-msg_handle_t *pdi_hdl;
-msg_handle_t *xclbin_hdl;
-msg_handle_t *af_hdl;
-msg_handle_t *clock_hdl;
-msg_handle_t *apubin_hdl;
-int xgq_pdi_flag = 0;
-int xgq_xclbin_flag = 0;
-int xgq_log_page_flag = 0;
-int xgq_clock_flag = 0;
-int xgq_apubin_flag = 0;
-int xgq_apu_control_flag = 0;
-char log_msg[1024] = { 0 };
-
-SemaphoreHandle_t xSemaDownload;
+#include "cl_rmgmt.h"
 
 int32_t VMC_Start_SC_Update(void);
+
+static struct rmgmt_handler rh = { 0 };
+static char log_msg[1024] = { 0 };
+static bool rmgmt_is_ready = false;
+
+enum pdi_type {
+	BASE_PDI = 0,
+	APU_PDI,
+	PL_XCLBIN,
+};
 
 static struct vmr_endpoints vmr_eps[] = {
 	{"VMR_EP_SYSTEM_DTB", VMR_EP_SYSTEM_DTB},
@@ -65,16 +59,6 @@ static struct vmr_endpoints vmr_eps[] = {
 #endif
 };
 
-static bool acquire_download_sema()
-{
-	return xSemaphoreTake(xSemaDownload, (TickType_t)10) == pdTRUE;
-}
-
-static bool release_download_sema()
-{
-	return xSemaphoreGive(xSemaDownload) == pdTRUE;
-}
-
 /*
  * Block comment for validation functions:
  * We should always keep VMR running, any incoming request should be validated
@@ -84,29 +68,29 @@ static int validate_clock_payload(struct xgq_vmr_clock_payload *payload)
 {
 	int ret = -EINVAL;
 
-	if(!cl_xgq_pl_is_ready()) {
-		RMGMT_ERR("pl is not ready.");
+	if(!cl_rmgmt_pl_is_ready()) {
+		VMR_ERR("pl is not ready.");
 		return -EIO;
 	}
 
 
 	if (payload->ocl_region != 0) {
-		RMGMT_ERR("ocl region %d is not 0", payload->ocl_region);
+		VMR_ERR("ocl region %d is not 0", payload->ocl_region);
 		return ret;
 	}
 
 	if (payload->ocl_req_type > CL_CLOCK_SCALE) {
-		RMGMT_ERR("invalid req_type %d", payload->ocl_req_type);
+		VMR_ERR("invalid req_type %d", payload->ocl_req_type);
 		return ret;
 	}
 
 	if (payload->ocl_req_id > OCL_MAX_ID) {
-		RMGMT_ERR("invalid req_id %d", payload->ocl_req_id);
+		VMR_ERR("invalid req_id %d", payload->ocl_req_id);
 		return ret;
 	}
 
 	if (payload->ocl_req_num > OCL_MAX_NUM) {
-		RMGMT_ERR("invalid req_num %d", payload->ocl_req_num);
+		VMR_ERR("invalid req_num %d", payload->ocl_req_num);
 		return ret;
 	}
 
@@ -122,12 +106,12 @@ static int validate_data_payload(struct xgq_vmr_data_payload *payload)
 	u32 size = payload->size;
 
 	if (address + size >= VMR_EP_RPU_SHARED_MEMORY_END) {
-		RMGMT_ERR("address overflow 0x%x", address);
+		VMR_ERR("address overflow 0x%x", address);
 		return ret;
 	}
 
 	if (size > rh.rh_max_size) {
-		RMGMT_ERR("size 0x%x over max 0x%x", size, rh.rh_max_size);
+		VMR_ERR("size 0x%x over max 0x%x", size, rh.rh_max_size);
 		return ret;
 	}
 
@@ -142,17 +126,17 @@ static int validate_log_payload(struct xgq_vmr_log_payload *payload, u32 size)
 	u32 address = RPU_SHARED_MEMORY_ADDR(payload->address);
 
 	if (address >= VMR_EP_RPU_SHARED_MEMORY_END) {
-		RMGMT_ERR("address overflow 0x%x", address);
+		VMR_ERR("address overflow 0x%x", address);
 		return ret;
 	}
 
 	if (payload->pid > CL_LOG_INFO) {
-		RMGMT_ERR("invalid log type 0x%x", payload->pid);
+		VMR_ERR("invalid log type 0x%x", payload->pid);
 		return ret;
 	}
 
 	if (payload->size < size) {
-		RMGMT_ERR("request size 0x%x is smaller than result size 0x%x",
+		VMR_ERR("request size 0x%x is smaller than result size 0x%x",
 			payload->size, size);
 		return ret;
 	}
@@ -161,7 +145,7 @@ static int validate_log_payload(struct xgq_vmr_log_payload *payload, u32 size)
 	return 0;
 }
 
-static int xgq_clock_cb(cl_msg_t *msg, void *arg)
+int cl_rmgmt_clock(cl_msg_t *msg)
 {
 	int ret = 0;
 	uint32_t freq = 0;
@@ -185,20 +169,18 @@ static int xgq_clock_cb(cl_msg_t *msg, void *arg)
 		msg->clock_payload.ocl_req_freq[0] = freq;
 		break;
 	default:
-		RMGMT_ERR("ERROR: unknown req_type %d",
+		VMR_ERR("ERROR: unknown req_type %d",
 			msg->clock_payload.ocl_req_type);
 		ret = -EINVAL;
 		break;
 	}
 
 done:
-	msg->hdr.rcode = ret;
-	cl_msg_handle_complete(msg);
-	RMGMT_DBG("complete msg id %d, ret %d", msg->hdr.cid, ret);
-	return 0;
+	VMR_DBG("complete msg id %d, ret %d", msg->hdr.cid, ret);
+	return ret;
 }
 
-static int rmgmt_download_pdi(cl_msg_t *msg, bool is_rpu_pdi)
+static int rmgmt_download_pdi(cl_msg_t *msg, enum pdi_type ptype)
 {
 	u32 address = 0;
 	u32 size = 0;
@@ -215,84 +197,34 @@ static int rmgmt_download_pdi(cl_msg_t *msg, bool is_rpu_pdi)
 	rh.rh_data_size = size;
 	cl_memcpy_fromio8(address, rh.rh_data, size);
 
-	if (is_rpu_pdi)
-		ret = rmgmt_flash_rpu_pdi(&rh, msg);
-	else
-		ret = rmgmt_download_apu_pdi(&rh);
-
-	return ret;
-}
-
-/* We acquire sema for pdi but not for apubin because the apubin can be
- * run in parallel with xclbin download and sc download.
- * The race between pdi download and apubin download is handled by host driver.
- */
-static int xgq_pdi_cb(cl_msg_t *msg, void *arg)
-{
-	int ret = 0;
-
-	if (acquire_download_sema()) {
-		ret = rmgmt_download_pdi(msg, true);
-		release_download_sema();
-	} else {
-		RMGMT_WARN("system busy, please try later");
-		ret = -EBUSY;
+	switch (ptype) {
+	case BASE_PDI:
+		return rmgmt_flash_rpu_pdi(&rh, msg);
+	case APU_PDI:
+		return rmgmt_download_apu_pdi(&rh);
+	case PL_XCLBIN:
+		return rmgmt_download_xclbin(&rh);
+	default:
+		VMR_ERR("cannot handle pdi_type %d", ptype);
+		break;
 	}
 
-	msg->hdr.rcode = ret;
-	RMGMT_DBG("complete msg id %d, ret %d", msg->hdr.cid, ret);
-	cl_msg_handle_complete(msg);
-	return 0;
+	return -EINVAL;
 }
 
-static int xgq_apubin_cb(cl_msg_t *msg, void *arg)
+int cl_rmgmt_program_base_pdi(cl_msg_t *msg)
 {
-	int ret = 0;
-
-	ret = rmgmt_download_pdi(msg, false);
-
-	msg->hdr.rcode = ret;
-	RMGMT_DBG("complete msg id %d, ret %d", msg->hdr.cid, ret);
-	cl_msg_handle_complete(msg);
-	return 0;
+	return rmgmt_download_pdi(msg, BASE_PDI);
 }
 
-static int xgq_xclbin_cb(cl_msg_t *msg, void *arg)
+int cl_rmgmt_program_apu_pdi(cl_msg_t *msg)
 {
-	u32 address = 0;
-	u32 size = 0;
-	int ret = 0;
+	return rmgmt_download_pdi(msg, APU_PDI);
+}
 
-	if(!cl_xgq_pl_is_ready()) {
-		RMGMT_ERR("pl is not ready");
-		ret = -EIO;
-		goto done;
-	}
-
-	ret = validate_data_payload(&msg->data_payload);
-	if (ret)
-		goto done;
-
-	address = RPU_SHARED_MEMORY_ADDR(msg->data_payload.address);
-	size = msg->data_payload.size;
-
-	/* prepare rmgmt handler */
-	rh.rh_data_size = size;
-	cl_memcpy_fromio8(address, rh.rh_data, size);
-
-	if (acquire_download_sema()) {
-		ret = rmgmt_download_xclbin(&rh);
-		release_download_sema();
-	} else {
-		RMGMT_WARN("system busy, please try later");
-		ret = -EBUSY;
-	}
-
-done:
-	msg->hdr.rcode = ret;
-	RMGMT_DBG("complete msg id%d, ret %d", msg->hdr.cid, ret);
-	cl_msg_handle_complete(msg);
-	return 0;
+int cl_rmgmt_program_xclbin(cl_msg_t *msg)
+{
+	return rmgmt_download_pdi(msg, PL_XCLBIN);
 }
 
 static u32 rmgmt_fpt_status_query(cl_msg_t *msg, char *buf, u32 size)
@@ -307,7 +239,7 @@ static u32 rmgmt_fpt_status_query(cl_msg_t *msg, char *buf, u32 size)
 		msg->multiboot_payload.pdimeta_size,
 		msg->multiboot_payload.default_partition_size);
 	if (count > size) {
-		RMGMT_WARN("msg is truncated");
+		VMR_WARN("msg is truncated");
 		return size;
 	}
 	
@@ -317,14 +249,14 @@ static u32 rmgmt_fpt_status_query(cl_msg_t *msg, char *buf, u32 size)
 		msg->multiboot_payload.pdimeta_backup_size,
 		msg->multiboot_payload.backup_partition_size);
 	if (count > size) {
-		RMGMT_WARN("msg is truncated");
+		VMR_WARN("msg is truncated");
 		return size;
 	}
 
 	count += snprintf(buf + count, size - count, "SC firmware size: 0x%lx\n",
 		msg->multiboot_payload.scfw_size);
 	if (count > size) {
-		RMGMT_WARN("msg is truncated");
+		VMR_WARN("msg is truncated");
 		return size;
 	}
 
@@ -339,10 +271,65 @@ static u32 rmgmt_endpoints_query(cl_msg_t *msg, char *buf, u32 size)
 		count += snprintf(buf + count, size - count, "%s: 0x%lx\n",
 			vmr_eps[i].vmr_ep_name, vmr_eps[i].vmr_ep_address);
 		if (count > size) {
-			RMGMT_WARN("msg is truncated at %d %s", i, vmr_eps[i].vmr_ep_name);
+			VMR_WARN("msg is truncated at %d %s", i, vmr_eps[i].vmr_ep_name);
 			return size;
 		}
 	}
+	return count;
+}
+
+static u32 rmgmt_rpu_status_query(struct cl_msg *msg, char *buf, u32 size)
+{
+	u32 count = 0;
+
+#ifdef VMR_BUILD_XRT_ONLY
+	VMR_LOG("Build flags: -XRT");
+	count = snprintf(buf, size, "Build flags: -XRT\n");
+#else
+	VMR_LOG("Build flags: default full build");
+	count = snprintf(buf, size, "Build flags: default full build\n");
+#endif
+
+	if (count > size) {
+		VMR_ERR("msg is truncated");
+		return size;
+	}
+
+#ifdef _VMR_VERSION_
+	VMR_LOG("vitis version: %s", VMR_TOOL_VERSION);
+	VMR_LOG("git hash: %s", VMR_GIT_HASH);
+	VMR_LOG("git branch: %s", VMR_GIT_BRANCH);
+	VMR_LOG("git hash date: %s", VMR_GIT_HASH_DATE);
+	VMR_LOG("vmr build date: %s", VMR_BUILD_VERSION_DATE);
+	VMR_LOG("vmr build version: %s", VMR_BUILD_VERSION);
+
+	count += snprintf(buf + count, size - count,
+		"vitis version: %s\ngit hash: %s\ngit branch: %s\ngit hash date: %s\n",
+		VMR_TOOL_VERSION, VMR_GIT_HASH, VMR_GIT_BRANCH, VMR_GIT_HASH_DATE);
+	if (count > size) {
+		VMR_ERR("msg is truncated");
+		return size;
+	}
+
+	count += snprintf(buf + count, size - count,
+		"vmr build date: %s\nvmr build version: %s\n",
+		VMR_BUILD_VERSION_DATE, VMR_BUILD_VERSION);
+	if (count > size) {
+		VMR_ERR("msg is truncated");
+		return size;
+	}
+#endif
+
+	return count;
+}
+
+static u32 rmgmt_apu_status_query(struct cl_msg *msg, char *buf, u32 size)
+{
+	u32 count = 0;
+
+	//cl_xgq_apu_identify(msg);
+	count = snprintf(buf, size, "is PS ready: %d\n", cl_rmgmt_apu_is_ready());
+
 	return count;
 }
 
@@ -357,18 +344,18 @@ static int vmr_verbose_info(cl_msg_t *msg)
 	u32 count = 0;
 	u32 total_count = 0;
 
-	count = cl_rpu_status_query(msg, log_msg, safe_size);
+	count = rmgmt_rpu_status_query(msg, log_msg, safe_size);
 	if (msg->log_payload.size < total_count + count) {
-		RMGMT_ERR("log buffer %d is too small, log message %s is truncated",
+		VMR_ERR("log buffer %d is too small, log message %s is truncated",
 			msg->log_payload.size, log_msg);
 		goto done;
 	}		
 	cl_memcpy_toio8(dst_addr + total_count, &log_msg, count);
 	total_count += count;
 
-	count = cl_apu_status_query(msg, log_msg, safe_size);
+	count = rmgmt_apu_status_query(msg, log_msg, safe_size);
 	if (msg->log_payload.size < total_count + count) {
-		RMGMT_ERR("log buffer %d is too small, log message %s is truncated",
+		VMR_ERR("log buffer %d is too small, log message %s is truncated",
 			msg->log_payload.size, log_msg);
 		goto done;
 	}
@@ -377,7 +364,7 @@ static int vmr_verbose_info(cl_msg_t *msg)
 
 	count = rmgmt_fpt_status_query(msg, log_msg, safe_size);
 	if (msg->log_payload.size < total_count + count) {
-		RMGMT_ERR("log buffer %d is too small, log message %s is truncated",
+		VMR_ERR("log buffer %d is too small, log message %s is truncated",
 			msg->log_payload.size, log_msg);
 		goto done;
 	}
@@ -400,7 +387,7 @@ static int vmr_endpoint_info(cl_msg_t *msg)
 
 	count = rmgmt_endpoints_query(msg, log_msg, safe_size);
 	if (msg->log_payload.size < total_count + count) {
-		RMGMT_ERR("log buffer %d is too small, log message %s is truncated",
+		VMR_ERR("log buffer %d is too small, log message %s is truncated",
 			msg->log_payload.size, log_msg);
 		goto done;
 	}
@@ -429,17 +416,17 @@ static inline u32 check_firewall()
 	return IS_FIRED(read_firewall());
 }
 
-int cl_xgq_pl_is_ready()
+int cl_rmgmt_pl_is_ready()
 {
 	return !check_firewall();
 }
 
-static int vmr_clear_firewall()
+static int rmgmt_clear_firewall()
 {
 	int i = 0;
 
 	if (!check_firewall()) {
-		RMGMT_LOG("done");
+		VMR_LOG("done");
 		return 0;
 	}
 	
@@ -453,7 +440,7 @@ static int vmr_clear_firewall()
 	}
 
 	if (read_firewall() & FIREWALL_STATUS_BUSY) {
-		RMGMT_ERR("firewall is busy, status: 0x%x", read_firewall());
+		VMR_ERR("firewall is busy, status: 0x%x", read_firewall());
 		return -EINVAL;
 	}
 
@@ -467,11 +454,11 @@ static int vmr_clear_firewall()
 		vTaskDelay(pdMS_TO_TICKS(CLEAR_RETRY_INTERVAL));
 	}
 
-	RMGMT_ERR("failed clear firewall, status: 0x%x", read_firewall());
+	VMR_ERR("failed clear firewall, status: 0x%x", read_firewall());
 	return -EINVAL;
 }
 
-static u32 vmr_check_firewall(cl_msg_t *msg)
+static u32 rmgmt_check_firewall(cl_msg_t *msg)
 {
 	u32 val = check_firewall();
 
@@ -483,10 +470,10 @@ static u32 vmr_check_firewall(cl_msg_t *msg)
 		u32 dst_addr = RPU_SHARED_MEMORY_ADDR(msg->log_payload.address);
 		u32 count = 0;
 		
-		RMGMT_ERR("tripped status: 0x%x", val);
+		VMR_ERR("tripped status: 0x%x", val);
 
 		if (msg->log_payload.size < safe_size) {
-			RMGMT_ERR("log buffer %d is too small, log message %d is trunked",
+			VMR_ERR("log buffer %d is too small, log message %d is trunked",
 				msg->log_payload.size, sizeof(log_msg));
 			safe_size = msg->log_payload.size;
 		}
@@ -494,7 +481,7 @@ static u32 vmr_check_firewall(cl_msg_t *msg)
 		count = snprintf(log_msg, safe_size,
 			"AXI Firewall User is tripped, status: 0x%lx\n", val);
 		if (count > safe_size) 
-			RMGMT_WARN("log msg is trunked");
+			VMR_WARN("log msg is trunked");
 
 		cl_memcpy_toio8(dst_addr, &log_msg, safe_size);
 
@@ -505,9 +492,20 @@ static u32 vmr_check_firewall(cl_msg_t *msg)
 	return val;
 }
 
-static u32 vmr_log_clock_shutdown(cl_msg_t *msg)
+static u32 check_clock_shutdown_status(void)
 {
-	u32 val = cl_check_clock_shutdown_status();
+	u32 shutdown_status = 0 ;
+
+	//offset to read shutdown status
+	shutdown_status = IO_SYNC_READ32(VMR_EP_UCS_CONTROL_STATUS_BASEADDR);
+
+	return (shutdown_status & SHUTDOWN_LATCHED_STATUS);
+}
+
+
+static u32 rmgmt_log_clock_shutdown(cl_msg_t *msg)
+{
+	u32 val = check_clock_shutdown_status();
 
 	/*
 	 * copy message back from log_msg to shared memory
@@ -517,10 +515,10 @@ static u32 vmr_log_clock_shutdown(cl_msg_t *msg)
 		u32 dst_addr = RPU_SHARED_MEMORY_ADDR(msg->log_payload.address);
 		u32 count = 0;
 
-		RMGMT_ERR("clock shutdown status: 0x%x", val);
+		VMR_ERR("clock shutdown status: 0x%x", val);
 
 		if (msg->log_payload.size < sizeof(log_msg)) {
-			RMGMT_ERR("log buffer %d is too small, log message will be trunked %d bytes ",
+			VMR_ERR("log buffer %d is too small, log message will be trunked %d bytes ",
 				msg->log_payload.size, sizeof(log_msg));
 			safe_size = msg->log_payload.size;
 		}
@@ -542,7 +540,7 @@ static u32 vmr_log_clock_shutdown(cl_msg_t *msg)
 
 	return val;
 }
-static int vmr_load_firmware(cl_msg_t *msg)
+static int rmgmt_load_firmware(cl_msg_t *msg)
 {
 	u32 dst_addr = 0;
 	u32 src_addr = 0;
@@ -551,7 +549,7 @@ static int vmr_load_firmware(cl_msg_t *msg)
 	int ret = 0;
 
 	if (rmgmt_fpt_get_xsabin(msg, &fw_offset, &fw_size)) {
-		RMGMT_ERR("get xsabin firmware failed");
+		VMR_ERR("get xsabin firmware failed");
 		return -1;
 	}
 
@@ -574,22 +572,22 @@ static int vmr_load_firmware(cl_msg_t *msg)
 	return 0;
 }
 
-static int xgq_log_page_cb(cl_msg_t *msg, void *arg)
+int cl_rmgmt_log_page(cl_msg_t *msg)
 {
 	int ret = 0;
 
 	switch (msg->log_payload.pid) {
 	case CL_LOG_AF_CHECK:
-		ret = vmr_log_clock_shutdown(msg);
+		ret = rmgmt_log_clock_shutdown(msg);
 		if(ret)
 			break;
-		ret = vmr_check_firewall(msg);
+		ret = rmgmt_check_firewall(msg);
 		break;
 	case CL_LOG_AF_CLEAR:
-		ret = vmr_clear_firewall();
+		ret = rmgmt_clear_firewall();
 		break;
 	case CL_LOG_FW:
-		ret = vmr_load_firmware(msg);
+		ret = rmgmt_load_firmware(msg);
 		break;
 	case CL_LOG_INFO:
 		ret = vmr_verbose_info(msg);
@@ -598,15 +596,13 @@ static int xgq_log_page_cb(cl_msg_t *msg, void *arg)
 		ret = vmr_endpoint_info(msg);
 		break;
 	default:
-		RMGMT_LOG("unsupported type %d", msg->log_payload.pid);
+		VMR_WARN("unsupported type %d", msg->log_payload.pid);
 		ret = -EINVAL;
 		break;
 	}
 
-	msg->hdr.rcode = ret;
-	cl_msg_handle_complete(msg);
-	RMGMT_DBG("complete msg id %d, ret %d", msg->hdr.cid, ret);
-	return 0;
+	VMR_DBG("complete msg id %d, ret %d", msg->hdr.cid, ret);
+	return ret;
 }
 
 static inline void rmgmt_enable_srst_por()
@@ -618,7 +614,7 @@ static inline void rmgmt_enable_srst_por()
 
 static inline void rmgmt_set_multiboot(u32 offset)
 {
-	RMGMT_WARN("set to: 0x%x", offset);
+	VMR_WARN("set to: 0x%x", offset);
 	IO_SYNC_WRITE32(offset, VMR_EP_PLM_MULTIBOOT);
 }
 
@@ -645,11 +641,11 @@ static int rmgmt_enable_boot_default(cl_msg_t *msg)
 
 	ret = rmgmt_enable_pl_reset();
 	if (ret && ret != -ENODEV) {
-		RMGMT_ERR("request reset failed %d", ret);
+		VMR_ERR("request reset failed %d", ret);
 		return -1;
 	}
 
-	RMGMT_LOG("done");
+	VMR_LOG("done");
 	return 0;
 }
 
@@ -662,24 +658,15 @@ static int rmgmt_enable_boot_backup(cl_msg_t *msg)
 
 	ret = rmgmt_enable_pl_reset();
 	if (ret && ret != -ENODEV) {
-		RMGMT_ERR("request reset failed %d", ret);
+		VMR_ERR("request reset failed %d", ret);
 		return -1;
 	}
 
-	RMGMT_LOG("done");
+	VMR_LOG("done");
 	return 0;
 }
 
-static int xgq_apu_channel_probe()
-{
-	if (cl_xgq_client_probe() != 0) {
-		return -1;
-	}
-
-	return 0;
-}
-
-u32 rmgmt_boot_on_offset()
+u32 cl_rmgmt_boot_on_offset()
 {
 	return rh.rh_boot_on_offset;
 }
@@ -700,21 +687,6 @@ int cl_rmgmt_fpt_query(cl_msg_t *msg)
 	return 0;
 }
 
-int cl_rmgmt_program_sc(cl_msg_t *msg)
-{
-	/* calling into vmc_update APIs, we check progress separately */
-	if (acquire_download_sema()) {
-		RMGMT_LOG("start programing SC ...");
-		VMC_Start_SC_Update();
-		RMGMT_LOG("end programing SC ...");
-		release_download_sema();
-		return 0;
-	} 
-
-	RMGMT_LOG("system busy, please try later");
-	return -EBUSY;
-}
-
 int cl_rmgmt_fpt_get_debug_type(cl_msg_t *msg, u8 *debug_type)
 {
 	return rmgmt_fpt_get_debug_type((struct cl_msg *)msg, debug_type);
@@ -725,105 +697,73 @@ int cl_rmgmt_fpt_debug(cl_msg_t *msg)
 	return rmgmt_fpt_set_debug_type(msg);
 }
 
-static void pvXGQTask( void *pvParameters )
+int cl_rmgmt_program_sc(cl_msg_t *msg)
 {
-	const TickType_t x1second = pdMS_TO_TICKS( 1000*1 );
-	cl_msg_t msg = { 0 };
-	int cnt = 0;
+	VMR_WARN("Obsolated cmd, ignore");
+	return 0;
+}
 
-	xSemaDownload = xSemaphoreCreateMutex();
-	configASSERT(xSemaDownload != NULL);
-	
+struct xgq_vmr_op {
+	int 		op_req_type;
+	const char 	*op_name;
+	int (*op_handle)(cl_msg_t *msg);
+} xgq_vmr_op_table[] = {
+	{ CL_MULTIBOOT_DEFAULT, "MULTIBOOT_DEFAULT", cl_rmgmt_enable_boot_default },
+	{ CL_MULTIBOOT_BACKUP, "MULTIBOOT_BACKUP", cl_rmgmt_enable_boot_backup },
+	{ CL_VMR_QUERY, "VMR_QUERY", cl_rmgmt_fpt_query },
+	{ CL_VMR_DEBUG, "VMR_DEBUG", cl_rmgmt_fpt_debug },
+	{ CL_PROGRAM_SC, "PROGRAM_SC", cl_rmgmt_program_sc },
+};
+
+int cl_rmgmt_vmr_control(cl_msg_t *msg)
+{
+	int ret = 0;
+
+	for (int i = 0; i < ARRAY_SIZE(xgq_vmr_op_table); i++) {
+		if (xgq_vmr_op_table[i].op_req_type == msg->multiboot_payload.req_type) {
+			ret = xgq_vmr_op_table[i].op_handle(msg);
+			goto done;
+		}
+	}
+
+	VMR_ERR("unknown type %d", msg->multiboot_payload.req_type);
+	ret = -EINVAL;
+done:
+	VMR_DBG("msg cid %d, ret %d", msg->hdr.cid, ret);
+	return ret;	
+}
+
+int cl_rmgmt_is_ready()
+{
+	return rmgmt_is_ready == true;
+}
+
+int cl_rmgmt_init( void )
+{	
+	int ret = 0;
+	cl_msg_t msg = { 0 };
+
+	ret = ospi_flash_init();
+	if (ret != XST_SUCCESS) {
+		VMR_ERR("OSPI is not ready");
+		return -EIO;
+	}
+
+	if(rmgmt_init_handler(&rh)) {
+		VMR_LOG("FATAL: init rmgmt handler failed.");
+		return -ENOMEM;
+	}
+
 	/* try to clear any existign uncleared firewall before rmgmt launch */
-	vmr_clear_firewall();
+	rmgmt_clear_firewall();
 
 	rh.rh_boot_on_offset = IO_SYNC_READ32(VMR_EP_PLM_MULTIBOOT);
-	RMGMT_WARN("boot on 0x%x", rh.rh_boot_on_offset);
+	VMR_WARN("boot on 0x%x", rh.rh_boot_on_offset);
 
 	/* enforce next boot to default image */
 	rmgmt_enable_boot_default(&msg);
 
-	for ( ;; )
-	{
-		vTaskDelay( x1second );
-
-		cnt++;
-		//xil_printf("%d  pvXGQTask in main \r", cnt);
-
-		if (xgq_pdi_flag == 0 &&
-		    cl_msg_handle_init(&pdi_hdl, CL_MSG_PDI, xgq_pdi_cb, NULL) == 0) {
-			RMGMT_LOG("init pdi download handle done.");
-			xgq_pdi_flag = 1;
-		}
-
-		if (xgq_xclbin_flag == 0 &&
-		    cl_msg_handle_init(&xclbin_hdl, CL_MSG_XCLBIN, xgq_xclbin_cb, NULL) == 0) {
-			RMGMT_LOG("init xclbin download handle done.");
-			xgq_xclbin_flag = 1;
-		}
-
-		if (xgq_log_page_flag == 0 &&
-		    cl_msg_handle_init(&af_hdl, CL_MSG_LOG_PAGE, xgq_log_page_cb, NULL) == 0) {
-			RMGMT_LOG("init log page handle done.");
-			xgq_log_page_flag = 1;
-		}
-
-		if (xgq_clock_flag == 0 &&
-		    cl_msg_handle_init(&clock_hdl, CL_MSG_CLOCK, xgq_clock_cb, NULL) == 0) {
-			RMGMT_LOG("init sensor handle done.");
-			xgq_clock_flag = 1;
-		}
-
-		if (xgq_apubin_flag == 0 &&
-		    cl_msg_handle_init(&apubin_hdl, CL_MSG_APUBIN, xgq_apubin_cb, NULL) == 0) {
-			RMGMT_LOG("init apubin handle done.");
-			xgq_apubin_flag = 1;
-		}
-
-		if (xgq_apu_control_flag == 0 && xgq_apu_channel_probe() == 0) {
-			RMGMT_LOG("apu is ready.");
-			xgq_apu_control_flag = 1;
-		}
-
-		RMGMT_DBG("free heap %d", xPortGetFreeHeapSize());
-	}
-	RMGMT_LOG("done");
-}
-
-static int rmgmt_create_tasks(void)
-{
-	if (xTaskCreate( pvXGQTask,
-		 ( const char * ) "R5-0-XGQ",
-		 TASK_STACK_DEPTH,
-		 NULL,
-		 tskIDLE_PRIORITY + 1,
-		 &xXGQTask) != pdPASS) {
-
-		RMGMT_LOG("FATAL: pvXGQTask creation failed.");
-		return -1;
-	}
-
-	return 0;
-}
-
-int RMGMT_Launch( void )
-{	
-	int ret = 0;
-
-	ret = rmgmt_init_handler(&rh);
-	if (ret != 0) {
-		RMGMT_LOG("FATAL: init rmgmt handler failed.");
-		return ret;
-	}
-
-#if 0
-	rmgmt_load_apu(&rh);
-#endif
-
-	ret = rmgmt_create_tasks();
-	if (ret != 0)
-		return ret;
-
-	RMGMT_LOG("done.");
+	rmgmt_is_ready = true;
+	VMR_LOG("Done. set rmgmt is ready.");
 	return 0;
 }

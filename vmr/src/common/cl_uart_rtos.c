@@ -1,5 +1,5 @@
 /******************************************************************************
-* Copyright (C) 2020 Xilinx, Inc.  All rights reserved.
+* Copyright (C) 2020-2022 Xilinx, Inc.  All rights reserved.
 * SPDX-License-Identifier: MIT
 *******************************************************************************/
 
@@ -34,7 +34,6 @@
 
 /************************** Function Prototypes *****************************/
 
-static void 	UART_Task(void* pvParameters);
 static void 	UART_RTOS_Handler(void *CallBackRef, u32 Event, unsigned int EventData);
 static int32_t 	UART_Config(uart_rtos_handle_t *handle, XUartPsv *UartInstPtr, uint16_t DeviceId, uint16_t UartIntrId);
 
@@ -485,43 +484,6 @@ int32_t UART_RTOS_Receive(uart_rtos_handle_t *handle, uint8_t *buf, uint32_t siz
 	return retVal;
 }
 
-
-
-/**************************************************************************/
-/**
-*
-* This task is created only with intend to initialize and configure UART
-* driver when FreeRTOS is running.
-*
-* It prints a welcome message when initialization and configuration is successful.
-*
-*
-* @param	handle is a pointer to UART RTOS driver configuration parameter.
-*
-* @return
-*
-* @note		Task will suspends itself at the end.
-*
-**************************************************************************/
-static void UART_Task(void* pvParameters)
-{
-	int32_t status;
-
-	uart_rtos_config_t *uartConf = (uart_rtos_config_t *)pvParameters;
-
-	status = UART_RTOS_Init(uartConf->uartHandler, &uartConf->INTC, uartConf->uart_ID, uartConf->uart_IRQ_ID);
-	if (status != XST_SUCCESS) {
-		xil_printf("Uart RTOS Initialization Failed\r\n");
-	}
-
-#ifdef VMC_DEBUG
-	UART_RTOS_Send(uartConf->uartHandler, (u8 *)WELCOME_MSG, strlen(WELCOME_MSG));
-#endif
-	vTaskSuspend(NULL);
-}
-
-
-
 /**************************************************************************/
 /**
 *
@@ -538,13 +500,19 @@ static void UART_Task(void* pvParameters)
 **************************************************************************/
 int32_t UART_RTOS_Enable(uart_rtos_config_t *uartConfig)
 {
-    if(xTaskCreate(UART_Task,"UART_Task", TASK_STACK_DEPTH, uartConfig, UART_RTOS_TASK_PRIORITY, NULL) != pdPASS)
-    {
-    	xil_printf("UART Task Create Failed!");
-    	return XST_FAILURE;
-    }
+	int32_t status = UART_RTOS_Init(uartConfig->uartHandler, &uartConfig->INTC,
+		uartConfig->uart_ID, uartConfig->uart_IRQ_ID);
 
-    return XST_SUCCESS;
+	if (status != XST_SUCCESS) {
+		xil_printf("Uart RTOS Initialization Failed\r\n");
+		return XST_FAILURE;
+	}
+
+#ifdef VMC_DEBUG
+	UART_RTOS_Send(uartConfig->uartHandler, (u8 *)WELCOME_MSG, strlen(WELCOME_MSG));
+#endif
+
+	return XST_SUCCESS;
 }
 
 
