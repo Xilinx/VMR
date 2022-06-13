@@ -10,6 +10,7 @@
 #include "vmc_sc_comms.h"
 #include "cl_mem.h"
 #include <semphr.h>
+#include "xsysmonpsv.h"
 
 #define ASDM_GET_SDR_SIZE_REQ (0x00)
 
@@ -101,9 +102,9 @@ void getCurrentNames(u8 index, char8* snsrName, u8 *sensorId)
     };
 
     struct sensorData snsrData[] =    {
-        { PEX_12V_I_IN,   "12v_pex\0"  },
-        { V12_IN_AUX0_I,  "12v_aux_0\0" },
-        { V12_IN_AUX1_I,  "12v_aux_1\0" },
+        { PEX_12V_I_IN_SC,   "12v_pex\0"  },
+        { V12_IN_AUX0_I_SC,  "12v_aux_0\0" },
+        { V12_IN_AUX1_I_SC,  "12v_aux_1\0" },
     };
 
     if(NULL != snsrName)
@@ -127,11 +128,11 @@ void getVoltagesName(u8 index, char8* snsrName, u8 *sensorId)
 
     struct sensorData voltageData[] =
     {
-        { PEX_12V,    "12v_pex\0" },
-        { PEX_3V3,    "3v3_pex\0" },
-        { AUX_3V3,     "3v3_aux\0" },
-        { AUX_12V,     "12v_aux_0\0" },
-        { AUX1_12V,    "12v_aux_1\0" }
+        { PEX_12V_SC,    "12v_pex\0" },
+        { PEX_3V3_SC,    "3v3_pex\0" },
+        { AUX_3V3_SC,     "3v3_aux\0" },
+        { AUX_12V_SC,     "12v_aux_0\0" },
+        { AUX1_12V_SC,    "12v_aux_1\0" }
     };
 
     if(NULL != snsrName)
@@ -154,8 +155,8 @@ void getQSFPName(u8 index, char8* snsrName, u8 *sensorId)
 
     struct sensorData qsfpData[] =
     {
-        { CAGE_TEMP0,  TEMP_CAGE0_NAME },
-        { CAGE_TEMP1,  TEMP_CAGE1_NAME }
+        { CAGE_TEMP0_SC,  TEMP_CAGE0_NAME },
+        { CAGE_TEMP1_SC,  TEMP_CAGE1_NAME }
     };
 
     if(NULL != snsrName)
@@ -270,7 +271,7 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
 	    .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_2B,
 	    .snsrUnitModifier = 0x0,
 	    .supportedThreshold = SNSR_MAX_VAL | SNSR_AVG_VAL | HAS_UPPER_THRESHOLDS,
-	    .sesnorListTbl = SE98_TEMP0,
+	    .sesnorListTbl = SE98_TEMP0_SC,
 	    .sampleCount = 0x1,
 	    .monitorFunc = &Temperature_Read_Inlet,
 
@@ -282,7 +283,7 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
 	    .snsrUnitModifier = 0x0,
 	    .supportedThreshold = SNSR_MAX_VAL | SNSR_AVG_VAL | HAS_UPPER_THRESHOLDS,
 	    .sampleCount = 0x1,
-	    .sesnorListTbl = SE98_TEMP1,
+	    .sesnorListTbl = SE98_TEMP1_SC,
 	    .monitorFunc = &Temperature_Read_Outlet,
 	},
 */
@@ -293,7 +294,7 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
 	    .snsrUnitModifier = 0x0,
 	    .supportedThreshold = SNSR_MAX_VAL | SNSR_AVG_VAL | HAS_UPPER_THRESHOLDS,
 	    .sampleCount = 0x1,
-	    .sesnorListTbl = FAN_TEMP,
+	    .sesnorListTbl = FAN_TEMP_SC,
 	    .monitorFunc = &Temperature_Read_Board,
 	},
 	{
@@ -303,7 +304,7 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
 	    .snsrUnitModifier = 0x0,
 	    .supportedThreshold = SNSR_MAX_VAL | SNSR_AVG_VAL | HAS_UPPER_THRESHOLDS,
 	    .sampleCount = 0x1,
-	    .sesnorListTbl = FPGA_TEMP,
+	    .sesnorListTbl = FPGA_TEMP_SC,
 	    .monitorFunc = &Temperature_Read_ACAP_Device_Sysmon,
 	},
 	{
@@ -313,7 +314,7 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
 	    .snsrUnitModifier = 0x0,
 	    .supportedThreshold = SNSR_MAX_VAL | SNSR_AVG_VAL | HAS_UPPER_THRESHOLDS,
 	    .sampleCount = 0x1,
-	    .sesnorListTbl = VCCINT_TEMP,
+	    .sesnorListTbl = VCCINT_TEMP_SC,
 	    .monitorFunc = &PMBUS_SC_Sensor_Read,
 	},
 	{
@@ -363,7 +364,7 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
 	    .snsrUnitModifier = -3,
 	    .supportedThreshold = SNSR_MAX_VAL | SNSR_AVG_VAL ,
 	    .sampleCount = 0x1,
-	    .sesnorListTbl = VCCINT_I,
+	    .sesnorListTbl = VCCINT_I_SC,
 	    .monitorFunc = &PMBUS_SC_Vccint_Read,
 	},
 	{
@@ -1319,7 +1320,7 @@ u8 Asdm_Send_I2C_Sensors_SC(u8 *scPayload)
 	    /* We do not need send VCCINT_TEMP to SC,
  	       as we are receiving it from SC
 	    */
-	    if(sensorRecord[i].mspSensorId == VCCINT_TEMP)
+	    if(sensorRecord[i].mspSensorId == VCCINT_TEMP_SC)
 	    {
 		continue;
 	    }

@@ -369,9 +369,9 @@ s8 Power_Monitor(snsrRead_t *snsrData)
     if (xSemaphoreTake(vmc_sc_lock, portMAX_DELAY))
     {
     	power_mode =  sc_vmc_data.availpower;
-    	pexPower = ((sc_vmc_data.sensor_values[PEX_12V]/1000.0) * (sc_vmc_data.sensor_values[PEX_12V_I_IN])/1000.0);
-    	aux0Power = ((sc_vmc_data.sensor_values[AUX_12V]/1000.0) * (sc_vmc_data.sensor_values[V12_IN_AUX0_I])/1000.0); //2x4 AUX
-    	aux1Power = ((sc_vmc_data.sensor_values[AUX1_12V]/1000.0) * (sc_vmc_data.sensor_values[V12_IN_AUX1_I])/1000.0); //2x3 AUX
+    	pexPower = ((sc_vmc_data.sensor_values[PEX_12V_SC]/1000.0) * (sc_vmc_data.sensor_values[PEX_12V_I_IN_SC])/1000.0);
+    	aux0Power = ((sc_vmc_data.sensor_values[AUX_12V_SC]/1000.0) * (sc_vmc_data.sensor_values[V12_IN_AUX0_I_SC])/1000.0); //2x4 AUX
+    	aux1Power = ((sc_vmc_data.sensor_values[AUX1_12V_SC]/1000.0) * (sc_vmc_data.sensor_values[V12_IN_AUX1_I_SC])/1000.0); //2x3 AUX
     	totalPower = (pexPower + aux0Power +aux1Power);
     	xSemaphoreGive(vmc_sc_lock);
     }
@@ -567,7 +567,7 @@ void qsfp_monitor(void)
 void Monitor_Thresholds()
 {
 	static bool is_vccint_temp_critical_threshold_reached = false;
-	u16 sensorReading = sc_vmc_data.sensor_values[VCCINT_TEMP];
+	u16 sensorReading = sc_vmc_data.sensor_values[VCCINT_TEMP_SC];
 
 	if (sensorReading >= TEMP_VCCINT_CRITICAL_THRESHOLD)
 	{

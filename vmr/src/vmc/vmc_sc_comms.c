@@ -5,7 +5,8 @@
 #include "cl_mem.h"
 #include "vmc_sc_comms.h"
 #include "vmc_update_sc.h"
-
+#include "cl_uart_rtos.h"
+#include "vmc_api.h"
 
 EventGroupHandle_t xScUpdateEvent = NULL;
 
@@ -33,9 +34,9 @@ u8 scPayload[128] = {0};
 
 static u8 vmc_active_resp_len = MSP432_COMMS_MSG_GOOD_LEN;
 
-static volatile bool is_SC_active  = false ;
-volatile bool isPowerModeActive = false;
-volatile bool getSensorRespLen = false;
+static volatile bool is_SC_active  = false;
+static volatile bool isPowerModeActive = false;
+static volatile bool getSensorRespLen = false;
 
 u8 VMC_SC_Comms_Msg[] = {
        MSP432_COMMS_VOLT_SNSR_REQ,
@@ -140,13 +141,13 @@ void VMC_Update_Version_PowerMode(u16 length,u8 *payload)
 		switch(payload[i])
 		{
 		
-		case BMC_VERSION:
+		case BMC_VERSION_SC:
 			sc_vmc_data.scVersion[0] = payload[i+2];  // fw_version
 			sc_vmc_data.scVersion[1] = payload[i+3];  // fw_rev_major
 			sc_vmc_data.scVersion[2] = payload[i+4];  // fw_rev_minor
 			break;
 		
-		case TOTAL_POWER_AVAIL:
+		case TOTAL_POWER_AVAIL_SC:
 			sc_vmc_data.availpower = payload[i+2];
 			break;
 		}
@@ -161,7 +162,7 @@ void VMC_StoreSensor_Value(u8 id, u32 value)
 
 	if (xSemaphoreTake(vmc_sc_lock, portMAX_DELAY))
 	{
-		if(id == VCCINT_I) {
+		if(id == VCCINT_I_SC) {
 			sc_vmc_data.VCCINT_sensor_value = value;
 		} else {
 			sc_vmc_data.sensor_values[id] = value;
