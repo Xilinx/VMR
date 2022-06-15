@@ -22,24 +22,26 @@
 #include "vmc_sc_comms.h"
 #include "vmc_update_sc.h"
 #include "vmr_common.h"
+#include "vmc_main.h"
 
-extern XSysMonPsv InstancePtr;
-extern XScuGic IntcInst;
+#define MAX6639_FAN_TACHO_TO_RPM(x) (8000*60)/(x)
+#define LPD_I2C_0	0x1
+#define BITMASK_TO_CLEAR	0xFF00000F
+#define ENABLE_FORCE_SHUTDOWN	0x001B6320
+
+static int vmc_sysmon_is_ready = 0;
+static XSysMonPsv InstancePtr;
+static XScuGic IntcInst;
+
 extern SemaphoreHandle_t vmc_sc_lock;
 
 extern SC_VMC_Data sc_vmc_data;
 
-extern uint8_t sc_update_flag;
+Vmc_Global_Variables vmc_g_var = {
+	.logging_level = VMC_LOG_LEVEL_NONE,
+};
 
-extern s8 Asdm_Process_Sensor_Request(u8 *req, u8 *resp, u16 *respSize);
-
-#define MAX6639_FAN_TACHO_TO_RPM(x) (8000*60)/(x)
-
-Versal_sensor_readings sensor_readings;
-u8 i2c_num = 1;  // LPD_I2C0
-#define LPD_I2C_0	0x1
-#define BITMASK_TO_CLEAR	0xFF00000F
-#define ENABLE_FORCE_SHUTDOWN	0x001B6320
+static u8 i2c_num = 1;
 
 void clear_clock_shutdown_status()
 {
@@ -467,7 +469,7 @@ void se98a_monitor(void)
 	u8 status = XST_FAILURE;
 	for (i = 0 ; i < BOARD_TEMPERATURE_SENSOR_NUM ; i++)
 	{
-		status = SE98A_ReadTemperature(i2c_num, SLAVE_ADDRESS_SE98A_0 + i, &sensor_readings.board_temp[i]);
+		status = SE98A_ReadTemperature(i2c_num, SLAVE_ADDRESS_SE98A_0 + i, &vmc_g_var.sensor_readings.board_temp[i]);
 		if (status == XST_FAILURE)
 		{
 			VMC_DBG("Failed to read SE98A_%d \n\r",i);
@@ -491,7 +493,7 @@ void max6639_monitor(void)
 		return;
 	}
 	//CL_LOG (APP_VMC,"fpga temp %f",TempReading);
-	sensor_readings.remote_temp = TempReading;
+	vmc_g_var.sensor_readings.remote_temp = TempReading;
 
         status = max6639_ReadDDRTemperature(i2c_num, SLAVE_ADDRESS_MAX6639, &TempReading);
         if (status == XST_FAILURE)
@@ -500,7 +502,7 @@ void max6639_monitor(void)
                 return;
         }
         //CL_LOG (APP_VMC,"local temp %f",TempReading);
-	sensor_readings.local_temp = TempReading;
+	vmc_g_var.sensor_readings.local_temp = TempReading;
 	
     	status = max6639_ReadFanTach(i2c_num, SLAVE_ADDRESS_MAX6639, 1, &fanSpeed);
     	fanRpm1 = MAX6639_FAN_TACHO_TO_RPM(fanSpeed);
@@ -509,7 +511,7 @@ void max6639_monitor(void)
     	status = max6639_ReadFanTach(i2c_num, SLAVE_ADDRESS_MAX6639, 2, &fanSpeed);
    	fanRpm2 = MAX6639_FAN_TACHO_TO_RPM(fanSpeed);
 
-    	sensor_readings.fanRpm = (fanRpm1 + fanRpm2)/2;
+    	vmc_g_var.sensor_readings.fanRpm = (fanRpm1 + fanRpm2)/2;
 	
 	//CL_LOG (APP_VMC,"Fan RPM %d",fanRpm);
 	
@@ -524,11 +526,11 @@ void sysmon_monitor(void)
 	if (XSysMonPsv_ReadTempProcessed(&InstancePtr, XSYSMONPSV_TEMP_MAX, &TempReading))
 	{
 		CL_LOG(APP_VMC, "Failed to read sysmon temperature \n\r");
-		sensor_readings.sysmon_max_temp = -1.0;
+		vmc_g_var.sensor_readings.sysmon_max_temp = -1.0;
 		return;
 	}
 
-	sensor_readings.sysmon_max_temp = TempReading;
+	vmc_g_var.sensor_readings.sysmon_max_temp = TempReading;
 	return;
 }
 
@@ -544,7 +546,7 @@ void qsfp_monitor(void)
 
 		if (status == XST_SUCCESS)
 		{
-			sensor_readings.qsfp_temp[snsrIndex] = TemperatureValue;
+			vmc_g_var.sensor_readings.qsfp_temp[snsrIndex] = TemperatureValue;
 		}
 		if (status == XST_FAILURE)
 		{
@@ -647,4 +649,20 @@ void cl_vmc_monitor_sensors()
     	sysmon_monitor();
     	qsfp_monitor ();
 #endif
+}
+
+
+int cl_vmc_sysmon_is_ready()
+{
+	if (!vmc_sysmon_is_ready)
+		VMC_ERR("vmc sysmon is not ready");
+
+	return vmc_sysmon_is_ready;
+}
+
+int cl_vmc_sysmon_init()
+{
+	vmc_sysmon_is_ready = (XSysMonPsv_Init(&InstancePtr, &IntcInst) == XST_SUCCESS) ? 1 : 0;
+
+	return cl_vmc_sysmon_is_ready();
 }

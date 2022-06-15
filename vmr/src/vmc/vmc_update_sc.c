@@ -223,33 +223,27 @@ void VMC_Get_Fpt_SC_Version(cl_msg_t *msg)
 	}
 }
 
-int32_t VMC_Start_SC_Update(void)
+static int32_t VMC_Start_SC_Update(void)
 {
 	int32_t retVal = 0;
-	EventBits_t uxBits;
 
 	retVal = (s32)Get_SC_Checksum();
 	if(retVal && fptSCvalid)
 	{
-		VMC_LOG("\n\rSC Needs Update !!\r\n");
-
-		uxBits = xEventGroupSetBits( xScUpdateEvent, FW_UPDATE_TRIGGER_0 );
-		if((uxBits & FW_UPDATE_TRIGGER_0) == 0) {
-			retVal = -1;
-			VMC_ERR("SC Update trigger failed !!");
-		}
+		VMC_LOG("SC Needs Update !!");
+		UpdateSCFW();
 	}
 	else
 	{
 		if(!fptSCvalid)
 		{
-			VMC_LOG("\n\rNo Valid SC available !!\r\n");
+			VMC_ERR("No Valid SC available !!");
 			retVal = -1;
 		}
 		else if(!retVal)
 		{
 			VMC_LOG("\n\rSC Up-to-date !!\r\n");
-			retVal = -1;
+			retVal = 0;
 		}
 	}
 
@@ -1210,9 +1204,7 @@ void UpdateSCFW()
 
 int cl_vmc_scfw_program(cl_msg_t *msg)
 {
-	UpdateSCFW();
-
-	return 0;
+	return VMC_Start_SC_Update();
 }
 
 int cl_vmc_scfw_init()

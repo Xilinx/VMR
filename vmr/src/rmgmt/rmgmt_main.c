@@ -19,8 +19,6 @@
 #include "cl_main.h"
 #include "cl_rmgmt.h"
 
-int32_t VMC_Start_SC_Update(void);
-
 static struct rmgmt_handler rh = { 0 };
 static char log_msg[1024] = { 0 };
 static bool rmgmt_is_ready = false;

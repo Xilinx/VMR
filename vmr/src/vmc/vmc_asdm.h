@@ -196,5 +196,5 @@ typedef enum Sensor_Status_Enum_e
 
 s8 Init_Asdm();
 void Monitor_Sensors(void);
-
+s8 Asdm_Process_Sensor_Request(u8 *req, u8 *resp, u16 *respSize);
 

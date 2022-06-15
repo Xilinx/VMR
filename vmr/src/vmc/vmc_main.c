@@ -31,7 +31,10 @@ static bool vmc_is_ready = false;
 
 int cl_vmc_is_ready()
 {
-	return vmc_is_ready == true;
+	if (!vmc_is_ready)
+		VMC_ERR("vmc main service is not ready");
+
+	return cl_vmc_sysmon_is_ready() && (vmc_is_ready == true);
 }
 
 int cl_vmc_init()

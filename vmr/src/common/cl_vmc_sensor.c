@@ -112,7 +112,7 @@ void cl_vmc_sensor_func(void *task_args)
 {
 	while (1) {
 		/* vmc_sensors task */
-		cl_vmc_monitor_sensors(); //20 ms
+		cl_vmc_monitor_sensors();
 
 		/* every 100ms we should check hardware status */
 		vTaskDelay(pdMS_TO_TICKS(100));

@@ -21,4 +21,7 @@ int cl_vmc_scfw_init(void);
 int cl_vmc_scfw_program(struct cl_msg *msg);
 int cl_vmc_scfw_program_progress(void);
 
+int cl_vmc_sysmon_init(void);
+int cl_vmc_sysmon_is_ready(void);
+
 #endif

@@ -20,7 +20,6 @@
 #include "cl_rmgmt.h"
 #include "cl_vmc.h"
 #include "vmr_common.h"
-#include "xsysmonpsv.h"
 
 #define XGQ_XQUEUE_LENGTH	8
 #define XGQ_XQUEUE_WAIT_MS	10
@@ -87,14 +86,6 @@
  *         local cache. There is a lock (sdr_lock) to protect local cache update and
  *         sensor data request.
  */
-
-/*
- * Global variable for sysmon.
- * workaround: sysmon cannot be inited after vTaskSchedulerStart for 2022.1 release
- * AI: find the root cause of this issue and add comments.
- */
-XSysMonPsv InstancePtr;
-XScuGic IntcInst;
 
 static TaskHandle_t cl_main_task_handle = NULL;
 
@@ -253,7 +244,11 @@ static int cl_main_task_init(void)
 	cl_log_init();
 	VMR_WARN("=== VMR Service Starting ... ===");
 
-	if (XSysMonPsv_Init(&InstancePtr, &IntcInst) != XST_SUCCESS)
+	/*
+	 * workaround: sysmon cannot be inited after vTaskSchedulerStart for 2022.1 release
+	 * AI: find the root cause of this issue and add comments.
+	 */
+	if (cl_vmc_sysmon_init() == 0)
 	{
 		VMR_WARN("Failed to init sysmon \n\r");
 	}
@@ -312,6 +307,7 @@ static void cl_main_task_func(void *task_args)
 	}
 
 	VMR_LOG("\r\n=== VMR Services fully started. ===");
+	vTaskDelay(pdMS_TO_TICKS(1000));
 	vTaskDelete(NULL);
 }
 
