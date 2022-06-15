@@ -149,18 +149,17 @@ typedef struct cl_msg {
 	};
 } cl_msg_t;
 
-typedef int (*process_msg_cb)(cl_msg_t *msg, void *arg);
-
-typedef struct msg_handle {
-	cl_msg_type_t 	type;
-	process_msg_cb 	msg_cb;
-	void 		*arg;
-	const char	*name;
-} msg_handle_t;
-
-int cl_msg_handle_init(msg_handle_t **hdl, cl_msg_type_t type,
-	process_msg_cb cb, void *arg);
 int cl_msg_handle_complete(cl_msg_t *msg);
-void cl_msg_handle_fini(msg_handle_t *hdl);
+
+static inline void cl_msg_set_rcode(cl_msg_t *msg, int rcode)
+{
+	msg->hdr.rcode = (u32)rcode;
+}
+
+static inline u32 cl_msg_get_rcode(cl_msg_t *msg)
+{
+	return msg->hdr.rcode;
+}
+
 
 #endif

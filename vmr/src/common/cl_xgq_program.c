@@ -19,10 +19,28 @@
 #include "xgq_cmd_vmr.h"
 #include "vmr_common.h"
 
+/*
+ * Run SCFW program till finish and return result by xgq complete.
+ *
+ * xgq request  --> SCFW_REQ queue  --> cl_vmc_sc_comms --> SCFW_program --+
+ *                                                                         |
+ * xgq complete <-- SCFW_RESP queue <---------------------- return val   --+
+ *                                                                         |
+ *                                         cl_vmc_sc_comms task continues  V
+ */
 static int program_scfw(cl_msg_t *msg)
 {
-	/* notify SCFW update via xQueue of SC */
-	return cl_send_to_queue(msg, CL_QUEUE_SC);
+	int ret = 0;
+
+	ret = cl_send_to_queue(msg, CL_QUEUE_SCFW_REQ);
+	if (ret)
+		return ret;
+
+	ret = cl_recv_from_queue(msg, CL_QUEUE_SCFW_RESP);
+	if (ret)
+		return ret;
+
+	return cl_msg_get_rcode(msg);
 }
 
 struct program_handle {

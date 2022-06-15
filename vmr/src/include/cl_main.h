@@ -26,7 +26,8 @@ struct cl_msg;
 enum cl_queue_id {
 	CL_QUEUE_PROGRAM = 0,
 	CL_QUEUE_OPCODE,
-	CL_QUEUE_SC,
+	CL_QUEUE_SCFW_REQ,
+	CL_QUEUE_SCFW_RESP,
 };
 int cl_send_to_queue(struct cl_msg *msg, enum cl_queue_id qid);
 int cl_recv_from_queue(struct cl_msg *msg, enum cl_queue_id qid);
