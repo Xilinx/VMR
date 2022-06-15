@@ -306,7 +306,7 @@ static void cl_main_task_func(void *task_args)
 			break;
 	}
 
-	VMR_LOG("\r\n=== VMR Services fully started. ===");
+	VMR_WARN("\r\n=== VMR Services fully started. ===");
 	vTaskDelay(pdMS_TO_TICKS(1000));
 	vTaskDelete(NULL);
 }
