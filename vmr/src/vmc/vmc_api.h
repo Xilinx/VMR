@@ -21,6 +21,8 @@
 #include "cl_main.h"
 #include "cl_io.h"
 
+#include "vmc_asdm.h"
+
 #define	VMC_STRING	"VMC"
 
 #ifdef VMC_DEBUG
@@ -87,6 +89,46 @@ typedef struct Versal_BoardInfo
     unsigned char DIMM_size[5];
     unsigned char Num_MAC_IDS;
 } Versal_BoardInfo;
+
+#define 	MAX_PLATFORM_NAME_LEN (20u)
+#define 	MAX_FUNCTION_NAME_LEN (20u)
+
+typedef enum{
+	eVCK5000 = 0, /* VCK5000 or V350, so 2 platforms in one enum*/
+	eV70 = 2,
+	eMax_Platforms,
+} ePlatformType;
+
+typedef struct __attribute__((packed)) {
+	ePlatformType 	product_type_id;
+	char		product_type_name[MAX_PLATFORM_NAME_LEN];
+} Platform_t;
+
+typedef enum{
+	eTemperature_Sensor_Inlet = 0,
+	eTemperature_Sensor_Outlet,
+	eTemperature_Sensor_Board,
+	eTemperature_Sensor_QSFP,
+	//eFAN_RPM_READ,
+	eMax_Sensor_Functions,
+} eSensor_Functions;
+
+#if 0
+typedef struct __attribute__((packed)) {
+	eSensor_Functions	sensor_type;
+	char	product_type_name[MAX_FUNCTION_NAME_LEN];
+	//s8		(*sensor_handler)(snsrRead_t *snsrData);
+	sensorMonitorFunc	sensor_handler;
+}Sensor_Handler_t;
+#endif
+
+typedef struct __attribute__((packed)) {
+	ePlatformType 	product_type_id;
+	eSensor_Functions	sensor_type;
+	//s8		(*sensor_handler)(snsrRead_t *snsrData);
+	sensorMonitorFunc	sensor_handler;
+}Platform_Sensor_Handler_t;
+
 
 /*****************************************************************************/
 /**
@@ -195,5 +237,16 @@ void EepromDump(void);
 **
 ******************************************************************************/
 u8 Versal_EEPROM_ReadBoardInfo(void);
+
+
+s8 Vck5000_Temperature_Read_Inlet(snsrRead_t *snsrData);
+s8 Vck5000_Temperature_Read_Outlet(snsrRead_t *snsrData);
+s8 Vck5000_Temperature_Read_Board(snsrRead_t *snsrData);
+s8 Vck5000_Temperature_Read_QSFP(snsrRead_t *snsrData);
+
+extern sensorMonitorFunc Temperature_Read_Inlet_Ptr;
+extern sensorMonitorFunc Temperature_Read_Outlet_Ptr;
+extern sensorMonitorFunc Temperature_Read_Board_Ptr;
+extern sensorMonitorFunc Temperature_Read_QSFP_Ptr;
 
 #endif /* INC_VMC_API_H_ */

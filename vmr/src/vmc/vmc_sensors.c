@@ -33,6 +33,11 @@ static int vmc_sysmon_is_ready = 0;
 static XSysMonPsv InstancePtr;
 static XScuGic IntcInst;
 
+sensorMonitorFunc Temperature_Read_Inlet_Ptr;
+sensorMonitorFunc Temperature_Read_Outlet_Ptr;
+sensorMonitorFunc Temperature_Read_Board_Ptr;
+sensorMonitorFunc Temperature_Read_QSFP_Ptr;
+
 extern SemaphoreHandle_t vmc_sc_lock;
 
 extern SC_VMC_Data sc_vmc_data;
@@ -84,7 +89,7 @@ void ucs_clock_shutdown()
    return;
 }
 
-s8 Temperature_Read_Inlet(snsrRead_t *snsrData)
+s8 Vck5000_Temperature_Read_Inlet(snsrRead_t *snsrData)
 {
 	s8 status = XST_FAILURE;
 	s16 tempValue = 0;
@@ -105,7 +110,7 @@ s8 Temperature_Read_Inlet(snsrRead_t *snsrData)
 	return status;
 }
 
-s8 Temperature_Read_Outlet(snsrRead_t *snsrData)
+s8 Vck5000_Temperature_Read_Outlet(snsrRead_t *snsrData)
 {
 	s8 status = XST_FAILURE;
 	s16 tempValue = 0;
@@ -126,7 +131,7 @@ s8 Temperature_Read_Outlet(snsrRead_t *snsrData)
 	return status;
 }
 
-s8 Temperature_Read_Board(snsrRead_t *snsrData)
+s8 Vck5000_Temperature_Read_Board(snsrRead_t *snsrData)
 {
 	s8 status = XST_FAILURE;
 	float TempReading = 0;
@@ -241,7 +246,7 @@ s8 Fan_RPM_Read(snsrRead_t *snsrData)
 
 	return status;
 }
-s8 Temperature_Read_QSFP(snsrRead_t *snsrData)
+s8 Vck5000_Temperature_Read_QSFP(snsrRead_t *snsrData)
 {
 	u8 status = XST_FAILURE;
 	float TempReading = 0.0;
@@ -634,6 +639,28 @@ done:
 	VMC_DBG("msg cid%d, ret %d", msg->hdr.cid, ret);
 	return ret;
 }
+
+
+s8 Temperature_Read_Inlet(snsrRead_t *snsrData)
+{
+	return (*Temperature_Read_Inlet_Ptr)(snsrData);
+}
+
+s8 Temperature_Read_Outlet(snsrRead_t *snsrData)
+{
+	return (*Temperature_Read_Outlet_Ptr)(snsrData);
+}
+
+s8 Temperature_Read_Board(snsrRead_t *snsrData)
+{
+	return (*Temperature_Read_Board_Ptr)(snsrData);
+}
+
+s8 Temperature_Read_QSFP(snsrRead_t *snsrData)
+{
+	return (*Temperature_Read_QSFP_Ptr)(snsrData);
+}
+
 
 void cl_vmc_monitor_sensors()
 {

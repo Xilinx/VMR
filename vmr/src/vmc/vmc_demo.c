@@ -124,7 +124,7 @@ static void App_SetLogLevel(void)
 /*
  *  ======== Menu Task ========
  */
-void cl_uart_demo_func(void *arg0)
+void cl_uart_demo_func(void *task_args)
 {
     u8 TestIndex = 0;
     u8 MenuLevel = 0;
@@ -250,7 +250,7 @@ void cl_uart_demo_func(void *arg0)
     return;
 }
 
-int cl_uart_demo(void)
+int cl_uart_demo_init(void)
 {
 	return 0;
 }

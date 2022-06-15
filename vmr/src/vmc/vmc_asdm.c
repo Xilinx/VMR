@@ -61,16 +61,16 @@ extern SC_VMC_Data sc_vmc_data;
 extern u8 fpt_sc_version[3];
 
 void Asdm_Update_Active_MSP_sensor();
-extern s8 Temperature_Read_Inlet(snsrRead_t *snsrData);
-extern s8 Temperature_Read_Outlet(snsrRead_t *snsrData);
-extern s8 Temperature_Read_Board(snsrRead_t *snsrData);
-extern s8 Temperature_Read_ACAP_Device_Sysmon(snsrRead_t *snsrData);
-extern s8 Fan_RPM_Read(snsrRead_t *snsrData);
-extern s8 Temperature_Read_QSFP(snsrRead_t *snsrData);
-extern s8 PMBUS_SC_Sensor_Read(snsrRead_t *snsrData);
-extern s8 Power_Monitor(snsrRead_t *snsrData);
-extern s8 PMBUS_SC_Vccint_Read(snsrRead_t *snsrData);
-extern s8 VCCINT_Read_ACAP_Device_Sysmon(snsrRead_t *snsrData);
+s8 Temperature_Read_Inlet(snsrRead_t *snsrData);
+s8 Temperature_Read_Outlet(snsrRead_t *snsrData);
+s8 Temperature_Read_Board(snsrRead_t *snsrData);
+s8 Temperature_Read_QSFP(snsrRead_t *snsrData);
+s8 Temperature_Read_ACAP_Device_Sysmon(snsrRead_t *snsrData);
+s8 Fan_RPM_Read(snsrRead_t *snsrData);
+s8 PMBUS_SC_Sensor_Read(snsrRead_t *snsrData);
+s8 Power_Monitor(snsrRead_t *snsrData);
+s8 PMBUS_SC_Vccint_Read(snsrRead_t *snsrData);
+s8 VCCINT_Read_ACAP_Device_Sysmon(snsrRead_t *snsrData);
 
 Asdm_Sensor_Thresholds_t thresholds_limit_tbl[]= {
     /*  Name           LW   LC   LF    UW   UC  UF  */

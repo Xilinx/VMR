@@ -13,7 +13,7 @@ int cl_xgq_program_init(void);
 int cl_xgq_opcode_init(void);
 int cl_vmc_sensor_init(void);
 int cl_vmc_sc_comms_init(void);
-int cl_uart_demo(void);
+int cl_uart_demo_init(void);
 
 void cl_xgq_receive_func(void *task_args);
 void cl_xgq_program_func(void *task_args);

@@ -2,6 +2,9 @@
 * Copyright (C) 2020 Xilinx, Inc.  All rights reserved.
 * SPDX-License-Identifier: MIT
 *******************************************************************************/
+#ifndef INC_VMC_ASDM_H_
+#define INC_VMC_ASDM_H_
+
 #include "xil_types.h"
 
 typedef enum VMC_Sensor_State_e
@@ -197,4 +200,6 @@ typedef enum Sensor_Status_Enum_e
 s8 Init_Asdm();
 void Monitor_Sensors(void);
 s8 Asdm_Process_Sensor_Request(u8 *req, u8 *resp, u16 *respSize);
+
+#endif
 
