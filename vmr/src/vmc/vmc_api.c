@@ -4,9 +4,6 @@
 * SPDX-License-Identifier: MIT
 *******************************************************************************/
 
-#include "vmc_api.h"
-#include "vmc_sensors.h"
-
 #include "cl_uart_rtos.h"
 #include "cl_log.h"
 #include "cl_mem.h"
@@ -19,28 +16,37 @@
 #include <task.h>
 #include <semphr.h>
 
+#include "vmc_api.h"
+#include "vmc_sensors.h"
+#include "vmc_main.h"
 
 #define MAX_FILE_NAME_SIZE 25
 
 extern uart_rtos_handle_t uart_log;
-extern Versal_sensor_readings sensor_readings;
-u8    logging_level = VMC_LOG_LEVEL_NONE;
-static char LogBuf[MAX_LOG_SIZE];
+
+/*
+ * This is the example code of migrating all global variables into an unified
+ * vmc_global_variable structure, so that we can convert this into MPU supported
+ * framework.
+ */
+extern Vmc_Global_Variables vmc_g_var;
+
 SemaphoreHandle_t vmc_debug_logbuf_lock; /* used to block until LogBuf is in use */
 Versal_BoardInfo board_info;
 
+static char LogBuf[MAX_LOG_SIZE];
 
 void Debug_Printf(char *filename, u32 line, u8 log_level, const char *fmt, va_list *argp);
 
 
 void VMC_SetLogLevel(u8 LogLevel)
 {
-    logging_level = (LogLevel <= VMC_LOG_LEVEL_NONE)? LogLevel:logging_level;
+    vmc_g_var.logging_level = (LogLevel <= VMC_LOG_LEVEL_NONE) ? LogLevel : vmc_g_var.logging_level;
 }
 
 u8 VMC_GetLogLevel(void)
 {
-    return logging_level;
+    return vmc_g_var.logging_level;
 }
 
 void VMC_Printf(char *filename, u32 line, u8 log_level, const char *fmt, ...)
@@ -76,14 +82,14 @@ void Debug_Printf(char *filename, u32 line, u8 log_level, const char *fmt, va_li
     s8 uart_rtos_status = UART_ERROR_GENERIC;
     u8 msg_idx = 0;
     u16 max_msg_size = MAX_LOG_SIZE;
-    if (log_level < logging_level)
+    if (log_level < vmc_g_var.logging_level)
     {
         return;
     }
 
     if (xSemaphoreTake(vmc_debug_logbuf_lock, portMAX_DELAY))
     {
-        if ((logging_level == VMC_LOG_LEVEL_VERBOSE) && (log_level != VMC_LOG_LEVEL_DEMO_MENU))
+        if ((vmc_g_var.logging_level == VMC_LOG_LEVEL_VERBOSE) && (log_level != VMC_LOG_LEVEL_DEMO_MENU))
 	{
     	    for ( ; (filename[msg_idx] != '\0') && (msg_idx < MAX_FILE_NAME_SIZE); msg_idx++)
    	    {
@@ -191,14 +197,14 @@ void SensorData_Display(void)
 	//VMC_PRNT("====================================================================\n\r");
 	//VMC_PRNT("TBD: Sensor Data to be printed!\n\r");
 	//VMC_PRNT("====================================================================\n\r");
-	VMC_PRNT("SE98A_0 temperature 			: %d \n\r",sensor_readings.board_temp[0]);
-	VMC_PRNT("SE98A_1 temperature 			: %d \n\r",sensor_readings.board_temp[1]);
-	VMC_PRNT("local temperature(max6639) 		: %f \n\r",sensor_readings.local_temp);
-	VMC_PRNT("remote temp or fpga temp(max6639) 	: %f \n\r ",sensor_readings.remote_temp);
-	VMC_PRNT("Fan RPM (max6639) 			: %d \n\r ",sensor_readings.fanRpm);
-	VMC_PRNT("Maximum SYSMON temp 			: %f \n\r ",sensor_readings.sysmon_max_temp);
-	VMC_PRNT("QSFP_0 temperature			: %f \n\r ",sensor_readings.qsfp_temp[0]);
-	VMC_PRNT("QSFP_1 temperature			: %f \n\r ",sensor_readings.qsfp_temp[1]);
+	VMC_PRNT("SE98A_0 temperature 			: %d \n\r",vmr_g_var.sensor_readings.board_temp[0]);
+	VMC_PRNT("SE98A_1 temperature 			: %d \n\r",vmr_g_var.sensor_readings.board_temp[1]);
+	VMC_PRNT("local temperature(max6639) 		: %f \n\r",vmr_g_var.sensor_readings.local_temp);
+	VMC_PRNT("remote temp or fpga temp(max6639) 	: %f \n\r ",vmr_g_var.sensor_readings.remote_temp);
+	VMC_PRNT("Fan RPM (max6639) 			: %d \n\r ",vmr_g_var.sensor_readings.fanRpm);
+	VMC_PRNT("Maximum SYSMON temp 			: %f \n\r ",vmr_g_var.sensor_readings.sysmon_max_temp);
+	VMC_PRNT("QSFP_0 temperature			: %f \n\r ",vmr_g_var.sensor_readings.qsfp_temp[0]);
+	VMC_PRNT("QSFP_1 temperature			: %f \n\r ",vmr_g_var.sensor_readings.qsfp_temp[1]);
 	VMC_PRNT("\n\r");
 
 

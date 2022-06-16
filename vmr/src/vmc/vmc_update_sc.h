@@ -140,8 +140,6 @@ typedef enum scUpateError_e
 }scUpateError_t;
 
 
-int32_t VMC_Start_SC_Update(void);
-void SC_Update_Task_Create(void);
 void VMC_Parse_Fpt_SC(u32 addr_location, u8 *bsl_send_data_pkt , u16 *pkt_length);
 void VMC_Parse_Fpt_SC_Version(u32 addr_location, u8 *bsl_send_data_pkt);
 bool VMC_Read_SC_FW(void);
