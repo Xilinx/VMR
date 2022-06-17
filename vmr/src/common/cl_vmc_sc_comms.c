@@ -49,8 +49,12 @@ void cl_vmc_sc_comms_func(void *task_args)
 	cl_msg_t msg;
 
 	while (1) {
-		if (cl_recv_from_queue_nowait(&msg, CL_QUEUE_SC) == 0) {
+		if (cl_recv_from_queue_nowait(&msg, CL_QUEUE_SCFW_REQ) == 0) {
 			process_scfw_msg(&msg);
+			/* set correct rcode based on scfw program */
+			cl_msg_set_rcode(&msg, 0);
+			/* send msg back via SCFW Response Queue */
+			(void) cl_send_to_queue(&msg, CL_QUEUE_SCFW_RESP);
 		}
 
 		/* every 1000ms we update sensor from vmc_sc_comms */

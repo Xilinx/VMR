@@ -74,7 +74,6 @@ static struct xgq_cmd_cl_map xgq_cmd_sensor_map[] = {
 	{XGQ_CMD_SENSOR_SID_ALL, CL_SENSOR_ALL},
 };
 
-
 int cl_msg_handle_complete(cl_msg_t *msg)
 {
 	struct xgq_com_queue_entry cq_cmd = {

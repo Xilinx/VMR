@@ -100,7 +100,8 @@ static TaskHandle_t cl_uart_demo_handle = NULL;
 
 static QueueHandle_t cl_xgq_program_queue = NULL;
 static QueueHandle_t cl_xgq_opcode_queue = NULL;
-static QueueHandle_t cl_vmc_sc_queue = NULL;
+static QueueHandle_t cl_vmc_sc_req_queue = NULL;
+static QueueHandle_t cl_vmc_sc_resp_queue = NULL;
 
 extern void vApplicationStackOverflowHook(TaskHandle_t xTask, char *pcTaskName)
 {
@@ -142,7 +143,8 @@ struct cl_queue_handle {
 } queue_handles[] = {
 	{CL_QUEUE_PROGRAM, "XGQ Program", &cl_xgq_program_queue},
 	{CL_QUEUE_OPCODE, "XGQ Opcode", &cl_xgq_opcode_queue},
-	{CL_QUEUE_SC, "SCFW", &cl_vmc_sc_queue},
+	{CL_QUEUE_SCFW_REQ, "SCFW Request", &cl_vmc_sc_req_queue},
+	{CL_QUEUE_SCFW_RESP, "SCFW Respond", &cl_vmc_sc_resp_queue},
 };
 
 /*
