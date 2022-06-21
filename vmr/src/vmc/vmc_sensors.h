@@ -2,28 +2,17 @@
  * Copyright (C) 2020 Xilinx, Inc.  All rights reserved.
  * SPDX-License-Identifier: MIT
  *******************************************************************************/
+
+#ifndef INC_VMC_SENSORS_H_
+#define INC_VMC_SENSORS_H_
+
 #include "xil_types.h"
 #include "sensors/inc/qsfp.h"
 
 #define BOARD_TEMPERATURE_SENSOR_NUM 2
 
-//Slave Addresses
-#define SLAVE_ADDRESS_SE98A_0 0x18
-#define SLAVE_ADDRESS_SE98A_1 0x19
-#define SLAVE_ADDRESS_MAX6639 0x2E
-
-/*Power threshold limits for vck5000 */
-#define POWER_12VPEX_CRITICAL_THRESHOLD 69.000
-#define POWER_12VAUX_2X3_CRITICAL_THRESHOLD 78.000
-#define POWER_12VAUX_2X4_CRITICAL_THRESHOLD 153.000
-
-/* Temp threshold limits for vck5000 */
-#define TEMP_VCCINT_CRITICAL_THRESHOLD  110.000
-#define TEMP_QSFP_CRITICAL_THRESHOLD    85.000
-#define TEMP_FPGA_CRITICAL_THRESHOLD    100.000
-
-
 #define POWER_MODE_300W 3
+#define LPD_I2C_0	0x1
 
 typedef struct
 {
@@ -36,7 +25,7 @@ typedef struct
 
 } Versal_sensor_readings;
 
+void ucs_clock_shutdown();
+void clear_clock_shutdown_status();
 
-void se98a_monitor(void);
-void max6639_monitor(void);
-void qsfp_monitor(void);
+#endif

@@ -43,6 +43,7 @@ Platform_Sensor_Handler_t platform_sensor_handlers[]=
 	{eVCK5000,eTemperature_Sensor_Outlet,Vck5000_Temperature_Read_Outlet},
 	{eVCK5000,eTemperature_Sensor_Board,Vck5000_Temperature_Read_Board},
 	{eVCK5000,eTemperature_Sensor_QSFP,Vck5000_Temperature_Read_QSFP},
+	//{eVCK5000,eFAN_RPM_READ,Vck5000_Fan_RPM_Read},
 };
 
 extern Versal_BoardInfo board_info;
@@ -170,6 +171,10 @@ static u8 Vmc_ConfigurePlatform(const char * product_name)
 			case eTemperature_Sensor_QSFP:
 				Temperature_Read_QSFP_Ptr = Vmc_Find_Sensor_Handler(i);
 				break;
+
+//			case eFAN_RPM_READ:
+//				Fan_RPM_Read_Ptr = Vmc_Find_Sensor_Handler(i);
+//				break;
 
 		}
 	}
