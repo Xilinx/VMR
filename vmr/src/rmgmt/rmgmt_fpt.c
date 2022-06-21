@@ -428,7 +428,7 @@ int rmgmt_flash_rpu_pdi(struct rmgmt_handler *rh, struct cl_msg *msg)
 		return ret;
 	}
 	pdi_data = (u8 *)axlf + pdi_offset;
-	len = pdi_size;
+	len = (u32)pdi_size;
 
 	if (msg->data_payload.flash_to_legacy) {
 		VMR_WARN("WARN: force to flash back to legacy mode, PDI starts at 0x0");
