@@ -53,6 +53,16 @@
 /* Voltage and Current Sensor Name */
 #define VCCINT_NAME    "vccint\0"
 
+/* ASDM API Req/Resp Offsets */
+#define ASDM_REQ_BYTE_CMD_CODE		(0)
+#define ASDM_REQ_BYTE_REPO_TYPE		(1)
+#define ASDM_REQ_BYTE_SNSR_ID		(2)
+
+/* CC - Completion Code */
+#define ASDM_RESP_BYTE_CC		(0)
+#define ASDM_RESP_BYTE_REPO_TYPE	(1)
+#define ASDM_RESP_BYTE_SNSR_SIZE	(2)
+
 SDR_t *sdrInfo;
 extern SemaphoreHandle_t sdr_lock;
 static u8 asdmInitSuccess = false;
@@ -1060,7 +1070,81 @@ s8 Asdm_Get_Sensor_Repository(u8 *req, u8 *resp, u16 *respSize)
     return retStatus;
 }
 
-s8 Asdm_Get_Sensor_Value(u8 *req, u8 *resp, u16 *respSize)
+s8 Asdm_Get_All_Sensor_Data(u8 *req, u8 *resp, u16 *respSize)
+{
+	u8 sdrIndex = 0;
+	u8 snsrIndex = 0;
+	u8 total_records = 0;
+	u8 payload_size = 0;
+	u8 snsrValueLen = 0;
+	u8 snsrStatusLen = 0;
+
+	u16 respIndex = 0;
+
+	if((req == NULL) || (resp == NULL) || (respSize == NULL)) {
+		VMC_ERR(" Buffers received are NULL.\n\r req : %p, resp : %p, respSize : %p \n\r",
+				req, resp,respSize);
+		return -1;
+	}
+
+	if(asdmInitSuccess != true) {
+		VMC_ERR(" ASDM Data not Initialized yet or has Failed \n\r");
+		return -1;
+	}
+
+	sdrIndex = getSDRIndex(req[ASDM_REQ_BYTE_REPO_TYPE]);
+	total_records = sdrInfo[sdrIndex].header.no_of_records;
+
+	*respSize = 0;
+	payload_size = 0;
+
+	if (xSemaphoreTake(sdr_lock, portMAX_DELAY)) {
+		/* Fetch the Sensor Record to extract the Value */
+		Asdm_SensorRecord_t *tmp = sdrInfo[sdrIndex].sensorRecord;
+
+		resp[ASDM_RESP_BYTE_CC] = Asdm_CC_Operation_Success;
+
+		/* Copy the Repo Type */
+		resp[ASDM_RESP_BYTE_REPO_TYPE] = req[ASDM_REQ_BYTE_REPO_TYPE];
+
+		/* Send the Index to copy the Payload */
+		respIndex = ASDM_RESP_BYTE_SNSR_SIZE + 1;
+
+		/* Sensor Id are 1 indexed, but we have 0 indexed */
+		for(snsrIndex = 0; snsrIndex < total_records; snsrIndex++) {
+
+			/* Size of sensor Value * 3( Snsr Val + Max Snsr Val + Snsr Avg) */
+			snsrValueLen = (tmp[snsrIndex].sensor_value_type_length & LENGTH_BITMASK);
+			snsrStatusLen = sizeof(tmp[snsrIndex].sensor_status);
+
+			payload_size += ( sizeof(snsrValueLen) + (3 * snsrValueLen) + snsrStatusLen);
+
+			resp[respIndex++] = snsrValueLen;
+
+			Cl_SecureMemcpy(&resp[respIndex],snsrValueLen,tmp[snsrIndex].sensor_value,snsrValueLen);
+			respIndex += snsrValueLen;
+			Cl_SecureMemcpy(&resp[respIndex],snsrValueLen,tmp[snsrIndex].sensorMaxValue,snsrValueLen);
+			respIndex += snsrValueLen;
+			Cl_SecureMemcpy(&resp[respIndex],snsrValueLen,tmp[snsrIndex].sensorAverageValue,snsrValueLen);
+			respIndex += snsrValueLen;
+			Cl_SecureMemcpy(&resp[respIndex],snsrStatusLen,&tmp[snsrIndex].sensor_status,snsrStatusLen);
+			respIndex += snsrStatusLen;
+		}
+		xSemaphoreGive(sdr_lock);
+
+		resp[ASDM_RESP_BYTE_SNSR_SIZE] = payload_size;
+		/* 3 -> Length of (CC + REPOTYPE + Payload_Size) */
+		*respSize = 3 + payload_size;
+
+	} else {
+		resp[ASDM_RESP_BYTE_CC] = Asdm_CC_Operation_Failed;
+		*respSize = 1;
+	}
+
+	return 0;
+}
+
+s8 Asdm_Get_Sensor_Data(u8 *req, u8 *resp, u16 *respSize)
 {
     u8 sdrIndex = 0;
     u8 snsrIndex = 0;
@@ -1082,41 +1166,44 @@ s8 Asdm_Get_Sensor_Value(u8 *req, u8 *resp, u16 *respSize)
 	return -1;
     }
 
-    sdrIndex = getSDRIndex(req[1]);
+    sdrIndex = getSDRIndex(req[ASDM_REQ_BYTE_REPO_TYPE]);
     /* Sensor Id are 1 indexed, but we have 0 indexed */
-    snsrIndex = req[1] - 1;
+    snsrIndex = req[ASDM_REQ_BYTE_SNSR_ID] - 1;
     *respSize = 0;
 
     if (xSemaphoreTake(sdr_lock, portMAX_DELAY))
     {
-	/* Fetch the Sensor Record to extract the Value */
-	Asdm_SensorRecord_t *tmp = sdrInfo[sdrIndex].sensorRecord;
+    	/* Fetch the Sensor Record to extract the Value */
+    	Asdm_SensorRecord_t *tmp = sdrInfo[sdrIndex].sensorRecord;
 
-	resp[respIndex++] = Asdm_CC_Operation_Success;
+    	resp[ASDM_RESP_BYTE_CC] = Asdm_CC_Operation_Success;
+    	respIndex = ASDM_RESP_BYTE_CC + 1;
 
-	/* Copy the Repo Type */
-	resp[respIndex++] = req[0];
+    	/* Copy the Repo Type */
+    	resp[ASDM_RESP_BYTE_REPO_TYPE] = req[ASDM_REQ_BYTE_REPO_TYPE];
+    	respIndex = ASDM_RESP_BYTE_REPO_TYPE + 1;
 
-	/* Size of sensor Value * 3( Snsr Val + Max Snsr Val + Snsr Avg) */
-	snsrValueLen = (tmp[snsrIndex].sensor_value_type_length & LENGTH_BITMASK);
-	snsrStatusLen = sizeof(tmp[snsrIndex].sensor_status);
-	resp[respIndex++] = ( snsrValueLen * 3) + snsrStatusLen;
+    	/* Size of sensor Value * 3( Snsr Val + Max Snsr Val + Snsr Avg) */
+    	snsrValueLen = (tmp[snsrIndex].sensor_value_type_length & LENGTH_BITMASK);
+    	snsrStatusLen = sizeof(tmp[snsrIndex].sensor_status);
 
-	Cl_SecureMemcpy(&resp[respIndex],snsrValueLen,tmp[snsrIndex].sensor_value,snsrValueLen);
-	respIndex += snsrValueLen;
-	Cl_SecureMemcpy(&resp[respIndex],snsrValueLen,tmp[snsrIndex].sensorMaxValue,snsrValueLen);
-	respIndex += snsrValueLen;
-	Cl_SecureMemcpy(&resp[respIndex],snsrValueLen,tmp[snsrIndex].sensorAverageValue,snsrValueLen);
-	respIndex += snsrValueLen;
-	Cl_SecureMemcpy(&resp[respIndex],snsrStatusLen,&tmp[snsrIndex].sensor_status,snsrStatusLen);
-	respIndex += snsrStatusLen;
+    	resp[respIndex++] = snsrValueLen;
 
-	xSemaphoreGive(sdr_lock);
-	*respSize = respIndex;
+    	Cl_SecureMemcpy(&resp[respIndex],snsrValueLen,tmp[snsrIndex].sensor_value,snsrValueLen);
+    	respIndex += snsrValueLen;
+    	Cl_SecureMemcpy(&resp[respIndex],snsrValueLen,tmp[snsrIndex].sensorMaxValue,snsrValueLen);
+    	respIndex += snsrValueLen;
+    	Cl_SecureMemcpy(&resp[respIndex],snsrValueLen,tmp[snsrIndex].sensorAverageValue,snsrValueLen);
+    	respIndex += snsrValueLen;
+    	Cl_SecureMemcpy(&resp[respIndex],snsrStatusLen,&tmp[snsrIndex].sensor_status,snsrStatusLen);
+    	respIndex += snsrStatusLen;
+
+    	xSemaphoreGive(sdr_lock);
+    	*respSize = respIndex;
     }
     else
     {
-	resp[0] = Asdm_CC_Operation_Failed;
+	resp[ASDM_RESP_BYTE_CC] = Asdm_CC_Operation_Failed;
 	*respSize = 1;
     }
 
@@ -1149,9 +1236,13 @@ s8 Asdm_Process_Sensor_Request(u8 *req, u8 *resp, u16 *respSize)
         {
             return Asdm_Get_Sensor_Repository(req, resp, respSize);
         }
+        else if(req[0] == ASDM_CMD_GET_SINGLE_SENSOR_DATA)
+        {
+            return Asdm_Get_Sensor_Data(req, resp, respSize);
+        }
         else if(req[0] == ASDM_CMD_GET_ALL_SENSOR_DATA)
         {
-            return Asdm_Get_Sensor_Value(req, resp, respSize);
+            return Asdm_Get_All_Sensor_Data(req, resp, respSize);
         }
     }
     return 0;

@@ -264,6 +264,7 @@ int sensor_handle(cl_msg_t *msg, struct xgq_cmd_sq *sq)
 	msg->sensor_payload.address = (u32)sq->sensor_payload.address;
 	msg->sensor_payload.size = (u32)sq->sensor_payload.size;
 	msg->sensor_payload.aid = (u8) sq->sensor_payload.aid;
+	msg->sensor_payload.sensor_id = (u8) sq->sensor_payload.sensor_id;
 
 	return 0;
 }

@@ -108,7 +108,8 @@ struct xgq_cmd_sensor_payload {
 	uint32_t aid:8;
 	uint32_t sid:8;
 	uint32_t addr_type:3;
-	uint32_t rsvd1:13;
+	uint32_t sensor_id:8;
+	uint32_t rsvd1:5;
 	uint32_t pad;
 };
 

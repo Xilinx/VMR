@@ -608,13 +608,14 @@ int cl_vmc_sensor(cl_msg_t *msg)
 {
 	u32 address = RPU_SHARED_MEMORY_ADDR(msg->sensor_payload.address);
 	u32 size = msg->sensor_payload.size;
-	u8 reqBuffer[2] = {0};
+	u8 reqBuffer[3] = {0};
 	u8 respBuffer[SENSOR_RESP_BUFFER_SIZE] = {0};
 	u16 respSize = 0;
 	s32 ret = 0;
 
 	reqBuffer[0] = msg->sensor_payload.aid;
 	reqBuffer[1] = msg->sensor_payload.sid;
+	reqBuffer[2] = msg->sensor_payload.sensor_id;
 
 	ret = validate_sensor_payload(&msg->sensor_payload);
 	if (ret)
