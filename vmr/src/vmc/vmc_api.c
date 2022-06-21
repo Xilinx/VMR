@@ -197,14 +197,14 @@ void SensorData_Display(void)
 	//VMC_PRNT("====================================================================\n\r");
 	//VMC_PRNT("TBD: Sensor Data to be printed!\n\r");
 	//VMC_PRNT("====================================================================\n\r");
-	VMC_PRNT("SE98A_0 temperature 			: %d \n\r",vmr_g_var.sensor_readings.board_temp[0]);
-	VMC_PRNT("SE98A_1 temperature 			: %d \n\r",vmr_g_var.sensor_readings.board_temp[1]);
-	VMC_PRNT("local temperature(max6639) 		: %f \n\r",vmr_g_var.sensor_readings.local_temp);
-	VMC_PRNT("remote temp or fpga temp(max6639) 	: %f \n\r ",vmr_g_var.sensor_readings.remote_temp);
-	VMC_PRNT("Fan RPM (max6639) 			: %d \n\r ",vmr_g_var.sensor_readings.fanRpm);
-	VMC_PRNT("Maximum SYSMON temp 			: %f \n\r ",vmr_g_var.sensor_readings.sysmon_max_temp);
-	VMC_PRNT("QSFP_0 temperature			: %f \n\r ",vmr_g_var.sensor_readings.qsfp_temp[0]);
-	VMC_PRNT("QSFP_1 temperature			: %f \n\r ",vmr_g_var.sensor_readings.qsfp_temp[1]);
+	VMC_PRNT("SE98A_0 temperature 			: %d \n\r",vmc_g_var.sensor_readings.board_temp[0]);
+	VMC_PRNT("SE98A_1 temperature 			: %d \n\r",vmc_g_var.sensor_readings.board_temp[1]);
+	VMC_PRNT("local temperature(max6639) 		: %f \n\r",vmc_g_var.sensor_readings.local_temp);
+	VMC_PRNT("remote temp or fpga temp(max6639) 	: %f \n\r ",vmc_g_var.sensor_readings.remote_temp);
+	VMC_PRNT("Fan RPM (max6639) 			: %d \n\r ",vmc_g_var.sensor_readings.fanRpm);
+	VMC_PRNT("Maximum SYSMON temp 			: %f \n\r ",vmc_g_var.sensor_readings.sysmon_max_temp);
+	VMC_PRNT("QSFP_0 temperature			: %f \n\r ",vmc_g_var.sensor_readings.qsfp_temp[0]);
+	VMC_PRNT("QSFP_1 temperature			: %f \n\r ",vmc_g_var.sensor_readings.qsfp_temp[1]);
 	VMC_PRNT("\n\r");
 
 

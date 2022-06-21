@@ -15,6 +15,8 @@
 
 /* VMC Header files */
 #include "vmc_api.h"
+#include "vmc_main.h"
+
 /*
  * Menu thread stack size
  */
@@ -22,7 +24,7 @@
 
 extern void AsdmSensor_Display(void);
 
-extern u8    logging_level;
+extern Vmc_Global_Variables vmc_g_var;
 
 #define demoMenu_task_PRIORITY	tskIDLE_PRIORITY + 1
 
@@ -85,7 +87,8 @@ static void App_SetLogLevel(void)
     char UserInput = 0;
     u32 receivedBytes = 0;
 
-    VMC_DMO("Current log level is: %d %s\n\r\n\r", (unsigned int)logging_level, LogLevels[logging_level]);
+    VMC_DMO("Current log level is: %d %s\n\r\n\r", (unsigned int)VMC_GetLogLevel(), LogLevels[VMC_GetLogLevel()]);
+
     for(EntryIndex = 0; LogLevels[EntryIndex] != NULL; EntryIndex++)
     {
     	VMC_DMO("%d %s\n\r", (unsigned int)EntryIndex, LogLevels[EntryIndex]);

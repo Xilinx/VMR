@@ -76,7 +76,7 @@ s8 Temperature_Read_Outlet(snsrRead_t *snsrData);
 s8 Temperature_Read_Board(snsrRead_t *snsrData);
 s8 Temperature_Read_QSFP(snsrRead_t *snsrData);
 s8 Temperature_Read_ACAP_Device_Sysmon(snsrRead_t *snsrData);
-s8 Fan_RPM_Read(snsrRead_t *snsrData);
+//s8 Fan_RPM_Read(snsrRead_t *snsrData);
 s8 PMBUS_SC_Sensor_Read(snsrRead_t *snsrData);
 s8 Power_Monitor(snsrRead_t *snsrData);
 s8 PMBUS_SC_Vccint_Read(snsrRead_t *snsrData);

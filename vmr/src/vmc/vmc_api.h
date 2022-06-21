@@ -26,8 +26,9 @@
 #define	VMC_STRING	"VMC"
 
 #ifdef VMC_DEBUG
-#warning "When enabled RPU UART RX has conflic with APU UART so need to disable XRT code (RMGMT_Launch and cl_msg_service_launch)."
+//#warning "When enabled RPU UART RX has conflic with APU UART so need to disable XRT code (RMGMT_Launch and cl_msg_service_launch)."
 
+#define VMC_TEST
 
 #define VMC_DMO(fmt, arg...) 		\
 	VMC_Printf(__FILENAME__, __LINE__, VMC_LOG_LEVEL_DEMO_MENU, fmt,##arg)
@@ -248,5 +249,6 @@ extern sensorMonitorFunc Temperature_Read_Inlet_Ptr;
 extern sensorMonitorFunc Temperature_Read_Outlet_Ptr;
 extern sensorMonitorFunc Temperature_Read_Board_Ptr;
 extern sensorMonitorFunc Temperature_Read_QSFP_Ptr;
+//extern sensorMonitorFunc Fan_RPM_Read_Ptr;
 
 #endif /* INC_VMC_API_H_ */
