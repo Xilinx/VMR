@@ -192,7 +192,7 @@ uint32_t rmgmt_clock_get_freq(int idx, enum clock_ip ip)
 			if ((status & OCL_CLKWIZ_STATUS_MASK) ==
 				OCL_CLKWIZ_STATUS_MEASURE_DONE)
 				break;
-			MDELAY(1);
+			MDELAY(30);
 			times--;
 		};
 		if ((status & OCL_CLKWIZ_STATUS_MASK) ==
@@ -203,6 +203,6 @@ uint32_t rmgmt_clock_get_freq(int idx, enum clock_ip ip)
 		}
 	}
 
-	VMR_DBG("idx %d freq %d", idx, freq);
+	VMR_LOG("idx %d freq %d times %d", idx, freq, times);
 	return freq;
 }
