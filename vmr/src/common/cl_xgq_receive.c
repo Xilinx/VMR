@@ -61,6 +61,8 @@ static struct xgq_cmd_cl_map xgq_cmd_log_page_map[] = {
 	{XGQ_CMD_LOG_FW, CL_LOG_FW},
 	{XGQ_CMD_LOG_INFO, CL_LOG_INFO},
 	{XGQ_CMD_LOG_ENDPOINT, CL_LOG_ENDPOINT},
+	{XGQ_CMD_LOG_TASK_STATS, CL_LOG_TASK_STATS},
+	{XGQ_CMD_LOG_MEM_STATS, CL_LOG_MEM_STATS},
 };
 
 static struct xgq_cmd_cl_map xgq_cmd_sensor_map[] = {

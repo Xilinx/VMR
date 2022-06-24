@@ -683,6 +683,100 @@ static int rmgmt_load_firmware(cl_msg_t *msg)
 	return 0;
 }
 
+static char* eTaskStateName(eTaskState st)
+{
+	switch (st) {
+	case eRunning:
+		return "Running";
+	case eReady:
+		return "Ready";
+	case eBlocked:
+		return "Blocked";
+	case eSuspended:
+		return "Suspended";
+	case eDeleted:
+		return "Deleted";
+	case eInvalid:
+	default:
+		break;
+	}
+
+	return "Invalid";
+}
+
+static int vmr_rtos_task_stats(cl_msg_t *msg)
+{
+	u32 safe_size = sizeof(log_msg);
+	u32 dst_addr = RPU_SHARED_MEMORY_ADDR(msg->log_payload.address);
+	u32 count = 0;
+	TaskStatus_t *pxTaskStatusArray = NULL;
+	volatile UBaseType_t uxArraySize, i;
+	
+	uxArraySize = uxTaskGetNumberOfTasks();
+	pxTaskStatusArray = pvPortMalloc( uxArraySize * sizeof(TaskStatus_t));
+	if (pxTaskStatusArray == NULL)
+		return -ENOMEM;
+
+	count += snprintf(log_msg + count, safe_size - count,
+		"Name\t\tState\tPriority\tStack\tBase\n");    
+
+	uxArraySize = uxTaskGetSystemState(pxTaskStatusArray, uxArraySize, NULL);
+	for (i = 0; i < uxArraySize; i++) {
+		count += snprintf(log_msg + count, safe_size - count,
+			"%-16s%-12s%-4ld\t%ld\t0x%lx\n",
+			pxTaskStatusArray[i].pcTaskName,
+			eTaskStateName(pxTaskStatusArray[i].eCurrentState),
+			pxTaskStatusArray[i].uxBasePriority,
+			pxTaskStatusArray[i].usStackHighWaterMark,
+			(u32)pxTaskStatusArray[i].pxStackBase);    
+		if (count > safe_size) {
+			VMR_WARN("log msg is trunked");
+			break;
+		}
+	}
+
+	vPortFree(pxTaskStatusArray);
+
+	cl_memcpy_toio8(dst_addr, &log_msg, MIN(count, safe_size));
+	msg->log_payload.size = MIN(count, safe_size);
+
+	return 0;
+}
+
+static int vmr_rtos_mem_stats(cl_msg_t *msg)
+{
+	u32 safe_size = sizeof(log_msg);
+	u32 dst_addr = RPU_SHARED_MEMORY_ADDR(msg->log_payload.address);
+	u32 count = 0;
+	HeapStats_t hp = {0};
+	
+	vPortGetHeapStats(&hp);
+
+	count += snprintf(log_msg + count, safe_size - count,
+		"Available heap size: %d\n"
+		"Max size of free blocks in bytes: %d\n"
+		"Min size of free blocks in bytes: %d\n"
+		"Num of free blocks: %d\n"
+		"Min amount of free blocks since system booted: %d\n"
+		"Num of successful pvPortMalloc: %d\n"
+		"Num of successful pvPortFree: %d\n",
+		hp.xAvailableHeapSpaceInBytes,
+		hp.xSizeOfLargestFreeBlockInBytes,
+		hp.xSizeOfSmallestFreeBlockInBytes,
+		hp.xNumberOfFreeBlocks,
+		hp.xMinimumEverFreeBytesRemaining,
+		hp.xNumberOfSuccessfulAllocations,
+		hp.xNumberOfSuccessfulFrees);
+	if (count > safe_size) {
+		VMR_WARN("log msg is trunked");
+	}
+
+	cl_memcpy_toio8(dst_addr, &log_msg, MIN(count, safe_size));
+	msg->log_payload.size = MIN(count, safe_size);
+
+	return 0;
+}
+
 int cl_rmgmt_log_page(cl_msg_t *msg)
 {
 	int ret = 0;
@@ -705,6 +799,12 @@ int cl_rmgmt_log_page(cl_msg_t *msg)
 		break;
 	case CL_LOG_ENDPOINT:
 		ret = vmr_endpoint_info(msg);
+		break;
+	case CL_LOG_TASK_STATS:
+		ret = vmr_rtos_task_stats(msg);
+		break;
+	case CL_LOG_MEM_STATS:
+		ret = vmr_rtos_mem_stats(msg);
 		break;
 	default:
 		VMR_WARN("unsupported type %d", msg->log_payload.pid);
@@ -837,7 +937,7 @@ int cl_rmgmt_vmr_control(cl_msg_t *msg)
 		}
 	}
 
-	VMR_ERR("unknown type %d", msg->multiboot_payload.req_type);
+	VMR_ERR("cannot handle type %d", msg->multiboot_payload.req_type);
 	ret = -EINVAL;
 done:
 	VMR_DBG("msg cid %d, ret %d", msg->hdr.cid, ret);
