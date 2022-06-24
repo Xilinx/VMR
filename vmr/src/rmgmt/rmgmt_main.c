@@ -19,6 +19,63 @@
 #include "cl_main.h"
 #include "cl_rmgmt.h"
 
+/* rmgmt specific macros */
+/* Firewall IPs */
+/* version 1.0 registers */
+#define FAULT_STATUS            		0x0
+#define UNBLOCK_CTRL            		0x8
+#define IP_VERSION				0x10
+#define MAX_CONTINUOUS_RTRANSFERS_WAITS		0x30
+
+/* version >= 1.1 registers */
+#define SI_FAULT_STATUS                         0x100
+#define SI_SOFT_CTRL                            0x104
+#define SI_UNBLOCK_CTRL                         0x108
+#define MAX_CONTINUOUS_WTRANSFERS_WAITS         0x130
+#define ARADDR_LO				0x210
+#define ARADDR_HI				0x214
+#define AWADDR_LO				0x218
+#define AWADDR_HI				0x21c
+#define ARUSER					0x220
+#define AWUSER					0x224
+
+#define READ_RESPONSE_BUSY      BIT(0)
+#define WRITE_RESPONSE_BUSY     BIT(16)
+#define FIREWALL_STATUS_BUSY    (READ_RESPONSE_BUSY | WRITE_RESPONSE_BUSY)
+#define IS_FIRED(val) 		(val & ~FIREWALL_STATUS_BUSY)
+#define FIREWALL_RETRY_COUNT	10
+#define	BUSY_RETRY_INTERVAL	100		/* ms */
+#define	CLEAR_RETRY_INTERVAL	2		/* ms */
+
+#define IP_VER_10		0
+#define IP_VER_11		1
+
+#define AF_READ32(base_addr, reg)				\
+	IO_SYNC_READ32(base_addr + reg)
+#define AF_WRITE32(base_addr, reg, val)				\
+	IO_SYNC_WRITE32(val, base_addr + reg)
+
+#define READ_ARADDR(base_addr) (((u64)(AF_READ32(base_addr, ARADDR_HI))) << 32 |	\
+		(AF_READ32(base_addr, ARADDR_LO)))
+#define READ_AWADDR(base_addr) (((u64)(AF_READ32(base_addr, AWADDR_HI))) << 32 |	\
+		(AF_READ32(base_addr, AWADDR_LO)))
+#define READ_ARUSER(base_addr) (AF_READ32(base_addr, ARUSER))
+#define READ_AWUSER(base_addr) (AF_READ32(base_addr, AWUSER))
+
+/* PMC IPs for host reset */
+#define	PMC_ERR1_STATUS_MASK	(1 << 24)
+#define	PMC_ERR_OUT1_EN_MASK	(1 << 24)
+#define	PMC_POR1_EN_MASK	(1 << 24)
+#define	PMC_POR_ENABLE_BIT	(1 << 24)
+#define	PMC_REG_ERR_OUT1_MASK	0x20
+#define	PMC_REG_ERR_OUT1_EN	0x24
+#define	PMC_REG_POR1_MASK	0x40
+#define	PMC_REG_POR1_EN		0x44
+#define	PMC_REG_ACTION		0x48
+#define	PMC_REG_SRST		0x84
+#define	PL_TO_PMC_ERROR_SIGNAL_PATH_MASK	(1 << 0)
+
+
 static struct rmgmt_handler rh = { 0 };
 static char log_msg[1024] = { 0 };
 static bool rmgmt_is_ready = false;
@@ -55,6 +112,13 @@ static struct vmr_endpoints vmr_eps[] = {
 #ifdef CONFIG_FORCE_RESET
 	{"VMR_EP_FORCE_RESET", VMR_EP_FORCE_RESET},
 #endif
+};
+
+static struct vmr_endpoints vmr_afs[] = {
+	{"VMR_EP_FIREWALL_USER_BASE", VMR_EP_FIREWALL_USER_BASE},
+	/* Comment out for test only now, we will have more firewall levels in the future
+	{"VMR_EP_FIREWALL_TEMP_BASE", 0x80002000},
+	*/
 };
 
 /*
@@ -399,9 +463,18 @@ done:
 	return 0;
 }
 
-static inline u32 read_firewall()
+static u32 read_firewall(u32 af_base)
 {
-	return IO_SYNC_READ32(VMR_EP_FIREWALL_USER_BASE + FAULT_STATUS);
+	u32 version = 0;
+	bool si_mode = false;
+
+	version = IO_SYNC_READ32(af_base + IP_VERSION);
+	if (version >= IP_VER_11 &&
+		IO_SYNC_READ32(af_base + MAX_CONTINUOUS_WTRANSFERS_WAITS) != 0)
+		si_mode = true;
+
+	return si_mode ? IO_SYNC_READ32(af_base + SI_FAULT_STATUS) :
+		IO_SYNC_READ32(af_base + FAULT_STATUS);
 }
 
 static inline void write_firewall_unblock(u32 val)
@@ -409,9 +482,18 @@ static inline void write_firewall_unblock(u32 val)
 	return IO_SYNC_WRITE32(val, VMR_EP_FIREWALL_USER_BASE + UNBLOCK_CTRL);
 }
 
-static inline u32 check_firewall()
+static u32 check_firewall()
 {
-	return IS_FIRED(read_firewall());
+	u32 val = 0;
+
+	for (int i = 0; i < ARRAY_SIZE(vmr_afs); i++) {
+		val = IS_FIRED(read_firewall(vmr_afs[i].vmr_ep_address));
+		/* Once one level firewall tripped, break and report */
+		if (val)
+			break;
+	}
+
+	return val;
 }
 
 int cl_rmgmt_pl_is_ready()
@@ -421,6 +503,8 @@ int cl_rmgmt_pl_is_ready()
 
 static int rmgmt_clear_firewall()
 {
+	u32 af_base = vmr_afs[0].vmr_ep_address;
+	u32 val = 0;
 	int i = 0;
 
 	if (!check_firewall()) {
@@ -428,8 +512,9 @@ static int rmgmt_clear_firewall()
 		return 0;
 	}
 	
-	for (i = 0; i < FIREWALL_RETRY_COUNT; i++) {
-		if (read_firewall() & FIREWALL_STATUS_BUSY) {
+	for (i  = 0; i < FIREWALL_RETRY_COUNT; i++) {
+		val = read_firewall(af_base);
+		if (val & FIREWALL_STATUS_BUSY) {
 			vTaskDelay(pdMS_TO_TICKS(BUSY_RETRY_INTERVAL));
 			continue;
 		} else {
@@ -437,12 +522,13 @@ static int rmgmt_clear_firewall()
 		}
 	}
 
-	if (read_firewall() & FIREWALL_STATUS_BUSY) {
-		VMR_ERR("firewall is busy, status: 0x%x", read_firewall());
+	if (val & FIREWALL_STATUS_BUSY) {
+		VMR_ERR("firewall %s(0x%lx) is busy, status: 0x%x",
+			vmr_afs[0].vmr_ep_name, af_base, val);
 		return -EINVAL;
 	}
 
-	/* now clear firewall */
+	/*Note: only work for user firewall now */
 	write_firewall_unblock(1);
 
 	for (i = 0; i < FIREWALL_RETRY_COUNT; i++) {
@@ -452,7 +538,7 @@ static int rmgmt_clear_firewall()
 		vTaskDelay(pdMS_TO_TICKS(CLEAR_RETRY_INTERVAL));
 	}
 
-	VMR_ERR("failed clear firewall, status: 0x%x", read_firewall());
+	VMR_ERR("failed clear firewall, status: 0x%x", read_firewall(af_base));
 	return -EINVAL;
 }
 
@@ -477,14 +563,39 @@ static u32 rmgmt_check_firewall(cl_msg_t *msg)
 		}
 
 		count = snprintf(log_msg, safe_size,
-			"AXI Firewall User is tripped, status: 0x%lx\n", val);
+			"AXI Firewall User is tripped, status: 0x%lx. ", val);
 		if (count > safe_size) 
 			VMR_WARN("log msg is trunked");
 
-		cl_memcpy_toio8(dst_addr, &log_msg, safe_size);
+		for (int i = 0; i < ARRAY_SIZE(vmr_afs); i++) {
+			u32 af_base = vmr_afs[i].vmr_ep_address;
+			u32 version = IO_SYNC_READ32(af_base + IP_VERSION);
+
+			count += snprintf(log_msg + count, safe_size - count,
+				"Firewall IP Version: %ld, EP: 0x%lx. ",
+				version, vmr_afs[i].vmr_ep_address);
+			if (count > safe_size) { 
+				VMR_WARN("log msg is trunked");
+				break;
+			}
+
+			if (version < IP_VER_11)
+				continue;
+
+			count += snprintf(log_msg + count, safe_size - count,
+				"ARADDR 0x%llx, AWADDR 0x%llx, ARUSER 0x%lx, AWUSER 0x%lx\n",
+				READ_ARADDR(af_base), READ_AWADDR(af_base),
+				READ_ARUSER(af_base), READ_AWUSER(af_base));
+			if (count > safe_size) { 
+				VMR_WARN("log msg is trunked");
+				break;
+			}
+		}
+
+		cl_memcpy_toio8(dst_addr, &log_msg, MIN(count, safe_size));
 
 		/* set correct size in result payload */
-		msg->log_payload.size = safe_size;
+		msg->log_payload.size = MIN(count, safe_size);
 	}
 
 	return val;
