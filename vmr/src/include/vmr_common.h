@@ -155,12 +155,12 @@ static inline int rmgmt_enable_pl_reset() { return -ENODEV; }
 #if defined(CONFIG_2022_1_VITIS)
 /*
  * This is the workaround hardcode for 2022.1 xparameters.h only
- */
 #undef STDIN_BASEADDRESS
 #define STDIN_BASEADDRESS 0xFF010000
 
 #undef STDOUT_BASEADDRESS
 #define STDOUT_BASEADDRESS 0xFF010000
+ */
 
 #undef XPAR_BLP_BLP_LOGIC_XGQ_R2A_BASEADDR
 #define XPAR_BLP_BLP_LOGIC_XGQ_R2A_BASEADDR 0x80011000
