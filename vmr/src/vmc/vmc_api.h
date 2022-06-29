@@ -130,6 +130,18 @@ typedef struct __attribute__((packed)) {
 	sensorMonitorFunc	sensor_handler;
 }Platform_Sensor_Handler_t;
 
+typedef u8 (*Platform_Func_Ptr)(void);
+
+typedef enum{
+	ePlatform_Init,
+	eMax_Platform_Functions
+} ePlatform_Functions;
+
+typedef struct __attribute__((packed)){
+	ePlatformType 	product_type_id;
+	ePlatform_Functions	func_type;
+	Platform_Func_Ptr	func_handler;
+}Platform_Function_Handler_t;
 
 /*****************************************************************************/
 /**
@@ -238,12 +250,6 @@ void EepromDump(void);
 **
 ******************************************************************************/
 u8 Versal_EEPROM_ReadBoardInfo(void);
-
-
-s8 Vck5000_Temperature_Read_Inlet(snsrRead_t *snsrData);
-s8 Vck5000_Temperature_Read_Outlet(snsrRead_t *snsrData);
-s8 Vck5000_Temperature_Read_Board(snsrRead_t *snsrData);
-s8 Vck5000_Temperature_Read_QSFP(snsrRead_t *snsrData);
 
 extern sensorMonitorFunc Temperature_Read_Inlet_Ptr;
 extern sensorMonitorFunc Temperature_Read_Outlet_Ptr;

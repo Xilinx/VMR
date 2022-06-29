@@ -21,6 +21,9 @@
 #include "vmc_sc_comms.h"
 #include "vmc_update_sc.h"
 
+#include "platforms/vck5000.h"
+#include "platforms/v70.h"
+
 SemaphoreHandle_t vmc_sc_lock = NULL;
 SemaphoreHandle_t sdr_lock = NULL;
 
@@ -46,9 +49,23 @@ Platform_Sensor_Handler_t platform_sensor_handlers[]=
 	//{eVCK5000,eFAN_RPM_READ,Vck5000_Fan_RPM_Read},
 };
 
+Platform_Function_Handler_t platform_function_handlers[]=
+{
+	{eVCK5000,ePlatform_Init,Vck5000_Init},
+	{eV70,ePlatform_Init,V70_Init},
+};
+
+Platform_Func_Ptr platform_init_ptr = NULL;
+
 extern Versal_BoardInfo board_info;
 
+
 static u8 Vmc_ConfigurePlatform(const char * product_name);
+
+static u8 Init_Platform(void)
+{
+	return (*platform_init_ptr)();
+}
 
 int cl_vmc_is_ready()
 {
@@ -87,14 +104,20 @@ int cl_vmc_init()
 		return -EINVAL;
 	}
 
-	status = UART_VMC_SC_Enable(&uart_vmcsc_log);
+	status = Init_Platform();
 	if (status != XST_SUCCESS) {
-		VMR_ERR("UART VMC to SC init Failed");
+		VMR_ERR("Platform Initialization Failed.");
 		return -EINVAL;
 	}
 
-	/* Retry till fan controller is programmed */
-	while (max6639_init(1, 0x2E));  // only for vck5000
+	status = UART_VMC_SC_Enable(&uart_vmcsc_log);
+	if (status != XST_SUCCESS) {
+		VMR_ERR("UART VMC to SC init Failed.");
+		return -EINVAL;
+	}
+
+//	/* Retry till fan controller is programmed */
+//	while (max6639_init(1, 0x2E));  // only for vck5000
 
 	/* sdr_lock */
 	sdr_lock = xSemaphoreCreateMutex();
@@ -115,7 +138,7 @@ int cl_vmc_init()
 }
 
 
-sensorMonitorFunc Vmc_Find_Sensor_Handler(eSensor_Functions sensor_type)
+static sensorMonitorFunc Vmc_Find_Sensor_Handler(eSensor_Functions sensor_type)
 {
 	u16 j = 0;
 	u16 platform_sensors_len = ARRAY_SIZE(platform_sensor_handlers);
@@ -125,6 +148,22 @@ sensorMonitorFunc Vmc_Find_Sensor_Handler(eSensor_Functions sensor_type)
 				&& sensor_type == platform_sensor_handlers[j].sensor_type){
 
 			return platform_sensor_handlers[j].sensor_handler;
+		}
+	}
+
+	return NULL;
+}
+
+static Platform_Func_Ptr Vmc_Find_Function_Handler(ePlatform_Functions function_type)
+{
+	u16 j = 0;
+	u16 platform_functions_len = ARRAY_SIZE(platform_function_handlers);
+
+	for(j = 0; j < platform_functions_len; j++){
+		if((current_platform == platform_function_handlers[j].product_type_id)
+				&& function_type == platform_function_handlers[j].func_type){
+
+			return platform_function_handlers[j].func_handler;
 		}
 	}
 
@@ -153,6 +192,14 @@ static u8 Vmc_ConfigurePlatform(const char * product_name)
 
 	if(XST_SUCCESS != status)
 		return status;
+
+	for(i = 0; i < eMax_Platform_Functions; i++){
+		switch (i){
+			case ePlatform_Init:
+				platform_init_ptr = Vmc_Find_Function_Handler(i);
+				break;
+		}
+	}
 
 	for(i = 0; i < eMax_Sensor_Functions; i++){
 		switch (i){

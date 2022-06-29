@@ -8,5 +8,6 @@
 
 #include "../vmc_asdm.h"
 
+u8 V70_Init(void);
 
 #endif
