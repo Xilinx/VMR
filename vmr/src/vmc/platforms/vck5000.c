@@ -17,6 +17,16 @@ extern Vmc_Global_Variables vmc_g_var;
 
 static u8 i2c_num = LPD_I2C_0;
 
+u8 Vck5000_Init(void)
+{
+	//s8 status = XST_FAILURE;
+
+	/* Retry till fan controller is programmed */
+	while (max6639_init(1, 0x2E));  // only for vck5000
+
+	return XST_SUCCESS;
+}
+
 s8 Vck5000_Temperature_Read_Inlet(snsrRead_t *snsrData)
 {
 	s8 status = XST_FAILURE;

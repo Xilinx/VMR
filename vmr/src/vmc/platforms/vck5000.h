@@ -25,6 +25,8 @@
 
 #define MAX6639_FAN_TACHO_TO_RPM(x) (8000*60)/(x)
 
+u8 Vck5000_Init(void);
+
 s8 Vck5000_Temperature_Read_Inlet(snsrRead_t *snsrData);
 s8 Vck5000_Temperature_Read_Outlet(snsrRead_t *snsrData);
 s8 Vck5000_Temperature_Read_Board(snsrRead_t *snsrData);
