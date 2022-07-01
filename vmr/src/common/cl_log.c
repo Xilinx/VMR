@@ -66,6 +66,17 @@ static void vmr_log_collect(uint32_t msg_index_addr, uint32_t msg_buf_addr,
 	IO_SYNC_WRITE32(log_idx, msg_index_addr);
 }
 
+/* Current tick since boot to Seconds*/
+static inline u32 getCurrentSecond()
+{
+	return pdTICKS_TO_S(xTaskGetTickCount()); 
+}
+
+static inline u32 getCurrentMS()
+{
+	return pdTICKS_TO_MS(xTaskGetTickCount()) - getCurrentSecond() * 1000;
+}
+
 static void cl_printf_impl(const char *name, uint32_t line, uint8_t log_level,
 	const char *app_name, const char *fmt, va_list *argp)
 {
@@ -88,8 +99,8 @@ static void cl_printf_impl(const char *name, uint32_t line, uint8_t log_level,
 
 	/* assembile log message into log_buf char array */
 	vsnprintf(buf, sizeof(buf), fmt, *argp);
-	snprintf(log_buf, sizeof(log_buf), "[ %ld ] %s:%s:%ld: %s\r\n",
-		xTaskGetTickCount(), app_name, name, line, buf);
+	snprintf(log_buf, sizeof(log_buf), "[ %ld.%ld] %s:%s:%ld: %s\r\n",
+		getCurrentSecond(), getCurrentMS(), app_name, name, line, buf);
 
 	/* print to console */
 	xil_printf("%s", log_buf);
