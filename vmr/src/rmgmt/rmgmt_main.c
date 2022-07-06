@@ -169,13 +169,19 @@ static int validate_data_payload(struct xgq_vmr_data_payload *payload)
 	u32 address = RPU_SHARED_MEMORY_ADDR(payload->address);
 	u32 size = payload->size;
 
+	/* check address is 32bit aligned */
+	if (address & 0x3) {
+		VMR_ERR("address 0x%x is not 32bit aligned", address);
+		return -EINVAL;
+	}
+
 	if (address + size >= VMR_EP_RPU_SHARED_MEMORY_END) {
 		VMR_ERR("address overflow 0x%x", address);
 		return ret;
 	}
 
 	if (size > rh.rh_max_size) {
-		VMR_ERR("size 0x%x over max 0x%x", size, rh.rh_max_size);
+		VMR_ERR("size %d is over max %d", size, rh.rh_max_size);
 		return ret;
 	}
 
@@ -249,6 +255,7 @@ static int rmgmt_download_pdi(cl_msg_t *msg, enum pdi_type ptype)
 	u32 address = 0;
 	u32 size = 0;
 	int ret = 0;
+	u32 last_trunk_size = 0;
 
 	ret = validate_data_payload(&msg->data_payload);
 	if (ret)
@@ -259,7 +266,15 @@ static int rmgmt_download_pdi(cl_msg_t *msg, enum pdi_type ptype)
 
 	/* prepare rmgmt handler */
 	rh.rh_data_size = size;
-	cl_memcpy_fromio8(address, rh.rh_data, size);
+	if (size & 0x3) {
+		VMR_WARN("size %d is not 32bit aligned, ready last several by ioread8", size);
+		last_trunk_size = size & 0x3;
+	}
+
+	cl_memcpy_fromio32(address, rh.rh_data, size - last_trunk_size);
+	if (last_trunk_size)
+		cl_memcpy_fromio8(address + size - last_trunk_size,
+			rh.rh_data + size - last_trunk_size, last_trunk_size);
 
 	switch (ptype) {
 	case BASE_PDI:
