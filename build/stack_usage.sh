@@ -66,7 +66,7 @@ fi
 # sourcing vitis tooling
 . ${DEFAULT_VITIS}
 
-printf "\nanalyzing stack from srouce $SRC ...\n"
+printf "\nanalyzing stack from source $SRC ...\n"
 O_FILE=`find $SRC -name *.o`
 $AVSTACK $O_FILE
 ERR=$?
