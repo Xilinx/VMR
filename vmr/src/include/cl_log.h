@@ -13,12 +13,8 @@
 #include "cl_version.h"
 #include "cl_config.h"
 
-/*
- * The pdMS_TO_TICKS is defined as (xTimeInMs * configTICKRATEHZ) / 1000
- * so the pdTICKS_TO_MS can be the opposite way
- */
-#define pdTICKS_TO_MS( xTicks ) \
-	(( xTicks * 1000 ) / configTICKRATEHZ)
+#define pdTICKS_TO_MS(n) (n * 1000 / configTICK_RATE_HZ)
+#define pdTICKS_TO_S(n) (n / configTICK_RATE_HZ)
 
 /**
  * Application type id for logging, mem signature etc.
