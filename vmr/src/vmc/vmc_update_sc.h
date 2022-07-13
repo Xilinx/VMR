@@ -43,7 +43,7 @@
 #define SC_BSL_SYNCED_RESP_SIZE		(0x0B)
 
 #define SC_ENABLE_BSL_REQ_SIZE		(0x09)
-#define SC_ENABLE_BSL_RESP_SIZE		(0x0A)
+#define SC_ENABLE_BSL_RESP_SIZE		(0x0B)
 
 #define CMD_RX_DATA_BLOCK_32		(0x20)
 #define CMD_RX_PASSWORD			(0x21)

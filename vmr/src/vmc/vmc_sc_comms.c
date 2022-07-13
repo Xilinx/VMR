@@ -24,13 +24,14 @@ extern uart_rtos_handle_t uart_vmcsc_log;
 u8 g_scData[MAX_VMC_SC_UART_BUF_SIZE] = {0x00};
 u16 g_scDataCount = 0;
 bool isPacketReceived;
-u8 scPayload[128] = {0};
+u8 scPayload[MAX_VMC_SC_UART_BUF_SIZE] = {0};
 
-static u8 vmc_active_resp_len = MSP432_COMMS_MSG_GOOD_LEN;
+static u8 vmc_active_resp_len = MSP432_COMMS_GENERAL_RESP_LEN;
 
 static volatile bool is_SC_active  = false ;
 volatile bool isPowerModeActive = false;
 volatile bool getSensorRespLen = false;
+static volatile bool is_boardInfo_sentTo_SC = false;
 
 u8 VMC_SC_Comms_Msg[] = {
        MSP432_COMMS_VOLT_SNSR_REQ,
@@ -99,6 +100,15 @@ void vmc_set_snsr_resp_status(bool value)
 	getSensorRespLen = value;
 }
 
+bool vmc_get_boardInfo_status()
+{
+	return is_boardInfo_sentTo_SC;
+}
+
+void vmc_set_boardInfo_status(bool value)
+{
+	is_boardInfo_sentTo_SC = value;
+}
 u16 vmcU8ToU16(u8 *payload) {
 	return (u16)payload[0] | (((u16)payload[1])<<8);
 }
@@ -118,11 +128,14 @@ void VMC_Update_Sensor_Length(u16 length,u8 *payload)
     switch(payload[0])
     {
     case MSP432_COMMS_VOLT_SNSR_REQ:
-    	sc_vmc_data.voltsensorlength = payload[1]+RAW_PAYLOAD_LENTGH;
+    	sc_vmc_data.voltSensorLength = payload[1]+RAW_PAYLOAD_LENGTH;
     	break;
     case MSP432_COMMS_POWER_SNSR_REQ:
-    	sc_vmc_data.powersensorlength = payload[1]+RAW_PAYLOAD_LENTGH;
+    	sc_vmc_data.powerSensorLength = payload[1]+RAW_PAYLOAD_LENGTH;
     	break;
+    case MSP432_COMMS_TEMP_SNSR_REQ:
+	sc_vmc_data.tempSensorLength = payload[1]+RAW_PAYLOAD_LENGTH;
+	break;
     }
 
 }
@@ -135,14 +148,14 @@ void VMC_Update_Version_PowerMode(u16 length,u8 *payload)
 		switch(payload[i])
 		{
 		
-		case BMC_VERSION:
+		case eSC_BMC_VERSION:
 			sc_vmc_data.scVersion[0] = payload[i+2];  // fw_version
 			sc_vmc_data.scVersion[1] = payload[i+3];  // fw_rev_major
 			sc_vmc_data.scVersion[2] = payload[i+4];  // fw_rev_minor
 			break;
 		
-		case TOTAL_POWER_AVAIL:
-			sc_vmc_data.availpower = payload[i+2];
+		case eSC_POWER_MODE:
+			sc_vmc_data.powerMode = payload[i+2];
 			break;
 		}
 		i = i + 2 + payload[i + 1];
@@ -156,7 +169,7 @@ void VMC_StoreSensor_Value(u8 id, u32 value)
 
 	if (xSemaphoreTake(vmc_sc_lock, portMAX_DELAY))
 	{
-		if(id == VCCINT_I) {
+		if(id == eSC_VCCINT_I) {
 			sc_vmc_data.VCCINT_sensor_value = value;
 		} else {
 			sc_vmc_data.sensor_values[id] = value;
@@ -216,6 +229,11 @@ bool Parse_SCData(u8 *Payload)
 			break;
 		case MSP432_COMMS_VMC_GET_RESP_SIZE_RESP:
 			VMC_Update_Sensor_Length(Payload[PayloadLength], &Payload[COMMS_PAYLOAD_START_INDEX]);
+			break;
+		case MSP432_COMMS_VMC_SEND_I2C_SNSR_RESP:
+			break;
+		case MSP432_COMMS_VMC_SEND_BOARDINFO_RESP:
+			vmc_set_boardInfo_status(true);
 			break;
 		case MSP432_COMMS_MSG_ERR:
 			VMC_LOG("received error message  \r\n");
@@ -349,7 +367,21 @@ void VMC_uart_receive(u8  Expected_Msg_Length)
 		}
 	}
 }
+s32 VMC_Send_BoardInfo_SC(u8 *board_snsr_data)
+{
+    Versal_BoardInfo board_info = {0};
+    /* byte_count will indicate the length of the response payload being generated */
+    u32 byte_count = 0;
 
+    (void)VMC_Get_BoardInfo(&board_info);
+    
+    Cl_SecureMemcpy(board_snsr_data, sizeof(Versal_BoardInfo), &board_info, sizeof(Versal_BoardInfo));
+    byte_count = sizeof(Versal_BoardInfo);
+
+    /* Check and return -1 if size of response is > 256 */
+    return ((byte_count <= MAX_VMC_SC_UART_BUF_SIZE) ? (byte_count) : (-1));
+
+}
 void Get_Sensor_Response_Length(u8 Data)
 {
 	u8 Expected_Msg_Length = 11;
@@ -367,7 +399,7 @@ void Get_Sensor_Response_Length(u8 Data)
 	g_scDataCount = 0;
 }
 
-void VMC_Fetch_SC_SensorData(u8 messageID)
+void VMC_SC_COMMS_Tx_Rx(u8 messageID)
 {
     u8 buf[32] = {0x00};
 
@@ -376,7 +408,7 @@ void VMC_Fetch_SC_SensorData(u8 messageID)
         case MSP432_COMMS_VOLT_SNSR_REQ:
         {
             VMC_send_packet(MSP432_COMMS_VOLT_SNSR_REQ,MSP432_COMMS_NO_FLAG,0x00,buf);
-            VMC_uart_receive(sc_vmc_data.voltsensorlength);
+            VMC_uart_receive(sc_vmc_data.voltSensorLength);
             if(isPacketReceived)
             {
                 Parse_SCData(g_scData);
@@ -390,7 +422,7 @@ void VMC_Fetch_SC_SensorData(u8 messageID)
         case MSP432_COMMS_POWER_SNSR_REQ:
         {
             VMC_send_packet(MSP432_COMMS_POWER_SNSR_REQ,MSP432_COMMS_NO_FLAG,0x00,buf);
-            VMC_uart_receive(sc_vmc_data.powersensorlength);
+            VMC_uart_receive(sc_vmc_data.powerSensorLength);
             if(isPacketReceived)
             {
             	Parse_SCData(g_scData);
@@ -402,9 +434,8 @@ void VMC_Fetch_SC_SensorData(u8 messageID)
         }
         case MSP432_COMMS_TEMP_SNSR_REQ:
         {
-            u8  Expected_Msg_Length = 12;
             VMC_send_packet(MSP432_COMMS_TEMP_SNSR_REQ,MSP432_COMMS_NO_FLAG,0x00,buf);
-            VMC_uart_receive(Expected_Msg_Length);
+            VMC_uart_receive(sc_vmc_data.tempSensorLength);
             if(isPacketReceived)
             {
             	Parse_SCData(g_scData);
@@ -417,10 +448,11 @@ void VMC_Fetch_SC_SensorData(u8 messageID)
         case MSP432_COMMS_VMC_SEND_I2C_SNSR_REQ:
         {
             u8 payloadLength = 0;
-            Cl_SecureMemset(scPayload ,0x00,128);
+            Cl_SecureMemset(scPayload ,0x00,MAX_VMC_SC_UART_BUF_SIZE);
             payloadLength = Asdm_Send_I2C_Sensors_SC(scPayload);
             VMC_send_packet(MSP432_COMMS_VMC_SEND_I2C_SNSR_REQ,
                             MSP432_COMMS_NO_FLAG,payloadLength,scPayload);
+            VMC_uart_receive(MSP432_COMMS_GENERAL_RESP_LEN);
             if(isPacketReceived)
             {
                 Parse_SCData(g_scData);
@@ -430,7 +462,28 @@ void VMC_Fetch_SC_SensorData(u8 messageID)
             g_scDataCount = 0;
             break;
         }
-
+        case MSP432_COMMS_VMC_SEND_BOARDINFO_REQ:
+        {
+	    u8 payloadLength = 0;
+	    Cl_SecureMemset(scPayload ,0x00,MAX_VMC_SC_UART_BUF_SIZE);
+	    payloadLength = VMC_Send_BoardInfo_SC(scPayload);
+	    if(payloadLength < 0)
+	    {
+	        VMC_ERR("BoardInfo Size exceeding UART Max Payload Size");
+		break;
+	    }
+	    VMC_send_packet(MSP432_COMMS_VMC_SEND_BOARDINFO_REQ,
+	        		MSP432_COMMS_NO_FLAG,payloadLength,scPayload);
+	    VMC_uart_receive(MSP432_COMMS_GENERAL_RESP_LEN);
+	    if(isPacketReceived)
+	    {
+		Parse_SCData(g_scData);
+		isPacketReceived = false;
+	    }
+	    Cl_SecureMemset(g_scData,0x00,MAX_VMC_SC_UART_BUF_SIZE);
+	    g_scDataCount = 0;
+	    break;
+        }
         case MSP432_COMMS_VMC_VERSION_POWERMODE_REQ:
         {
             u8  Expected_Msg_Length = 18;
@@ -465,8 +518,11 @@ void VMC_Fetch_SC_SensorData(u8 messageID)
         {
 		Get_Sensor_Response_Length(MSP432_COMMS_VOLT_SNSR_REQ);
 		Get_Sensor_Response_Length(MSP432_COMMS_POWER_SNSR_REQ);
+		Get_Sensor_Response_Length(MSP432_COMMS_TEMP_SNSR_REQ);
 
-		if((sc_vmc_data.voltsensorlength != 0) && (sc_vmc_data.powersensorlength != 0 ))
+		if((sc_vmc_data.voltSensorLength != 0) &&
+				(sc_vmc_data.powerSensorLength != 0 ) &&
+				(sc_vmc_data.tempSensorLength   != 0 ))
 		{
 			vmc_set_snsr_resp_status(true);
 		}
@@ -484,107 +540,10 @@ void VMC_Mointor_SC_Sensors()
 
     for(msgId=0; msgId < MAX_MSGID_COUNT; msgId++)
     {
-        VMC_Fetch_SC_SensorData(VMC_SC_Comms_Msg[msgId]);
+        VMC_SC_COMMS_Tx_Rx(VMC_SC_Comms_Msg[msgId]);
         vTaskDelay(DELAY_MS(200));
     }
 }
-
-#if 0
-void VMC_SC_CommsTask(void *params)
-{
-    EventBits_t xEventGroupValue;
-    u8 task_notify_cnt = 0;
-    u8 checking_sc_active_retry_cnt = 0;
-    u8 isSensorMonitorLockAquired = 0;
-    BaseType_t task_notified = SENSOR_MONITOR_TASK_NOT_NOTIFIED;
-    const TickType_t xDelay1s = pdMS_TO_TICKS( 1000 * 1 );
-    VMC_LOG("VMC SC COMMs Task Created !!!");
-
-	/* After Bootup, this function validates fpt SC image and the version */
-	VMC_Get_Fpt_SC_Version(&fpt_sc_offsets);
-
-	while (1)
-	{
-		xEventGroupValue = xEventGroupWaitBits(xScUpdateEvent, FW_UPDATE_TRIGGER_0, pdFALSE, pdTRUE, xDelay1s);
-		if ((xEventGroupValue & FW_UPDATE_TRIGGER_0))
-		{
-			VMC_LOG("SC update request received !!");
-			UpdateSCFW();
-			checking_sc_active_retry_cnt = 0;
-			vmc_set_active_resp_len(MSP432_COMMS_MSG_GOOD_LEN);
-		}
-
-    	/* Notify SC of VMC Presence */
-    	if(!vmc_get_sc_status())
-    	{
-    		if (task_notified == SENSOR_MONITOR_TASK_NOTIFIED ) {
-    			if(isSensorMonitorLockAquired == SENSOR_MONITOR_LOCK_RELEASED ) {
-    				if(xSemaphoreTake(vmc_sensor_monitoring_lock, portMAX_DELAY) == pdFALSE) {
-    					VMC_ERR(" Failed to acquire sensor monitor lock \r");
-    				} else {
-    					isSensorMonitorLockAquired = SENSOR_MONITOR_LOCK_ACQUIRED;
-    				}
-    			}
-    		}
-			/* 
-			 * This condition is to check whether we are communicating with unsupported or Discovery SC.
-			 * We retry max 10 times for the active flag with an expectation that SC responds
-			 * with a message GOOD of length 10 bytes. 
-			 * If we still do not receive an expected response from SC, 
-			 * we consider it as an unsupported SC FW and we expect an ERROR response of length 11 bytes from SC.
-			 * With this, it will be able to handle responses from both supported and unsupported SC FW.
-			 * Without this condition, in the case of unsupported SC, 
-			 * COMMS requests would continuously time out after every 500 mSec because VMC expects 
-			 * a message GOOD response for each request, which legacy SC does not support.
-			 */
-    		if(checking_sc_active_retry_cnt < MAX_RETRY_TO_CHK_SC_ACTIVE) {
-    			checking_sc_active_retry_cnt++;
-			} else {
-				vmc_set_active_resp_len(MSP432_COMMS_MSG_ERR_LEN);
-			}
-
-    		VMC_Fetch_SC_SensorData(MSP432_COMMS_VMC_ACTIVE_REQ);
-    	}
-    	else
-    	{
-    		checking_sc_active_retry_cnt = 0;
-    		if(task_notified == SENSOR_MONITOR_TASK_NOT_NOTIFIED )
-    		{
-    			task_notify_cnt++;
-    			/* Notify the Sensor monitor task to Poll I2c Sensors*/
-    			task_notified = xTaskNotify(xSensorMonTask, 0, eNoAction);
-    			if(task_notify_cnt > SENSOR_MONITOR_TASK_MAX_NOTIFY_COUNT) {
-    				VMC_LOG("TaskNotify failed for SensorMonTask \r\n");
-    				configASSERT(task_notified != SENSOR_MONITOR_TASK_NOT_NOTIFIED);
-    			}
-    		}
-    		if ( isSensorMonitorLockAquired == SENSOR_MONITOR_LOCK_ACQUIRED ) {
-
-    			if(xSemaphoreGive(vmc_sensor_monitoring_lock)) {
-    				xil_printf("Lock released \r\n");
-    				isSensorMonitorLockAquired = SENSOR_MONITOR_LOCK_RELEASED ;
-    			}
-    			else {
-    				xil_printf("semaphore lock not released \r\n");
-    			}
-    		}
-    		/* Fetch the SC Version and Power Config */
-    		if(!vmc_get_power_mode_status())
-    		{
-    			VMC_Fetch_SC_SensorData(MSP432_COMMS_VMC_VERSION_POWERMODE_REQ);
-    		}
-    		/* Fetch the Volt & power Sensor length */
-    		if(!vmc_get_snsr_resp_status())
-    		{
-    			VMC_Fetch_SC_SensorData(MSP432_COMMS_VMC_GET_RESP_SIZE_REQ);
-    		}
-    		/* Fetching Sensor values from SC */
-    		VMC_Mointor_SC_Sensors();
-	}
-
-	vTaskSuspend(NULL);
-}
-#endif
 
 static void cl_vmc_sc_active()
 {
@@ -593,19 +552,8 @@ static void cl_vmc_sc_active()
 			return;
 
 		vTaskDelay(pdMS_TO_TICKS(1000));
-		vmc_set_active_resp_len(MSP432_COMMS_MSG_GOOD_LEN);
-		VMC_Fetch_SC_SensorData(MSP432_COMMS_VMC_ACTIVE_REQ);
-	}
-
-
-	/*
-	 * Still not getting SENSOR_GOOD, it is an unsupported SC, set correct
-	 * len for reporting error.
-	 */
-	if (!vmc_get_sc_status()) {
-		vmc_set_active_resp_len(MSP432_COMMS_MSG_ERR_LEN);
-		VMC_Fetch_SC_SensorData(MSP432_COMMS_VMC_ACTIVE_REQ);
-		VMC_ERR("vmc_sc is not ready yet.");
+		vmc_set_active_resp_len(MSP432_COMMS_GENERAL_RESP_LEN);
+		VMC_SC_COMMS_Tx_Rx(MSP432_COMMS_VMC_ACTIVE_REQ);
 	}
 }
 
@@ -624,13 +572,18 @@ void cl_vmc_sc_update()
 	/* Fetch the SC Version and Power Config  */
 	if(!isPowerModeActive)
 	{
-		VMC_Fetch_SC_SensorData(MSP432_COMMS_VMC_VERSION_POWERMODE_REQ);
+		VMC_SC_COMMS_Tx_Rx(MSP432_COMMS_VMC_VERSION_POWERMODE_REQ);
 	}
 
 	/* Fetch the Volt & power Sensor length  */
 	if( vmc_get_sc_status() &&  (!getSensorRespLen))
 	{
-		VMC_Fetch_SC_SensorData(MSP432_COMMS_VMC_GET_RESP_SIZE_REQ);
+		VMC_SC_COMMS_Tx_Rx(MSP432_COMMS_VMC_GET_RESP_SIZE_REQ);
+	}
+
+	if(!vmc_get_boardInfo_status())
+	{
+		VMC_SC_COMMS_Tx_Rx(MSP432_COMMS_VMC_SEND_BOARDINFO_REQ);
 	}
 
 	/*
