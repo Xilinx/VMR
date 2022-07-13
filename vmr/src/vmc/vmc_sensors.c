@@ -217,7 +217,7 @@ s8 PMBUS_SC_Vccint_Read(snsrRead_t *snsrData)
 s8 Power_Monitor(snsrRead_t *snsrData)
 {
     s8 status = XST_SUCCESS;
-    u8 power_mode = 0;
+    u8 powerMode = 0;
     float totalPower = 0;
     float pexPower = 0;
     float aux0Power = 0;
@@ -233,10 +233,10 @@ s8 Power_Monitor(snsrRead_t *snsrData)
 
     if (xSemaphoreTake(vmc_sc_lock, portMAX_DELAY))
     {
-    	power_mode =  sc_vmc_data.availpower;
-    	pexPower = ((sc_vmc_data.sensor_values[PEX_12V]/1000.0) * (sc_vmc_data.sensor_values[PEX_12V_I_IN])/1000.0);
-    	aux0Power = ((sc_vmc_data.sensor_values[AUX_12V]/1000.0) * (sc_vmc_data.sensor_values[V12_IN_AUX0_I])/1000.0); //2x4 AUX
-    	aux1Power = ((sc_vmc_data.sensor_values[AUX1_12V]/1000.0) * (sc_vmc_data.sensor_values[V12_IN_AUX1_I])/1000.0); //2x3 AUX
+    	powerMode =  sc_vmc_data.powerMode;
+    	pexPower = ((sc_vmc_data.sensor_values[eSC_PEX_12V]/1000.0) * (sc_vmc_data.sensor_values[eSC_PEX_12V_I_IN])/1000.0);
+    	aux0Power = ((sc_vmc_data.sensor_values[eSC_AUX_12V]/1000.0) * (sc_vmc_data.sensor_values[eSC_V12_IN_AUX0_I])/1000.0); //2x4 AUX
+    	aux1Power = ((sc_vmc_data.sensor_values[eSC_AUX1_12V]/1000.0) * (sc_vmc_data.sensor_values[eSC_V12_IN_AUX1_I])/1000.0); //2x3 AUX
     	totalPower = (pexPower + aux0Power +aux1Power);
     	xSemaphoreGive(vmc_sc_lock);
     }
@@ -270,7 +270,7 @@ s8 Power_Monitor(snsrRead_t *snsrData)
     	count_12vpex = count_12vpex + 1;
     }
 
-    if (power_mode == POWER_MODE_300W) // Both 2x3 and 2x4 AUX connected
+    if (powerMode == POWER_MODE_300W) // Both 2x3 and 2x4 AUX connected
     {
     	if ((aux0Power >= POWER_12VAUX_2X4_CRITICAL_THRESHOLD) || (aux1Power >= POWER_12VAUX_2X3_CRITICAL_THRESHOLD))
     	{
@@ -309,7 +309,7 @@ s8 Power_Monitor(snsrRead_t *snsrData)
     	count_12vpex = 1;
     }
 
-    if (power_mode == POWER_MODE_300W)
+    if (powerMode == POWER_MODE_300W)
     {
     	if(is_12v_aux_2x3_2x4_critical_threshold_reached == true)
     	{
@@ -349,7 +349,7 @@ void sysmon_monitor(void)
 void Monitor_Thresholds()
 {
 	static bool is_vccint_temp_critical_threshold_reached = false;
-	u16 sensorReading = sc_vmc_data.sensor_values[VCCINT_TEMP];
+	u16 sensorReading = sc_vmc_data.sensor_values[eSC_VCCINT_TEMP];
 
 	if (sensorReading >= TEMP_VCCINT_CRITICAL_THRESHOLD)
 	{
@@ -445,9 +445,6 @@ s8 Temperature_Read_QSFP(snsrRead_t *snsrData)
 
 void cl_vmc_monitor_sensors()
 {
-	if (!cl_vmc_sc_is_ready())
-		return;
-
     	Monitor_Thresholds();
     	Monitor_Sensors();
 

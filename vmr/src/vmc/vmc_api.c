@@ -220,6 +220,11 @@ void EepromDump(void)
 	VMC_DBG("\n\rTBD: EEPROM data will be dumped out here! %d\n\r", 2000);
 }
 
+void VMC_Get_BoardInfo(Versal_BoardInfo *_board_info) {
+	Cl_SecureMemcpy(_board_info, sizeof(Versal_BoardInfo),
+			&board_info, sizeof(Versal_BoardInfo));
+}
+
 u8 Versal_EEPROM_ReadBoardInfo(void)
 {
 	s8 i			= 0;

@@ -27,6 +27,31 @@
 
 u8 Vck5000_Init(void);
 
+/*
+ * VCK5000 Sensor IDs Fetched from SC
+ */
+typedef enum
+{
+    eSC_PEX_12V = 0,
+    eSC_PEX_3V3,
+    eSC_AUX_3V3,
+    eSC_AUX_12V,
+    eSC_AUX1_12V,
+
+    eSC_VCCINT_I,
+    eSC_PEX_12V_I_IN,
+    eSC_V12_IN_AUX0_I,
+    eSC_V12_IN_AUX1_I,
+
+    eSC_VCCINT_TEMP,
+    eSC_FAN_SPEED,
+    eSC_BMC_VERSION,
+    eSC_POWER_MODE,
+    eSC_POWER_GOOD,
+    eSC_SENSOR_ID_MAX
+
+}vck5000_sensor_id_list;
+
 s8 Vck5000_Temperature_Read_Inlet(snsrRead_t *snsrData);
 s8 Vck5000_Temperature_Read_Outlet(snsrRead_t *snsrData);
 s8 Vck5000_Temperature_Read_Board(snsrRead_t *snsrData);

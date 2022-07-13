@@ -1112,6 +1112,8 @@ static s32 start_scfw_update(void)
 	if (ret_val && fpt_sc_valid) {
 		VMC_LOG("SC Needs Update !! ");
 		update_scfw();
+		/* SC FW updated, Resend the Board Info */
+		vmc_set_boardInfo_status(false);
 	} else {
 		if (!fpt_sc_valid) {
 			VMC_ERR("No Valid SC available !! ");

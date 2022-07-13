@@ -11,6 +11,7 @@
 #include "cl_uart_rtos.h"
 #include "vmc_api.h"
 
+#include "platforms/vck5000.h"
 
 extern uart_rtos_handle_t uart_vmcsc_log;
 
@@ -42,7 +43,7 @@ extern uart_rtos_handle_t uart_vmcsc_log;
 
 
 #define COMMS_PAYLOAD_START_INDEX    5
-#define RAW_PAYLOAD_LENTGH           9
+#define RAW_PAYLOAD_LENGTH           9
 
 #define MAX_VMC_SC_UART_BUF_SIZE            255
 #define MAX_VMC_SC_UART_COUNT_WITH_INTR     60
@@ -62,8 +63,7 @@ extern uart_rtos_handle_t uart_vmcsc_log;
 #define MSP432_COMMS_MSG_GOOD           (0xFE)
 #define MSP432_COMMS_MSG_ERR            (0xFF)
 
-#define MSP432_COMMS_MSG_GOOD_LEN       (0x0A)
-#define MSP432_COMMS_MSG_ERR_LEN        (0x0B)
+#define MSP432_COMMS_GENERAL_RESP_LEN   (0x0B)
 
 #define MSP432_COMMS_OEM_CMD_REQ        (0x6F)
 #define MSP432_COMMS_OEM_CMD_RESP       (0xEF)
@@ -93,6 +93,8 @@ extern uart_rtos_handle_t uart_vmcsc_log;
 #define MSP432_COMMS_VMC_GET_RESP_SIZE_REQ (0xF5)
 #define MSP432_COMMS_VMC_GET_RESP_SIZE_RESP (0xF6)
 
+#define MSP432_COMMS_VMC_SEND_BOARDINFO_REQ  (0xF7)
+#define MSP432_COMMS_VMC_SEND_BOARDINFO_RESP (0xF8)
 
 typedef enum return_error_codes {
     FIELD_PARSE_SUCCESSFUL,                 /* The current field was parsed successfully */
@@ -133,147 +135,29 @@ typedef struct vmc_sc_uart_cmd {
 
 }vmc_sc_uart_cmd;
 
-typedef enum // satellite controller sensor and info ids
-{
-    SNSR_ID_12V_PEX = 0x0,
-    SNSR_ID_3V3_PEX,
-    SNSR_ID_3V3_AUX,
-    SNSR_ID_12V_AUX,
-    SNSR_ID_DDR4_VPP_BTM,
-    SNSR_ID_SYS_5V5,
-    SNSR_ID_VCC1V2_TOP,
-    SNSR_ID_VCC1V8,
-    SNSR_ID_VCC0V85,
-    SNSR_ID_DDR4_VPP_TOP,
-    SNSR_ID_MGT0V9AVCC,
-    SNSR_ID_12V_SW,
-    SNSR_ID_MGTAVTT,
-    SNSR_ID_VCC1V2_BTM,
-    SNSR_ID_12VPEX_I_IN,
-    SNSR_ID_12V_AUX_I_IN,
-    SNSR_ID_VCCINT,
-    SNSR_ID_VCCINT_I,
-    SNSR_ID_FPGA_TEMP,
-    SNSR_ID_FAN_TEMP,
-    SNSR_ID_DIMM_TEMP0,
-    SNSR_ID_DIMM_TEMP1,
-    SNSR_ID_DIMM_TEMP2,
-    SNSR_ID_DIMM_TEMP3,
-    SNSR_ID_SE98_TEMP0,
-    SNSR_ID_SE98_TEMP1,
-    SNSR_ID_SE98_TEMP2,
-    SNSR_ID_FAN_SPEED,
-    SNSR_ID_CAGE_TEMP0,
-    SNSR_ID_CAGE_TEMP1,
-    SNSR_ID_CAGE_TEMP2,
-    SNSR_ID_CAGE_TEMP3,
-    SNSR_ID_BOARD_SN = 0x21,
-    SNSR_ID_MAC_ADDRESS0,
-    SNSR_ID_MAC_ADDRESS1,
-    SNSR_ID_MAC_ADDRESS2,
-    SNSR_ID_MAC_ADDRESS3,
-    SNSR_ID_BOARD_REV,
-    SNSR_ID_BOARD_NAME,
-    SNSR_ID_SAT_VERSION,
-    SNSR_ID_TOTAL_POWER_AVAIL,
-    SNSR_ID_FAN_PRESENCE,
-    SNSR_ID_CONFIG_MODE,
-    SNSR_ID_HBM_TEMP1 = 0x30,
-    SNSR_ID_VCC_3V3,
-    SNSR_ID_3V3PEX_I_IN,
-    SNSR_ID_VCC0V85_I,
-    SNSR_ID_HBM_1V2,
-    SNSR_ID_VPP2V5,
-    SNSR_ID_VCCINT_BRAM,
-    SNSR_ID_HBM_TEMP2 = 0x37,
-    CMC_MAX_NUM_SNSRS,
-}Sensor_id;
-
-/* List sensor ids used for communicating between MB and MSP */
+/* List sensor ids used for communicating between VMR and MSP */
 typedef enum
 {
-    PEX_12V = 0,
-    PEX_3V3,
-    AUX_3V3,
-    AUX_12V,
-    DDR4_VPP_BTM,
-    SYS_5V5,
-    VCC1V2_TOP,
-    VCC1V8,
-    VCC0V85,
-    DDR4_VPP_TOP,
-    MGT0V9AVCC,
-    SW_12V,
-    MGTAVTT,
-    VCC1V2_BTM,
-    PEX_12V_I_IN,
-    AUX_12V_I_IN,
-	VCCINT_SC, //Dummy sensor in enum just to keep the ordering.
-    VCCINT_I,
-    FPGA_TEMP,
-    FAN_TEMP,
-    DIMM_TEMP0,
-    DIMM_TEMP1,
-    DIMM_TEMP2,
-    DIMM_TEMP3,
-    SE98_TEMP0,
-    SE98_TEMP1,
-    SE98_TEMP2,
-    FAN_SPEED,
-    CAGE_TEMP0,
-    CAGE_TEMP1,
-    CAGE_TEMP2,
-    CAGE_TEMP3,
-    RESERVED5,
-    BOARD_SN,
-    MAC_ADDRESS0,
-    MAC_ADDRESS1,
-    MAC_ADDRESS2,
-    MAC_ADDRESS3,
-    BOARD_REV,
-    BOARD_NAME,
-    BMC_VERSION,
-    TOTAL_POWER_AVAIL,
-    FAN_PRESENCE,
-    CONFIGURATION_MODE,
-    HBM_TEMP1 = 0x30,
-    VCC_3V3,
-    PEX3V3_I_IN,
-    VCC0V85_I,
-    HBM_1V2,
-    VPP2V5,
-    VCCINT_BRAM,
-    HBM_TEMP2,
-    AUX1_12V,
-    VCCINT_TEMP = 0x39,
-    PEX_12V_POWER,
-    PEX_3V3_POWER,
-    AUX_3V3_I,
-    VCC1V2_I = 0x3F,
-    V12_IN_I,
-    V12_IN_AUX0_I,
-    V12_IN_AUX1_I,
-    VCCAUX_SC,
-    VCCAUX_PMC,
-    VCCRAM,
-    POWER_GOOD = 0x46,
-    NEW_MAC_SCHEME_ID = 0x4B,
-    HBM_T_1V2 = 0x4C,
-    HBM_B_1V2,
-    VPP_T_2V5,
-    VPP_B_2V5,
-    SENSOR_ID_MAX
-}sensor_id_list;
+    eSC_INLET_TEMP = 0,
+    eSC_OUTLET_TEMP,
+    eSC_BOARD_TEMP,
+    eSC_FPGA_TEMP,
+    eSC_CAGE_TEMP0,
+    eSC_CAGE_TEMP1,
+    eSC_TOTAL_POWER
+}oob_sensor_ids;
 
 typedef struct SC_VMC_Data{
     bool boardInfoStatus;
-    u8   voltsensorlength;
-    u8   powersensorlength;
-    u8   availpower;
+    u8   voltSensorLength;
+    u8   powerSensorLength;
+    u8   tempSensorLength;
+    u8   powerMode;
     u8   configmode;
     u8   scVersion[4];
     u32  VCCINT_sensor_value;
-    u16  sensor_values[SENSOR_ID_MAX];
+    /* Stores Sensor values recvd from SC */
+    u16  sensor_values[eSC_SENSOR_ID_MAX];
 }SC_VMC_Data;
 
 
@@ -294,4 +178,5 @@ bool vmc_get_power_mode_status();
 void vmc_set_power_mode_status(bool value);
 bool vmc_get_snsr_resp_status();
 void vmc_set_snsr_resp_status(bool value);
-
+bool vmc_get_boardInfo_status();
+void vmc_set_boardInfo_status(bool value);
