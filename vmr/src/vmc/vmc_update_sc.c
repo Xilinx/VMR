@@ -601,26 +601,49 @@ static void sync_sc_bsl(void)
 {
 	static u8 mode_retry_cnt = 0;
 	static u8 retry_count = 0;
+	static u32 bytes_to_rcv = SC_BSL_SYNCED_RESP_SIZE;
 	u8 sc_bsl_sync[SC_BSL_SYNCED_REQ_SIZE] = { BSL_SYNC_REQ_CHAR };
 
 	VMC_LOG("CMD : SC BSL SYNC ");
-	if (do_uart_transaction(&sc_bsl_sync[0], SC_BSL_SYNCED_REQ_SIZE, TRUE, SC_BSL_SYNCED_RESP_SIZE)) {
+	/* Here we are trying to receive packets from MSP and decide whether MSP is in SC or BSL mode based on the response received */
+	if (do_uart_transaction(&sc_bsl_sync[0], SC_BSL_SYNCED_REQ_SIZE, TRUE, bytes_to_rcv)) {
 		/* Check if MSP is in SC/BSL mode. */
 		if ((rcv_bufr[0] == ESCAPE_CHAR) && (rcv_bufr[1] == STX)) {
 			mode_retry_cnt = 0;
 			retry_count = 0;
 			update_state = eSc_Enable_Bsl;
-		} else if ((rcv_bufr[0] == BSL_SYNC_SUCCESS)
-				&& (mode_retry_cnt <= MODE_VER_MAX_RETRY_COUNT)) {
+			VMC_LOG("MSP is in SC mode !! ");
+		}
+		/* Check if BSL is sending an unknown message as a response. */
+		else if ((bytes_to_rcv == BSL_UNKNOWN_MSG_RESP_SIZE)
+					&& (!vmc_validate_bsl_resp(&rcv_bufr[0], (u16)bytes_to_rcv))
+					&& (mode_retry_cnt <= MODE_VER_MAX_RETRY_COUNT)) {
 			mode_retry_cnt += 1;
 			/* Make sure MSP is in BSL mode. */
 			if (mode_retry_cnt >= MODE_VER_MAX_RETRY_COUNT) {
 				mode_retry_cnt = 0;
 				retry_count = 0;
 				update_state = eBsl_Unlock_Password;
+				bytes_to_rcv = SC_BSL_SYNCED_RESP_SIZE;
+				VMC_LOG("MSP is in BSL mode !! ");
+			}
+		}
+		/* Check if BSL is trying to sync with VMC. */
+		else if ((bytes_to_rcv == BSL_SYNCED_RESP_SIZE)
+					&& (rcv_bufr[0] == BSL_SYNC_SUCCESS)
+					&& (mode_retry_cnt <= MODE_VER_MAX_RETRY_COUNT)) {
+			mode_retry_cnt += 1;
+			/* Make sure MSP is in BSL mode. */
+			if (mode_retry_cnt >= MODE_VER_MAX_RETRY_COUNT) {
+				mode_retry_cnt = 0;
+				retry_count = 0;
+				update_state = eBsl_Unlock_Password;
+				bytes_to_rcv = SC_BSL_SYNCED_RESP_SIZE;
+				VMC_LOG("MSP is in BSL mode !! ");
 			}
 		} else {
 			retry_count += 1;
+			mode_retry_cnt = 0;
 			update_state = eSc_Bsl_Sync;
 			VMC_ERR("SC BSL Sync Failure.. Retrying !! ");
 		}
@@ -629,12 +652,24 @@ static void sync_sc_bsl(void)
 	}
 
 	if (retry_count >= SC_UPDATE_MAX_RETRY_COUNT) {
+		if ((retry_count >= SC_UPDATE_MAX_RETRY_COUNT)
+				&& (bytes_to_rcv == BSL_SYNCED_RESP_SIZE)) {
+			retry_count = 0;
+			mode_retry_cnt = 0;
+			update_status = eStatus_Failure;
+			update_state = eSc_State_Idle;
+			update_error = eSc_Update_Error_Sc_Bsl_Sync_Failed;
+			bytes_to_rcv = SC_BSL_SYNCED_RESP_SIZE;
+			VMC_ERR("Update failure: Retry !! ");
+			return;
+		}
+		if (bytes_to_rcv == SC_BSL_SYNCED_RESP_SIZE) {
+			bytes_to_rcv = BSL_UNKNOWN_MSG_RESP_SIZE;
+		} else if (bytes_to_rcv == BSL_UNKNOWN_MSG_RESP_SIZE) {
+			bytes_to_rcv = BSL_SYNCED_RESP_SIZE;
+		}
 		retry_count = 0;
-		update_error = eSc_Update_Error_Sc_Bsl_Sync_Failed;
-		update_progress = update_error;
-		update_status = eStatus_Failure;
-		update_state = eSc_State_Idle;
-		VMC_ERR("Update failure: Retry !! ");
+		mode_retry_cnt = 0;
 	}
 	vTaskDelay(pdMS_TO_TICKS(1000 * 1));
 }
@@ -666,7 +701,6 @@ static void enable_sc_bsl(void)
 	if (retry_count >= SC_UPDATE_MAX_RETRY_COUNT) {
 		retry_count = 0;
 		update_error = eSc_Update_Error_En_Bsl_Failed;
-		update_progress = update_error;
 		update_status = eStatus_Failure;
 		update_state = eSc_State_Idle;
 		VMC_ERR("Update failure: Retry !! ");
@@ -704,7 +738,6 @@ static void sync_vmc_bsl(void)
 	if (retry_count >= SC_UPDATE_MAX_RETRY_COUNT) {
 		retry_count = 0;
 		update_error = eSc_Update_Error_Vmc_Bsl_Sync_Failed;
-		update_progress = update_error;
 		update_status = eStatus_Failure;
 		update_state = eSc_State_Idle;
 		VMC_ERR("Update failure: Retry !! ");
@@ -755,7 +788,6 @@ static void unlock_bsl(void)
 	if (retry_count >= SC_UPDATE_MAX_RETRY_COUNT) {
 		retry_count = 0;
 		update_error = eSc_Update_Error_Bsl_Unlock_Password_Failed;
-		update_progress = update_error;
 		update_status = eStatus_Failure;
 		update_state = eSc_State_Idle;
 		VMC_ERR("Update failure: Retry !! ");
@@ -800,7 +832,6 @@ static void mass_erase_bsl(void)
 	if (retry_count >= SC_UPDATE_MAX_RETRY_COUNT) {
 		retry_count = 0;
 		update_error = eSc_Update_Error_Erase_Failed;
-		update_progress = update_error;
 		update_status = eStatus_Failure;
 		update_state = eSc_State_Idle;
 		VMC_ERR("Update failure: Retry !! ");
@@ -827,7 +858,6 @@ static void send_data_to_bsl(void)
 		update_status = eStatus_Failure;
 		update_state = eSc_State_Idle;
 		update_error = eSc_Update_Error_Invalid_Sc_Symbol_Found;
-		update_progress = update_error;
 		VMC_ERR("Invalid symbol... ");
 		return;
 	}
@@ -849,28 +879,19 @@ static void send_data_to_bsl(void)
 					/* Check if the data was written to the MSP flash successfully. */
 					if (matchcrc_postwrite(parsed_sc_flash_addr) != eStatus_Success) {
 						update_status = eStatus_Failure;
-						update_state = eSc_State_Idle;
 						update_error = eSc_Update_Error_Post_Crc_Failed;
-						update_progress = update_error;
-						data_ptr = 0x00;
 						VMC_ERR("Post CRC failed... ");
 						break;
 					}
 				} else {
 					update_status = eStatus_Failure;
-					update_state = eSc_State_Idle;
 					update_error = eSc_Update_Error_Invalid_Bsl_Resp;
-					update_progress = update_error;
-					data_ptr = 0x00;
 					VMC_ERR("BSL Resp failure. Retry.. ");
 					break;
 				}
 			} else {
 				update_status = eStatus_Failure;
-				update_state = eSc_State_Idle;
 				update_error = eSc_Update_Error_Invalid_Bsl_Resp;
-				update_progress = update_error;
-				data_ptr = 0x00;
 				VMC_ERR("Invalid Response from BSL..");
 				break;
 			}
@@ -883,7 +904,15 @@ static void send_data_to_bsl(void)
 	data_ptr = 0x00;
 	curr_prog = 0;
 	max_data_slot = 0;
-	update_state = eBsl_Load_Pc_32;
+
+	/* Move the FSM ahead and reset the BSL state machine,
+	 * as we failed in the middle of packet transfer. */
+	if (update_status != eStatus_Failure) {
+		update_state = eBsl_Load_Pc_32;
+	} else {
+		update_state = eBsl_Reboot_Reset;
+		update_status = eStatus_In_Progress;
+	}
 	vTaskDelay(pdMS_TO_TICKS(10));
 }
 
@@ -910,7 +939,6 @@ static void loadpc_bsl(void)
 	}
 }
 
-#ifdef VMC_DEBUG
 /**
   * @brief  This used to initiate a reboot-reset into the MSP MCU.
   * @param  None
@@ -933,6 +961,7 @@ static void reboot_bsl(void)
 	vTaskDelay(pdMS_TO_TICKS(100));
 }
 
+#ifdef VMC_DEBUG
 /**
   * @brief  This used to get the BSL version.
   * @param  None
@@ -973,7 +1002,6 @@ static void get_bsl_version(void)
 		update_status = eStatus_Failure;
 		update_state = eSc_State_Idle;
 		update_error = eSc_Update_Error_Failed_To_Get_Bsl_Version;
-		update_progress = update_error;
 		VMC_ERR("Failed to get BSL version: Retry !! ");
 	}
 	/* Reset the progress variables. */
@@ -1019,17 +1047,17 @@ static void get_bsl_version(void)
   *	      		|		 |		 MASS Erase 
   * 			|		 |		(eBsl_Mass_Erase)
   *	      		|		 |	(Fail)	     |
-  *	      		|		 +-------------------+
-  *	      		|		 ^	  	     |
-  *	      		|		 |		 Data Tx_32
-  * 			|		 |		(eBsl_Data_Tx_32)
-  *	      		|	         |	(Fail)	     |
-  *	      		|		 +-------------------+
-  *	      		|		 ^	   	     |
-  *	      		|	         |		 Load Pc_32
-  * 			|		 |		(eBsl_Load_Pc_32)
-  *	      		|		 |	(Fail)	     |
-  *	      		|	         +-------------------+
+  *	      		|     +--------> +-------------------+
+  *	      		|     |		 ^	  	     |
+  *	      		|     |	         |		 Data Tx_32
+  * 			|     |	         |		(eBsl_Data_Tx_32)
+  *	      		|     |      Reboot BSL	      (Fail) |
+  *	      		|     |  (eBsl_Reboot_Reset) <-------+
+  *	      		|     |  	     		     |
+  *	      		|     |        			 Load Pc_32
+  * 			|     |	 			(eBsl_Load_Pc_32)
+  *	      		|     |	 	(Fail)	     	     |
+  *	      		|     +------------------------------+
   *	      		|				     |
   *	      		+------------------------------------+
   *
@@ -1038,8 +1066,10 @@ static void get_bsl_version(void)
   *	@retval	None
   */
 
-void update_scfw(void)
+u8 update_scfw(void)
 {
+	u8 ret_val = 0;
+
 	if ((update_state == eSc_State_Idle)
 			&& ((update_status == eStatus_Success)
 					|| (update_status == eStatus_Failure))) {
@@ -1071,20 +1101,21 @@ void update_scfw(void)
 		case eBsl_Load_Pc_32:
 			loadpc_bsl();
 			break;
-#ifdef VMC_DEBUG
 		case eBsl_Reboot_Reset:
 			reboot_bsl();
 			break;
+#ifdef VMC_DEBUG
 		case eTx_Bsl_Version:
 			get_bsl_version();
-#endif
 			break;
+#endif
 		default:
 			VMC_ERR("Invalid Command !! ");
 			update_status = eStatus_Failure;
 			update_state = eSc_State_Idle;
 		}
 	}
+	ret_val = (u8)update_error;
 
 	/* Waiting for 5sec so that XRT will get the updated progress of the SC update. */
 	vTaskDelay(pdMS_TO_TICKS(1000 * 5));
@@ -1102,34 +1133,35 @@ void update_scfw(void)
 	vmc_set_sc_status(false);
 	vmc_set_power_mode_status(false);
 	vmc_set_snsr_resp_status(false);
+	/* SC FW updated, Resend the Board Info */
+	vmc_set_boardInfo_status(false);
+
+	return ret_val;
 }
 
-static s32 start_scfw_update(void)
+static u8 start_scfw_update(void)
 {
-	s32 ret_val = 0;
-
-	ret_val = (s32)get_sc_checksum();
-	if (ret_val && fpt_sc_valid) {
-		VMC_LOG("SC Needs Update !! ");
-		update_scfw();
-		/* SC FW updated, Resend the Board Info */
-		vmc_set_boardInfo_status(false);
-	} else {
-		if (!fpt_sc_valid) {
-			VMC_ERR("No Valid SC available !! ");
-			ret_val = -1;
-		} else if (!ret_val) {
-			VMC_LOG("SC Up-to-date !! ");
-			ret_val = 0;
-		}
+	u8 ret_val = 0;
+  
+	if (!fpt_sc_valid) {
+		VMC_ERR("No Valid SC available !! ");
+		return ((u8)eSc_Update_Error_No_Valid_Fpt_Sc_Found);
 	}
 
+	ret_val = get_sc_checksum();
+	if (!ret_val) {
+		VMC_LOG("SC Up-to-date !! ");
+		return ((u8)eSc_Up_To_Date_No_Update_Req);
+	}
+
+	VMC_LOG("SC Needs Update !! ");
+	ret_val = update_scfw();
 	return ret_val;
 }
 
 int cl_vmc_scfw_program(cl_msg_t *msg)
 {
-	return start_scfw_update();
+	return ((int)start_scfw_update());
 }
 
 int cl_vmc_scfw_init()
