@@ -24,10 +24,10 @@
  *                                        +---> Fetch VOLT, POWER, TEMP, I2C
  */
 
-static void process_scfw_msg(cl_msg_t *msg)
+static int process_scfw_msg(cl_msg_t *msg)
 {
 	/* this is a blocking call */
-	(void) cl_vmc_scfw_program(msg);
+	return (cl_vmc_scfw_program(msg));
 }
 
 /*
@@ -47,11 +47,16 @@ int cl_vmc_sc_comms_init(void)
 void cl_vmc_sc_comms_func(void *task_args)
 {
 	cl_msg_t msg;
+	int ret = 0;
 
 	while (1) {
 		if (cl_recv_from_queue_nowait(&msg, CL_QUEUE_SCFW_REQ) == 0) {
-			process_scfw_msg(&msg);
+			ret = process_scfw_msg(&msg);
 			/* set correct rcode based on scfw program */
+			/*TODO: Here we need to return the ret value so that XRT will get
+			 * a valid error code if SC update fails in the middle. 
+			 * To enable this, we need a new XRT version. We will enable this in sync with XRT changes. */
+			VMR_ERR("SCFW Update return code: %02x", ret);
 			cl_msg_set_rcode(&msg, 0);
 			/* send msg back via SCFW Response Queue */
 			(void) cl_send_to_queue(&msg, CL_QUEUE_SCFW_RESP);

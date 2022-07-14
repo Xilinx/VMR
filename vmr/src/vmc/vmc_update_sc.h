@@ -41,6 +41,7 @@
 #define BSL_SYNC_SUCCESS		(0x00)
 #define SC_BSL_SYNCED_REQ_SIZE		(0x01)
 #define SC_BSL_SYNCED_RESP_SIZE		(0x0B)
+#define BSL_UNKNOWN_MSG_RESP_SIZE	(0x08)
 
 #define SC_ENABLE_BSL_REQ_SIZE		(0x09)
 #define SC_ENABLE_BSL_RESP_SIZE		(0x0A)
@@ -143,8 +144,8 @@ typedef enum sc_update_state_e
 
 typedef enum sc_update_error_e
 {
-	eSc_Update_No_Error = 0xE0,
-	eSc_Up_To_Date_No_Update_Req,
+	eSc_Update_No_Error = 0x00,
+	eSc_Up_To_Date_No_Update_Req = 0xE0,
 	eSc_Update_Error_Sc_Bsl_Sync_Failed,
 	eSc_Update_Error_En_Bsl_Failed,
 	eSc_Update_Error_Vmc_Bsl_Sync_Failed,
