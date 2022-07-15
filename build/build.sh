@@ -358,7 +358,7 @@ usage() {
     echo "                           Note: only take effect when env has no Vitis env"
     echo "-version                   version.json file"
     echo "-platform                  platform.json file for enable platform specific resources"
-    echo "-jtag                      build VMR stdout to jtag"
+    echo "-jtag [0|1|2]              RPU console is on jtag uart 0, 1, or 2 for uartlite 0; APU is always on uartlite 1."
     echo "-help"
     exit $1
 }
@@ -403,7 +403,8 @@ do
 			PLATFORM_FILE=$1
 			;;
 		-jtag)
-			STDOUT_JTAG=1
+			shift
+			STDOUT_JTAG=$1
 			;;
 		-stable)
 			echo "bypass, obsolated"
