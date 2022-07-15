@@ -5,7 +5,7 @@
 
 TOOL_VERSION="2022.1"
 DEFAULT_VITIS="/proj/xbuilds/${TOOL_VERSION}_daily_latest/installs/lin64/Vitis/HEAD/settings64.sh"
-STDOUT_JTAG=0
+STDOUT_JTAG=2 # 0: uart0; 1: uart1; 2: default to uartlite
 BUILD_XRT=0
 ROOT_DIR=`pwd`
 #REAL_BSP=`realpath ../bsp/2021.2_stable/bsp`
@@ -121,9 +121,13 @@ load_build_info()
 		BUILD_SHELL=$CONF_BUILD_SHELL
 	fi
 
-
-	#enforce jtag mode for pipeline build
-	STDOUT_JTAG=1
+	CONF_BUILD_JTAG=`grep_file "CONF_BUILD_JTAG" ${BUILD_CONF_FILE}`
+	if [ -z $CONF_BUILD_JTAG ];then
+		echo "skip loading CONF_BUILD_JTAG"
+	else
+		# override STDOUT_JTAG
+		STDOUT_JTAG=$CONF_BUILD_JTAG;
+	fi
 
 	echo "================================"
 	echo "BUILD_TA: $BUILD_TA"
@@ -242,9 +246,11 @@ check_vmr() {
 	fi
 
 	if [ $STDOUT_JTAG == 1 ];then
-		echo "STDOUT is JTAG"
+		echo "STDOUT is JTAG1"
+	elif [ $STDOUT_JTAG == 0 ];then
+		echo "STDOUT is JTAG0"
 	else
-		echo "STDOUT is default"
+		echo "STDOUT is default UARTLite"
 	fi
 
 	if [ $BUILD_XRT == 1 ];then
@@ -341,12 +347,11 @@ build_bsp_stable() {
 }
 
 usage() {
-    echo "Instruction: PLEASE READ!!!"
     echo "Usage:"
     echo 
-    echo "-config                    config json instead of using default build.json"  
+    echo "-config <config file.json> config json instead of using default build.json"  
     echo "-clean                     Remove build directories"  
-    echo "-xsa                       XSA file"  
+    echo "-xsa <xsa file.xsa>        XSA file"  
     echo "-app                       Re-build Application only"  
     echo "-config_VMR                Update VMR project too edit in Vitis GUI"
     echo "-XRT                       Build XRT only"
@@ -402,6 +407,7 @@ do
 			;;
 		-stable)
 			echo "bypass, obsolated"
+			usage 1
 			;;
                 * | --* | -*)
                         echo "Invalid argument: $1"
