@@ -550,14 +550,19 @@ int32_t UART_RTOS_Disable(uart_rtos_handle_t *handle)
 * @note
 *
 **************************************************************************/
-s32 UART_RTOS_Debug_Enable(uart_rtos_handle_t *handle)
+s32 UART_RTOS_Debug_Enable(uart_rtos_handle_t *handle, ePlatformType curr_platform)
 {
 
 	static uart_rtos_config_t debugUartConig = {
 			.INTC_ID = XPAR_SCUGIC_SINGLE_DEVICE_ID,
-			.uart_ID = XPAR_XUARTPSV_1_DEVICE_ID,
-			.uart_IRQ_ID = XPAR_XUARTPS_1_INTR
+			.uart_ID = XPAR_XUARTPSV_0_DEVICE_ID,
+			.uart_IRQ_ID = XPAR_XUARTPS_0_INTR
 	};
+
+	if(curr_platform == eVCK5000){
+		debugUartConig.uart_ID = XPAR_XUARTPSV_1_DEVICE_ID;
+		debugUartConig.uart_IRQ_ID = XPAR_XUARTPS_1_INTR;
+	}
 
 	debugUartConig.uartHandler = handle;
 
@@ -568,14 +573,19 @@ s32 UART_RTOS_Debug_Enable(uart_rtos_handle_t *handle)
 	return UART_RTOS_Enable(&debugUartConig);
 }
 
-s32 UART_VMC_SC_Enable(uart_rtos_handle_t *handle)
+s32 UART_VMC_SC_Enable(uart_rtos_handle_t *handle, ePlatformType curr_platform)
 {
 
 	static uart_rtos_config_t vmcscUartConfig = {
 			.INTC_ID = XPAR_SCUGIC_SINGLE_DEVICE_ID,
-			.uart_ID = XPAR_XUARTPSV_0_DEVICE_ID,
-			.uart_IRQ_ID = XPAR_XUARTPS_0_INTR
+			.uart_ID = XPAR_XUARTPSV_1_DEVICE_ID,
+			.uart_IRQ_ID = XPAR_XUARTPS_1_INTR
 	};
+
+	if(curr_platform == eVCK5000){
+		vmcscUartConfig.uart_ID = XPAR_XUARTPSV_0_DEVICE_ID;
+		vmcscUartConfig.uart_IRQ_ID = XPAR_XUARTPS_0_INTR;
+	}
 
 	vmcscUartConfig.uartHandler = handle;
 

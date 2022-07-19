@@ -79,14 +79,6 @@ int cl_vmc_init()
 {
 	s8 status = 0;
 
-#ifdef VMC_DEBUG
-	/* Enable FreeRTOS Debug UART */
-	if (UART_RTOS_Debug_Enable(&uart_log) != XST_SUCCESS) {
-		return -ENODEV;
-	}
-	/* Demo Menu is already enabled by cl_main task handler */
-#endif
-
 	cl_I2CInit();
 
 	/* Read the EEPROM */
@@ -104,20 +96,25 @@ int cl_vmc_init()
 		return -EINVAL;
 	}
 
+#ifdef VMC_DEBUG
+	/* Enable FreeRTOS Debug UART */
+	if (UART_RTOS_Debug_Enable(&uart_log, current_platform) != XST_SUCCESS) {
+		return -ENODEV;
+	}
+	/* Demo Menu is already enabled by cl_main task handler */
+#endif
+
 	status = Init_Platform();
 	if (status != XST_SUCCESS) {
 		VMR_ERR("Platform Initialization Failed.");
 		return -EINVAL;
 	}
 
-	status = UART_VMC_SC_Enable(&uart_vmcsc_log);
+	status = UART_VMC_SC_Enable(&uart_vmcsc_log, current_platform);
 	if (status != XST_SUCCESS) {
 		VMR_ERR("UART VMC to SC init Failed.");
 		return -EINVAL;
 	}
-
-//	/* Retry till fan controller is programmed */
-//	while (max6639_init(1, 0x2E));  // only for vck5000
 
 	/* sdr_lock */
 	sdr_lock = xSemaphoreCreateMutex();
