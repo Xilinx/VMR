@@ -7,18 +7,18 @@ setws .
 puts "=== create entire platform and vmr_app application"
 app create -name vmr_app -hw vmr.xsa -proc blp_cips_pspmc_0_psv_cortexr5_0 -os freertos10_xilinx -template "Empty Application(C)"
 
-if { [lindex $argv 0] == 1 } {
-
-	puts "=== stdout to jtag"
+if { [lindex $argv 0] == 0 } {
+	puts "=== stdout to jtag0"
+	bsp config stdin blp_cips_pspmc_0_psv_sbsauart_0
+	bsp config stdout blp_cips_pspmc_0_psv_sbsauart_0
+} elseif { [lindex $argv 0] == 1 } {
+	puts "=== stdout to jtag1"
 	bsp config stdin blp_cips_pspmc_0_psv_sbsauart_1
 	bsp config stdout blp_cips_pspmc_0_psv_sbsauart_1
-
 } else {
-
 	puts "=== stdout to uartlite"
 	bsp config stdin blp_blp_logic_axi_uart_rpu
 	bsp config stdout blp_blp_logic_axi_uart_rpu
-
 }
 
 puts "=== customize bsp libs"
