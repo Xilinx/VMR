@@ -14,6 +14,8 @@
 #include "xil_types.h"
 #include "xscugic.h"
 
+#include "../vmc/vmc_api.h"
+
 
 #define MAX_LOG_SIZE	(1024u)
 
@@ -61,8 +63,8 @@ int32_t UART_RTOS_Send(uart_rtos_handle_t *handle, uint8_t *buf, uint32_t size);
 int32_t UART_RTOS_Receive(uart_rtos_handle_t *handle, uint8_t *buf, uint32_t size, uint32_t *received,uint32_t timeout);
 int32_t UART_RTOS_Enable(uart_rtos_config_t *uartConfig);
 int32_t UART_RTOS_Disable(uart_rtos_handle_t *handle);
-int32_t UART_RTOS_Debug_Enable(uart_rtos_handle_t *handle);
-int32_t UART_VMC_SC_Enable(uart_rtos_handle_t *handle);
+int32_t UART_RTOS_Debug_Enable(uart_rtos_handle_t *handle, ePlatformType curr_platform);
+int32_t UART_VMC_SC_Enable(uart_rtos_handle_t *handle, ePlatformType curr_platform);
 
 
 #endif
