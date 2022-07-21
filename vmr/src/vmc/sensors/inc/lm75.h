@@ -3,4 +3,4 @@
  *   * * SPDX-License-Identifier: MIT
  *    * *******************************************************************************/
 
-u8 LM75_ReadTemperature(u8 i2c_num, u8 slaveAddr, s32 *temperatureValue);
+u8 LM75_ReadTemperature(u8 i2c_num, u8 slaveAddr, s16 *temperatureValue);
