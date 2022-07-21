@@ -22,3 +22,18 @@ u8 M24C128_ReadByte(u8 i2c_num, u8 slaveAddr, u16 *AddressOffset,u8 *RegisterVal
 	return status;
 
 }
+
+u8 M24C128_ReadMultiBytes(u8 i2c_num, u8 slaveAddr, u16 *AddressOffset, u8 *RegisterValue, size_t BufSize)
+{
+	u8 status = 0;
+	status = i2c_send_rs_recv(i2c_num, slaveAddr, (u8 *)AddressOffset, EEPROM_ADDRESS_SIZE, RegisterValue, BufSize);
+
+	if (status == XST_FAILURE)
+	{
+		VMC_LOG("Failed to read M24C128 \n\r");
+		return status;
+	}
+
+	return status;
+
+}
