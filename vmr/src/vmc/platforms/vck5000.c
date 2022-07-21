@@ -13,7 +13,7 @@
 #include "../vmc_main.h"
 #include "vck5000.h"
 
-extern Vmc_Global_Variables vmc_g_var;
+extern Vmc_Sensors_Gl_t sensor_glvr;
 
 static u8 i2c_num = LPD_I2C_0;
 
@@ -170,7 +170,7 @@ void se98a_monitor(void)
 	u8 status = XST_FAILURE;
 	for (i = 0 ; i < BOARD_TEMPERATURE_SENSOR_NUM ; i++)
 	{
-		status = SE98A_ReadTemperature(i2c_num, SLAVE_ADDRESS_SE98A_0 + i, &vmc_g_var.sensor_readings.board_temp[i]);
+		status = SE98A_ReadTemperature(i2c_num, SLAVE_ADDRESS_SE98A_0 + i, &sensor_glvr.sensor_readings.board_temp[i]);
 		if (status == XST_FAILURE)
 		{
 			VMC_DBG("Failed to read SE98A_%d \n\r",i);
@@ -195,7 +195,7 @@ void max6639_monitor(void)
 		return;
 	}
 	//CL_LOG (APP_VMC,"fpga temp %f",TempReading);
-	vmc_g_var.sensor_readings.remote_temp = TempReading;
+	sensor_glvr.sensor_readings.remote_temp = TempReading;
 
 	status = max6639_ReadDDRTemperature(i2c_num, SLAVE_ADDRESS_MAX6639, &TempReading);
 	if (status == XST_FAILURE)
@@ -204,7 +204,7 @@ void max6639_monitor(void)
 			return;
 	}
 	//CL_LOG (APP_VMC,"local temp %f",TempReading);
-	vmc_g_var.sensor_readings.local_temp = TempReading;
+	sensor_glvr.sensor_readings.local_temp = TempReading;
 
 	status = max6639_ReadFanTach(i2c_num, SLAVE_ADDRESS_MAX6639, 1, &fanSpeed);
 	fanRpm1 = MAX6639_FAN_TACHO_TO_RPM(fanSpeed);
@@ -213,7 +213,7 @@ void max6639_monitor(void)
 	status = max6639_ReadFanTach(i2c_num, SLAVE_ADDRESS_MAX6639, 2, &fanSpeed);
    	fanRpm2 = MAX6639_FAN_TACHO_TO_RPM(fanSpeed);
 
-	vmc_g_var.sensor_readings.fanRpm = (fanRpm1 + fanRpm2)/2;
+	sensor_glvr.sensor_readings.fanRpm = (fanRpm1 + fanRpm2)/2;
 
 	//CL_LOG (APP_VMC,"Fan RPM %d",fanRpm);
 
@@ -233,7 +233,7 @@ void qsfp_monitor(void)
 
 		if (status == XST_SUCCESS)
 		{
-			vmc_g_var.sensor_readings.qsfp_temp[snsrIndex] = TemperatureValue;
+			sensor_glvr.sensor_readings.qsfp_temp[snsrIndex] = TemperatureValue;
 		}
 		if (status == XST_FAILURE)
 		{

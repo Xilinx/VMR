@@ -30,9 +30,11 @@
 #define ENABLE_FORCE_SHUTDOWN	0x001B6320
 
 static int vmc_sysmon_is_ready = 0;
+/* TODO: init those to a certain value */
 static XSysMonPsv InstancePtr;
 static XScuGic IntcInst;
 
+/* TODO: make those static if not sharing with other files */
 sensorMonitorFunc Temperature_Read_Inlet_Ptr;
 sensorMonitorFunc Temperature_Read_Outlet_Ptr;
 sensorMonitorFunc Temperature_Read_Board_Ptr;
@@ -40,10 +42,9 @@ sensorMonitorFunc Temperature_Read_QSFP_Ptr;
 //sensorMonitorFunc Fan_RPM_Read_Ptr;
 
 extern SemaphoreHandle_t vmc_sc_lock;
-
 extern SC_VMC_Data sc_vmc_data;
 
-Vmc_Global_Variables vmc_g_var = {
+Vmc_Sensors_Gl_t sensor_glvr = {
 	.logging_level = VMC_LOG_LEVEL_NONE,
 };
 
@@ -338,11 +339,11 @@ void sysmon_monitor(void)
 	if (XSysMonPsv_ReadTempProcessed(&InstancePtr, XSYSMONPSV_TEMP_MAX, &TempReading))
 	{
 		CL_LOG(APP_VMC, "Failed to read sysmon temperature \n\r");
-		vmc_g_var.sensor_readings.sysmon_max_temp = -1.0;
+		sensor_glvr.sensor_readings.sysmon_max_temp = -1.0;
 		return;
 	}
 
-	vmc_g_var.sensor_readings.sysmon_max_temp = TempReading;
+	sensor_glvr.sensor_readings.sysmon_max_temp = TempReading;
 	return;
 }
 

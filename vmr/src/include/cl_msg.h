@@ -80,6 +80,13 @@ struct xgq_vmr_log_payload {
 	uint32_t rsvd1:13;
 };
 
+struct fpt_sc_version {
+	uint8_t	fsv_major;
+	uint8_t	fsv_minor;
+	uint8_t	fsv_revision;
+	uint8_t	fsv_rsvd;
+};
+
 struct xgq_vmr_sensor_payload {
 	uint32_t address;
 	uint32_t size;

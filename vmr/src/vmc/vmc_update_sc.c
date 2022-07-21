@@ -8,11 +8,11 @@
 #include "cl_mem.h"
 #include "cl_vmc.h"
 #include "cl_msg.h"
+#include "cl_rmgmt.h"
 #include "vmc_api.h"
 #include "cl_uart_rtos.h"
 #include "vmc_update_sc.h"
 #include "vmc_sc_comms.h"
-
 
 static sc_update_status_t update_status = eStatus_Success;
 static sc_update_state_t update_state = eSc_State_Idle;
@@ -42,7 +42,7 @@ static u32 max_data_slot = 0;
 static u8 rcv_bufr[BSL_MAX_RCV_DATA_SIZE] = {0x00}; /* UART Receiver buffer */
 static u32 rcvd_byte_count = 0x00; /* UART received byte count */
 
-extern void rmgmt_extension_fpt_query(struct cl_msg *msg);
+//extern void rmgmt_extension_fpt_query(struct cl_msg *msg);
 
 
 int cl_vmc_scfw_program_progress(void)
@@ -220,6 +220,10 @@ void parse_fpt_sc_version(u32 addr_location, u8 *versionbuff)
 			data_ptr += BYTES_TO_READ;
 
 			while ((Msg != SECTION_START) && (Msg != FILE_TERMINATION_CHAR)) {
+				if (version_ptr >= sizeof(struct fpt_sc_version)) {
+					VMC_ERR("ptr %d is overflow fpt_sc_version", version_ptr);
+					break;
+				}
 				if ((Msg != NEW_LINE) && (Msg != SPACE)) {
 					Msg = char_to_hex(Msg);
 					if ((version_flag) && (version_ptr <= (MAX_SC_VERSION_SIZE - 1)))
@@ -462,15 +466,16 @@ void parse_fpt_sc(u32 addr_location, u8 *bsl_send_data_pkt, u32 *pkt_length)
   * @retval None
   */
 
-void get_fpt_sc_version(cl_msg_t *msg)
+static int get_fpt_sc_version(cl_msg_t *msg, struct fpt_sc_version *version)
 {
 	u8 read_buffer[SC_TOT_HEADER_SIZE] = {0};
 	u8 header[] = SC_HEADER_MSG;
 	u8 fpt_sc_status = SC_INVALID;
 	u32 fpt_scfw_end_addr = 0;
 	data_ptr = 0x00;
+	int ret = 0;
 
-	rmgmt_extension_fpt_query(msg);
+	cl_rmgmt_fpt_query(msg);
 
 	fpt_sc_loc.start_address = msg->multiboot_payload.scfw_offset;
 	fpt_sc_loc.size = msg->multiboot_payload.scfw_size;
@@ -488,16 +493,20 @@ void get_fpt_sc_version(cl_msg_t *msg)
 		VMC_LOG("SC Identification: Successful !! ");
 		fpt_scfw_end_addr = fpt_sc_loc.start_address + SC_TOT_HEADER_SIZE + fpt_sc_loc.size;
 		portENTER_CRITICAL();
-		parse_fpt_sc_version((fpt_scfw_end_addr - SC_VER_ADDR_WO_CHKSUM), &fpt_sc_version[0]);
+		parse_fpt_sc_version((fpt_scfw_end_addr - SC_VER_ADDR_WO_CHKSUM), (u8 *)version);
 		portEXIT_CRITICAL();
 
-		VMC_LOG("Fpt SC version: v%d.%d.%d ",fpt_sc_version[MAJOR], fpt_sc_version[MINOR], fpt_sc_version[REVISION]);
+		VMC_LOG("Fpt SC version: v%d.%d.%d ",
+			version->fsv_major, version->fsv_minor, version->fsv_revision);
 	}
 	else
 	{
 		fpt_sc_valid = false;
 		VMC_ERR("SC Identification: Failed !! ");
+		ret = -1;
 	}
+
+	return ret;
 }
 
 /**
@@ -1164,11 +1173,19 @@ int cl_vmc_scfw_program(cl_msg_t *msg)
 	return ((int)start_scfw_update());
 }
 
+void cl_vmc_scfw_version(struct fpt_sc_version *version)
+{
+	if (version != NULL) {
+		cl_msg_t msg = { 0 };
+		(void) get_fpt_sc_version(&msg, version);
+	}
+}
+
 int cl_vmc_scfw_init()
 {
-	cl_msg_t msg;
+	struct fpt_sc_version version = { 0 };
 
-	get_fpt_sc_version(&msg);
+	cl_vmc_scfw_version(&version);
 
 	return 0;
 }

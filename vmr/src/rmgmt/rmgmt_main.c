@@ -18,6 +18,7 @@
 #include "cl_flash.h"
 #include "cl_main.h"
 #include "cl_rmgmt.h"
+#include "cl_vmc.h"
 
 /* rmgmt specific macros */
 /* Firewall IPs */
@@ -309,6 +310,7 @@ int cl_rmgmt_program_xclbin(cl_msg_t *msg)
 static u32 rmgmt_fpt_status_query(cl_msg_t *msg, char *buf, u32 size)
 {
 	u32 count = 0;
+	struct fpt_sc_version version = { 0 };
 
 	rmgmt_fpt_query(msg);
 
@@ -332,8 +334,16 @@ static u32 rmgmt_fpt_status_query(cl_msg_t *msg, char *buf, u32 size)
 		return size;
 	}
 
-	count += snprintf(buf + count, size - count, "SC firmware size: 0x%lx\n",
+	count += snprintf(buf + count, size - count, "SCFW image size: 0x%lx\n",
 		msg->multiboot_payload.scfw_size);
+	if (count > size) {
+		VMR_WARN("msg is truncated");
+		return size;
+	}
+
+	(void) cl_vmc_scfw_version(&version); 
+	count += snprintf(buf + count, size - count, "SCFW image version: %d.%d.%d\n",
+		version.fsv_major, version.fsv_minor, version.fsv_revision);
 	if (count > size) {
 		VMR_WARN("msg is truncated");
 		return size;

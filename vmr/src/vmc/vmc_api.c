@@ -31,7 +31,7 @@ extern uart_rtos_handle_t uart_log;
  * vmc_global_variable structure, so that we can convert this into MPU supported
  * framework.
  */
-extern Vmc_Global_Variables vmc_g_var;
+extern Vmc_Sensors_Gl_t sensor_glvr;
 
 SemaphoreHandle_t vmc_debug_logbuf_lock; /* used to block until LogBuf is in use */
 Versal_BoardInfo board_info;
@@ -43,12 +43,12 @@ void Debug_Printf(char *filename, u32 line, u8 log_level, const char *fmt, va_li
 
 void VMC_SetLogLevel(u8 LogLevel)
 {
-    vmc_g_var.logging_level = (LogLevel <= VMC_LOG_LEVEL_NONE) ? LogLevel : vmc_g_var.logging_level;
+    sensor_glvr.logging_level = (LogLevel <= VMC_LOG_LEVEL_NONE) ? LogLevel : sensor_glvr.logging_level;
 }
 
 u8 VMC_GetLogLevel(void)
 {
-    return vmc_g_var.logging_level;
+    return sensor_glvr.logging_level;
 }
 
 void VMC_Printf(char *filename, u32 line, u8 log_level, const char *fmt, ...)
@@ -84,14 +84,14 @@ void Debug_Printf(char *filename, u32 line, u8 log_level, const char *fmt, va_li
     s8 uart_rtos_status = UART_ERROR_GENERIC;
     u8 msg_idx = 0;
     u16 max_msg_size = MAX_LOG_SIZE;
-    if (log_level < vmc_g_var.logging_level)
+    if (log_level < sensor_glvr.logging_level)
     {
         return;
     }
 
     if (xSemaphoreTake(vmc_debug_logbuf_lock, portMAX_DELAY))
     {
-        if ((vmc_g_var.logging_level == VMC_LOG_LEVEL_VERBOSE) && (log_level != VMC_LOG_LEVEL_DEMO_MENU))
+        if ((sensor_glvr.logging_level == VMC_LOG_LEVEL_VERBOSE) && (log_level != VMC_LOG_LEVEL_DEMO_MENU))
 	{
     	    for ( ; (filename[msg_idx] != '\0') && (msg_idx < MAX_FILE_NAME_SIZE); msg_idx++)
    	    {
@@ -199,14 +199,14 @@ void SensorData_Display(void)
 	//VMC_PRNT("====================================================================\n\r");
 	//VMC_PRNT("TBD: Sensor Data to be printed!\n\r");
 	//VMC_PRNT("====================================================================\n\r");
-	VMC_PRNT("SE98A_0 temperature 			: %d \n\r",vmc_g_var.sensor_readings.board_temp[0]);
-	VMC_PRNT("SE98A_1 temperature 			: %d \n\r",vmc_g_var.sensor_readings.board_temp[1]);
-	VMC_PRNT("local temperature(max6639) 		: %f \n\r",vmc_g_var.sensor_readings.local_temp);
-	VMC_PRNT("remote temp or fpga temp(max6639) 	: %f \n\r ",vmc_g_var.sensor_readings.remote_temp);
-	VMC_PRNT("Fan RPM (max6639) 			: %d \n\r ",vmc_g_var.sensor_readings.fanRpm);
-	VMC_PRNT("Maximum SYSMON temp 			: %f \n\r ",vmc_g_var.sensor_readings.sysmon_max_temp);
-	VMC_PRNT("QSFP_0 temperature			: %f \n\r ",vmc_g_var.sensor_readings.qsfp_temp[0]);
-	VMC_PRNT("QSFP_1 temperature			: %f \n\r ",vmc_g_var.sensor_readings.qsfp_temp[1]);
+	VMC_PRNT("SE98A_0 temperature 			: %d \n\r",sensor_glvr.sensor_readings.board_temp[0]);
+	VMC_PRNT("SE98A_1 temperature 			: %d \n\r",sensor_glvr.sensor_readings.board_temp[1]);
+	VMC_PRNT("local temperature(max6639) 		: %f \n\r",sensor_glvr.sensor_readings.local_temp);
+	VMC_PRNT("remote temp or fpga temp(max6639) 	: %f \n\r ",sensor_glvr.sensor_readings.remote_temp);
+	VMC_PRNT("Fan RPM (max6639) 			: %d \n\r ",sensor_glvr.sensor_readings.fanRpm);
+	VMC_PRNT("Maximum SYSMON temp 			: %f \n\r ",sensor_glvr.sensor_readings.sysmon_max_temp);
+	VMC_PRNT("QSFP_0 temperature			: %f \n\r ",sensor_glvr.sensor_readings.qsfp_temp[0]);
+	VMC_PRNT("QSFP_1 temperature			: %f \n\r ",sensor_glvr.sensor_readings.qsfp_temp[1]);
 	VMC_PRNT("\n\r");
 
 
