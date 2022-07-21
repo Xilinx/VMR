@@ -6,7 +6,7 @@
 #include "cl_i2c.h"
 #include "../inc/lm75.h"
 
-u8 LM75_ReadTemperature(u8 i2c_num, u8 slaveAddr, s32 *temperatureValue)
+u8 LM75_ReadTemperature(u8 i2c_num, u8 slaveAddr, s16 *temperatureValue)
 {
     u8 status = 0;
     u16 TempHexVal = 0;
