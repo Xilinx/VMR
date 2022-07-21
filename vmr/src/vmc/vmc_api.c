@@ -22,6 +22,8 @@
 
 #define MAX_FILE_NAME_SIZE 25
 
+#define EEPROM_BUF_SIZE 128
+
 extern uart_rtos_handle_t uart_log;
 
 /*
@@ -217,7 +219,18 @@ void EepromTest(void)
 
 void EepromDump(void)
 {
-	VMC_DBG("\n\rTBD: EEPROM data will be dumped out here! %d\n\r", 2000);
+	unsigned char buf[EEPROM_BUF_SIZE] = { 0 };
+	u16 i = 0;
+	u16 offset = 0;
+
+	M24C128_ReadMultiBytes(LPD_I2C_0, SLAVE_ADDRESS_M24C128, &offset, buf, EEPROM_BUF_SIZE);
+
+	for(i = 0; i < EEPROM_BUF_SIZE; i += 8)
+	{
+		VMC_DMO( "%.2x %.2x %.2x %.2x %.2x %.2x %.2x %.2x\n\r",
+			buf[i], buf[i + 1], buf[i + 2], buf[i + 3], buf[i + 4],
+			buf[i + 5], buf[i + 6], buf[i + 7]);
+	}
 }
 
 void VMC_Get_BoardInfo(Versal_BoardInfo *_board_info) {
