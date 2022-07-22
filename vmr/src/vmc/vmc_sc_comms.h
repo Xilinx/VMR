@@ -27,6 +27,16 @@ extern uart_rtos_handle_t uart_vmcsc_log;
 #define ETX                 (0x03)
 #define ESCAPE_CHAR         (0x5C)
 
+#define MSG_ID_OFFSET			(2u)
+#define FLAG_OFFSET			(3u)
+#define PAYLOAD_LEN_L_OFFSET		(4u)
+#define PAYLOAD_LEN_H_OFFSET		(5u)
+#define PAYLOAD_START_OFFSET_NO_FLAG	(5u)
+#define PAYLOAD_START_OFFSET_W_FLAG	(6u)
+#define CHECKSUM_L_OFFSET		(4u)
+#define CHECKSUM_H_OFFSET		(3u)
+#define TOTAL_FOOTER_SIZE		(4u)
+
 // board info sizes
 #define BOARD_NAME_SIZE     17
 #define BOARD_REV_SIZE      9
@@ -170,7 +180,7 @@ void Update_OEM_Data(u8 PayloadLength , u8 * Payload);
 void VMC_StoreSensor_Value(u8 id, u32 value);
 void VMC_Update_Sensors(u16 length,u8 *payload);
 void Update_SNSR_Data(u8 PayloadLength , u8 * payload);
-bool Parse_SCData(u8 *Payload);
+bool Parse_SCData(u8 *Payload, u8 expected_msgid);
 bool VMC_send_packet(u8 Message_id , u8 Flags,u8 Payloadlength, u8 *Payload);
 bool vmc_get_sc_status();
 void vmc_set_sc_status(bool value);

@@ -122,6 +122,41 @@ uint64_t vmcU8ToU64(uint8_t * payload)
          (((uint64_t)payload[1]) << 32) | (((uint64_t)payload[0]) << 40);
 }
 
+bool VMC_Validate_SC_Packet(u8 *rcvd_data, u32 length)
+{
+	bool status = false;
+	u16 payload_len = 0;
+	u16 rcvd_csum = 0;
+	u16 calc_csum = 0;
+	u16 payload_start_offset = 0;
+
+	if ((rcvd_data[length - 1] == ETX) && (rcvd_data[length - 2] == ESCAPE_CHAR)) {
+		if (rcvd_data[FLAG_OFFSET] == MSP432_COMMS_NO_FLAG) {
+			payload_len = rcvd_data[PAYLOAD_LEN_L_OFFSET];
+			payload_start_offset = PAYLOAD_START_OFFSET_NO_FLAG;
+		} else {
+			payload_len = ((rcvd_data[PAYLOAD_LEN_H_OFFSET] << 8) | rcvd_data[PAYLOAD_LEN_L_OFFSET]);
+			payload_start_offset = PAYLOAD_START_OFFSET_W_FLAG;
+		}
+
+		calc_csum += rcvd_data[MSG_ID_OFFSET];
+		calc_csum += rcvd_data[FLAG_OFFSET];
+		calc_csum += payload_len;
+
+		for (int i = 0; ((i < payload_len) && (payload_start_offset < (length - TOTAL_FOOTER_SIZE))); i++) {
+			calc_csum += rcvd_data[payload_start_offset];
+			payload_start_offset++;
+		}
+
+		rcvd_csum = ((rcvd_data[length - CHECKSUM_H_OFFSET] << 8) | (rcvd_data[length - CHECKSUM_L_OFFSET]));
+		if (rcvd_csum == calc_csum) {
+			status = true;
+		}
+	}
+
+	return status;
+}
+
 void VMC_Update_Sensor_Length(u16 length,u8 *payload)
 {
 
@@ -210,49 +245,47 @@ void VMC_Update_Sensors(u16 length,u8 *payload)
 
 }
 
-bool Parse_SCData(u8 *Payload)
+bool Parse_SCData(u8 *Payload, u8 expected_msgid)
 {
-
-
-	if(Payload[SOP_ESCAPE_CHAR] == ESCAPE_CHAR && Payload[SOP_ETX] == STX)
-	{
-		switch(Payload[Rsp_MessageID])
-		{
-		case MSP432_COMMS_VOLT_SNSR_RESP:
-		case MSP432_COMMS_POWER_SNSR_RESP:
-		case MSP432_COMMS_TEMP_SNSR_RESP:
-			VMC_Update_Sensors(Payload[PayloadLength], &Payload[COMMS_PAYLOAD_START_INDEX]);
-			break;
-		case MSP432_COMMS_VMC_VERSION_POWERMODE_RESP:
-			vmc_set_power_mode_status(true);
-			VMC_Update_Version_PowerMode(Payload[PayloadLength], &Payload[COMMS_PAYLOAD_START_INDEX]);
-			break;
-		case MSP432_COMMS_VMC_GET_RESP_SIZE_RESP:
-			VMC_Update_Sensor_Length(Payload[PayloadLength], &Payload[COMMS_PAYLOAD_START_INDEX]);
-			break;
-		case MSP432_COMMS_VMC_SEND_I2C_SNSR_RESP:
-			break;
-		case MSP432_COMMS_VMC_SEND_BOARDINFO_RESP:
-			vmc_set_boardInfo_status(true);
-			break;
-		case MSP432_COMMS_MSG_ERR:
-			VMC_LOG("received error message  \r\n");
-			break;
-		case MSP432_COMMS_MSG_GOOD:
-			vmc_set_sc_status(true);
-			VMC_LOG("Received MSG_GOOD  \r\n");
-			break;
-		default :
-			VMC_LOG("Unknown messageID : 0x%x\r\n",Payload[Rsp_MessageID]);
-			break;
-		}
+	if ((Payload[SOP_ESCAPE_CHAR] != ESCAPE_CHAR) || (Payload[SOP_ETX] != STX)) {
+		VMC_LOG("Unexpected response !!");
+		return false;
 	}
-	else
-	{
-		VMC_LOG("Received data is not in protocol format ignore the data \r\n");
+	if (Payload[Rsp_MessageID] != expected_msgid) {
+		VMC_LOG("Expected: %02x Received : %02x", expected_msgid, Payload[Rsp_MessageID]);
+		return false;
 	}
-
-return true;
+	switch (Payload[Rsp_MessageID])
+	{
+	case MSP432_COMMS_VOLT_SNSR_RESP:
+	case MSP432_COMMS_POWER_SNSR_RESP:
+	case MSP432_COMMS_TEMP_SNSR_RESP:
+		VMC_Update_Sensors(Payload[PayloadLength], &Payload[COMMS_PAYLOAD_START_INDEX]);
+		break;
+	case MSP432_COMMS_VMC_VERSION_POWERMODE_RESP:
+		vmc_set_power_mode_status(true);
+		VMC_Update_Version_PowerMode(Payload[PayloadLength], &Payload[COMMS_PAYLOAD_START_INDEX]);
+		break;
+	case MSP432_COMMS_VMC_GET_RESP_SIZE_RESP:
+		VMC_Update_Sensor_Length(Payload[PayloadLength], &Payload[COMMS_PAYLOAD_START_INDEX]);
+		break;
+	case MSP432_COMMS_VMC_SEND_I2C_SNSR_RESP:
+		break;
+	case MSP432_COMMS_VMC_SEND_BOARDINFO_RESP:
+		vmc_set_boardInfo_status(true);
+		break;
+	case MSP432_COMMS_MSG_ERR:
+		VMC_LOG("received error message  \r\n");
+		break;
+	case MSP432_COMMS_MSG_GOOD:
+		vmc_set_sc_status(true);
+		VMC_LOG("Received MSG_GOOD  \r\n");
+		break;
+	default:
+		VMC_LOG("Unknown messageID : 0x%x\r\n", Payload[Rsp_MessageID]);
+		break;
+	}
+	return true;
 }
 
 bool VMC_send_packet(u8 Message_id , u8 Flags, u8 Payloadlength, u8 *Payload)
@@ -347,26 +380,25 @@ bool VMC_send_packet(u8 Message_id , u8 Flags, u8 Payloadlength, u8 *Payload)
 	return false;
 }
 
-void VMC_uart_receive(u8  Expected_Msg_Length)
+void VMC_uart_receive(u8 Expected_Msg_Length)
 {
-	u32 receivedcount = 0 ;
+	u32 receivedcount = 0;
 	static u8 data[MAX_VMC_SC_UART_BUF_SIZE] = {0x00};
 
 	Cl_SecureMemset(data,0x00,MAX_VMC_SC_UART_BUF_SIZE);
 
-	if(UART_RTOS_Receive(&uart_vmcsc_log, data, Expected_Msg_Length ,&receivedcount,RCV_TIMEOUT_MS(500)) == UART_SUCCESS)
+	if(UART_RTOS_Receive(&uart_vmcsc_log, data, Expected_Msg_Length, &receivedcount, RCV_TIMEOUT_MS(500)) == UART_SUCCESS)
 	{
 		configASSERT(receivedcount <= MAX_VMC_SC_UART_BUF_SIZE);
-		if(receivedcount > 2)   // condition to avoid negative indexing
-		{
-			Cl_SecureMemcpy(g_scData,receivedcount,data,receivedcount);
-			if ((g_scData[receivedcount-1] == ETX) && (g_scData[receivedcount-2] == ESCAPE_CHAR))
-			{
+		if (receivedcount > 2) { /* Condition to avoid over bound */
+			if (VMC_Validate_SC_Packet(&data[0], receivedcount)) {
+				Cl_SecureMemcpy(g_scData, receivedcount, data, receivedcount);
 				isPacketReceived = true;
 			}
 		}
 	}
 }
+
 s32 VMC_Send_BoardInfo_SC(u8 *board_snsr_data)
 {
     Versal_BoardInfo board_info = {0};
@@ -392,7 +424,7 @@ void Get_Sensor_Response_Length(u8 Data)
 	VMC_uart_receive(Expected_Msg_Length);
 	if(isPacketReceived)
 	{
-		Parse_SCData(g_scData);
+		Parse_SCData(g_scData, MSP432_COMMS_VMC_GET_RESP_SIZE_RESP);
 		isPacketReceived = false;
 	}
 	Cl_SecureMemset(g_scData,0x00,MAX_VMC_SC_UART_BUF_SIZE);
@@ -411,7 +443,7 @@ void VMC_SC_COMMS_Tx_Rx(u8 messageID)
             VMC_uart_receive(sc_vmc_data.voltSensorLength);
             if(isPacketReceived)
             {
-                Parse_SCData(g_scData);
+                Parse_SCData(g_scData, MSP432_COMMS_VOLT_SNSR_RESP);
                 isPacketReceived = false;
             }
             Cl_SecureMemset(g_scData,0x00,MAX_VMC_SC_UART_BUF_SIZE);
@@ -425,7 +457,7 @@ void VMC_SC_COMMS_Tx_Rx(u8 messageID)
             VMC_uart_receive(sc_vmc_data.powerSensorLength);
             if(isPacketReceived)
             {
-            	Parse_SCData(g_scData);
+            	Parse_SCData(g_scData, MSP432_COMMS_POWER_SNSR_RESP);
             	isPacketReceived = false;
             }
             Cl_SecureMemset(g_scData,0x00,MAX_VMC_SC_UART_BUF_SIZE);
@@ -438,7 +470,7 @@ void VMC_SC_COMMS_Tx_Rx(u8 messageID)
             VMC_uart_receive(sc_vmc_data.tempSensorLength);
             if(isPacketReceived)
             {
-            	Parse_SCData(g_scData);
+            	Parse_SCData(g_scData, MSP432_COMMS_TEMP_SNSR_RESP);
             	isPacketReceived = false;
             }
             Cl_SecureMemset(g_scData,0x00,MAX_VMC_SC_UART_BUF_SIZE);
@@ -455,7 +487,7 @@ void VMC_SC_COMMS_Tx_Rx(u8 messageID)
             VMC_uart_receive(MSP432_COMMS_GENERAL_RESP_LEN);
             if(isPacketReceived)
             {
-                Parse_SCData(g_scData);
+                Parse_SCData(g_scData, MSP432_COMMS_VMC_SEND_I2C_SNSR_RESP);
                 isPacketReceived = false;
             }
             Cl_SecureMemset(g_scData,0x00,MAX_VMC_SC_UART_BUF_SIZE);
@@ -477,7 +509,7 @@ void VMC_SC_COMMS_Tx_Rx(u8 messageID)
 	    VMC_uart_receive(MSP432_COMMS_GENERAL_RESP_LEN);
 	    if(isPacketReceived)
 	    {
-		Parse_SCData(g_scData);
+		Parse_SCData(g_scData, MSP432_COMMS_VMC_SEND_BOARDINFO_RESP);
 		isPacketReceived = false;
 	    }
 	    Cl_SecureMemset(g_scData,0x00,MAX_VMC_SC_UART_BUF_SIZE);
@@ -492,7 +524,7 @@ void VMC_SC_COMMS_Tx_Rx(u8 messageID)
             VMC_uart_receive(Expected_Msg_Length);
             if(isPacketReceived)
             {
-                Parse_SCData(g_scData);
+                Parse_SCData(g_scData, MSP432_COMMS_VMC_VERSION_POWERMODE_RESP);
                 isPacketReceived = false;
             }
             Cl_SecureMemset(g_scData,0x00,MAX_VMC_SC_UART_BUF_SIZE);
@@ -506,7 +538,7 @@ void VMC_SC_COMMS_Tx_Rx(u8 messageID)
             VMC_uart_receive(Expected_Msg_Length);
             if(isPacketReceived)
             {
-                Parse_SCData(g_scData);
+                Parse_SCData(g_scData, MSP432_COMMS_MSG_GOOD);
                 isPacketReceived = false;
             }
             Cl_SecureMemset(g_scData,0x00,MAX_VMC_SC_UART_BUF_SIZE);
@@ -530,7 +562,7 @@ void VMC_SC_COMMS_Tx_Rx(u8 messageID)
         }
         default:
             break;
-}
+    }
 }
 
 void VMC_Mointor_SC_Sensors()
