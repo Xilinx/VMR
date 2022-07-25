@@ -16,7 +16,6 @@ EventGroupHandle_t xScUpdateEvent = NULL;
 #define SENSOR_MONITOR_TASK_MAX_NOTIFY_COUNT (3)
 
 SC_VMC_Data sc_vmc_data;
-cl_msg_t fpt_sc_offsets;
 extern SemaphoreHandle_t vmc_sc_lock;
 /* VMC SC Comms handles and flags */
 extern uart_rtos_handle_t uart_vmcsc_log;

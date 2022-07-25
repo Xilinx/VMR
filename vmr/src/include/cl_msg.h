@@ -152,7 +152,7 @@ typedef struct cl_msg {
 	};
 } cl_msg_t;
 
-int cl_msg_handle_complete(cl_msg_t *msg);
+void cl_msg_handle_complete(cl_msg_t *msg);
 
 static inline void cl_msg_set_rcode(cl_msg_t *msg, int rcode)
 {
