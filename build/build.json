@@ -1,5 +1,5 @@
 {
-  "CONF_BUILD_TA" : "2022.1_0715_1",
+  "CONF_BUILD_TA" : "2022.1_0722_1",
   "CONF_BUILD_XSA" : "/opt/xilinx/platforms/xilinx_vck5000_gen4x8_qdma_1_202210_1/hw/xilinx_vck5000_gen4x8_qdma_1_202210_1.xsa",
   "CONF_BUILD_XSABIN" : "/opt/xilinx/firmware/vck5000/gen4x8-qdma/base/partition.xsabin",
   "CONF_BUILD_PLATFORM" : "platform_2022.1_vitis.json",

@@ -10,7 +10,6 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <stdbool.h>
-#include "cl_msg.h"
 
 #define ULONG_MAX			0xFFFFFFFFUL
 #define FW_UPDATE_TRIGGER_0		( 0x01UL )

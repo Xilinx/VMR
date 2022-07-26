@@ -7,6 +7,7 @@
 #include "task.h"
 #include "queue.h"
 #include "timers.h"
+#include "semphr.h"
 
 #include <stdbool.h>
 
@@ -28,6 +29,7 @@
 
 static struct xgq rpu_xgq;
 static int xgq_io_hdl = 0;
+static SemaphoreHandle_t msg_complete_lock = NULL;
 
 /* mapping from xgq_cmd to vmr internal common layer msg type */
 struct xgq_cmd_cl_map {
@@ -76,7 +78,7 @@ static struct xgq_cmd_cl_map xgq_cmd_sensor_map[] = {
 	{XGQ_CMD_SENSOR_SID_ALL, CL_SENSOR_ALL},
 };
 
-int cl_msg_handle_complete(cl_msg_t *msg)
+void cl_msg_handle_complete(cl_msg_t *msg)
 {
 	struct xgq_com_queue_entry cq_cmd = {
 		.hdr.cid = msg->hdr.cid,
@@ -130,11 +132,17 @@ int cl_msg_handle_complete(cl_msg_t *msg)
 		cmd_cq->cq_log_payload.count = msg->log_payload.size;
 	}
 
-	xgq_produce(&rpu_xgq, &cq_slot_addr);
-	cl_memcpy_toio32(cq_slot_addr, &cq_cmd, sizeof(struct xgq_com_queue_entry));
-	xgq_notify_peer_produced(&rpu_xgq);
-
-	return 0;
+	if (xSemaphoreTake(msg_complete_lock, portMAX_DELAY)) {
+		xgq_produce(&rpu_xgq, &cq_slot_addr);
+		cl_memcpy_toio32(cq_slot_addr, &cq_cmd, sizeof(struct xgq_com_queue_entry));
+		xgq_notify_peer_produced(&rpu_xgq);
+		xSemaphoreGive(msg_complete_lock);
+	} else {
+		/* Should never been here if use portMAX_DELAY */
+		VMR_ERR("msg_complete_lock lock failed");
+	}
+	
+	return;
 }
 
 static inline int convert_cl_type(u32 xgq_type, u32 *cl_type,
@@ -365,12 +373,12 @@ static inline bool read_vmr_shared_mem(struct vmr_shared_mem *mem)
 	return true;
 }
 
-static void vmr_status_service_start()
+static int vmr_status_service_start()
 {
 	struct vmr_shared_mem mem = { 0 };
 
 	if (!read_vmr_shared_mem(&mem))
-		return;
+		return -1;
 
 	IO_SYNC_WRITE32(1, RPU_SHARED_MEMORY_ADDR(mem.vmr_status_off));
 
@@ -384,6 +392,8 @@ static void vmr_status_service_start()
 		mem.log_msg_buf_off,
 		mem.vmr_data_start,
 		mem.vmr_data_end);
+
+	return 0;
 }
 
 /*
@@ -462,7 +472,11 @@ int cl_xgq_receive_init(void)
 	if (vmr_xgq_init())
 		return -1;
 
-	vmr_status_service_start();
+	if (vmr_status_service_start())
+		return -1;
+
+	/* Init mutex for cl_msg_handle_complete */
+	msg_complete_lock = xSemaphoreCreateMutex();
 
 	return 0;
 }
