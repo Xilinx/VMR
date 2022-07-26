@@ -341,7 +341,7 @@ static u32 rmgmt_fpt_status_query(cl_msg_t *msg, char *buf, u32 size)
 		return size;
 	}
 
-	(void) cl_vmc_scfw_version(&version); 
+	(void) cl_vmc_pdi_scfw_version(&version); 
 	count += snprintf(buf + count, size - count, "SCFW image version: %d.%d.%d\n",
 		version.fsv_major, version.fsv_minor, version.fsv_revision);
 	if (count > size) {

@@ -1173,7 +1173,7 @@ int cl_vmc_scfw_program(cl_msg_t *msg)
 	return ((int)start_scfw_update());
 }
 
-void cl_vmc_scfw_version(struct fpt_sc_version *version)
+void cl_vmc_pdi_scfw_version(struct fpt_sc_version *version)
 {
 	if (version != NULL) {
 		cl_msg_t msg = { 0 };
@@ -1185,7 +1185,8 @@ int cl_vmc_scfw_init()
 {
 	struct fpt_sc_version version = { 0 };
 
-	cl_vmc_scfw_version(&version);
+	/* Log pdi SCFW version */ 
+	cl_vmc_pdi_scfw_version(&version);
 
 	return 0;
 }
