@@ -136,6 +136,7 @@ void cl_msg_handle_complete(cl_msg_t *msg)
 		xgq_produce(&rpu_xgq, &cq_slot_addr);
 		cl_memcpy_toio32(cq_slot_addr, &cq_cmd, sizeof(struct xgq_com_queue_entry));
 		xgq_notify_peer_produced(&rpu_xgq);
+		xSemaphoreGive(msg_complete_lock);
 	} else {
 		/* Should never been here if use portMAX_DELAY */
 		VMR_ERR("msg_complete_lock lock failed");
