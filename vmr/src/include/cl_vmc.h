@@ -7,11 +7,13 @@
 #define COMMON_VMC_H
 
 struct cl_msg;
+struct fpt_sc_version;
 
 int cl_vmc_sensor(struct cl_msg *msg);
 int cl_vmc_is_ready(void);
 void cl_vmc_sc_update(void);
 void cl_vmc_monitor_sensors();
+void cl_vmc_pdi_scfw_version(struct fpt_sc_version *version);
 
 int cl_vmc_init(void);
 

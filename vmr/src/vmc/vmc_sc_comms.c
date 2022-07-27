@@ -28,8 +28,8 @@ u8 scPayload[MAX_VMC_SC_UART_BUF_SIZE] = {0};
 static u8 vmc_active_resp_len = MSP432_COMMS_GENERAL_RESP_LEN;
 
 static volatile bool is_SC_active  = false ;
-volatile bool isPowerModeActive = false;
-volatile bool getSensorRespLen = false;
+static volatile bool isPowerModeActive = false;
+static volatile bool getSensorRespLen = false;
 static volatile bool is_boardInfo_sentTo_SC = false;
 
 u8 VMC_SC_Comms_Msg[] = {

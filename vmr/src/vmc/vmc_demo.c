@@ -24,8 +24,6 @@
 
 extern void AsdmSensor_Display(void);
 
-extern Vmc_Global_Variables vmc_g_var;
-
 #define demoMenu_task_PRIORITY	tskIDLE_PRIORITY + 1
 
 /** Maximum menu levels that are supported in xmenu */
