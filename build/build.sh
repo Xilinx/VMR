@@ -211,12 +211,14 @@ make_version_h()
 	echo "#endif" >> $CL_VERSION_H
 }
 
-check_vmr() {
+check_vmr()
+{
 	typeset C_DIR="$1"
 	typeset VMR_FILE="${C_DIR}/Debug/vmr_app.elf"
 
 	if [[ ! -f "${VMR_FILE}" ]];then
 		echo "Build failed, cannot find $VMR_FILE"
+		cat $BUILD_DIR/$BUILD_LOG
 		exit 1
 	fi
 

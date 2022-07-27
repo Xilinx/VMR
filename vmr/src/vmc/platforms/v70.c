@@ -13,7 +13,8 @@
 #include "../vmc_main.h"
 #include "vmr_common.h"
 
-extern Vmc_Global_Variables vmc_g_var;
+extern Vmc_Sensors_Gl_t sensor_glvr;
+
 static u8 i2c_main = LPD_I2C_0;
 
 u8 V70_Init(void)
@@ -71,7 +72,7 @@ s8 V70_Temperature_Read_Board(snsrRead_t *snsrData)
 	s8 status = XST_SUCCESS;
 	s16 TempReading = 0;
 
-	TempReading = (vmc_g_var.sensor_readings.board_temp[0] + vmc_g_var.sensor_readings.board_temp[1])/2;
+	TempReading = (sensor_glvr.sensor_readings.board_temp[0] + sensor_glvr.sensor_readings.board_temp[1])/2;
 
 	Cl_SecureMemcpy(&snsrData->snsrValue[0],sizeof(TempReading),&TempReading,sizeof(TempReading));
 	snsrData->sensorValueSize = sizeof(TempReading);
@@ -83,13 +84,13 @@ s8 V70_Temperature_Read_Board(snsrRead_t *snsrData)
 void LM75_monitor(void)
 {
 	u8 status = XST_FAILURE;
-	status = LM75_ReadTemperature(i2c_main, SLAVE_ADDRESS_LM75_0_V70, &vmc_g_var.sensor_readings.board_temp[0]);
+	status = LM75_ReadTemperature(i2c_main, SLAVE_ADDRESS_LM75_0_V70, &sensor_glvr.sensor_readings.board_temp[0]);
 	if (status == XST_FAILURE)
 	{
 		VMC_DBG("Failed to read LM75_0 \n\r");
 	}
 
-	status = LM75_ReadTemperature(i2c_main, SLAVE_ADDRESS_LM75_1_V70, &vmc_g_var.sensor_readings.board_temp[1]);
+	status = LM75_ReadTemperature(i2c_main, SLAVE_ADDRESS_LM75_1_V70, &sensor_glvr.sensor_readings.board_temp[1]);
 	if (status == XST_FAILURE)
 	{
 		VMC_DBG("Failed to read LM75_1 \n\r");
