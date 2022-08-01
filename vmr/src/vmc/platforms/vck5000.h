@@ -62,5 +62,6 @@ void se98a_monitor(void);
 void max6639_monitor(void);
 void qsfp_monitor(void);
 
+u8 Vck5000_Vmc_Sc_Comms(void);
 
 #endif

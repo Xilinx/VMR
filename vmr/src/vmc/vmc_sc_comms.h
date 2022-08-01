@@ -2,6 +2,10 @@
 * Copyright (C) 2020 Xilinx, Inc.  All rights reserved.
 * SPDX-License-Identifier: MIT
 *******************************************************************************/
+
+#ifndef INC_VMC_VMC_SC_COMMS_H_
+#define INC_VMC_VMC_SC_COMMS_H_
+
 #include "xil_types.h"
 #include "FreeRTOS.h"
 #include "task.h"
@@ -14,6 +18,8 @@
 #include "platforms/vck5000.h"
 
 extern uart_rtos_handle_t uart_vmcsc_log;
+
+typedef u8 (*msg_id_ptr);
 
 #define SOP_SIZE            (2)
 #define MESSAGE_ID_SIZE     (1)
@@ -65,9 +71,9 @@ extern uart_rtos_handle_t uart_vmcsc_log;
 #define MSP432_COMMS_ALERT_RESP         (0x82)
 #define MSP432_COMMS_ADV_VERS_RESP      (0x83)
 #define MSP432_COMMS_BOARD_SNSR_RESP    (0x85)
-#define MSP432_COMMS_VOLT_SNSR_RESP     (0x86)
-#define MSP432_COMMS_POWER_SNSR_RESP    (0x87)
-#define MSP432_COMMS_TEMP_SNSR_RESP     (0x88)
+#define SC_COMMS_RX_VOLT_SNSR_RESP     (0x86)
+#define SC_COMMS_RX_POWER_SNSR_RESP    (0x87)
+#define SC_COMMS_RX_TEMP_SNSR_RESP     (0x88)
 #define MSP432_COMMS_EN_DEMO_RESP       (0x89)
 
 #define MSP432_COMMS_MSG_GOOD           (0xFE)
@@ -85,9 +91,9 @@ extern uart_rtos_handle_t uart_vmcsc_log;
 #define MSP432_COMMS_ADV_VERS           (0x03)
 #define MSP432_COMMS_SET_VERS           (0x04)
 #define MSP432_COMMS_BOARD_SNSR_REQ     (0x05)
-#define MSP432_COMMS_VOLT_SNSR_REQ      (0x06)
-#define MSP432_COMMS_POWER_SNSR_REQ     (0x07)
-#define MSP432_COMMS_TEMP_SNSR_REQ      (0x08)
+#define SC_COMMS_RX_VOLT_SNSR      (0x06)
+#define SC_COMMS_RX_POWER_SNSR     (0x07)
+#define SC_COMMS_RX_TEMP_SNSR       (0x08)
 #define MSP432_COMMS_EN_DEMO_MENU       (0x09)
 
 #define MSP432_COMMS_NO_FLAG             (0x00)
@@ -97,14 +103,14 @@ extern uart_rtos_handle_t uart_vmcsc_log;
 #define MSP432_COMMS_VMC_VERSION_POWERMODE_REQ (0xF1)
 #define MSP432_COMMS_VMC_VERSION_POWERMODE_RESP (0xF2)
 
-#define MSP432_COMMS_VMC_SEND_I2C_SNSR_REQ (0xF3)
-#define MSP432_COMMS_VMC_SEND_I2C_SNSR_RESP (0xF4)
+#define SC_COMMS_TX_I2C_SNSR (0xF3)
+#define SC_COMMS_RX_I2C_SNSR_RESP (0xF4)
 
 #define MSP432_COMMS_VMC_GET_RESP_SIZE_REQ (0xF5)
 #define MSP432_COMMS_VMC_GET_RESP_SIZE_RESP (0xF6)
 
-#define MSP432_COMMS_VMC_SEND_BOARDINFO_REQ  (0xF7)
-#define MSP432_COMMS_VMC_SEND_BOARDINFO_RESP (0xF8)
+#define SC_COMMS_TX_BOARD_INFO  (0xF7)
+#define SC_COMMS_RX_BOARD_INFO_RESP (0xF8)
 
 typedef enum return_error_codes {
     FIELD_PARSE_SUCCESSFUL,                 /* The current field was parsed successfully */
@@ -170,18 +176,7 @@ typedef struct SC_VMC_Data{
     u16  sensor_values[eSC_SENSOR_ID_MAX];
 }SC_VMC_Data;
 
-
-
-void Update_MSGgood_Data(u8 PayloadLength , u8 * Payload);
-void Update_CommsVersion_Response(u8 PayloadLength , u8 * Payload);
-u16 vmcU8ToU16(u8 *payload);
-uint64_t vmcU8ToU64(uint8_t * payload);
-void Update_OEM_Data(u8 PayloadLength , u8 * Payload);
-void VMC_StoreSensor_Value(u8 id, u32 value);
-void VMC_Update_Sensors(u16 length,u8 *payload);
-void Update_SNSR_Data(u8 PayloadLength , u8 * payload);
-bool Parse_SCData(u8 *Payload, u8 expected_msgid);
-bool VMC_send_packet(u8 Message_id , u8 Flags,u8 Payloadlength, u8 *Payload);
+void VMC_SC_COMMS_Tx_Rx(u8 messageID);
 bool vmc_get_sc_status();
 void vmc_set_sc_status(bool value);
 bool vmc_get_power_mode_status();
@@ -190,3 +185,7 @@ bool vmc_get_snsr_resp_status();
 void vmc_set_snsr_resp_status(bool value);
 bool vmc_get_boardInfo_status();
 void vmc_set_boardInfo_status(bool value);
+u8 get_total_req_size();
+void set_total_req_size(u8 value);
+
+#endif /* INC_VMC_VMC_SC_COMMS_H_ */

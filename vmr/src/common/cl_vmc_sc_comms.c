@@ -63,7 +63,7 @@ void cl_vmc_sc_comms_func(void *task_args)
 		}
 
 		/* every 1000ms we update sensor from vmc_sc_comms */
-		cl_vmc_sc_update();
+		cl_vmc_sc_tx_rx_data();
 
 		/* every 1000ms we should check hardware status */
 		vTaskDelay(pdMS_TO_TICKS(1000));
