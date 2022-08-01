@@ -181,6 +181,7 @@ typedef u8 (*Platform_Func_Ptr)(void);
 
 typedef enum{
 	ePlatform_Init,
+	eSc_Comms,
 	eMax_Platform_Functions
 } ePlatform_Functions;
 

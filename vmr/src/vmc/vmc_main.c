@@ -54,13 +54,15 @@ Platform_Sensor_Handler_t platform_sensor_handlers[]=
 Platform_Function_Handler_t platform_function_handlers[]=
 {
 	{eVCK5000,ePlatform_Init,Vck5000_Init},
+	{eVCK5000,eSc_Comms,Vck5000_Vmc_Sc_Comms},
 	{eV70,ePlatform_Init,V70_Init},
+	{eV70,eSc_Comms,NULL},
 };
 
 Platform_Func_Ptr platform_init_ptr = NULL;
 
 extern Versal_BoardInfo board_info;
-
+extern Platform_Func_Ptr vmc_sc_comms_ptr;
 
 static u8 Vmc_ConfigurePlatform(const char * product_name);
 
@@ -196,6 +198,9 @@ static u8 Vmc_ConfigurePlatform(const char * product_name)
 		switch (i){
 			case ePlatform_Init:
 				platform_init_ptr = Vmc_Find_Function_Handler(i);
+				break;
+			case eSc_Comms:
+				vmc_sc_comms_ptr = Vmc_Find_Function_Handler(i);
 				break;
 		}
 	}

@@ -12,10 +12,21 @@
 #include "../vmc_sensors.h"
 #include "../vmc_main.h"
 #include "vck5000.h"
+#include "../vmc_sc_comms.h"
 
 extern Vmc_Sensors_Gl_t sensor_glvr;
+extern msg_id_ptr msg_id_handler_ptr;
 
 static u8 i2c_num = LPD_I2C_0;
+
+u8 VCK5000_VMC_SC_Comms_Msg[] = {
+		SC_COMMS_RX_VOLT_SNSR,
+		SC_COMMS_RX_POWER_SNSR,
+		SC_COMMS_RX_TEMP_SNSR,
+		SC_COMMS_TX_I2C_SNSR,
+};
+
+#define VCK5000_MAX_MSGID_COUNT     (sizeof(VCK5000_VMC_SC_Comms_Msg)/sizeof(VCK5000_VMC_SC_Comms_Msg[0]))
 
 u8 Vck5000_Init(void)
 {
@@ -23,6 +34,9 @@ u8 Vck5000_Init(void)
 
 	/* Retry till fan controller is programmed */
 	while (max6639_init(1, 0x2E));  // only for vck5000
+
+	msg_id_handler_ptr = VCK5000_VMC_SC_Comms_Msg;
+	set_total_req_size(VCK5000_MAX_MSGID_COUNT);
 
 	return XST_SUCCESS;
 }
@@ -247,3 +261,14 @@ void qsfp_monitor(void)
 	}
 	return;
 }
+
+u8 Vck5000_Vmc_Sc_Comms(void)
+{
+	/* Fetch the Volt & power Sensor length */
+	if (!vmc_get_snsr_resp_status()) {
+		VMC_SC_COMMS_Tx_Rx(MSP432_COMMS_VMC_GET_RESP_SIZE_REQ);
+	}
+
+	return XST_SUCCESS;
+}
+

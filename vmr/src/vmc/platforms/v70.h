@@ -7,6 +7,7 @@
 #define INC_PLATFORMS_V70_H_
 
 #include "../vmc_asdm.h"
+
 #define SLAVE_ADDRESS_LM75_0_V70  (0x48)
 #define SLAVE_ADDRESS_LM75_1_V70  (0x4A)
 

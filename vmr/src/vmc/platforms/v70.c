@@ -12,14 +12,24 @@
 #include "../sensors/inc/lm75.h"
 #include "../vmc_main.h"
 #include "vmr_common.h"
+#include "../vmc_sc_comms.h"
 
 extern Vmc_Sensors_Gl_t sensor_glvr;
+extern msg_id_ptr msg_id_handler_ptr;
 
 static u8 i2c_main = LPD_I2C_0;
+
+u8 V70_VMC_SC_Comms_Msg[] = {
+		SC_COMMS_TX_I2C_SNSR
+};
+
+#define V70_MAX_MSGID_COUNT     (sizeof(V70_VMC_SC_Comms_Msg)/sizeof(V70_VMC_SC_Comms_Msg[0]))
 
 u8 V70_Init(void)
 {
 	//s8 status = XST_FAILURE;
+	msg_id_handler_ptr = V70_VMC_SC_Comms_Msg;
+	set_total_req_size(V70_MAX_MSGID_COUNT);
 
 	return XST_SUCCESS;
 }
@@ -97,6 +107,4 @@ void LM75_monitor(void)
 	}
 
 	return;
-
-
 }
