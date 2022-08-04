@@ -14,6 +14,7 @@ BUILD_CONF_FILE="build.json"
 BUILD_DIR="build_dir"
 BUILD_LOG="build.log"
 REGEN_SHELL="regen_pdi.sh"
+REGEN_VMR="regen_vmrpdi.sh"
 BUILD_CLEAN=0
 CURRENT_DIR=$(dirname "$0")
 BASE_NAME=$(basename "$0")
@@ -280,7 +281,6 @@ check_vmr()
 	echo "=== Build vmr.elf ==="
 	cp $VMR_FILE $ROOT_DIR/vmr.elf
 	realpath $ROOT_DIR/vmr.elf
-	echo "=== Build done. ==="
 }
 
 build_app_all() {
@@ -353,6 +353,29 @@ build_app_incremental() {
 	echo "=== Make App Took: $((SECONDS - start_seconds)) S"
 }
 
+build_vmrpdi()
+{
+	cd $ROOT_DIR
+	cp $REGEN_VMR $BUILD_DIR
+	cd $BUILD_DIR
+
+	if [ -z $BUILD_AIE2 ] || [ ! $BUILD_AIE2 = "yes" ];then
+		bash $REGEN_VMR -v $ROOT_DIR/vmr.elf >> $BUILD_LOG 2>&1
+	else
+		bash $REGEN_VMR -a -v $ROOT_DIR/vmr.elf >> $BUILD_LOG 2>&1
+	fi
+
+	ls vmr.pdi >> $BUILD_LOG
+	if [ $? -eq 0 ];then
+		cp vmr.pdi $ROOT_DIR/vmr.pdi
+		realpath $ROOT_DIR/vmr.pdi
+	else
+		echo "=== Build vmr.pdi failed."
+		cat $BUILD_LOG
+		exit 1;
+	fi
+}
+
 build_shell()
 {
 	cd $ROOT_DIR
@@ -370,12 +393,13 @@ build_shell()
 		bash $REGEN_SHELL -a -v $ROOT_DIR/vmr.elf -x $BUILD_XSA -y $BUILD_XSABIN >> $BUILD_LOG 2>&1
 	fi
 
-	ls rebuilt.xsabin
+	ls rebuilt.xsabin >> $BUILD_LOG
 	if [ $? -eq 0 ];then
 		realpath rebuilt.xsabin
 	else
 		echo "Build Shell failed."
 		cat $BUILD_LOG
+		exit 1;
 	fi
 }
 
@@ -615,6 +639,9 @@ echo "=== (3) Build entire project "
 start_seconds=$SECONDS
 build_app_all
 echo "=== Make App Took: $((SECONDS - start_seconds)) S"
+
+echo "=== (3.1) Build vmr.pdi"
+build_vmrpdi
 
 echo "=== (4) Build shell "
 start_seconds=$SECONDS

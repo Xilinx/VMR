@@ -25,9 +25,11 @@ int cl_rmgmt_fpt_query(struct cl_msg *msg);
 
 /* APIs for cl_main and cl_xgq tasks */
 int cl_rmgmt_init(void);
+
 int cl_rmgmt_program_apu_pdi(struct cl_msg *msg);
 int cl_rmgmt_program_base_pdi(struct cl_msg *msg);
 int cl_rmgmt_program_xclbin(struct cl_msg *msg);
+int cl_rmgmt_program_vmr(struct cl_msg *msg);
 
 int cl_rmgmt_apu_channel_probe(void);
 int cl_rmgmt_apu_is_ready(void);

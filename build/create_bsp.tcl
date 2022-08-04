@@ -27,6 +27,7 @@ if { $2 == 0 } {
 puts "=== customize bsp libs"
 bsp setlib xilfpga
 bsp setlib xilmailbox
+bsp setlib xilpm
 bsp getlibs
 puts "=== customize FreeRTOS heap size 0x16000000 (352M)"
 bsp config total_heap_size 0x16000000

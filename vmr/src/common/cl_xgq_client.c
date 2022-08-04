@@ -350,11 +350,18 @@ out:
 	return rval;
 }
 
+int cl_xgq_client_fini()
+{
+	/* reset the APU status back to init status */
+	IO_SYNC_WRITE32(0, VMR_EP_APU_SHARED_MEMORY_START);
+	return 0;
+}
+
 int cl_rmgmt_apu_channel_probe()
 {
 	uint64_t flags = 0;
 	int ret = 0;
-	struct xgq_vmr_cmd_identify id_cmd = {0};
+	struct xgq_vmr_cmd_identify id_cmd = { 0 };
 	
 	if (cl_rmgmt_apu_is_ready()) {
 		VMR_WARN("dup probe, skip");
@@ -377,7 +384,7 @@ int cl_rmgmt_apu_channel_probe()
 		return -ENOMEM;
 	}
 
-	VMR_DBG("mem %x %x", mem.apu_channel_ready, mem.apu_xgq_ring_buffer);
+	VMR_WARN("APU up:%d, ring buffer off:0x%x", mem.apu_channel_ready, mem.apu_xgq_ring_buffer);
 
 	/* APU channel is ready, attaching xgq */
 	ret = xgq_attach(&apu_xgq, flags, 0, APU_SHARED_MEMORY_ADDR(mem.apu_xgq_ring_buffer),
@@ -394,6 +401,7 @@ int cl_rmgmt_apu_channel_probe()
 	 * continue probing APU again
 	 */
 	xgq_apu_ready = true;
+
 	ret = rmgmt_apu_identify(&id_cmd);
 	if (ret != 0) {
 		VMR_ERR("xgq identify failed: %d, please reset device", ret);

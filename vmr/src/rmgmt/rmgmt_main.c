@@ -13,6 +13,8 @@
 #include "rmgmt_xfer.h"
 #include "rmgmt_clock.h"
 #include "rmgmt_fpt.h"
+#include "rmgmt_pm.h"
+#include "rmgmt_ipi.h"
 
 #include "cl_msg.h"
 #include "cl_flash.h"
@@ -84,6 +86,7 @@ enum pdi_type {
 	BASE_PDI = 0,
 	APU_PDI,
 	PL_XCLBIN,
+	VMR_PDI,
 };
 
 static struct vmr_endpoints vmr_eps[] = {
@@ -250,6 +253,12 @@ done:
 	return ret;
 }
 
+static int rmgmt_download_vmr(struct rmgmt_handler *rh, cl_msg_t *msg)
+{
+	rmgmt_ipi_image_store((u32)rh->rh_data, rh->rh_data_size);
+	return rmgmt_pm_reset_rpu(msg);
+}
+
 static int rmgmt_download_pdi(cl_msg_t *msg, enum pdi_type ptype)
 {
 	u32 address = 0;
@@ -277,6 +286,8 @@ static int rmgmt_download_pdi(cl_msg_t *msg, enum pdi_type ptype)
 		return rmgmt_download_apu_pdi(&rh);
 	case PL_XCLBIN:
 		return rmgmt_download_xclbin(&rh);
+	case VMR_PDI:
+		return rmgmt_download_vmr(&rh, msg);
 	default:
 		VMR_ERR("cannot handle pdi_type %d", ptype);
 		break;
@@ -298,6 +309,11 @@ int cl_rmgmt_program_apu_pdi(cl_msg_t *msg)
 int cl_rmgmt_program_xclbin(cl_msg_t *msg)
 {
 	return rmgmt_download_pdi(msg, PL_XCLBIN);
+}
+
+int cl_rmgmt_program_vmr(cl_msg_t *msg)
+{
+	return rmgmt_download_pdi(msg, VMR_PDI);
 }
 
 static u32 rmgmt_fpt_status_query(cl_msg_t *msg, char *buf, u32 size)
@@ -414,7 +430,7 @@ static u32 rmgmt_apu_status_query(char *buf, u32 size)
 	if (!apu_is_ready)
 		goto done;
 
-	if(rmgmt_apu_identify(&id_cmd) == 0){
+	if (rmgmt_apu_identify(&id_cmd) == 0){
 		count = snprintf(buf,size,"APU XGQ Version: %d.%d\n",id_cmd.major,id_cmd.minor);
 	}
 	if (count > size) {
@@ -1040,9 +1056,14 @@ int cl_rmgmt_init( void )
 		return -EIO;
 	}
 
-	if(rmgmt_init_handler(&rh)) {
-		VMR_LOG("FATAL: init rmgmt handler failed.");
+	if (rmgmt_init_handler(&rh)) {
+		VMR_ERR("FATAL: init rmgmt handler failed.");
 		return -ENOMEM;
+	}
+
+	if (rmgmt_pm_init()) {
+		VMR_ERR("WARN: rmgmt_pm init failed.");
+		return -ENODEV;
 	}
 
 	/* try to clear any existign uncleared firewall before rmgmt launch */
@@ -1062,6 +1083,6 @@ int cl_rmgmt_init( void )
 	}
 
 	rmgmt_is_ready_flag = true;
-	VMR_LOG("Done. set rmgmt is ready.");
+	VMR_LOG("Done. rmgmt is ready.");
 	return 0;
 }

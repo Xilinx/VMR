@@ -52,12 +52,21 @@ struct program_handle {
 	{"DOWNLOAD APU PDI", CL_MSG_APUBIN, cl_rmgmt_program_apu_pdi},
 	{"DOWNLOAD XCLBIN", CL_MSG_XCLBIN, cl_rmgmt_program_xclbin},
 	{"PROGRAM SCFW", CL_MSG_PROGRAM_SCFW, program_scfw},
+	{"PROGRAM VMR", CL_MSG_PROGRAM_VMR, cl_rmgmt_program_vmr},
 };
 
 static void process_program_msg(cl_msg_t *msg)
 {
 	for (int i = 0; i < ARRAY_SIZE(program_handles); i++) {
 		if (msg->hdr.type == program_handles[i].msg_type) {
+			/* The program_vmr will reset subsystem, thus we complete cmd first */
+			if (msg->hdr.type == CL_MSG_PROGRAM_VMR) {
+				msg->hdr.rcode = 0;
+				cl_msg_handle_complete(msg);
+				program_handles[i].msg_cb(msg);
+				return;
+			}
+
 			msg->hdr.rcode = program_handles[i].msg_cb(msg);
 			cl_msg_handle_complete(msg);
 			return;

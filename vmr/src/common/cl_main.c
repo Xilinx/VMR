@@ -250,6 +250,9 @@ static int cl_main_task_init(void)
 {
 	cl_log_init();
 	VMR_WARN("=== VMR Service Starting ... ===");
+#ifdef _VMR_VERSION_
+	VMR_WARN("=== VMR Version: %s", VMR_GIT_HASH);
+#endif
 
 	/*
 	 * workaround: sysmon cannot be inited after vTaskSchedulerStart for 2022.1 release

@@ -9,6 +9,10 @@
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof (*(x)))
 
 int cl_xgq_receive_init(void);
+int cl_xgq_receive_fini(void);
+
+int cl_xgq_client_fini(void);
+
 int cl_xgq_program_init(void);
 int cl_xgq_opcode_init(void);
 int cl_vmc_sensor_init(void);
