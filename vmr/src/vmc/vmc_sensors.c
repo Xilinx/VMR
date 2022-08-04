@@ -23,6 +23,7 @@
 #include "vmc_update_sc.h"
 #include "vmr_common.h"
 #include "vmc_main.h"
+#include "clock_throttling.h"
 
 #include "platforms/vck5000.h"
 
@@ -42,6 +43,8 @@ sensorMonitorFunc Temperature_Read_QSFP_Ptr;
 //sensorMonitorFunc Fan_RPM_Read_Ptr;
 
 extern SemaphoreHandle_t vmc_sc_lock;
+
+extern Clock_Throttling_Algorithm  clock_throttling_std_algorithm;
 extern SC_VMC_Data sc_vmc_data;
 
 Vmc_Sensors_Gl_t sensor_glvr = {
@@ -103,6 +106,7 @@ s8 Temperature_Read_ACAP_Device_Sysmon(snsrRead_t *snsrData)
 		Cl_SecureMemcpy(&snsrData->snsrValue[0],sizeof(roundedOffVal),&roundedOffVal,sizeof(roundedOffVal));
 		snsrData->sensorValueSize = sizeof(roundedOffVal);
 		snsrData->snsrSatus = Vmc_Snsr_State_Normal;
+		sensor_glvr.sensor_readings.sysmon_max_temp = TempReading;
 	}
 	else
 	{
@@ -455,12 +459,17 @@ s8 Temperature_Read_QSFP(snsrRead_t *snsrData)
 	return (*Temperature_Read_QSFP_Ptr)(snsrData);
 }
 
+void Clock_throttling()
+{
+	clock_throttling_algorithm_power(&clock_throttling_std_algorithm);
+	clock_throttling_algorithm_temperature(&clock_throttling_std_algorithm);
+}
 
 void cl_vmc_monitor_sensors()
 {
     	Monitor_Thresholds();
     	Monitor_Sensors();
-
+    	Clock_throttling();
 #ifdef VMC_TEST
     	se98a_monitor();
     	max6639_monitor();
