@@ -13,9 +13,23 @@
 #include "../vmc_main.h"
 #include "vck5000.h"
 #include "../vmc_sc_comms.h"
+#include "../clock_throttling.h"
+
+#define NOMINAL_VOLTAGE 12000
+#define VCK5000_IDLE_POWER 21000000
+#define VCK5000_NUM_POWER_RAILS 3
+
+#define VCK5000_TEMP_GAIN_KP_FPGA		3.000e+06    //0x4a371b00;
+#define VCK5000_TEMP_GAIN_KI			2.500e+03    //0x451c4000;
+#define VCK5000_TEMP_GAIN_KP_VCCINT 	1.500e+07    //0x4b64e1c0;
+#define VCK5000_TEMP_GAIN_KAW			5.500e-04    //0x3a102de2;
+#define VCK5000_INTEGRATION_SUM_INITIAL	1.150e+08
 
 extern Vmc_Sensors_Gl_t sensor_glvr;
 extern msg_id_ptr msg_id_handler_ptr;
+
+Build_Clock_Throttling_Profile clock_throttling_vck5000;
+Clock_Throttling_Algorithm clock_throttling_std_algorithm;
 
 static u8 i2c_num = LPD_I2C_0;
 
@@ -28,6 +42,37 @@ u8 VCK5000_VMC_SC_Comms_Msg[] = {
 
 #define VCK5000_MAX_MSGID_COUNT     (sizeof(VCK5000_VMC_SC_Comms_Msg)/sizeof(VCK5000_VMC_SC_Comms_Msg[0]))
 
+void Build_clock_throttling_profile_VCK5000(Build_Clock_Throttling_Profile * pProfile)
+{
+    pProfile->NumberOfSensors = VCK5000_NUM_POWER_RAILS;
+
+    pProfile->VoltageSensorID[0] = eSC_PEX_12V;
+    pProfile->VoltageSensorID[1] = eSC_AUX_12V;
+    pProfile->VoltageSensorID[2] = eSC_AUX1_12V;
+
+    pProfile->CurrentSensorID[0] = eSC_PEX_12V_I_IN;
+    pProfile->CurrentSensorID[1] = eSC_V12_IN_AUX0_I;
+    pProfile->CurrentSensorID[2] = eSC_V12_IN_AUX1_I;
+
+    pProfile->throttlingThresholdCurrent[0] = VCK5000_PEX_12V_I_IN_THROTTLING_LIMIT;
+    pProfile->throttlingThresholdCurrent[1] = VCK5000_AUX_12V_I_IN_THROTTLING_LIMIT_2X4;
+    pProfile->throttlingThresholdCurrent[2] = VCK5000_AUX_12V_I_IN_THROTTLING_LIMIT_2X3;
+
+    pProfile->NominalVoltage[0] = NOMINAL_VOLTAGE;
+    pProfile->NominalVoltage[1] = NOMINAL_VOLTAGE;
+    pProfile->NominalVoltage[2] = NOMINAL_VOLTAGE;
+    pProfile->IdlePower = VCK5000_IDLE_POWER;
+
+    pProfile->bVCCIntThermalThrottling = true;
+    pProfile->TempGainKpFPGA    = VCK5000_TEMP_GAIN_KP_FPGA;
+    pProfile->TempGainKi        = VCK5000_TEMP_GAIN_KI;
+    pProfile->TempGainKpVCCInt  = VCK5000_TEMP_GAIN_KP_VCCINT;
+    pProfile->TempGainKaw       = VCK5000_TEMP_GAIN_KAW;
+
+    pProfile->IntegrataionSumInitial = VCK5000_INTEGRATION_SUM_INITIAL;
+
+}
+
 u8 Vck5000_Init(void)
 {
 	//s8 status = XST_FAILURE;
@@ -37,6 +82,13 @@ u8 Vck5000_Init(void)
 
 	msg_id_handler_ptr = VCK5000_VMC_SC_Comms_Msg;
 	set_total_req_size(VCK5000_MAX_MSGID_COUNT);
+
+	/* platform specific initialization */
+	Build_clock_throttling_profile_VCK5000(&clock_throttling_vck5000);
+
+	/* clock throttling initialization */
+	ClockThrottling_Initialize(&clock_throttling_std_algorithm, &clock_throttling_vck5000);
+
 
 	return XST_SUCCESS;
 }
