@@ -99,8 +99,17 @@ static void cl_printf_impl(const char *name, uint32_t line, uint8_t log_level,
 
 	/* assembile log message into log_buf char array */
 	vsnprintf(buf, sizeof(buf), fmt, *argp);
-	snprintf(log_buf, sizeof(log_buf), "[ %ld.%ld] %s:%s:%ld: %s\r\n",
-		getCurrentSecond(), getCurrentMS(), app_name, name, line, buf);
+
+	if(log_level == CL_LOG_LEVEL_PRNT)
+	{
+		snprintf(log_buf, sizeof(log_buf), "%s", buf);
+	}
+	else
+	{
+		snprintf(log_buf, sizeof(log_buf), "[ %ld.%ld] %s:%s:%ld: %s\r\n",
+			getCurrentSecond(), getCurrentMS(), app_name, name, line, buf);
+	}
+
 
 	/* print to console */
 	xil_printf("%s", log_buf);
