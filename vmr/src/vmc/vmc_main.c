@@ -49,6 +49,7 @@ Platform_Sensor_Handler_t platform_sensor_handlers[]=
 	{eV70,eTemperature_Sensor_Inlet,V70_Temperature_Read_Inlet},
 	{eV70,eTemperature_Sensor_Outlet,V70_Temperature_Read_Outlet},
 	{eV70,eTemperature_Sensor_Board,V70_Temperature_Read_Board},
+	{eV70, eTemperature_Sensor_QSFP, NULL},
 };
 
 Platform_Function_Handler_t platform_function_handlers[]=

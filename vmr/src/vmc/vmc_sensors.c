@@ -425,21 +425,33 @@ done:
 
 s8 Temperature_Read_Inlet(snsrRead_t *snsrData)
 {
+	if (Temperature_Read_Inlet_Ptr == NULL)
+		return XST_SUCCESS;
+
 	return (*Temperature_Read_Inlet_Ptr)(snsrData);
 }
 
 s8 Temperature_Read_Outlet(snsrRead_t *snsrData)
 {
+	if (Temperature_Read_Outlet_Ptr == NULL)
+		return XST_SUCCESS;
+
 	return (*Temperature_Read_Outlet_Ptr)(snsrData);
 }
 
 s8 Temperature_Read_Board(snsrRead_t *snsrData)
 {
+	if (Temperature_Read_Board_Ptr == NULL)
+		return XST_SUCCESS;
+
 	return (*Temperature_Read_Board_Ptr)(snsrData);
 }
 
 s8 Temperature_Read_QSFP(snsrRead_t *snsrData)
 {
+	if (Temperature_Read_QSFP_Ptr == NULL)
+		return XST_SUCCESS;
+
 	return (*Temperature_Read_QSFP_Ptr)(snsrData);
 }
 
