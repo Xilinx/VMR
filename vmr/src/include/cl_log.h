@@ -34,7 +34,8 @@ static const char *app_type_name[] = {
 };
 
 typedef enum cl_log_level {
-	CL_LOG_LEVEL_ERR = 0,
+	CL_LOG_LEVEL_PRNT = 0,
+	CL_LOG_LEVEL_ERR,
 	CL_LOG_LEVEL_LOG,
 	CL_LOG_LEVEL_DBG,
 } cl_log_level_t;
@@ -77,7 +78,8 @@ void cl_uart_printf(const char *name, uint32_t line, uint8_t log_level,
  	CL_PRINT(CL_LOG_LEVEL_DBG, app_type_name[app], fmt, ##arg)
 
 #define CL_DMO(app, fmt, arg...)
-#define CL_PRNT(app, fmt, arg...)
+#define CL_PRNT(app, fmt, arg...)	\
+	CL_PRINT(CL_LOG_LEVEL_PRNT, app_type_name[app], fmt, ##arg)
 
 #define CL_COLLECT(fmt, arg...) cl_log_collect(__FUNCTION__, __LINE__, fmt, ##arg)
 #define CL_DUMP() 		cl_log_dump()
@@ -100,6 +102,8 @@ void cl_uart_printf(const char *name, uint32_t line, uint8_t log_level,
         CL_LOG(APP_VMR, fmt, ##arg)
 #define VMR_DBG(fmt, arg...) \
         CL_DBG(APP_VMR, fmt, ##arg)
+#define VMR_PRNT(fmt, arg...) \
+        CL_PRNT(APP_VMR, fmt, ##arg)
 
 void cl_log_init();
 

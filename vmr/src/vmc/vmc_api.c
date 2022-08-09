@@ -280,6 +280,102 @@ void EepromDump(void)
 			buf[i], buf[i + 1], buf[i + 2], buf[i + 3], buf[i + 4],
 			buf[i + 5], buf[i + 6], buf[i + 7]);
 	}
+
+	Versal_Print_BoardInfo();
+}
+
+static void Print_Eeprom_3_0(void)
+{
+	VMR_PRNT( "EEPROM Version        : %s \n\r",board_info.eeprom_version);
+	VMR_PRNT( "Product Name          : %s \n\r",board_info.product_name);
+	VMR_PRNT( "Board Rev             : %s \n\r",board_info.board_rev);
+	VMR_PRNT( "Board Serial          : %s \n\r",board_info.board_serial);
+
+	VMR_PRNT( "Board MAC             : %02x:%02x:%02x:%02x:%02x:%02x\n\r",
+						board_info.board_mac[0][0],
+						board_info.board_mac[0][1],
+						board_info.board_mac[0][2],
+						board_info.board_mac[0][3],
+						board_info.board_mac[0][4],
+						board_info.board_mac[0][5]);
+
+
+	VMR_PRNT( "Board A/P             : %s \n\r",board_info.board_act_pas);
+
+	VMR_PRNT( "Board Config          : %02x \n\r",board_info.board_config_mode[0]);
+
+	VMR_PRNT( "MFG DATE              : %02x%02x%02x\n\r",
+	                                        board_info.board_mfg_date[0],
+	                                        board_info.board_mfg_date[1],
+	                                        board_info.board_mfg_date[2]);
+
+	VMR_PRNT( "PART NUM              : %s \n\r",board_info.board_part_num);
+
+	VMR_PRNT( "UUID                  : %02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x\n\r",
+		                                    board_info.board_uuid[0],
+		                                    board_info.board_uuid[1],
+		                                    board_info.board_uuid[2],
+		                                    board_info.board_uuid[3],
+		                                    board_info.board_uuid[4],
+		                                    board_info.board_uuid[5],
+		                                    board_info.board_uuid[6],
+		                                    board_info.board_uuid[7],
+		                                    board_info.board_uuid[8],
+		                                    board_info.board_uuid[9],
+		                                    board_info.board_uuid[10],
+		                                    board_info.board_uuid[11],
+		                                    board_info.board_uuid[12],
+		                                    board_info.board_uuid[13],
+		                                    board_info.board_uuid[14],
+		                                    board_info.board_uuid[15]);
+
+	VMR_PRNT( "PCIe Info             : %02x%02x, %02x%02x, %02x%02x, %02x%02x\n\r",
+                                            board_info.board_pcie_info[0],
+                                            board_info.board_pcie_info[1],
+                                            board_info.board_pcie_info[2],
+                                            board_info.board_pcie_info[3],
+                                            board_info.board_pcie_info[4],
+                                            board_info.board_pcie_info[5],
+                                            board_info.board_pcie_info[6],
+                                            board_info.board_pcie_info[7]);
+
+	VMR_PRNT( "OEM ID                : %02x%02x%02x%02x\n\r", board_info.OEM_ID[3],
+								  board_info.OEM_ID[2],
+								  board_info.OEM_ID[1],
+								  board_info.OEM_ID[0]);
+
+
+	VMR_PRNT( "Max Power Mode        : %x \n\r", board_info.board_max_power_mode);
+	VMR_PRNT( "Memory size           : %s \n\r", board_info.Memory_size);
+	VMR_PRNT( "Capabilities          : %02x%02x \n\r", board_info.capability[0], board_info.capability[1]);
+}
+
+static bool Checksum_Ok(void)
+{
+	unsigned char buf[EEPROM_BUF_SIZE] = { 0 };
+
+	u16 addr = 0;
+
+	M24C128_ReadMultiBytes(LPD_I2C_0, SLAVE_ADDRESS_M24C128, &addr, buf, EEPROM_BUF_SIZE);
+
+	u16 checksum = 0;
+	u16 expected = buf[EEPROM_V3_0_CHECKSUM_MSB_OFFSET] << 8 | buf[EEPROM_V3_0_CHECKSUM_LSB_OFFSET];
+
+	for(int i = EEPROM_V3_0_CHECKSUM_START; i <= EEPROM_V3_0_CHECKSUM_END; ++i){
+		checksum += buf[i];
+	}
+
+	checksum = (u16) 0 - checksum;
+
+	if(checksum == expected)
+	{
+		return true;
+	}
+	else
+	{
+		VMC_ERR("Incorrect checksum: calculated %hu %x%x expected %hu %x%x\n\r", checksum, checksum >> 8, checksum & 0xFF,																	expected, buf[EEPROM_V3_0_CHECKSUM_MSB_OFFSET], 																buf[EEPROM_V3_0_CHECKSUM_LSB_OFFSET]);
+		return false;
+	}
 }
 
 void VMC_Get_BoardInfo(Versal_BoardInfo *_board_info) {
@@ -321,6 +417,8 @@ u8 Versal_EEPROM_ReadBoardInfo(void)
 	EEPROM_Content_Details_t *eeprom_offset = NULL;
 
 	u8 *data_ptr = NULL;
+
+	Checksum_Ok();
 
 	status = Update_BoardInfo_Data(i2c_num, board_info.eeprom_version,
 			EEPROM_VERSION_OFFSET, EEPROM_VERSION_SIZE);
@@ -450,4 +548,22 @@ u8 Versal_EEPROM_ReadBoardInfo(void)
 	return status;
 }
 
+u8 Versal_Print_BoardInfo(void)
+{
+	if(!strncmp((char *) board_info.eeprom_version, "3.0", EEPROM_VERSION_SIZE))
+	{
+		Print_Eeprom_3_0();
+	}
+	else if(!strncmp((char *) board_info.eeprom_version, "2.0", EEPROM_VERSION_SIZE))
+	{
+		//TODO replace with 2_0
+		Print_Eeprom_3_0();
+	}
+	else
+	{
+		VMC_ERR("No matching eeprom version %.3s\n\r", board_info.eeprom_version);
+		return XST_FAILURE;
+	}
 
+	return XST_SUCCESS;
+}

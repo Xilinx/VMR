@@ -171,6 +171,12 @@
 #define EEPROM_V3_0_CAPABILITY_OFFSET         	0x7B00
 #define EEPROM_V3_0_CAPABILITY_SIZE           	2
 
+#define EEPROM_V3_0_CHECKSUM_LSB_OFFSET         0x06
+#define EEPROM_V3_0_CHECKSUM_MSB_OFFSET         0x07
+
+#define EEPROM_V3_0_CHECKSUM_START              8
+#define EEPROM_V3_0_CHECKSUM_END                124
+
 typedef enum eeprom_data_e
 {
 	eEeprom_Product_Name,
@@ -379,6 +385,7 @@ void EepromDump(void);
 **
 ******************************************************************************/
 u8 Versal_EEPROM_ReadBoardInfo(void);
+u8 Versal_Print_BoardInfo(void);
 
 extern sensorMonitorFunc Temperature_Read_Inlet_Ptr;
 extern sensorMonitorFunc Temperature_Read_Outlet_Ptr;

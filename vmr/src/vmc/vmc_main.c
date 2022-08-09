@@ -94,6 +94,7 @@ int cl_vmc_init()
 		return -EINVAL;
 	}
 
+
 	status = Vmc_ConfigurePlatform((const char *)&board_info.product_name[0]);
 	if(XST_FAILURE == status){
 		vmc_is_ready = false;
@@ -120,6 +121,8 @@ int cl_vmc_init()
 		VMR_ERR("UART VMC to SC init Failed.");
 		return -EINVAL;
 	}
+
+	Versal_Print_BoardInfo();
 
 	/* sdr_lock */
 	sdr_lock = xSemaphoreCreateMutex();
