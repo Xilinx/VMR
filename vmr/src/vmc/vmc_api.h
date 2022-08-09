@@ -71,51 +71,131 @@
 #define __FILENAME__                 (strrchr(__FILE__, '/') ? (strrchr(__FILE__, '/')+1) : __FILE__)
 #endif
 
+/* Current EEPROM versions that VMR supports */
+#define EEPROM_V3_0               (0x332E30u)
+#define EEPROM_V2_0               (0x322E30u)
+
 /* Default register content in EEPROM if a particular register has not been programmed */
-#define EEPROM_DEFAULT_VAL               0xFF
+#define EEPROM_DEFAULT_VAL			0xFF
 
-#define EEPROM_VERSION_OFFSET            0x0000
-#define EEPROM_VERSION_SIZE              3
+#define EEPROM_VERSION_OFFSET            	0x0000
+#define EEPROM_VERSION_SIZE              	3
 
-#define EEPROM_PRODUCT_NAME_OFFSET       0x0300
-#define EEPROM_PRODUCT_NAME_SIZE         16
+#define EEPROM_V2_0_PRODUCT_NAME_OFFSET       	0x0300
+#define EEPROM_V2_0_PRODUCT_NAME_SIZE         	16
 
-#define EEPROM_BOARD_REV_OFFSET          0x1300
-#define EEPROM_BOARD_REV_SIZE            8
+#define EEPROM_V2_0_BOARD_REV_OFFSET          	0x1300
+#define EEPROM_V2_0_BOARD_REV_SIZE            	8
 
-#define EEPROM_BOARD_SERIAL_OFFSET       0x1B00
-#define EEPROM_BOARD_SERIAL_SIZE         14
+#define EEPROM_V2_0_BOARD_SERIAL_OFFSET       	0x1B00
+#define EEPROM_V2_0_BOARD_SERIAL_SIZE         	14
 
-#define EEPROM_BOARD_MAC_OFFSET          0x2900 // EEPROM offset for the first MAC address
-#define EEPROM_BOARD_MAC_SIZE            6
-#define EEPROM_BOARD_NUM_MAC             2    // The EEPROM has 4 MAC addresses
+#define EEPROM_V2_0_BOARD_MAC_OFFSET          	0x2900
+#define EEPROM_V2_0_BOARD_MAC_SIZE            	6
 
-#define EEPROM_BOARD_ACT_PAS_OFFSET      0x4100
-#define EEPROM_BOARD_ACT_PAS_SIZE        1
+#define EEPROM_V2_0_BOARD_TOT_MAC_ID_OFFSET   	0xFFFF /* Not present in v2.0 version */
+#define EEPROM_V2_0_BOARD_NUM_MAC             	2
 
-#define EEPROM_BOARD_CONFIG_MODE_OFFSET  0x4200
-#define EEPROM_BOARD_CONFIG_MODE_SIZE    1
+#define EEPROM_V2_0_BOARD_ACT_PAS_OFFSET      	0x4100
+#define EEPROM_V2_0_BOARD_ACT_PAS_SIZE        	1
 
-#define EEPROM_MFG_DATE_OFFSET           0x4300
-#define EEPROM_MFG_DATE_SIZE             3
+#define EEPROM_V2_0_BOARD_CONFIG_MODE_OFFSET  	0x4200
+#define EEPROM_V2_0_BOARD_CONFIG_MODE_SIZE    	1
 
-#define EEPROM_PART_NUM_OFFSET           0x4600
-#define EEPROM_PART_NUM_SIZE             9
+#define EEPROM_V2_0_MFG_DATE_OFFSET           	0x4300
+#define EEPROM_V2_0_MFG_DATE_SIZE             	3
 
-#define EEPROM_UUID_OFFSET               0x4F00
-#define EEPROM_UUID_SIZE                 16
+#define EEPROM_V2_0_PART_NUM_OFFSET           	0x4600
+#define EEPROM_V2_0_PART_NUM_SIZE             	9
 
-#define EEPROM_PCIE_INFO_OFFSET          0x5F00
-#define EEPROM_PCIE_INFO_SIZE            8
+#define EEPROM_V2_0_UUID_OFFSET               	0x4F00
+#define EEPROM_V2_0_UUID_SIZE                 	16
 
-#define EEPROM_MAX_POWER_MODE_OFFSET     0x6700
-#define EEPROM_MAX_POWER_MODE_SIZE       1
+#define EEPROM_V2_0_PCIE_INFO_OFFSET          	0x5F00
+#define EEPROM_V2_0_PCIE_INFO_SIZE            	8
 
-#define EEPROM_DIMM_SIZE_OFFSET          0x6800
-#define EEPROM_DIMM_SIZE_SIZE            4
+#define EEPROM_V2_0_MAX_POWER_MODE_OFFSET     	0x6700
+#define EEPROM_V2_0_MAX_POWER_MODE_SIZE       	1
 
-#define EEPROM_OEMID_SIZE_OFFSET         0x6C00
-#define EEPROM_OEMID_SIZE                4
+#define EEPROM_V2_0_DIMM_SIZE_OFFSET          	0x6800
+#define EEPROM_V2_0_DIMM_SIZE_SIZE            	4
+
+#define EEPROM_V2_0_OEMID_SIZE_OFFSET		0x6C00
+#define EEPROM_V2_0_OEMID_SIZE                	4
+
+#define EEPROM_V2_0_CAPABILITY_OFFSET         	0xFFFF /* Not present in v2.0 version */
+#define EEPROM_V2_0_CAPABILITY_SIZE           	0
+
+#define EEPROM_V3_0_PRODUCT_NAME_OFFSET       	0x0800
+#define EEPROM_V3_0_PRODUCT_NAME_SIZE         	24
+
+#define EEPROM_V3_0_BOARD_REV_OFFSET          	0x2000
+#define EEPROM_V3_0_BOARD_REV_SIZE            	8
+
+#define EEPROM_V3_0_BOARD_SERIAL_OFFSET       	0x2800
+#define EEPROM_V3_0_BOARD_SERIAL_SIZE         	14
+
+#define EEPROM_V3_0_BOARD_TOT_MAC_ID_OFFSET   	0x3600
+#define EEPROM_V3_0_BOARD_TOT_MAC_ID_SIZE	1
+
+#define EEPROM_V3_0_BOARD_MAC_OFFSET          	0x3700
+#define EEPROM_V3_0_BOARD_MAC_SIZE            	6
+
+#define EEPROM_V3_0_BOARD_ACT_PAS_OFFSET      	0x3D00
+#define EEPROM_V3_0_BOARD_ACT_PAS_SIZE        	1
+
+#define EEPROM_V3_0_BOARD_CONFIG_MODE_OFFSET  	0x3E00
+#define EEPROM_V3_0_BOARD_CONFIG_MODE_SIZE    	1
+
+#define EEPROM_V3_0_MFG_DATE_OFFSET           	0x3F00
+#define EEPROM_V3_0_MFG_DATE_SIZE             	3
+
+#define EEPROM_V3_0_PART_NUM_OFFSET           	0x4200
+#define EEPROM_V3_0_PART_NUM_SIZE             	24
+
+#define EEPROM_V3_0_UUID_OFFSET               	0x5A00
+#define EEPROM_V3_0_UUID_SIZE                 	16
+
+#define EEPROM_V3_0_PCIE_INFO_OFFSET          	0x6A00
+#define EEPROM_V3_0_PCIE_INFO_SIZE            	8
+
+#define EEPROM_V3_0_MAX_POWER_MODE_OFFSET     	0x7200
+#define EEPROM_V3_0_MAX_POWER_MODE_SIZE       	1
+
+#define EEPROM_V3_0_DIMM_SIZE_OFFSET          	0x7300
+#define EEPROM_V3_0_DIMM_SIZE_SIZE            	4
+
+#define EEPROM_V3_0_OEMID_SIZE_OFFSET         	0x7700
+#define EEPROM_V3_0_OEMID_SIZE                	4
+
+#define EEPROM_V3_0_CAPABILITY_OFFSET         	0x7B00
+#define EEPROM_V3_0_CAPABILITY_SIZE           	2
+
+typedef enum eeprom_data_e
+{
+	eEeprom_Product_Name,
+	eEeprom_Board_Rev,
+	eEeprom_Board_Serial,
+	eEeprom_Board_Tot_Mac_Id,
+	eEeprom_Board_Mac,
+	eEeprom_Board_Act_Pas,
+	eEeprom_Board_config_Mode,
+	eEeprom_Mfg_Date,
+	eEeprom_Part_Num,
+	eEeprom_Uuid,
+	eEeprom_Pcie_Info,
+	eEeprom_Max_Power_Mode,
+	eEeprom_Dimm_Size,
+	eEeprom_Oemid_Size,
+	eEeprom_Capability_Word,
+	eEeprom_max_Offset,
+} eEEPROM_Offsets_t;
+
+typedef struct eeprom_data_s
+{
+	u16 offset;
+	u8 size;
+} EEPROM_Content_Details_t;
 
 
 typedef struct Versal_BoardInfo
@@ -136,6 +216,7 @@ typedef struct Versal_BoardInfo
     unsigned char OEM_ID[5];
     unsigned char DIMM_size[5];
     unsigned char Num_MAC_IDS;
+    unsigned char capability[2];
 } Versal_BoardInfo;
 
 #define 	MAX_PLATFORM_NAME_LEN (20u)
