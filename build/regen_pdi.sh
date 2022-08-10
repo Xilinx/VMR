@@ -176,9 +176,6 @@ golden_list="aie_subsys_7.bin
 cpm_6.bin
 ext_fpt_0.bin
 fpd_8.bin
-lpd_b.1.bin
-lpd_b.2.bin
-lpd_b.3.bin
 lpd_b.bin
 lpd_c.bin
 pl_cfi_3.bin
