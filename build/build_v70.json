@@ -4,6 +4,7 @@
   "CONF_BUILD_XSABIN" : "/opt/xilinx/firmware/v70/gen5x8-qdma/base/partition.xsabin",
   "CONF_BUILD_PLATFORM" : "platform_2022.1_vitis.json",
   "CONF_BUILD_JTAG" : "0",
-  "CONF_BUILD_SHELL" : "no"
+  "CONF_BUILD_AIE2" : "yes",
+  "CONF_BUILD_SHELL" : "yes"
 }
 

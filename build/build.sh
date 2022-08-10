@@ -121,6 +121,13 @@ load_build_info()
 		BUILD_SHELL=$CONF_BUILD_SHELL
 	fi
 
+	CONF_BUILD_AIE2=`grep_file "CONF_BUILD_AIE2" ${BUILD_CONF_FILE}`
+	if [ -z $CONF_BUILD_AIE2 ];then
+		echo "not aie2 shell"
+	else
+		BUILD_AIE2=$CONF_BUILD_AIE2;
+	fi
+
 	CONF_BUILD_JTAG=`grep_file "CONF_BUILD_JTAG" ${BUILD_CONF_FILE}`
 	if [ -z $CONF_BUILD_JTAG ];then
 		echo "skip loading CONF_BUILD_JTAG"
@@ -317,10 +324,17 @@ build_shell()
 	cp $REGEN_SHELL $BUILD_DIR
 	cd $BUILD_DIR
 
-	bash $REGEN_SHELL -v $ROOT_DIR/vmr.elf -x $BUILD_XSA -y $BUILD_XSABIN >> $BUILD_LOG 2>&1
+	if [ -z $BUILD_AIE2 ] || [ ! $BUILD_AIE2 = "yes" ];then
+		bash $REGEN_SHELL -v $ROOT_DIR/vmr.elf -x $BUILD_XSA -y $BUILD_XSABIN >> $BUILD_LOG 2>&1
+	else
+		bash $REGEN_SHELL -a -v $ROOT_DIR/vmr.elf -x $BUILD_XSA -y $BUILD_XSABIN >> $BUILD_LOG 2>&1
+	fi
+
+	ls rebuilt.xsabin
 	if [ $? -eq 0 ];then
 		realpath rebuilt.xsabin
 	else
+		cat $BUILD_LOG
 		echo "Build Shell failed, see $BUILD_LOG for more info."
 	fi
 }
