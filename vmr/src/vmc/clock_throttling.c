@@ -241,7 +241,7 @@ void clock_throttling_algorithm(Clock_Throttling_Algorithm* pContext, bool Readi
 		pContext->Activity = ACTIVITY_MAX;
 	}
 
-	VMC_ERR (" %d 	%d	%f	%f",pContext->Activity,(pContext->BoardMeasuredPower)/1000000,pContext->FPGAMeasuredTemp,pContext->VccIntMeasuredTemp);
+	VMC_DBG(" %d 	%d	%f	%f",pContext->Activity,(pContext->BoardMeasuredPower)/1000000,pContext->FPGAMeasuredTemp,pContext->VccIntMeasuredTemp);
 	IO_SYNC_WRITE32(pContext->Activity | MASK_CLOCKTHROTTLING_ENABLE_THROTTLING, VMR_EP_GAPPING_DEMAND);
 }
 /*
