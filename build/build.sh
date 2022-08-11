@@ -334,8 +334,8 @@ build_shell()
 	if [ $? -eq 0 ];then
 		realpath rebuilt.xsabin
 	else
+		echo "Build Shell failed."
 		cat $BUILD_LOG
-		echo "Build Shell failed, see $BUILD_LOG for more info."
 	fi
 }
 

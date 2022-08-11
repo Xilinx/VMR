@@ -201,7 +201,7 @@ static int validate_log_payload(struct xgq_vmr_log_payload *payload, u32 size)
 		return ret;
 	}
 
-	if (payload->pid > CL_LOG_INFO) {
+	if (payload->pid > CL_LOG_SYSTEM_DTB) {
 		VMR_ERR("invalid log type 0x%x", payload->pid);
 		return ret;
 	}
@@ -638,7 +638,6 @@ static u32 check_clock_shutdown_status(void)
 	return (shutdown_status & SHUTDOWN_LATCHED_STATUS);
 }
 
-
 static u32 rmgmt_log_clock_shutdown(cl_msg_t *msg)
 {
 	u32 val = check_clock_shutdown_status();
@@ -676,6 +675,7 @@ static u32 rmgmt_log_clock_shutdown(cl_msg_t *msg)
 
 	return val;
 }
+
 static int rmgmt_load_firmware(cl_msg_t *msg)
 {
 	u32 dst_addr = 0;
@@ -703,6 +703,33 @@ static int rmgmt_load_firmware(cl_msg_t *msg)
 
 	/* remaining cound is actually size for now,
 	 * it can be entire size - offset in the future*/
+	msg->log_payload.size = fw_size;
+
+	return 0;
+}
+
+static int rmgmt_load_system_dtb(cl_msg_t *msg)
+{
+	u32 dst_addr = 0;
+	u32 src_addr = 0;
+	u32 fw_offset = 0;
+	u32 fw_size = 0;
+	int ret = 0;
+
+	if (rmgmt_fpt_get_systemdtb(msg, &fw_offset, &fw_size)) {
+		VMR_ERR("get system dtb failed");
+		return -1;
+	}
+
+	ret = validate_log_payload(&msg->log_payload, fw_size);
+	if (ret)
+		return ret;
+
+	dst_addr = RPU_SHARED_MEMORY_ADDR(msg->log_payload.address);
+	src_addr = fw_offset;
+
+	cl_memcpy(dst_addr, src_addr, fw_size);
+
 	msg->log_payload.size = fw_size;
 
 	return 0;
@@ -830,6 +857,9 @@ int cl_rmgmt_log_page(cl_msg_t *msg)
 		break;
 	case CL_LOG_MEM_STATS:
 		ret = vmr_rtos_mem_stats(msg);
+		break;
+	case CL_LOG_SYSTEM_DTB:
+		ret = rmgmt_load_system_dtb(msg);
 		break;
 	default:
 		VMR_WARN("unsupported type %d", msg->log_payload.pid);

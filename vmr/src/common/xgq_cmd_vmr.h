@@ -1,7 +1,7 @@
 /******************************************************************************
-* Copyright (C) 2022 Xilinx, Inc.  All rights reserved.
-* SPDX-License-Identifier: MIT
-*******************************************************************************/
+ * Copyright (C) 2022 Xilinx, Inc.  All rights reserved.
+ * SPDX-License-Identifier: MIT
+ *******************************************************************************/
 
 #ifndef XGQ_CMD_VMR_H
 #define XGQ_CMD_VMR_H
@@ -18,10 +18,10 @@
  * sensor data request types
  */
 enum xgq_cmd_sensor_application_id {
-	XGQ_CMD_SENSOR_AID_GET_SIZE			= 0x1,
-	XGQ_CMD_SENSOR_AID_GET_SDR			= 0x2,
-	XGQ_CMD_SENSOR_AID_GET_SINGLE_SENSOR_DATA	= 0x3,
-	XGQ_CMD_SENSOR_AID_GET_ALL_SENSOR_DATA		= 0x4,
+	XGQ_CMD_SENSOR_AID_GET_SIZE		= 0x1,
+	XGQ_CMD_SENSOR_AID_GET_SDR		= 0x2,
+	XGQ_CMD_SENSOR_AID_GET_SINGLE_SDR	= 0x3,
+	XGQ_CMD_SENSOR_AID_GET_ALL_SDR		= 0x4,
 };
 
 /**
@@ -36,6 +36,7 @@ enum xgq_cmd_sensor_page_id {
 	XGQ_CMD_SENSOR_SID_POWER	= 0x5,
 	XGQ_CMD_SENSOR_SID_QSFP		= 0x6,
 	XGQ_CMD_SENSOR_SID_ALL		= 0x7,
+	XGQ_CMD_SENSOR_SID_MAX		= 0x8,
 };
 
 /**
@@ -67,8 +68,9 @@ enum xgq_cmd_log_page_type {
 	XGQ_CMD_LOG_INFO	= 0x2,
 	XGQ_CMD_LOG_AF_CLEAR	= 0x3,
 	XGQ_CMD_LOG_ENDPOINT	= 0x4,
-	XGQ_CMD_LOG_TASK_STATS	= 0x5,
+	XGQ_CMD_LOG_TASK_STATS  = 0x5,
 	XGQ_CMD_LOG_MEM_STATS	= 0x6,
+	XGQ_CMD_LOG_SYSTEM_DTB	= 0x7,
 };
 
 /**
@@ -98,8 +100,14 @@ struct xgq_cmd_log_payload {
  * @address:	pre-allocated sensor data, device writes sensor data at this address
  * @size:	size of pre-allocated sensor data
  * @offset:	offset of returned device data
- * @pid:	sensor request id
- * @addr_type:	pre-allocated address type
+ * @aid: Sensor API ID which decides API in VMC.
+ *          0x1 - GET_SDR_SIZE
+ *          0x2 - GET_SDR
+ *          0x3 - GET_SINGLE_SENSOR_DATA
+ *          0x4 - GET_ALL_SENSOR_DATA
+ * @sid: sensor request id, it is same as repo_id
+ * @addr_type: pre-allocated address type
+ * @sensor_id: sensor id values used to get single instantaneous sensor data
  *
  * This payload is used for sensor data report.
  */
