@@ -175,11 +175,20 @@ static int rmgmt_init_xfer_handler(struct rmgmt_handler *rh)
 
 int rmgmt_init_handler(struct rmgmt_handler *rh)
 {
-	rh->rh_max_size = BITSTREAM_SIZE; /* 32M */
-	rh->rh_data = (u8 *)pvPortMalloc(rh->rh_max_size);
+	rh->rh_data_max_size = BITSTREAM_SIZE; /* 32M */
+	rh->rh_log_max_size = LOG_MSG_SIZE; /* 4K */
+
+	rh->rh_data = (u8 *)pvPortMalloc(rh->rh_data_max_size);
 	if (rh->rh_data == NULL) {
-		VMR_LOG("pvPortMalloc %d bytes failed\r\n", rh->rh_data_size);
-		return -1;
+		VMR_ERR("pvPortMalloc %d bytes for rh_data failed", rh->rh_data_max_size);
+		return -ENOMEM;
+	}
+
+	rh->rh_log = (char *)pvPortMalloc(rh->rh_log_max_size);
+	if (rh->rh_log == NULL) {
+		vPortFree(rh->rh_data);
+		VMR_ERR("pvPortMalloc %d bytes for rh_log failed", rh->rh_log_max_size);
+		return -ENOMEM;
 	}
 	
 	rh->rh_already_flashed = false;

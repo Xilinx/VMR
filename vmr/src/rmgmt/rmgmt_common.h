@@ -34,12 +34,14 @@
 #define MDELAY(n) vTaskDelay( pdMS_TO_TICKS(n) )
 
 struct rmgmt_handler {
-	u32 rh_base;
-	u32 rh_max_size;
-	u32 rh_data_size;
-	u8  *rh_data; 	/* static malloc and never free */
-	bool rh_already_flashed; /* enforce reset/reboot after successfully flashed */
+	u32 rh_base;   /* obsolated */
 	u32 rh_boot_on_offset;
+	u32 rh_data_max_size;
+	u32 rh_data_size;
+	u32 rh_log_max_size; 
+	char *rh_log;	/* static malloc and never free */
+	u8   *rh_data; 	/* static malloc and never free */
+	bool rh_already_flashed; /* enforce reset/reboot after successfully flashed */
 };
 
 static void inline axigate_freeze()

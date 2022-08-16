@@ -71,7 +71,7 @@ static inline int cl_memcpy_toio32(u32 dst, void *buf, size_t len)
 	size_t i;
 	u32 *src = (u32 *)buf;
 
-	if (len % sizeof(u32))
+	if (len & 0x3)
 		return -1;
 
 	for (i = 0; i < len / 4; i++, dst += 4) {
@@ -88,6 +88,31 @@ static inline int cl_memcpy_toio8(u32 dst, void *buf, size_t len)
 
 	for (i = 0; i < len; i++, dst++ ) {
 		IO_SYNC_WRITE8(src[i], dst);
+	}
+
+	return len;
+}
+
+static inline int cl_memcpy_toio(u32 dst, void *buf, size_t len)
+{
+	int ret = 0;
+	u32 last_trunk_size = 0;
+
+	/* len is not 32bit aligned, read last unaligned by ioread8 */
+	if (len & 0x3) {
+		last_trunk_size = len & 0x3;
+	}
+
+	ret = cl_memcpy_toio32(dst, buf, len - last_trunk_size);
+	if (ret != (len - last_trunk_size))
+		return ret;
+
+	if (last_trunk_size) {
+		ret = cl_memcpy_toio8(dst + len - last_trunk_size,
+				buf + len - last_trunk_size,
+				last_trunk_size);
+		if (ret != last_trunk_size)
+			return ret;
 	}
 
 	return len;
@@ -115,6 +140,31 @@ static inline int cl_memcpy_fromio8(u32 src, void *buf, size_t len)
 	
 	for (i = 0; i < len; i++, src++) {
 		dst[i] = IO_SYNC_READ8(src);
+	}
+
+	return len;
+}
+
+static inline int cl_memcpy_fromio(u32 src, void *buf, size_t len)
+{
+	int ret = 0;
+	u32 last_trunk_size = 0;
+
+	/* len is not 32bit aligned, read last unaligned by ioread8 */
+	if (len & 0x3) {
+		last_trunk_size = len & 0x3;
+	}
+
+	ret = cl_memcpy_fromio32(src, buf, len - last_trunk_size);
+	if (ret != (len - last_trunk_size))
+		return ret;
+
+	if (last_trunk_size) {
+		ret = cl_memcpy_fromio8(src + len - last_trunk_size,
+				buf + len - last_trunk_size,
+				last_trunk_size);
+		if (ret != last_trunk_size)
+			return ret;
 	}
 
 	return len;

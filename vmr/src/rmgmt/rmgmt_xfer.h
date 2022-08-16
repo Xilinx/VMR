@@ -7,12 +7,19 @@
 #define RMGMT_XFER_H
 
 /* Versal Platform related definition */
-//#define OSPI_VERSAL_BASE (XPAR_PSV_OCM_RAM_0_S_AXI_BASEADDR + 0x8000)
+/*
+ #define OSPI_VERSAL_BASE (XPAR_PSV_OCM_RAM_0_S_AXI_BASEADDR + 0x8000)
+ This is obsolated for discovery shell, only valide for legacy shell which
+ has bram shared bewteen host and device.
+ TODO: Remove this when rmgmt_xfer versal ospi sudo code is removed.
+*/
 #define OSPI_VERSAL_BASE (0xFFFE0000 + 0x8000)
 
 #define TEST_ADDRESS	0x0
 
 #define BITSTREAM_SIZE	0x8000000U /* Bin or bit or PDI image max size (128M) */
+#define LOG_MSG_SIZE	0x1000 /* 4096 bytes */
+
 #define versal
 #ifdef versal
 #define PDI_LOAD        0U
