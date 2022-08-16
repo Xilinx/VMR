@@ -16,6 +16,7 @@ typedef enum cl_msg_type {
 	CL_MSG_APUBIN,
 	CL_MSG_VMR_CONTROL,
 	CL_MSG_PROGRAM_SCFW,
+	CL_MSG_CLK_THROTTLING,
 } cl_msg_type_t;
 
 typedef enum cl_sensor_type {
@@ -61,6 +62,12 @@ typedef enum cl_vmr_debug_type {
 	CL_DBG_DISABLE_RMGMT	= 0x1,
 	CL_DBG_DISABLE_VMC	= 0x2,
 } cl_vmr_debug_type_t;
+
+
+typedef enum cl_clk_scaling_type {
+	CL_CLK_SCALING_READ	= 0x1,
+	CL_CLK_SCALING_SET	= 0x2,
+} cl_clk_scaling_type_t;
 
 struct xgq_vmr_data_payload {
 	uint32_t address;
@@ -138,6 +145,14 @@ struct xgq_vmr_multiboot_payload {
 	uint8_t vmr_debug_type;
 };
 
+struct xgq_vmr_clk_scaling_payload {
+	uint32_t aid:3;
+	uint32_t scaling_en:1;
+	uint32_t pwr_scaling_ovrd_limit:16;
+	uint32_t temp_scaling_ovrd_limit:8;
+	uint32_t rsvd1:4;
+};
+
 struct xgq_vmr_head {
 	u16 version;
 	u16 type;
@@ -154,6 +169,7 @@ typedef struct cl_msg {
 		struct xgq_vmr_log_payload log_payload;
 		struct xgq_vmr_clock_payload clock_payload;
 		struct xgq_vmr_sensor_payload sensor_payload;
+		struct xgq_vmr_clk_scaling_payload clk_scaling_payload;
 	};
 	union {
 		struct xgq_vmr_multiboot_payload multiboot_payload;

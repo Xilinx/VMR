@@ -51,6 +51,8 @@ Vmc_Sensors_Gl_t sensor_glvr = {
 	.logging_level = VMC_LOG_LEVEL_NONE,
 };
 
+clk_throttling_params_t g_clk_trottling_params;
+
 void clear_clock_shutdown_status()
 {
     /* shutdown state can be cleared by writing a ‘1’ followed by a ‘0’ to bit 16
@@ -426,6 +428,116 @@ done:
 	return ret;
 }
 
+void cl_vmc_get_clk_throttling_params(clk_throttling_params_t *pParams)
+{
+	Cl_SecureMemcpy(pParams, sizeof(clk_throttling_params_t),
+				&g_clk_trottling_params, sizeof(clk_throttling_params_t));
+	return;
+}
+
+int validate_clk_scaling_payload(struct xgq_vmr_clk_scaling_payload *payload)
+{
+	int ret = -EINVAL;
+
+
+	if (payload->aid == 0) {
+	    VMC_ERR("Aid %d is 0", payload->aid);
+	    return ret;
+	}
+
+	if((payload->scaling_en != false) && (payload->scaling_en != true)) {
+		VMC_ERR("invalid Scaling Enable %d", payload->scaling_en);
+		return ret;
+	}
+
+	if (payload->pwr_scaling_ovrd_limit > POWER_THROTTLING_THRESOLD_LIMIT) {
+	    VMC_ERR("invalid Power Limit %d", payload->pwr_scaling_ovrd_limit);
+	    return ret;
+	}
+
+	if (payload->temp_scaling_ovrd_limit > TEMP_FPGA_CRITICAL_THRESHOLD) {
+	    VMC_ERR("invalid Temp %d", payload->temp_scaling_ovrd_limit);
+	    return ret;
+	}
+
+	return 0;
+
+
+}
+
+int vmc_get_clk_throttling_status(cl_msg_t *msg)
+{
+	VMR_LOG("Fetching CLK throttling Status");
+
+	return 0;
+}
+
+int vmc_set_clk_throttling_override(cl_msg_t *msg)
+{
+	VMR_LOG("Clock Throttling Override En:%d Pwr:%d Temp:%d",
+			msg->clk_scaling_payload.scaling_en,
+			msg->clk_scaling_payload.pwr_scaling_ovrd_limit,
+			msg->clk_scaling_payload.temp_scaling_ovrd_limit);
+	
+	g_clk_trottling_params.limits_update_req = (u8) true;
+	g_clk_trottling_params.clk_scaling_enable = msg->clk_scaling_payload.scaling_en;
+	
+	/*
+	 * Apply limits only if Scaling is enabled.
+	 * If limits are sent 0 from XRT, apply default limits
+	 */
+	if(g_clk_trottling_params.clk_scaling_enable) {
+		
+		if(msg->clk_scaling_payload.temp_scaling_ovrd_limit > 0) {
+			
+			g_clk_trottling_params.limits.throttle_limit_temp = 
+				msg->clk_scaling_payload.temp_scaling_ovrd_limit;
+			g_clk_trottling_params.temp_throttling_enabled = true;
+		}
+		
+		if(msg->clk_scaling_payload.pwr_scaling_ovrd_limit > 0) {
+			
+			g_clk_trottling_params.limits.throttle_limit_pwr = 
+				msg->clk_scaling_payload.pwr_scaling_ovrd_limit;
+			g_clk_trottling_params.power_throttling_enabled = true;
+		}
+	} else  {
+		/* Clock Throttling Disabled*/
+		g_clk_trottling_params.temp_throttling_enabled = false;
+		g_clk_trottling_params.power_throttling_enabled = false;
+		/* Set the default value*/
+		g_clk_trottling_params.limits.throttle_limit_temp  = FPGA_THROTTLING_TEMP_LIMIT;
+		g_clk_trottling_params.limits.throttle_limit_pwr = POWER_THROTTLING_THRESOLD_LIMIT;
+	}
+	
+	return 0;
+}
+
+int cl_vmc_clk_scaling(cl_msg_t *msg)
+{
+	int ret = 0;
+
+	ret = validate_clk_scaling_payload(&msg->clk_scaling_payload);
+	if (ret)
+		goto done;
+
+	switch (msg->clk_scaling_payload.aid) {
+	case CL_CLK_SCALING_READ:
+		ret = vmc_get_clk_throttling_status(msg);
+		break;
+	case CL_CLK_SCALING_SET:
+		ret = vmc_set_clk_throttling_override(msg);
+		break;
+	default:
+		VMR_ERR("ERROR: unknown req_type %d",
+			msg->clk_scaling_payload.aid);
+		ret = -EINVAL;
+		break;
+	}
+done:
+	VMR_DBG("complete msg id %d, ret %d", msg->hdr.cid, ret);
+	return ret;
+}
 
 s8 Temperature_Read_Inlet(snsrRead_t *snsrData)
 {
@@ -461,6 +573,27 @@ s8 Temperature_Read_QSFP(snsrRead_t *snsrData)
 
 void Clock_throttling()
 {
+	/* Check if we have received update request from XRT */
+	if(g_clk_trottling_params.limits_update_req) {
+		clock_throttling_std_algorithm.FeatureEnabled = 
+						g_clk_trottling_params.clk_scaling_enable;
+
+		/* Update override status */
+		clock_throttling_std_algorithm.bUserThrottlingTempLimitEnabled = 
+					g_clk_trottling_params.temp_throttling_enabled;
+		clock_throttling_std_algorithm.PowerOverRideEnabled = 
+					g_clk_trottling_params.power_throttling_enabled;
+		
+		/* Update the Override limits */
+		clock_throttling_std_algorithm.XRTSuppliedUserThrottlingTempLimit = 
+					g_clk_trottling_params.limits.throttle_limit_temp;
+		clock_throttling_std_algorithm.XRTSuppliedBoardThrottlingThresholdPower = 
+					g_clk_trottling_params.limits.throttle_limit_pwr;
+
+		/* Update done, clear the flag */
+		g_clk_trottling_params.limits_update_req = false;
+	}
+
 	clock_throttling_algorithm_power(&clock_throttling_std_algorithm);
 	clock_throttling_algorithm_temperature(&clock_throttling_std_algorithm);
 }
@@ -493,3 +626,5 @@ int cl_vmc_sysmon_init()
 
 	return cl_vmc_sysmon_is_ready();
 }
+
+

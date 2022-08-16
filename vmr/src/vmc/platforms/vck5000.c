@@ -41,6 +41,16 @@ u8 VCK5000_VMC_SC_Comms_Msg[] = {
 };
 
 #define VCK5000_MAX_MSGID_COUNT     (sizeof(VCK5000_VMC_SC_Comms_Msg)/sizeof(VCK5000_VMC_SC_Comms_Msg[0]))
+#define TEMP_THROTTLING_THRESHOLD       95
+#define PWR_THROTTLING_THRESHOLD        290
+
+typedef enum {
+        eCLK_SCALING_MODE_PWR  = 0x0,
+	eCLK_SCALING_MODE_TEMP = 0x1,
+	eCLK_SCALING_MODE_BOTH = 0x2
+}eClk_scaling_mode;
+
+extern clk_throttling_params_t g_clk_trottling_params;
 
 void Build_clock_throttling_profile_VCK5000(Build_Clock_Throttling_Profile * pProfile)
 {
@@ -73,6 +83,19 @@ void Build_clock_throttling_profile_VCK5000(Build_Clock_Throttling_Profile * pPr
 
 }
 
+
+void clk_scaling_params_init() {
+        g_clk_trottling_params.is_clk_scaling_supported = true;
+        g_clk_trottling_params.clk_scaling_mode = eCLK_SCALING_MODE_BOTH;
+        g_clk_trottling_params.clk_scaling_enable = false;
+        g_clk_trottling_params.limits.shutdown_limit_temp = TEMP_FPGA_CRITICAL_THRESHOLD;
+	g_clk_trottling_params.limits.shutdown_limit_pwr = POWER_CRITICAL_THRESHOLD;
+	g_clk_trottling_params.limits.throttle_limit_temp = TEMP_THROTTLING_THRESHOLD;
+        g_clk_trottling_params.limits.throttle_limit_pwr = POWER_THROTTLING_THRESOLD_LIMIT;
+        return;
+}
+
+
 u8 Vck5000_Init(void)
 {
 	//s8 status = XST_FAILURE;
@@ -89,7 +112,8 @@ u8 Vck5000_Init(void)
 	/* clock throttling initialization */
 	ClockThrottling_Initialize(&clock_throttling_std_algorithm, &clock_throttling_vck5000);
 
-
+	clk_scaling_params_init();
+	
 	return XST_SUCCESS;
 }
 

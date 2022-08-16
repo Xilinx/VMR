@@ -39,6 +39,11 @@ static int opcode_vmc_sensor(cl_msg_t *msg)
 	return cl_vmc_sensor(msg);
 }
 
+static int opcode_vmc_clk_throttling(cl_msg_t *msg)
+{
+	return cl_vmc_clk_scaling(msg);
+}
+
 struct opcode_handle {
 	const char 	*msg_type_name;
 	cl_msg_type_t	msg_type;
@@ -48,6 +53,7 @@ struct opcode_handle {
 	{"CLOCK", CL_MSG_CLOCK, opcode_clock},
 	{"VMR CONTROL", CL_MSG_VMR_CONTROL, opcode_vmr_control},
 	{"SENSOR", CL_MSG_SENSOR, opcode_vmc_sensor},
+	{"CLOCK THROTTLING", CL_MSG_CLK_THROTTLING, opcode_vmc_clk_throttling},
 };
 
 static void process_program_msg(cl_msg_t *msg)

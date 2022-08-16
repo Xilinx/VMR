@@ -49,6 +49,14 @@ enum xgq_cmd_clock_req_type {
 };
 
 /**
+ * clock scaling request types
+ */
+enum xgq_cmd_clock_scaling_req_type {
+	XGQ_CMD_CLK_SCALING_GET_STATUS	= 0x1,
+	XGQ_CMD_CLK_SCALING_SET_OVERRIDE= 0x2,
+};
+
+/**
  * multi-boot operation request types
  */
 enum xgq_cmd_vmr_control_type {
@@ -183,6 +191,26 @@ struct xgq_cmd_vmr_control_payload {
 };
 
 /**
+ * struct xgq_cmd_clk_scaling_payload: clock scaling request command
+ *
+ * @aid:			Application Id or command code
+ * @scaling_en:			Enable Clock Throttling
+ * @pwr_scaling_ovrd_limit:	Set Override for Power Throttling
+ * @temp_scaling_ovrd_limit:	Set Override for Temperature Throttling
+ * @rsvd:			reserved
+ *
+ * This payload is used for Enable and/or Override Clock Throttling Limits.
+ */
+
+struct xgq_cmd_clk_scaling_payload {
+    uint32_t aid:3;
+    uint32_t scaling_en:1;
+    uint32_t pwr_scaling_ovrd_limit:16;
+    uint32_t temp_scaling_ovrd_limit:8;
+    uint32_t rsvd1:4;
+};
+
+/**
  * struct xgq_cmd_sq: vmr xgq command
  *
  * @hdr:		vmr xgq command header
@@ -192,6 +220,8 @@ struct xgq_cmd_vmr_control_payload {
  * @pdi_payload:
  * @xclbin_payload:
  * @sensor_payload:
+ * @vmr_control_payload:
+ * @clock_scaling_payload:
  */
 struct xgq_cmd_sq {
 	struct xgq_cmd_sq_hdr hdr;
@@ -202,6 +232,7 @@ struct xgq_cmd_sq {
 		struct xgq_cmd_data_payload		xclbin_payload;
 		struct xgq_cmd_sensor_payload		sensor_payload;
 		struct xgq_cmd_vmr_control_payload	vmr_control_payload;
+		struct xgq_cmd_clk_scaling_payload	clk_scaling_payload;
 	};
 };
 
@@ -282,6 +313,21 @@ struct xgq_cmd_cq_vmr_payload {
 };
 
 /*
+ * struct xgq_cmd_cq_clk_scaling_payload: clock scaling status payload
+ *
+ * clock scaling status
+*/
+struct xgq_cmd_cq_clk_scaling_payload {
+    uint8_t has_clk_scaling:1;
+    uint8_t clk_scaling_mode:2;
+    uint8_t clk_scaling_en:1;
+    uint8_t rsvd:4;
+    uint8_t temp_shutdown_limit;
+    uint8_t temp_scaling_limit;
+    uint16_t pwr_shutdown_limit;
+    uint16_t pwr_scaling_limit;
+};
+/*
  * struct xgq_cmd_cq: vmr completion command
  *
  * @hdr:		vmr completion command header
@@ -289,7 +335,10 @@ struct xgq_cmd_cq_vmr_payload {
  * @default_payload: 	payload definitions in a union
  * @clock_payload:
  * @sensor_payload:
- * @multiboot_payload:
+ * @vmr_payload:
+ * @log_payload:
+ * @xclbin_payload
+ * @clk_scaling_payload
  */
 struct xgq_cmd_cq {
 	struct xgq_cmd_cq_hdr hdr;
@@ -300,6 +349,7 @@ struct xgq_cmd_cq {
 		struct xgq_cmd_cq_vmr_payload		cq_vmr_payload;
 		struct xgq_cmd_cq_log_page_payload	cq_log_payload;
 		struct xgq_cmd_cq_data_payload		cq_xclbin_payload;
+		struct xgq_cmd_cq_clk_scaling_payload	cq_clk_scaling_payload;
 	};
 	uint32_t rcode;
 };

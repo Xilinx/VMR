@@ -56,7 +56,7 @@ void ClockThrottling_Initialize(Clock_Throttling_Algorithm  *pContext, Build_Clo
 	pContext->VccIntThrottlingTempLimit    = VCCINT_THROTTLING_TEMP_LIMIT;
 	pContext->ThermalThrottlingLoopJustEnabled = false;
 
-	pContext->FeatureEnabled = true;
+	pContext->FeatureEnabled = false;
 	pContext->PowerOverRideEnabled = false;
 	pContext->bUserThrottlingTempLimitEnabled = false;
 }

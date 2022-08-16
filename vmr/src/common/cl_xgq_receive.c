@@ -79,8 +79,14 @@ static struct xgq_cmd_cl_map xgq_cmd_sensor_map[] = {
 	{XGQ_CMD_SENSOR_SID_ALL, CL_SENSOR_ALL},
 };
 
+static struct xgq_cmd_cl_map xgq_cmd_clk_scaling_map[] = {
+	{XGQ_CMD_CLK_SCALING_GET_STATUS,   CL_CLK_SCALING_READ},
+	{XGQ_CMD_CLK_SCALING_SET_OVERRIDE, CL_CLK_SCALING_SET},
+};
+
 void cl_msg_handle_complete(cl_msg_t *msg)
 {
+	clk_throttling_params_t scaling_params = {0};
 	struct xgq_com_queue_entry cq_cmd = {
 		.hdr.cid = msg->hdr.cid,
 		.hdr.state = XGQ_CMD_STATE_COMPLETED,
@@ -131,6 +137,24 @@ void cl_msg_handle_complete(cl_msg_t *msg)
 		cmd_cq->cq_vmr_payload.program_progress = FLASH_PROGRESS;
 	} else if (msg->hdr.type == CL_MSG_LOG_PAGE) {
 		cmd_cq->cq_log_payload.count = msg->log_payload.size;
+	} else if (msg->hdr.type == CL_MSG_CLK_THROTTLING) {
+		cl_vmc_get_clk_throttling_params(&scaling_params);
+		cmd_cq->cq_clk_scaling_payload.has_clk_scaling = 
+					scaling_params.is_clk_scaling_supported;
+		cmd_cq->cq_clk_scaling_payload.clk_scaling_mode =
+					scaling_params.clk_scaling_mode;
+		cmd_cq->cq_clk_scaling_payload.clk_scaling_en = 
+					scaling_params.clk_scaling_enable;
+		cmd_cq->cq_clk_scaling_payload.temp_shutdown_limit = 
+					scaling_params.limits.shutdown_limit_temp;
+		cmd_cq->cq_clk_scaling_payload.temp_scaling_limit = 
+					scaling_params.limits.throttle_limit_temp;
+		cmd_cq->cq_clk_scaling_payload.pwr_shutdown_limit = 
+					scaling_params.limits.shutdown_limit_pwr;
+		cmd_cq->cq_clk_scaling_payload.pwr_scaling_limit = 
+					scaling_params.limits.throttle_limit_pwr;
+
+
 	}
 
 	if (xSemaphoreTake(msg_complete_lock, portMAX_DELAY)) {
@@ -280,6 +304,27 @@ int sensor_handle(cl_msg_t *msg, struct xgq_cmd_sq *sq)
 	return 0;
 }
 
+int clk_scaling_handle(cl_msg_t *msg, struct xgq_cmd_sq *sq)
+{
+	int ret = 0;
+	u32 aid = 0x1;
+
+	ret = convert_cl_type(sq->clk_scaling_payload.aid, &aid,
+		xgq_cmd_clk_scaling_map, ARRAY_SIZE(xgq_cmd_clk_scaling_map));
+	if (ret)
+		return ret;
+
+	msg->clk_scaling_payload.aid = aid;
+	msg->clk_scaling_payload.scaling_en =
+			(u32)sq->clk_scaling_payload.scaling_en;
+	msg->clk_scaling_payload.scaling_en = 
+			(u32)sq->clk_scaling_payload.pwr_scaling_ovrd_limit;
+	msg->clk_scaling_payload.scaling_en = 
+			(u8) sq->clk_scaling_payload.temp_scaling_ovrd_limit;
+
+	return 0;
+}
+
 struct xgq_cmd_handler {
 	uint16_t	opcode;			/* xgq cmd opcode */
 	uint16_t	msg_type;		/* common layer internal msg type */
@@ -297,6 +342,7 @@ static struct xgq_cmd_handler xgq_cmd_handlers[] = {
 	{XGQ_CMD_OP_VMR_CONTROL, CL_MSG_VMR_CONTROL, "VMR_CONTROL", vmr_control_handle, CL_QUEUE_OPCODE},
 	{XGQ_CMD_OP_SENSOR, CL_MSG_SENSOR, "SENSOR", sensor_handle, CL_QUEUE_OPCODE},
 	{XGQ_CMD_OP_PROGRAM_SCFW, CL_MSG_PROGRAM_SCFW, "PROGRAM SCFW", NULL, CL_QUEUE_PROGRAM},
+	{XGQ_CMD_OP_CLOCK_THROTTLING, CL_MSG_CLK_THROTTLING, "CLOCK THROTTLING", clk_scaling_handle, CL_QUEUE_OPCODE},
 };
 
 /*
