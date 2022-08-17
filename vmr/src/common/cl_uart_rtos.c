@@ -34,8 +34,9 @@
 
 /************************** Function Prototypes *****************************/
 
-static void 	UART_RTOS_Handler(void *CallBackRef, u32 Event, unsigned int EventData);
-static int32_t 	UART_Config(uart_rtos_handle_t *handle, XUartPsv *UartInstPtr, uint16_t DeviceId, uint16_t UartIntrId);
+static void UART_RTOS_Handler(void *CallBackRef, u32 Event, unsigned int EventData);
+static int32_t UART_Config(uart_rtos_handle_t *handle, XUartPsv *UartInstPtr,
+		uint16_t DeviceId, uint16_t UartIntrId, ePlatformType curr_platform);
 
 /************************** Variable Definitions ***************************/
 
@@ -160,7 +161,9 @@ static void UART_RTOS_Handler(void *CallBackRef, u32 Event, unsigned int EventDa
 * @note
 *
 **************************************************************************/
-static int32_t UART_RTOS_Init(uart_rtos_handle_t *handle, XScuGic *IntcInstPtr, u16 DeviceId, u16 UartIntrId){
+static int32_t UART_RTOS_Init(uart_rtos_handle_t *handle, XScuGic *IntcInstPtr,
+		u16 DeviceId, u16 UartIntrId, ePlatformType curr_platform)
+{
 	UART_STATUS ret = UART_SUCCESS;
 	if(NULL == handle){
 		return UART_ERROR_INIT;
@@ -196,7 +199,7 @@ static int32_t UART_RTOS_Init(uart_rtos_handle_t *handle, XScuGic *IntcInstPtr, 
 	Cl_SecureMemset(&handle->cb_msg,0,sizeof(handle->cb_msg));
 
 
-	ret = UART_Config(handle, &handle->uartPsv,DeviceId,UartIntrId);
+	ret = UART_Config(handle, &handle->uartPsv, DeviceId, UartIntrId, curr_platform);
 
 	return ret;
 }
@@ -226,14 +229,13 @@ static int32_t UART_RTOS_Init(uart_rtos_handle_t *handle, XScuGic *IntcInstPtr, 
 * @note
 *
 **************************************************************************/
-static int32_t UART_Config(uart_rtos_handle_t *handle, XUartPsv *UartInstPtr, uint16_t DeviceId, uint16_t UartIntrId)
+static int32_t UART_Config(uart_rtos_handle_t *handle, XUartPsv *UartInstPtr,
+		uint16_t DeviceId, uint16_t UartIntrId, ePlatformType curr_platform)
 {
 	int32_t Status;
 	XUartPsv_Config *Config;
 	uint32_t IntrMask;
-    uint32_t LineCtrlRegister;
-
-
+	uint32_t LineCtrlRegister;
 
 	/*
 	 * Initialize the UART driver so that it's ready to use
@@ -249,16 +251,13 @@ static int32_t UART_Config(uart_rtos_handle_t *handle, XUartPsv *UartInstPtr, ui
 		return XST_FAILURE;
 	}
 
-
-
-	if (DeviceId == XPAR_XUARTPSV_0_DEVICE_ID)
+	if (((curr_platform == eVCK5000) && (DeviceId == XPAR_XUARTPSV_0_DEVICE_ID))
+			|| ((curr_platform == eV70) && (DeviceId == XPAR_XUARTPSV_1_DEVICE_ID)))
 	{
 		LineCtrlRegister = XUartPsv_ReadReg(Config->BaseAddress, XUARTPSV_UARTLCR_OFFSET);
-
 		LineCtrlRegister |= XUARTPSV_UARTLCR_PARITY_EVEN;
 		LineCtrlRegister |= XUARTPSV_UARTLCR_PARITY_MASK;
-		XUartPsv_WriteReg(Config->BaseAddress,
-				        XUARTPSV_UARTLCR_OFFSET, LineCtrlRegister);
+		XUartPsv_WriteReg(Config->BaseAddress, XUARTPSV_UARTLCR_OFFSET, LineCtrlRegister);
 	}
 
 	/*
@@ -269,10 +268,9 @@ static int32_t UART_Config(uart_rtos_handle_t *handle, XUartPsv *UartInstPtr, ui
 	 */
 	XUartPsv_SetHandler(UartInstPtr, (XUartPsv_Handler)UART_RTOS_Handler, handle);
 
-
 	XUartPsv_SetRxFifoThreshold(UartInstPtr, XUARTPSV_UARTIFLS_RXIFLSEL_1_8);
-
 	XUartPsv_SetTxFifoThreshold(UartInstPtr, UART_TX_FIFO_THRESHOLD);
+
 	/*
 	 * Enable the interrupt of the UART so interrupts will occur.
 	 */
@@ -498,10 +496,10 @@ int32_t UART_RTOS_Receive(uart_rtos_handle_t *handle, uint8_t *buf, uint32_t siz
 * @note
 *
 **************************************************************************/
-int32_t UART_RTOS_Enable(uart_rtos_config_t *uartConfig)
+int32_t UART_RTOS_Enable(uart_rtos_config_t *uartConfig, ePlatformType curr_platform)
 {
 	int32_t status = UART_RTOS_Init(uartConfig->uartHandler, &uartConfig->INTC,
-		uartConfig->uart_ID, uartConfig->uart_IRQ_ID);
+		uartConfig->uart_ID, uartConfig->uart_IRQ_ID, curr_platform);
 
 	if (status != XST_SUCCESS) {
 		xil_printf("Uart RTOS Initialization Failed\r\n");
@@ -570,7 +568,7 @@ s32 UART_RTOS_Debug_Enable(uart_rtos_handle_t *handle, ePlatformType curr_platfo
 	vmc_debug_logbuf_lock = xSemaphoreCreateMutex();
 	configASSERT(NULL != vmc_debug_logbuf_lock);
 
-	return UART_RTOS_Enable(&debugUartConig);
+	return UART_RTOS_Enable(&debugUartConig, curr_platform);
 }
 
 s32 UART_VMC_SC_Enable(uart_rtos_handle_t *handle, ePlatformType curr_platform)
@@ -589,5 +587,5 @@ s32 UART_VMC_SC_Enable(uart_rtos_handle_t *handle, ePlatformType curr_platform)
 
 	vmcscUartConfig.uartHandler = handle;
 
-	return UART_RTOS_Enable(&vmcscUartConfig);
+	return UART_RTOS_Enable(&vmcscUartConfig, curr_platform);
 }
