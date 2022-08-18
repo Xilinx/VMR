@@ -395,5 +395,6 @@ extern sensorMonitorFunc Temperature_Read_QSFP_Ptr;
 
 void VMC_Get_BoardInfo(Versal_BoardInfo *ptr);
 s32 VMC_Send_BoardInfo_SC(u8 *board_snsr_data);
+ePlatformType Vmc_Get_PlatformType(void);
 
 #endif /* INC_VMC_API_H_ */

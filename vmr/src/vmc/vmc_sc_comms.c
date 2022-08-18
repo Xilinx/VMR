@@ -406,8 +406,15 @@ s32 VMC_Fetch_BoardInfo(u8 *board_snsr_data)
 
     (void)VMC_Get_BoardInfo(&board_info);
     
-    Cl_SecureMemcpy(board_snsr_data, sizeof(Versal_BoardInfo), &board_info, sizeof(Versal_BoardInfo));
     byte_count = sizeof(Versal_BoardInfo);
+
+    /*Since VCK5000 does not support EEPROM v3, 
+     *Reducing the size of boardinfo*/
+    if(Vmc_Get_PlatformType() == eVCK5000)
+    {
+    	byte_count -= (sizeof(board_info.Num_MAC_IDS) + sizeof(board_info.capability));
+    }
+    Cl_SecureMemcpy(board_snsr_data, byte_count, &board_info, byte_count);
 
     /* Check and return -1 if size of response is > 256 */
     return ((byte_count <= MAX_VMC_SC_UART_BUF_SIZE) ? (byte_count) : (-1));
