@@ -34,10 +34,10 @@ static const char *app_type_name[] = {
 };
 
 typedef enum cl_log_level {
-	CL_LOG_LEVEL_PRNT = 0,
-	CL_LOG_LEVEL_ERR,
+	CL_LOG_LEVEL_ERR = 0, /* Please do not change log level value, ERR is using 0 as default value */
 	CL_LOG_LEVEL_LOG,
 	CL_LOG_LEVEL_DBG,
+	CL_LOG_LEVEL_PRNT, /*TODO: explain what is this level */
 } cl_log_level_t;
 
 typedef enum cl_uart_log_level {
