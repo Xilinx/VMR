@@ -13,6 +13,7 @@
 #include "../vmc_main.h"
 #include "vmr_common.h"
 #include "../vmc_sc_comms.h"
+#include "../vmc_update_sc.h"
 
 extern Vmc_Sensors_Gl_t sensor_glvr;
 extern msg_id_ptr msg_id_handler_ptr;

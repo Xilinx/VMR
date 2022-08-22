@@ -237,3 +237,9 @@ static u8 Vmc_ConfigurePlatform(const char * product_name)
 
 	return status;
 }
+
+ePlatformType Vmc_Get_PlatformType(void)
+{
+	return current_platform;
+}
+
