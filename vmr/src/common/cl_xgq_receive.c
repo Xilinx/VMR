@@ -317,9 +317,9 @@ int clk_scaling_handle(cl_msg_t *msg, struct xgq_cmd_sq *sq)
 	msg->clk_scaling_payload.aid = aid;
 	msg->clk_scaling_payload.scaling_en =
 			(u32)sq->clk_scaling_payload.scaling_en;
-	msg->clk_scaling_payload.scaling_en = 
+	msg->clk_scaling_payload.pwr_scaling_ovrd_limit =
 			(u32)sq->clk_scaling_payload.pwr_scaling_ovrd_limit;
-	msg->clk_scaling_payload.scaling_en = 
+	msg->clk_scaling_payload.temp_scaling_ovrd_limit =
 			(u8) sq->clk_scaling_payload.temp_scaling_ovrd_limit;
 
 	return 0;
