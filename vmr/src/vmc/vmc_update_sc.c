@@ -10,6 +10,7 @@
 #include "cl_msg.h"
 #include "cl_rmgmt.h"
 #include "vmc_api.h"
+#include "vmc_main.h"
 #include "cl_uart_rtos.h"
 #include "vmc_update_sc.h"
 #include "vmc_sc_comms.h"
@@ -41,8 +42,6 @@ static u32 max_data_slot = 0;
 
 static u8 rcv_bufr[BSL_MAX_RCV_DATA_SIZE] = {0x00}; /* UART Receiver buffer */
 static u32 rcvd_byte_count = 0x00; /* UART received byte count */
-
-//extern void rmgmt_extension_fpt_query(struct cl_msg *msg);
 
 
 int cl_vmc_scfw_program_progress(void)
@@ -493,7 +492,7 @@ static int get_fpt_sc_version(cl_msg_t *msg, struct fpt_sc_version *version)
 		VMC_LOG("SC Identification: Successful !! ");
 		fpt_scfw_end_addr = fpt_sc_loc.start_address + SC_TOT_HEADER_SIZE + fpt_sc_loc.size;
 		portENTER_CRITICAL();
-		parse_fpt_sc_version((fpt_scfw_end_addr - SC_VER_ADDR_WO_CHKSUM), (u8 *)version);
+		parse_fpt_sc_version((fpt_scfw_end_addr - SC_VER_ADDR_W_CHKSUM), (u8 *)version);
 		portEXIT_CRITICAL();
 
 		VMC_LOG("Fpt SC version: v%d.%d.%d ",
@@ -534,7 +533,7 @@ static bool do_uart_transaction(u8 *send_buf, u32 bytes_to_send, bool recv_resp,
 	}
 	if ((recv_resp) && (ret_value)) {
 		if (UART_SUCCESS == UART_RTOS_Receive(&uart_vmcsc_log, &rcv_bufr[0],
-				bytes_to_recv, &rcvd_byte_count, RCV_TIMEOUT_MS(500))) {
+				bytes_to_recv, &rcvd_byte_count, RCV_TIMEOUT_MS(2000))) {
 			(bytes_to_recv == rcvd_byte_count) ? (ret_value = true) : (ret_value = false);
 		} else {
 			VMC_ERR("Uart Receive Error. Retrying !!");
@@ -919,8 +918,13 @@ static void send_data_to_bsl(void)
 	if (update_status != eStatus_Failure) {
 		update_state = eBsl_Load_Pc_32;
 	} else {
-		update_state = eBsl_Reboot_Reset;
-		update_status = eStatus_In_Progress;
+		if (Vmc_Get_PlatformType() == eVCK5000) {
+			update_state = eBsl_Reboot_Reset;
+			update_status = eStatus_In_Progress;
+		} else {
+			update_state = eSc_State_Idle;
+			update_status = eStatus_Failure;
+		}
 	}
 	vTaskDelay(pdMS_TO_TICKS(10));
 }

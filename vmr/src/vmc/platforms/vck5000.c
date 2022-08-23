@@ -13,6 +13,7 @@
 #include "../vmc_main.h"
 #include "vck5000.h"
 #include "../vmc_sc_comms.h"
+#include "../vmc_update_sc.h"
 #include "../clock_throttling.h"
 
 #define NOMINAL_VOLTAGE 12000

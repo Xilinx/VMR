@@ -17,7 +17,7 @@
 #define DELAY_MS(x)			((x) /portTICK_PERIOD_MS )
 #define RCV_TIMEOUT_MS(x)		((x) /portTICK_PERIOD_MS )
 
-#define SC_UPDATE_MAX_RETRY_COUNT	(10u)
+#define SC_UPDATE_MAX_RETRY_COUNT	(5u)
 #define MODE_VER_MAX_RETRY_COUNT	(3u)
 
 #define BSL_VERSION_REQ_SIZE		(0x06)
@@ -95,7 +95,7 @@
 
 #define MAX_SC_VERSION_SIZE		(0x03)
 
-#define SC_VER_ADDR_WO_CHKSUM		(0x33)
+#define SC_VER_ADDR_W_CHKSUM		(0x195)
 #define SC_VER_MAJ_START_ADDR		(0x7E000)
 #define SC_VER_MIN_START_ADDR		(0x7E002)
 #define SC_VER_REV_START_ADDR		(0x7E004)

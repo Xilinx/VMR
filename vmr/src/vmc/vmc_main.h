@@ -28,4 +28,6 @@ typedef struct Vmc_Sc_Global_Variables {
 	u8    			logging_level;
 } Vmc_Sc_Gl_t;
 
+ePlatformType Vmc_Get_PlatformType(void);
+
 #endif
