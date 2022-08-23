@@ -26,6 +26,7 @@
 #include "clock_throttling.h"
 
 #include "platforms/vck5000.h"
+#include "platforms/v70.h"
 
 #define BITMASK_TO_CLEAR	0xFF00000F
 #define ENABLE_FORCE_SHUTDOWN	0x001B6320
@@ -40,7 +41,9 @@ sensorMonitorFunc Temperature_Read_Inlet_Ptr;
 sensorMonitorFunc Temperature_Read_Outlet_Ptr;
 sensorMonitorFunc Temperature_Read_Board_Ptr;
 sensorMonitorFunc Temperature_Read_QSFP_Ptr;
-//sensorMonitorFunc Fan_RPM_Read_Ptr;
+sensorMonitorFunc Power_Read_Ptr;
+
+platform_sensors_monitor_ptr Monitor_Sensors;
 
 extern SemaphoreHandle_t vmc_sc_lock;
 
@@ -221,7 +224,7 @@ s8 PMBUS_SC_Vccint_Read(snsrRead_t *snsrData)
 	return status;
 }
 
-s8 Power_Monitor(snsrRead_t *snsrData)
+s8 Vck5000_Asdm_Read_Power(snsrRead_t *snsrData)
 {
     s8 status = XST_SUCCESS;
     u8 powerMode = 0;
@@ -571,6 +574,14 @@ s8 Temperature_Read_QSFP(snsrRead_t *snsrData)
 	return (*Temperature_Read_QSFP_Ptr)(snsrData);
 }
 
+s8 Asdm_Read_Power(snsrRead_t *snsrData)
+{
+	if (NULL == Power_Read_Ptr)
+		return XST_SUCCESS;
+
+	return (*Power_Read_Ptr)(snsrData);
+}
+
 void Clock_throttling()
 {
 	/* Check if we have received update request from XRT */
@@ -600,9 +611,14 @@ void Clock_throttling()
 
 void cl_vmc_monitor_sensors()
 {
+	if(NULL != Monitor_Sensors) {
+		Monitor_Sensors();
+	}
     	Monitor_Thresholds();
-    	Monitor_Sensors();
+
+    	Asdm_Update_Sensors();
     	Clock_throttling();
+
 #ifdef VMC_TEST
     	se98a_monitor();
     	max6639_monitor();

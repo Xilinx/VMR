@@ -34,13 +34,6 @@
 #define QSFP_MAX_NUM    (2)
 
 #define ASDM_HEADER_VER     (0x1)
-#define NUM_BOARD_INFO_SENSORS  (12)
-#define NUM_TEMPERATURE_SENSORS  (5)
-#define NUM_SC_VOLTAGE_SENSORS  (5)
-#define NUM_SYSMON_VOLTAGE_SENSORS	(1)
-#define NUM_SC_CURRENT_SENSORS  (4)
-#define NUM_POWER_SENSORS       (1)
-#define CURRENT_SENSORS_INSTANCES (3)
 
 #define SNSRNAME_ACTIVE_SC_VER "Active SC Ver\0"
 /* Temp Sensor Names */
@@ -63,6 +56,12 @@
 #define ASDM_RESP_BYTE_REPO_TYPE	(1)
 #define ASDM_RESP_BYTE_SNSR_SIZE	(2)
 
+/* VCK5000 Specific sensors */
+#define CURRENT_SENSORS_INSTANCES	(3)
+#define NUM_SC_VOLTAGE_SENSORS		(5)
+
+#define MAX_SDR_INFO_COUNT		(100)
+
 SDR_t *sdrInfo;
 extern SemaphoreHandle_t sdr_lock;
 static u8 asdmInitSuccess = false;
@@ -78,9 +77,20 @@ s8 Temperature_Read_QSFP(snsrRead_t *snsrData);
 s8 Temperature_Read_ACAP_Device_Sysmon(snsrRead_t *snsrData);
 //s8 Fan_RPM_Read(snsrRead_t *snsrData);
 s8 PMBUS_SC_Sensor_Read(snsrRead_t *snsrData);
-s8 Power_Monitor(snsrRead_t *snsrData);
+s8 Asdm_Read_Power(snsrRead_t *snsrData);
 s8 PMBUS_SC_Vccint_Read(snsrRead_t *snsrData);
 s8 VCCINT_Read_ACAP_Device_Sysmon(snsrRead_t *snsrData);
+
+/*Todo : Add Abstraction */
+extern s8 V70_Asdm_Read_Voltage_12v(snsrRead_t *snsrData);
+extern s8 V70_Asdm_Read_Voltage_3v3(snsrRead_t *snsrData);
+extern s8 V70_Asdm_Read_Current_12v(snsrRead_t *snsrData);
+extern s8 V70_Asdm_Read_Current_3v3(snsrRead_t *snsrData);
+extern s8 V70_Asdm_Read_Current_Vccint(snsrRead_t *snsrData);
+extern s8 V70_Asdm_Read_Temp_Vccint(snsrRead_t *snsrData);
+
+supported_sdr_info_ptr get_supported_sdr_info;
+asdm_update_record_count_ptr asdm_update_record_count;
 
 Asdm_Sensor_Thresholds_t thresholds_limit_tbl[]= {
     /*  Name           LW   LC   LF    UW   UC  UF  */
@@ -178,13 +188,16 @@ void getQSFPName(u8 index, char8* snsrName, u8 *sensorId)
     }
 }
 
+/*
+ * Record Count is updated based on Platform Type runtime
+ */
 Asdm_Header_t asdmHeaderInfo[] = {
     /* Record Type	| Hdr Version | Record Count | NumBytes */
-    {BoardInfoSDR ,  	ASDM_HEADER_VER  ,  NUM_BOARD_INFO_SENSORS, 	0x7f},
-    {TemperatureSDR, 	ASDM_HEADER_VER  ,  NUM_TEMPERATURE_SENSORS,	0x7f},
-    {VoltageSDR,  	ASDM_HEADER_VER  ,  NUM_SC_VOLTAGE_SENSORS+NUM_SYSMON_VOLTAGE_SENSORS, 	0x7f},
-    {CurrentSDR, 	ASDM_HEADER_VER  ,  NUM_SC_CURRENT_SENSORS,    0x7f},
-    {PowerSDR, 		ASDM_HEADER_VER  ,  NUM_POWER_SENSORS,	        0x7f},
+    {BoardInfoSDR ,  	ASDM_HEADER_VER,  0, 	0x7f},
+    {TemperatureSDR, 	ASDM_HEADER_VER,  0,	0x7f},
+    {VoltageSDR,  	ASDM_HEADER_VER,  0, 	0x7f},
+    {CurrentSDR, 	ASDM_HEADER_VER,  0,	0x7f},
+    {PowerSDR, 		ASDM_HEADER_VER,  0,	0x7f},
 };
 
 #define MAX_SDR_REPO 	(sizeof(asdmHeaderInfo)/sizeof(asdmHeaderInfo[0]))
@@ -201,7 +214,7 @@ Asdm_Header_t asdmHeaderInfo[] = {
  *****************************************************************/
 void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
 {
-    Asdm_Sensor_MetaData_t snsrMetaData[] = {
+    Asdm_Sensor_MetaData_t snsrMetaData[eSdr_Sensor_Max] = {
 	{
 	    .repoType = BoardInfoSDR,
 	    .sensorName = "Product Name\0",
@@ -274,28 +287,6 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
 	    .snsrValTypeLength = SENSOR_TYPE_NUM | sizeof(board_info.OEM_ID),
 	    .defaultValue = &board_info.OEM_ID[0],
 	},
-/*	{
-	    .repoType = TemperatureSDR,
-	    .sensorName = "Inlet Temp\0",
-	    .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_2B,
-	    .snsrUnitModifier = 0x0,
-	    .supportedThreshold = SNSR_MAX_VAL | SNSR_AVG_VAL | HAS_UPPER_THRESHOLDS,
-	    .sensorListTbl = eSC_INLET_TEMP,
-	    .sampleCount = 0x1,
-	    .monitorFunc = &Temperature_Read_Inlet,
-
-	},
-	{
-	    .repoType = TemperatureSDR,
-	    .sensorName = "Outlet Temp\0",
-	    .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_2B,
-	    .snsrUnitModifier = 0x0,
-	    .supportedThreshold = SNSR_MAX_VAL | SNSR_AVG_VAL | HAS_UPPER_THRESHOLDS,
-	    .sampleCount = 0x1,
-	    .sensorListTbl = eSC_OUTLET_TEMP,
-	    .monitorFunc = &Temperature_Read_Outlet,
-	},
-*/
 	{
 	    .repoType = TemperatureSDR,
 	    .sensorName = TEMP_BOARD_NAME,
@@ -337,6 +328,15 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
 	    .monitorFunc = &Temperature_Read_QSFP,
 	},
 	{
+	    .repoType = TemperatureSDR,
+	    .sensorName = TEMP_VCCINT_NAME,
+	    .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_2B,
+	    .snsrUnitModifier = 0x0,
+	    .supportedThreshold = SNSR_MAX_VAL | SNSR_AVG_VAL | HAS_UPPER_THRESHOLDS,
+	    .sampleCount = 0x1,
+	    .monitorFunc = &V70_Asdm_Read_Temp_Vccint,
+	},
+	{
 	    .repoType = VoltageSDR,
 	    .getSensorName = &getVoltagesName,
 	    .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_2B,
@@ -355,6 +355,26 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
 		.sampleCount = 0x1,
 		.sensorListTbl = VCCINT,
 		.monitorFunc = &VCCINT_Read_ACAP_Device_Sysmon,
+	},
+	{
+	    .repoType = VoltageSDR,
+	    .sensorName = "12v_pex\0",
+	    .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_2B,
+	    .snsrUnitModifier = -3,
+	    .supportedThreshold = SNSR_MAX_VAL | SNSR_AVG_VAL ,
+	    .sampleCount = 0x1,
+	    .sensorInstance = 0x1,
+	    .monitorFunc = &V70_Asdm_Read_Voltage_12v,
+	},
+	{
+	    .repoType = VoltageSDR,
+	    .sensorName = "3v3_pex\0",
+	    .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_2B,
+	    .snsrUnitModifier = -3,
+	    .supportedThreshold = SNSR_MAX_VAL | SNSR_AVG_VAL ,
+	    .sampleCount = 0x1,
+	    .sensorInstance = 0x1,
+	    .monitorFunc = &V70_Asdm_Read_Voltage_3v3,
 	},
 	{
 	    .repoType = CurrentSDR,
@@ -377,31 +397,74 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
 	    .monitorFunc = &PMBUS_SC_Vccint_Read,
 	},
 	{
+	    .repoType = CurrentSDR,
+	    .sensorName = "12v_pex\0",
+	    .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_2B,
+	    .snsrUnitModifier = -3,
+	    .supportedThreshold = SNSR_MAX_VAL | SNSR_AVG_VAL ,
+	    .sampleCount = 0x1,
+	    .monitorFunc = &V70_Asdm_Read_Current_12v,
+	},
+	{
+	    .repoType = CurrentSDR,
+	    .sensorName = "3v3_pex\0",
+	    .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_2B,
+	    .snsrUnitModifier = -3,
+	    .supportedThreshold = SNSR_MAX_VAL | SNSR_AVG_VAL ,
+	    .sampleCount = 0x1,
+	    .monitorFunc = &V70_Asdm_Read_Current_3v3,
+	},
+	{
+	    .repoType = CurrentSDR,
+	    .sensorName = VCCINT_NAME,
+	    .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_2B,
+	    .snsrUnitModifier = -3,
+	    .supportedThreshold = SNSR_MAX_VAL | SNSR_AVG_VAL ,
+	    .sampleCount = 0x1,
+	    .monitorFunc = &V70_Asdm_Read_Current_Vccint,
+	},
+	{
 	    .repoType = PowerSDR,
 	    .sensorName = "Total Power\0",
 	    .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_2B,
 	    .snsrUnitModifier = 0,
 	    .supportedThreshold = SNSR_MAX_VAL | SNSR_AVG_VAL ,
 	    .sampleCount = 0x1,
-	    .monitorFunc = &Power_Monitor,
+	    .monitorFunc = &Asdm_Read_Power,
 	},
     };
 
-    /* Get Record Count */
-    *sdrMetaDataCount = (sizeof(snsrMetaData) / sizeof(snsrMetaData[0]));
+
+    u32 sdr_count = 0;
+    u32 platform_Supported_Sensors[MAX_SDR_INFO_COUNT] = {0};
+
+    if(NULL != get_supported_sdr_info) {
+    	(*get_supported_sdr_info)(platform_Supported_Sensors,&sdr_count);
+    	*sdrMetaDataCount = sdr_count;
+    }
 
     *pMetaData = (Asdm_Sensor_MetaData_t *) pvPortMalloc( sizeof(Asdm_Sensor_MetaData_t) * (*sdrMetaDataCount));
-
     if(*pMetaData != NULL)
     {
-    	Cl_SecureMemset(*pMetaData,0x00,sizeof(snsrMetaData));
-    	Cl_SecureMemcpy(*pMetaData,sizeof(snsrMetaData),snsrMetaData,sizeof(snsrMetaData));
+    	Cl_SecureMemset(*pMetaData,0x00,(sizeof(Asdm_Sensor_MetaData_t) * (*sdrMetaDataCount)));
+
+    	u16 loop = 0;
+    	u32 offset = 0;
+    	u32 sensorPdrIndex = 0;
+    	for(loop = 0; loop < (*sdrMetaDataCount); loop++)
+    	{
+    		sensorPdrIndex = platform_Supported_Sensors[loop];
+    		Cl_SecureMemcpy(*(pMetaData)+loop,sizeof(Asdm_Sensor_MetaData_t),
+    				&snsrMetaData[sensorPdrIndex], sizeof(Asdm_Sensor_MetaData_t));
+    		offset += sizeof(Asdm_Sensor_MetaData_t);
+    	}
     }
     else
     {
-	VMC_ERR(" pvPortMalloc Failed\n\r");
-	return;
+    	VMC_ERR(" pvPortMalloc Failed\n\r");
+    	return;
     }
+
 }
 
 u8 getThresholdIdx(u8 *threshIdx,char8 *snsrName,u8 snsrNameLen)
@@ -558,6 +621,11 @@ s8 Init_Asdm()
     u8 totalSensorInstances = 0;
     u8 sensorInstance = 0;
 
+    /* Update the Platform specific Record Count*/
+    if(asdm_update_record_count != NULL)
+    {
+    	(*asdm_update_record_count)(asdmHeaderInfo);
+    }
     /* Fetch the ASDM SDR Repository */
     getSDRMetaData(&pSdrMetaData, &sdrMetaDataCount);
 
@@ -571,7 +639,7 @@ s8 Init_Asdm()
     if(sdrMetaDataCount != totalRecords)
     {
 	/* LoG Error, don't proceed for Init */
-	VMC_ERR("Records Count Mismatch  !!!\n\r");
+	//VMC_ERR("Records Count Mismatch  !!!\n\r");
 	//return -1;
     }
 
@@ -889,7 +957,7 @@ s8 Init_Asdm()
     }
 
     asdmInitSuccess = true;
-    VMC_LOG("ASDM Init success !!\n\r");
+    VMC_LOG("ASDM Init success !!");
 
     return 0;
 }
@@ -1257,7 +1325,7 @@ s8 Asdm_Process_Sensor_Request(u8 *req, u8 *resp, u16 *respSize)
  * global SDR record for external consumption
  *******************************************************************/
 
-void Monitor_Sensors(void)
+void Asdm_Update_Sensors(void)
 {
     snsrRead_t snsrData = {0};
     u8 idx = 0;

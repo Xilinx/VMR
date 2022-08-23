@@ -14,6 +14,7 @@
 #include "vck5000.h"
 #include "../vmc_sc_comms.h"
 #include "../clock_throttling.h"
+#include "../vmc_asdm.h"
 
 #define NOMINAL_VOLTAGE 12000
 #define VCK5000_IDLE_POWER 21000000
@@ -25,9 +26,29 @@
 #define VCK5000_TEMP_GAIN_KAW			5.500e-04    //0x3a102de2;
 #define VCK5000_INTEGRATION_SUM_INITIAL	1.150e+08
 
+#define VCK5000_NUM_BOARD_INFO_SENSORS		(12)
+#define VCK5000_NUM_TEMPERATURE_SENSORS		(5)
+#define VCK5000_NUM_SC_VOLTAGE_SENSORS		(5)
+#define VCK5000_NUM_SYSMON_VOLTAGE_SENSORS	(1)
+#define VCK5000_NUM_SC_CURRENT_SENSORS		(4)
+#define VCK5000_NUM_POWER_SENSORS		(1)
+
+AsdmHeader_info_t vck5000_asdmHeader_info[] = {
+		{BoardInfoSDR, VCK5000_NUM_BOARD_INFO_SENSORS},
+		{TemperatureSDR, VCK5000_NUM_TEMPERATURE_SENSORS},
+		{VoltageSDR, VCK5000_NUM_SC_VOLTAGE_SENSORS + VCK5000_NUM_SYSMON_VOLTAGE_SENSORS},
+		{CurrentSDR, VCK5000_NUM_SC_CURRENT_SENSORS},
+		{PowerSDR, VCK5000_NUM_POWER_SENSORS},
+};
+#define MAX_SDR_REPO 	(sizeof(vck5000_asdmHeader_info)/sizeof(vck5000_asdmHeader_info[0]))
+
 extern Vmc_Sensors_Gl_t sensor_glvr;
 extern msg_id_ptr msg_id_handler_ptr;
+
 extern Fetch_BoardInfo_Func fetch_boardinfo_ptr;
+
+extern supported_sdr_info_ptr get_supported_sdr_info;
+extern asdm_update_record_count_ptr asdm_update_record_count;
 
 Build_Clock_Throttling_Profile clock_throttling_vck5000;
 Clock_Throttling_Algorithm clock_throttling_std_algorithm;
@@ -52,6 +73,59 @@ typedef enum {
 }eClk_scaling_mode;
 
 extern clk_throttling_params_t g_clk_trottling_params;
+
+u32 vck5000_Supported_Sensors[] = {
+	eProduct_Name,
+	eSerial_Number,
+	ePart_Number,
+	eRevision,
+	eMfg_Date,
+	eUUID,
+	eMAC_0,
+	eMAC_1,
+	eFpga_Fan_1,
+	eActive_SC_Ver,
+	eTarget_SC_Ver,
+	eOEM_Id,
+
+	/* Temperature SDR */
+	eTemp_Board,
+	eTemp_Sysmon_Fpga,
+	eTemp_Vccint,
+	eTemp_Qsfp,
+
+	/* Voltage SDR */
+	eVolatge_SC_Sensors,
+	eVoltage_Sysmon_Vccint,
+
+	/* Current SDR */
+	eCurrent_SC_Sensors,
+	eCurrent_SC_Vccint,
+
+	/* Power SDR */
+	ePower_Total
+};
+
+void Vck5000_Get_Supported_Sdr_Info(u32 *platform_Supported_Sensors, u32 *sdr_count)
+{
+	*sdr_count = (sizeof(vck5000_Supported_Sensors) / sizeof(vck5000_Supported_Sensors[0]));
+	Cl_SecureMemcpy(platform_Supported_Sensors, sizeof(vck5000_Supported_Sensors),
+			vck5000_Supported_Sensors,sizeof(vck5000_Supported_Sensors));
+
+	return;
+}
+
+void Vck5000_Asdm_Update_Record_Count(Asdm_Header_t *headerInfo)
+{
+	u8 i = 0;
+	for(i=0; i < MAX_SDR_REPO; i++)
+	{
+		if(headerInfo[i].repository_type == vck5000_asdmHeader_info[i].record_type) {
+			headerInfo[i].no_of_records = vck5000_asdmHeader_info[i].record_count;
+		}
+	}
+	return;
+}
 
 void Build_clock_throttling_profile_VCK5000(Build_Clock_Throttling_Profile * pProfile)
 {
@@ -115,7 +189,10 @@ u8 Vck5000_Init(void)
 	ClockThrottling_Initialize(&clock_throttling_std_algorithm, &clock_throttling_vck5000);
 
 	clk_scaling_params_init();
-	
+
+	get_supported_sdr_info = Vck5000_Get_Supported_Sdr_Info;
+	asdm_update_record_count = Vck5000_Asdm_Update_Record_Count;
+
 	return XST_SUCCESS;
 }
 

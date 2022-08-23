@@ -69,6 +69,7 @@ s8 Vck5000_Temperature_Read_Outlet(snsrRead_t *snsrData);
 s8 Vck5000_Temperature_Read_Board(snsrRead_t *snsrData);
 s8 Vck5000_Temperature_Read_QSFP(snsrRead_t *snsrData);
 s8 Vck5000_Fan_RPM_Read(snsrRead_t *snsrData);
+s8 Vck5000_Asdm_Read_Power(snsrRead_t *snsrData);
 
 void se98a_monitor(void);
 void max6639_monitor(void);
