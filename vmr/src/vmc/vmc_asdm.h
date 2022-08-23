@@ -37,6 +37,47 @@ typedef enum Asdm_Repository_Type_Enum_e
     VMCLogDataSDR  = 0xE1,
 }Asdm_RepositoryTypeEnum_t;
 
+typedef enum
+{
+	eProduct_Name,
+	eSerial_Number,
+	ePart_Number,
+	eRevision,
+	eMfg_Date,
+	eUUID,
+	eMAC_0,
+	eMAC_1,
+	eFpga_Fan_1,
+	eActive_SC_Ver,
+	eTarget_SC_Ver,
+	eOEM_Id,
+
+	/* Temperature SDR */
+	eTemp_Board,
+	eTemp_Sysmon_Fpga,
+	eTemp_Vccint,
+	eTemp_Qsfp,
+	eTemp_Vccint_Temp,
+
+	/* Voltage SDR */
+	eVolatge_SC_Sensors,
+	eVoltage_Sysmon_Vccint,
+	eVoltage_12v_Pex,
+	eVoltage_3v3_Pex,
+
+	/* Current SDR */
+	eCurrent_SC_Sensors,
+	eCurrent_SC_Vccint,
+	eCurrent_12v_Pex,
+	eCurrent_3v3_Pex,
+	eCurrent_Vccint,
+
+	/* Power SDR */
+	ePower_Total,
+
+	eSdr_Sensor_Max
+}Asdm_Sensor_PDR_List_t;
+
 typedef enum Threshold_Support_Enum
 {
     Upper_Warning_Threshold  = 0x01,
@@ -197,9 +238,16 @@ typedef enum Sensor_Status_Enum_e
     Sensor_Status_Not_Available = 0x7F,
 }SDR_Sensor_Status_Enum_t;
 
+typedef struct __attribute__((packed)) {
+	Asdm_RepositoryTypeEnum_t record_type;
+	u8 record_count;
+}AsdmHeader_info_t;
+
 s8 Init_Asdm();
-void Monitor_Sensors(void);
+void Asdm_Update_Sensors(void);
 s8 Asdm_Process_Sensor_Request(u8 *req, u8 *resp, u16 *respSize);
+
+typedef void (*asdm_update_record_count_ptr) (Asdm_Header_t *headerInfo );
 
 #endif
 

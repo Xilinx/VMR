@@ -46,10 +46,12 @@ Platform_Sensor_Handler_t platform_sensor_handlers[]=
 	{eVCK5000,eTemperature_Sensor_Outlet,Vck5000_Temperature_Read_Outlet},
 	{eVCK5000,eTemperature_Sensor_Board,Vck5000_Temperature_Read_Board},
 	{eVCK5000,eTemperature_Sensor_QSFP,Vck5000_Temperature_Read_QSFP},
+	{eVCK5000,ePower_Sensor,Vck5000_Asdm_Read_Power},
 	{eV70,eTemperature_Sensor_Inlet,V70_Temperature_Read_Inlet},
 	{eV70,eTemperature_Sensor_Outlet,V70_Temperature_Read_Outlet},
 	{eV70,eTemperature_Sensor_Board,V70_Temperature_Read_Board},
 	{eV70, eTemperature_Sensor_QSFP, NULL},
+	{eV70,ePower_Sensor,V70_Asdm_Read_Power},
 };
 
 Platform_Function_Handler_t platform_function_handlers[]=
@@ -227,9 +229,9 @@ static u8 Vmc_ConfigurePlatform(const char * product_name)
 				Temperature_Read_QSFP_Ptr = Vmc_Find_Sensor_Handler(i);
 				break;
 
-//			case eFAN_RPM_READ:
-//				Fan_RPM_Read_Ptr = Vmc_Find_Sensor_Handler(i);
-//				break;
+			case ePower_Sensor:
+				Power_Read_Ptr = Vmc_Find_Sensor_Handler(i);
+				break;
 
 		}
 	}

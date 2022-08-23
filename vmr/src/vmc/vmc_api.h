@@ -244,7 +244,7 @@ typedef enum{
 	eTemperature_Sensor_Outlet,
 	eTemperature_Sensor_Board,
 	eTemperature_Sensor_QSFP,
-	//eFAN_RPM_READ,
+	ePower_Sensor,
 	eMax_Sensor_Functions,
 } eSensor_Functions;
 
@@ -391,9 +391,12 @@ extern sensorMonitorFunc Temperature_Read_Inlet_Ptr;
 extern sensorMonitorFunc Temperature_Read_Outlet_Ptr;
 extern sensorMonitorFunc Temperature_Read_Board_Ptr;
 extern sensorMonitorFunc Temperature_Read_QSFP_Ptr;
-//extern sensorMonitorFunc Fan_RPM_Read_Ptr;
+extern sensorMonitorFunc Power_Read_Ptr;
 
 void VMC_Get_BoardInfo(Versal_BoardInfo *ptr);
 s32 VMC_Send_BoardInfo_SC(u8 *board_snsr_data);
+
+typedef void (*platform_sensors_monitor_ptr)(void);
+typedef void (*supported_sdr_info_ptr) (u32 *supported_pdr, u32 *pdr_count);
 
 #endif /* INC_VMC_API_H_ */
