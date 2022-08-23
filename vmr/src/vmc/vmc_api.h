@@ -162,8 +162,8 @@
 #define EEPROM_V3_0_MAX_POWER_MODE_OFFSET     	0x7200
 #define EEPROM_V3_0_MAX_POWER_MODE_SIZE       	1
 
-#define EEPROM_V3_0_DIMM_SIZE_OFFSET          	0x7300
-#define EEPROM_V3_0_DIMM_SIZE_SIZE            	4
+#define EEPROM_V3_0_MEM_SIZE_OFFSET          	0x7300
+#define EEPROM_V3_0_MEM_SIZE_SIZE            	4
 
 #define EEPROM_V3_0_OEMID_SIZE_OFFSET         	0x7700
 #define EEPROM_V3_0_OEMID_SIZE                	4
@@ -191,7 +191,7 @@ typedef enum eeprom_data_e
 	eEeprom_Uuid,
 	eEeprom_Pcie_Info,
 	eEeprom_Max_Power_Mode,
-	eEeprom_Dimm_Size,
+	eEeprom_mem_Size,
 	eEeprom_Oemid_Size,
 	eEeprom_Capability_Word,
 	eEeprom_max_Offset,
@@ -206,23 +206,23 @@ typedef struct eeprom_data_s
 
 typedef struct Versal_BoardInfo
 {
-    unsigned char product_name[17];
-    unsigned char board_rev[9];
-    unsigned char board_serial[15];
-    unsigned char eeprom_version[4];
-    unsigned char board_mac[4][7];
-    unsigned char board_act_pas[2];
-    unsigned char board_config_mode[2];
-    unsigned char board_mfg_date[4];
-    unsigned char board_part_num[10];
-    unsigned char board_uuid[17];
-    unsigned char board_pcie_info[9];
-    unsigned char board_max_power_mode[2];
-    unsigned char Memory_size[5];
-    unsigned char OEM_ID[5];
-    unsigned char DIMM_size[5];
-    unsigned char Num_MAC_IDS;
-    unsigned char capability[2];
+	u8 product_name[EEPROM_V3_0_PRODUCT_NAME_SIZE + 1];
+	u8 board_rev[EEPROM_V3_0_BOARD_REV_SIZE + 1];
+	u8 board_serial[EEPROM_V3_0_BOARD_SERIAL_SIZE + 1];
+	u8 eeprom_version[EEPROM_VERSION_SIZE + 1];
+	u8 board_mac[4][7];
+	u8 board_act_pas[EEPROM_V3_0_BOARD_ACT_PAS_SIZE + 1];
+	u8 board_config_mode[EEPROM_V3_0_BOARD_CONFIG_MODE_SIZE + 1];
+	u8 board_mfg_date[EEPROM_V3_0_MFG_DATE_SIZE + 1];
+	u8 board_part_num[EEPROM_V3_0_PART_NUM_SIZE + 1];
+	u8 board_uuid[EEPROM_V3_0_UUID_SIZE + 1];
+	u8 board_pcie_info[EEPROM_V3_0_PCIE_INFO_SIZE + 1];
+	u8 board_max_power_mode[EEPROM_V3_0_MAX_POWER_MODE_SIZE + 1];
+	u8 Memory_size[EEPROM_V3_0_MEM_SIZE_SIZE + 1];
+	u8 OEM_ID[EEPROM_V3_0_OEMID_SIZE + 1];
+	u8 DIMM_size[EEPROM_V3_0_MEM_SIZE_SIZE + 1];
+	u8 Num_MAC_IDS;
+	u8 capability[EEPROM_V3_0_CAPABILITY_SIZE + 1];
 } Versal_BoardInfo;
 
 #define 	MAX_PLATFORM_NAME_LEN (20u)

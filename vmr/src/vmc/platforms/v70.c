@@ -13,10 +13,10 @@
 #include "../vmc_main.h"
 #include "vmr_common.h"
 #include "../vmc_sc_comms.h"
-#include "../vmc_update_sc.h"
 
 extern Vmc_Sensors_Gl_t sensor_glvr;
 extern msg_id_ptr msg_id_handler_ptr;
+extern Fetch_BoardInfo_Func fetch_boardinfo_ptr;
 
 static u8 i2c_main = LPD_I2C_0;
 
@@ -31,6 +31,7 @@ u8 V70_Init(void)
 	//s8 status = XST_FAILURE;
 	msg_id_handler_ptr = V70_VMC_SC_Comms_Msg;
 	set_total_req_size(V70_MAX_MSGID_COUNT);
+	fetch_boardinfo_ptr = &V70_VMC_Fetch_BoardInfo;
 
 	return XST_SUCCESS;
 }
@@ -108,4 +109,19 @@ void LM75_monitor(void)
 	}
 
 	return;
+}
+
+s32 V70_VMC_Fetch_BoardInfo(u8 *board_snsr_data)
+{
+    Versal_BoardInfo board_info = {0};
+    /* byte_count will indicate the length of the response payload being generated */
+    u32 byte_count = 0;
+
+    (void)VMC_Get_BoardInfo(&board_info);
+
+    Cl_SecureMemcpy(board_snsr_data, sizeof(Versal_BoardInfo), &board_info, sizeof(Versal_BoardInfo));
+    byte_count = sizeof(Versal_BoardInfo);
+
+    /* Check and return -1 if size of response is > 256 */
+    return ((byte_count <= MAX_VMC_SC_UART_BUF_SIZE) ? (byte_count) : (-1));
 }

@@ -54,7 +54,7 @@ EEPROM_Content_Details_t Ver_3_0_Offset_Size[eEeprom_max_Offset] =
 	{EEPROM_V3_0_UUID_OFFSET, EEPROM_V3_0_UUID_SIZE},
 	{EEPROM_V3_0_PCIE_INFO_OFFSET, EEPROM_V3_0_PCIE_INFO_SIZE},
 	{EEPROM_V3_0_MAX_POWER_MODE_OFFSET, EEPROM_V3_0_MAX_POWER_MODE_SIZE},
-	{EEPROM_V3_0_DIMM_SIZE_OFFSET, EEPROM_V3_0_DIMM_SIZE_SIZE},
+	{EEPROM_V3_0_MEM_SIZE_OFFSET, EEPROM_V3_0_MEM_SIZE_SIZE},
 	{EEPROM_V3_0_OEMID_SIZE_OFFSET, EEPROM_V3_0_OEMID_SIZE},
 	{EEPROM_V3_0_CAPABILITY_OFFSET, EEPROM_V3_0_CAPABILITY_SIZE},
 };
@@ -532,8 +532,8 @@ u8 Versal_EEPROM_ReadBoardInfo(void)
 			eeprom_offset[eEeprom_Max_Power_Mode].size);
 
 	status = Update_BoardInfo_Data(i2c_num, board_info.Memory_size,
-			eeprom_offset[eEeprom_Dimm_Size].offset,
-			eeprom_offset[eEeprom_Dimm_Size].size);
+			eeprom_offset[eEeprom_mem_Size].offset,
+			eeprom_offset[eEeprom_mem_Size].size);
 
 	status = Update_BoardInfo_Data(i2c_num, board_info.OEM_ID,
 			eeprom_offset[eEeprom_Oemid_Size].offset,

@@ -13,7 +13,6 @@
 #include "../vmc_main.h"
 #include "vck5000.h"
 #include "../vmc_sc_comms.h"
-#include "../vmc_update_sc.h"
 #include "../clock_throttling.h"
 
 #define NOMINAL_VOLTAGE 12000
@@ -28,6 +27,7 @@
 
 extern Vmc_Sensors_Gl_t sensor_glvr;
 extern msg_id_ptr msg_id_handler_ptr;
+extern Fetch_BoardInfo_Func fetch_boardinfo_ptr;
 
 Build_Clock_Throttling_Profile clock_throttling_vck5000;
 Clock_Throttling_Algorithm clock_throttling_std_algorithm;
@@ -106,6 +106,7 @@ u8 Vck5000_Init(void)
 
 	msg_id_handler_ptr = VCK5000_VMC_SC_Comms_Msg;
 	set_total_req_size(VCK5000_MAX_MSGID_COUNT);
+	fetch_boardinfo_ptr = &Vck5000_VMC_Fetch_BoardInfo;
 
 	/* platform specific initialization */
 	Build_clock_throttling_profile_VCK5000(&clock_throttling_vck5000);
@@ -347,5 +348,52 @@ u8 Vck5000_Vmc_Sc_Comms(void)
 	}
 
 	return XST_SUCCESS;
+}
+
+s32 Vck5000_VMC_Fetch_BoardInfo(u8 *board_snsr_data)
+{
+	Versal_BoardInfo board_info = { 0 };
+	/* byte_count will indicate the length of the response payload being generated */
+	u32 byte_count = 0;
+	u32 bufr_ptr = 0;
+
+	(void) VMC_Get_BoardInfo(&board_info);
+	Cl_SecureMemcpy(board_info.DIMM_size, (EEPROM_V2_0_DIMM_SIZE_SIZE + 1), board_info.Memory_size, (EEPROM_V2_0_DIMM_SIZE_SIZE + 1));
+
+	Cl_SecureMemcpy(&board_snsr_data[bufr_ptr], (EEPROM_V2_0_PRODUCT_NAME_SIZE + 1), board_info.product_name, (EEPROM_V2_0_PRODUCT_NAME_SIZE + 1));
+	bufr_ptr += (EEPROM_V2_0_PRODUCT_NAME_SIZE + 1);
+	Cl_SecureMemcpy(&board_snsr_data[bufr_ptr], (EEPROM_V2_0_BOARD_REV_SIZE + 1), board_info.board_rev, (EEPROM_V2_0_BOARD_REV_SIZE + 1));
+	bufr_ptr += (EEPROM_V2_0_BOARD_REV_SIZE + 1);
+	Cl_SecureMemcpy(&board_snsr_data[bufr_ptr], (EEPROM_V2_0_BOARD_SERIAL_SIZE + 1), board_info.board_serial, (EEPROM_V2_0_BOARD_SERIAL_SIZE + 1));
+	bufr_ptr += (EEPROM_V2_0_BOARD_SERIAL_SIZE + 1);
+	Cl_SecureMemcpy(&board_snsr_data[bufr_ptr], (EEPROM_VERSION_SIZE + 1), board_info.eeprom_version, (EEPROM_VERSION_SIZE + 1));
+	bufr_ptr += (EEPROM_VERSION_SIZE + 1);
+	Cl_SecureMemcpy(&board_snsr_data[bufr_ptr], 28, board_info.board_mac, 28);
+	bufr_ptr += 28;
+	Cl_SecureMemcpy(&board_snsr_data[bufr_ptr], (EEPROM_V2_0_BOARD_ACT_PAS_SIZE + 1), board_info.board_act_pas, (EEPROM_V2_0_BOARD_ACT_PAS_SIZE + 1));
+	bufr_ptr += (EEPROM_V2_0_BOARD_ACT_PAS_SIZE + 1);
+	Cl_SecureMemcpy(&board_snsr_data[bufr_ptr], (EEPROM_V2_0_BOARD_CONFIG_MODE_SIZE + 1), board_info.board_config_mode, (EEPROM_V2_0_BOARD_CONFIG_MODE_SIZE + 1));
+	bufr_ptr += (EEPROM_V2_0_BOARD_CONFIG_MODE_SIZE + 1);
+	Cl_SecureMemcpy(&board_snsr_data[bufr_ptr], (EEPROM_V2_0_MFG_DATE_SIZE + 1), board_info.board_mfg_date, (EEPROM_V2_0_MFG_DATE_SIZE + 1));
+	bufr_ptr += (EEPROM_V2_0_MFG_DATE_SIZE + 1);
+	Cl_SecureMemcpy(&board_snsr_data[bufr_ptr], (EEPROM_V2_0_PART_NUM_SIZE + 1), board_info.board_part_num, (EEPROM_V2_0_PART_NUM_SIZE + 1));
+	bufr_ptr += (EEPROM_V2_0_PART_NUM_SIZE + 1);
+	Cl_SecureMemcpy(&board_snsr_data[bufr_ptr], (EEPROM_V2_0_UUID_SIZE + 1), board_info.board_uuid, (EEPROM_V2_0_UUID_SIZE + 1));
+	bufr_ptr += (EEPROM_V2_0_UUID_SIZE + 1);
+	Cl_SecureMemcpy(&board_snsr_data[bufr_ptr], (EEPROM_V2_0_PCIE_INFO_SIZE + 1), board_info.board_pcie_info, (EEPROM_V2_0_PCIE_INFO_SIZE + 1));
+	bufr_ptr += (EEPROM_V2_0_PCIE_INFO_SIZE + 1);
+	Cl_SecureMemcpy(&board_snsr_data[bufr_ptr], (EEPROM_V2_0_MAX_POWER_MODE_SIZE + 1), board_info.board_max_power_mode, (EEPROM_V2_0_MAX_POWER_MODE_SIZE + 1));
+	bufr_ptr += (EEPROM_V2_0_MAX_POWER_MODE_SIZE + 1);
+	Cl_SecureMemcpy(&board_snsr_data[bufr_ptr], (EEPROM_V2_0_DIMM_SIZE_SIZE + 1), board_info.Memory_size, (EEPROM_V2_0_DIMM_SIZE_SIZE + 1));
+	bufr_ptr += (EEPROM_V2_0_DIMM_SIZE_SIZE + 1);
+	Cl_SecureMemcpy(&board_snsr_data[bufr_ptr], (EEPROM_V2_0_OEMID_SIZE + 1), board_info.OEM_ID, (EEPROM_V2_0_OEMID_SIZE + 1));
+	bufr_ptr += (EEPROM_V2_0_OEMID_SIZE + 1);
+	Cl_SecureMemcpy(&board_snsr_data[bufr_ptr], (EEPROM_V2_0_DIMM_SIZE_SIZE + 1), board_info.DIMM_size, (EEPROM_V2_0_DIMM_SIZE_SIZE + 1));
+	bufr_ptr += (EEPROM_V2_0_DIMM_SIZE_SIZE + 1);
+
+	byte_count = bufr_ptr;
+
+	/* Check and return -1 if size of response is > 256 */
+	return ((byte_count <= MAX_VMC_SC_UART_BUF_SIZE) ? (byte_count) : (-1));
 }
 
