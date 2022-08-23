@@ -530,7 +530,7 @@ int cl_xgq_receive_init(void)
 
 void cl_xgq_receive_func(void *task_args)
 {
-	const TickType_t xBlockTime = pdMS_TO_TICKS(500);
+	const TickType_t xBlockTime = pdMS_TO_TICKS(100);
 
 	for( ;; ) {
 		uint64_t sq_slot_addr;
