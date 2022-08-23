@@ -15,5 +15,6 @@ u8 V70_Init(void);
 s8 V70_Temperature_Read_Inlet(snsrRead_t *snsrData);
 s8 V70_Temperature_Read_Outlet(snsrRead_t *snsrData);
 s8 V70_Temperature_Read_Board(snsrRead_t *snsrData);
+s32 V70_VMC_Fetch_BoardInfo(u8 *board_snsr_data);
 
 #endif

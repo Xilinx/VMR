@@ -20,6 +20,7 @@
 extern uart_rtos_handle_t uart_vmcsc_log;
 
 typedef u8 (*msg_id_ptr);
+typedef s32 (*Fetch_BoardInfo_Func)(u8 *);
 
 #define SOP_SIZE            (2)
 #define MESSAGE_ID_SIZE     (1)
@@ -187,5 +188,6 @@ bool vmc_get_boardInfo_status();
 void vmc_set_boardInfo_status(bool value);
 u8 get_total_req_size();
 void set_total_req_size(u8 value);
+
 
 #endif /* INC_VMC_VMC_SC_COMMS_H_ */

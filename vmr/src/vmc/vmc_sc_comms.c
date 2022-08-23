@@ -35,6 +35,7 @@ static u8 platform_specific_msgid_count = 0;
 extern u8 Asdm_Send_I2C_Sensors_SC(u8 *scPayload);
 
 Platform_Func_Ptr vmc_sc_comms_ptr = NULL;
+Fetch_BoardInfo_Func fetch_boardinfo_ptr = NULL;
 msg_id_ptr msg_id_handler_ptr = { 0 };
 
 static uint16_t calculate_checksum(vmc_sc_uart_cmd *data)
@@ -398,21 +399,6 @@ void VMC_RX_UART_packet(u8 Expected_Msg_Length)
 	}
 }
 
-s32 VMC_Fetch_BoardInfo(u8 *board_snsr_data)
-{
-    Versal_BoardInfo board_info = {0};
-    /* byte_count will indicate the length of the response payload being generated */
-    u32 byte_count = 0;
-
-    (void)VMC_Get_BoardInfo(&board_info);
-    
-    Cl_SecureMemcpy(board_snsr_data, sizeof(Versal_BoardInfo), &board_info, sizeof(Versal_BoardInfo));
-    byte_count = sizeof(Versal_BoardInfo);
-
-    /* Check and return -1 if size of response is > 256 */
-    return ((byte_count <= MAX_VMC_SC_UART_BUF_SIZE) ? (byte_count) : (-1));
-
-}
 void Get_Sensor_Response_Length(u8 Data)
 {
 	u8 Expected_Msg_Length = 11;
@@ -493,25 +479,27 @@ void VMC_SC_COMMS_Tx_Rx(u8 messageID)
         }
         case SC_COMMS_TX_BOARD_INFO:
         {
-	    u8 payloadLength = 0;
-	    Cl_SecureMemset(scPayload ,0x00,MAX_VMC_SC_UART_BUF_SIZE);
-	    payloadLength = VMC_Fetch_BoardInfo(scPayload);
-	    if(payloadLength < 0)
-	    {
-	        VMC_ERR("BoardInfo Size exceeding UART Max Payload Size");
-		break;
-	    }
-	    VMC_TX_UART_packet(SC_COMMS_TX_BOARD_INFO,
-	        		MSP432_COMMS_NO_FLAG,payloadLength,scPayload);
-	    VMC_RX_UART_packet(MSP432_COMMS_GENERAL_RESP_LEN);
-	    if(isPacketReceived)
-	    {
-		Parse_SC_Data(g_scData, SC_COMMS_RX_BOARD_INFO_RESP);
-		isPacketReceived = false;
-	    }
-	    Cl_SecureMemset(g_scData,0x00,MAX_VMC_SC_UART_BUF_SIZE);
-	    g_scDataCount = 0;
-	    break;
+        	u8 payloadLength = 0;
+        	Cl_SecureMemset(scPayload, 0x00, MAX_VMC_SC_UART_BUF_SIZE);
+        	if(fetch_boardinfo_ptr != NULL) {
+        		payloadLength = (*fetch_boardinfo_ptr)(scPayload);
+        	} else {
+        		payloadLength = 0;
+        		break;
+        	}
+        	if (payloadLength < 0) {
+        		VMC_ERR("BoardInfo Size exceeding UART Max Payload Size");
+        		break;
+        	}
+        	VMC_TX_UART_packet(SC_COMMS_TX_BOARD_INFO, MSP432_COMMS_NO_FLAG, payloadLength, scPayload);
+        	VMC_RX_UART_packet(MSP432_COMMS_GENERAL_RESP_LEN);
+        	if (isPacketReceived) {
+        		Parse_SC_Data(g_scData, SC_COMMS_RX_BOARD_INFO_RESP);
+        		isPacketReceived = false;
+        	}
+        	Cl_SecureMemset(g_scData, 0x00, MAX_VMC_SC_UART_BUF_SIZE);
+        	g_scDataCount = 0;
+        	break;
         }
         case MSP432_COMMS_VMC_VERSION_POWERMODE_REQ:
         {

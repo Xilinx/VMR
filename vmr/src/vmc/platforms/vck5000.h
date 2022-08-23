@@ -75,5 +75,6 @@ void max6639_monitor(void);
 void qsfp_monitor(void);
 
 u8 Vck5000_Vmc_Sc_Comms(void);
+s32 Vck5000_VMC_Fetch_BoardInfo(u8 *board_snsr_data);
 
 #endif
