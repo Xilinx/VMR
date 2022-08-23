@@ -147,4 +147,15 @@
 		xlnx,xgq_device = <&blp_blp_logic_gcq_r2a>;
 		interrupt-names = "irq_sq";
 	};
+
+        buffer@50100000000{
+		device_type = "memory";
+                no-map;
+                reg = <0x500 0x80000000 0x02 0x00>;
+        };
+        buffer@60000000000{
+		device_type = "memory";
+                no-map;
+                reg = <0x600 0x00 0x02 0x00>;
+        };
 };
