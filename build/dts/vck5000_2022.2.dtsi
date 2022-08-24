@@ -126,7 +126,7 @@
         };
     };
 
-	zyxclmm_drm {
+	zyxclmm_drm@0x20200000000 {
 		compatible = "xlnx,zocl-versal";
 		status = "okay";
 		memory-region = <&zocl_versal_region>;
