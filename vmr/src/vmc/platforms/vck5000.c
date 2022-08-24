@@ -129,45 +129,45 @@ void Vck5000_Asdm_Update_Record_Count(Asdm_Header_t *headerInfo)
 
 void Build_clock_throttling_profile_VCK5000(Build_Clock_Throttling_Profile * pProfile)
 {
-    pProfile->NumberOfSensors = VCK5000_NUM_POWER_RAILS;
+	pProfile->NumberOfSensors = VCK5000_NUM_POWER_RAILS;
 
-    pProfile->VoltageSensorID[0] = eSC_PEX_12V;
-    pProfile->VoltageSensorID[1] = eSC_AUX_12V;
-    pProfile->VoltageSensorID[2] = eSC_AUX1_12V;
+	pProfile->VoltageSensorID[0] = eSC_PEX_12V;
+	pProfile->VoltageSensorID[1] = eSC_AUX_12V;
+	pProfile->VoltageSensorID[2] = eSC_AUX1_12V;
 
-    pProfile->CurrentSensorID[0] = eSC_PEX_12V_I_IN;
-    pProfile->CurrentSensorID[1] = eSC_V12_IN_AUX0_I;
-    pProfile->CurrentSensorID[2] = eSC_V12_IN_AUX1_I;
+	pProfile->CurrentSensorID[0] = eSC_PEX_12V_I_IN;
+	pProfile->CurrentSensorID[1] = eSC_V12_IN_AUX0_I;
+	pProfile->CurrentSensorID[2] = eSC_V12_IN_AUX1_I;
 
-    pProfile->throttlingThresholdCurrent[0] = VCK5000_PEX_12V_I_IN_THROTTLING_LIMIT;
-    pProfile->throttlingThresholdCurrent[1] = VCK5000_AUX_12V_I_IN_THROTTLING_LIMIT_2X4;
-    pProfile->throttlingThresholdCurrent[2] = VCK5000_AUX_12V_I_IN_THROTTLING_LIMIT_2X3;
+	pProfile->throttlingThresholdCurrent[0] = VCK5000_PEX_12V_I_IN_THROTTLING_LIMIT;
+	pProfile->throttlingThresholdCurrent[1] = VCK5000_AUX_12V_I_IN_THROTTLING_LIMIT_2X4;
+	pProfile->throttlingThresholdCurrent[2] = VCK5000_AUX_12V_I_IN_THROTTLING_LIMIT_2X3;
 
-    pProfile->NominalVoltage[0] = NOMINAL_VOLTAGE;
-    pProfile->NominalVoltage[1] = NOMINAL_VOLTAGE;
-    pProfile->NominalVoltage[2] = NOMINAL_VOLTAGE;
-    pProfile->IdlePower = VCK5000_IDLE_POWER;
+	pProfile->NominalVoltage[0] = NOMINAL_VOLTAGE;
+	pProfile->NominalVoltage[1] = NOMINAL_VOLTAGE;
+	pProfile->NominalVoltage[2] = NOMINAL_VOLTAGE;
+	pProfile->IdlePower = VCK5000_IDLE_POWER;
 
-    pProfile->bVCCIntThermalThrottling = true;
-    pProfile->TempGainKpFPGA    = VCK5000_TEMP_GAIN_KP_FPGA;
-    pProfile->TempGainKi        = VCK5000_TEMP_GAIN_KI;
-    pProfile->TempGainKpVCCInt  = VCK5000_TEMP_GAIN_KP_VCCINT;
-    pProfile->TempGainKaw       = VCK5000_TEMP_GAIN_KAW;
+	pProfile->bVCCIntThermalThrottling = true;
+	pProfile->TempGainKpFPGA    = VCK5000_TEMP_GAIN_KP_FPGA;
+	pProfile->TempGainKi        = VCK5000_TEMP_GAIN_KI;
+	pProfile->TempGainKpVCCInt  = VCK5000_TEMP_GAIN_KP_VCCINT;
+	pProfile->TempGainKaw       = VCK5000_TEMP_GAIN_KAW;
 
-    pProfile->IntegrataionSumInitial = VCK5000_INTEGRATION_SUM_INITIAL;
+	pProfile->IntegrataionSumInitial = VCK5000_INTEGRATION_SUM_INITIAL;
 
 }
 
 
 void clk_scaling_params_init() {
-        g_clk_trottling_params.is_clk_scaling_supported = true;
-        g_clk_trottling_params.clk_scaling_mode = eCLK_SCALING_MODE_BOTH;
-        g_clk_trottling_params.clk_scaling_enable = false;
-        g_clk_trottling_params.limits.shutdown_limit_temp = TEMP_FPGA_CRITICAL_THRESHOLD;
+	g_clk_trottling_params.is_clk_scaling_supported = true;
+	g_clk_trottling_params.clk_scaling_mode = eCLK_SCALING_MODE_BOTH;
+	g_clk_trottling_params.clk_scaling_enable = false;
+	g_clk_trottling_params.limits.shutdown_limit_temp = TEMP_FPGA_CRITICAL_THRESHOLD;
 	g_clk_trottling_params.limits.shutdown_limit_pwr = POWER_CRITICAL_THRESHOLD;
 	g_clk_trottling_params.limits.throttle_limit_temp = TEMP_THROTTLING_THRESHOLD;
-        g_clk_trottling_params.limits.throttle_limit_pwr = POWER_THROTTLING_THRESOLD_LIMIT;
-        return;
+	g_clk_trottling_params.limits.throttle_limit_pwr = POWER_THROTTLING_THRESOLD_LIMIT;
+	return;
 }
 
 
@@ -265,7 +265,6 @@ s8 Vck5000_Temperature_Read_QSFP(snsrRead_t *snsrData)
 	u8 status = XST_FAILURE;
 	float TempReading = 0.0;
 
-	static bool is_qsfp_critical_threshold_reached = false;
 	status = QSFP_ReadTemperature(&TempReading, snsrData->sensorInstance);
 
 	if (status == XST_SUCCESS)
@@ -289,14 +288,6 @@ s8 Vck5000_Temperature_Read_QSFP(snsrRead_t *snsrData)
 	if (TempReading >= TEMP_QSFP_CRITICAL_THRESHOLD)
 	{
 		ucs_clock_shutdown();
-		is_qsfp_critical_threshold_reached = true;
-
-	}
-	if((is_qsfp_critical_threshold_reached == true) && 
-		(TempReading <  TEMP_QSFP_CRITICAL_THRESHOLD ))
-	{
-		clear_clock_shutdown_status();
-		is_qsfp_critical_threshold_reached = false;
 	}
 	return status;
 }

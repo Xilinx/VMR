@@ -10,6 +10,7 @@
 #include "sensors/inc/qsfp.h"
 
 #define BOARD_TEMPERATURE_SENSOR_NUM 2
+#define MAX_COUNT_TO_WAIT_1SEC 10
 
 #define POWER_MODE_300W 3
 #define LPD_I2C_0	0x1
@@ -38,6 +39,5 @@ typedef struct
 } Versal_sensor_readings;
 
 void ucs_clock_shutdown();
-void clear_clock_shutdown_status();
 
 #endif
