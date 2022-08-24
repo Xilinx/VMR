@@ -5,10 +5,10 @@
 # <path>/ matches files under <path> and any of its subdirectories unless later match
 # <path>/* matches files under <path> but *not* further nested files.
 
-src/common/	@krishna-xilinx @houlz0507 @xdavidz @shahabalilou @sgbhargava
-src/include/	@krishna-xilinx @houlz0507 @xdavidz @shahabalilou @sgbhargava
-src/lscript.ld	@xdavidz
-src/rmgmt/	@xdavidz @houlz0507
-src/vmc/	@krishna-xilinx @houlz0507 @xdavidz @shahabalilou @sgbhargava @sandeept8
+vmr/src/common/	@krishna-xilinx @houlz0507 @xdavidz @shahabalilou @sgbhargava
+vmr/src/include/	@krishna-xilinx @houlz0507 @xdavidz @shahabalilou @sgbhargava
+vmr/src/lscript.ld	@xdavidz
+vmr/src/rmgmt/	@xdavidz @houlz0507
+vmr/src/vmc/	@krishna-xilinx @houlz0507 @xdavidz @shahabalilou @sgbhargava @sandeept8
 
 build/ @xdavidz
