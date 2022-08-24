@@ -15,6 +15,7 @@
 #include "../vmc_main.h"
 #include "vmr_common.h"
 #include "../vmc_sc_comms.h"
+#include "../vmc_sensors.h"
 
 #define SLAVE_ADDRESS_LM75_0_V70  (0x48)
 #define SLAVE_ADDRESS_LM75_1_V70  (0x4A)
@@ -282,6 +283,10 @@ void V70_Power_Monitor()
 	u8 status = XST_FAILURE;
 	float power_12v_pex = 0.0;
 	float power_3v3_pex = 0.0;
+
+	static u8 count_12vpex = 1;
+	static u8 count_3v3pex = 1;
+
 	status = INA3221_ReadPower(i2c_main, SLAVE_ADDRESS_INA3221, 0, &power_12v_pex);
 	if(XST_SUCCESS != status)
 	{
@@ -296,6 +301,41 @@ void V70_Power_Monitor()
 
 	/* Divide by 1000 to convert to Watts */
 	sensor_glvr.sensor_readings.total_power = (power_12v_pex + power_3v3_pex)/1000.0;
+
+	// shutdown clock only if power reached critical threshold continuously for 1sec (100ms*10)
+	if (power_12v_pex >= POWER_12VPEX_CRITICAL_THRESHOLD)
+	{
+		if (count_12vpex == MAX_COUNT_TO_WAIT_1SEC)
+		{
+			ucs_clock_shutdown();
+			count_12vpex = 0;
+		}
+		count_12vpex = count_12vpex + 1;
+	}
+	else /* Reset count value to zero when power values below critical limit and count is less than 10 */
+	{
+		if ((count_12vpex != 0) && (power_12v_pex < POWER_12VPEX_CRITICAL_THRESHOLD))
+		{
+			count_12vpex = 0;
+		}
+	}
+	if (power_3v3_pex >= POWER_3V3PEX_CRITICAL_THRESHOLD)
+	{
+		if (count_3v3pex == MAX_COUNT_TO_WAIT_1SEC)
+		{
+			ucs_clock_shutdown();
+			count_3v3pex = 0;
+		}
+		count_3v3pex = count_3v3pex + 1;
+	}
+	else /* Reset count value to zero when power values below critical limit and count is less than 10 */
+	{
+		if ((count_3v3pex != 0) && (power_3v3_pex < POWER_3V3PEX_CRITICAL_THRESHOLD))
+		{
+			count_3v3pex = 0;
+		}
+
+	}
 }
 
 void V70_Current_Monitor_Vccint()
@@ -395,6 +435,11 @@ s8 V70_Asdm_Read_Temp_Vccint(snsrRead_t *snsrData)
 	snsrData->sensorValueSize = sizeof(temp);
 	snsrData->snsrSatus = Vmc_Snsr_State_Normal;
 
+	/* Shutdown user clock when vccint temperature value goes beyond critical value*/
+	if (temp >= V70_TEMP_VCCINT_CRITICAL_THRESHOLD)
+	{
+	    ucs_clock_shutdown();
+	}
 	return status;
 }
 

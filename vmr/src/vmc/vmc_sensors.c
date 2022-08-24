@@ -56,53 +56,36 @@ Vmc_Sensors_Gl_t sensor_glvr = {
 
 clk_throttling_params_t g_clk_trottling_params;
 
-void clear_clock_shutdown_status()
-{
-    /* shutdown state can be cleared by writing a ‘1’ followed by a ‘0’ to bit 16
-     * But this requires a hardware change which hasn't been applied to the hardware yet
-     * The only way to clear shutdown state bit is by reloading the FPGA (Hot reset or cold reset)
-     */
-
-    u32 shutdownSatus = IO_SYNC_READ32(VMR_EP_GAPPING_DEMAND);
-    shutdownSatus = (shutdownSatus | (1 << 0xF));
-    IO_SYNC_WRITE32(shutdownSatus, VMR_EP_GAPPING_DEMAND);
-    shutdownSatus = (shutdownSatus &(~ (1 << 0xF)));
-    IO_SYNC_WRITE32(shutdownSatus, VMR_EP_GAPPING_DEMAND);
-    return;
-}
-
 void ucs_clock_shutdown()
 {
-    u32 shutdown_status = 0 ;
+	u32 shutdown_status = 0 ;
 
-    // offset for clock shutdown
-    u32 originalValue = IO_SYNC_READ32(VMR_EP_UCS_SHUTDOWN);
+	// offset for clock shutdown
+	u32 originalValue = IO_SYNC_READ32(VMR_EP_UCS_SHUTDOWN);
 
-    // clear 23:4 bits
-    u32 triggerValue = originalValue & BITMASK_TO_CLEAR;
+	// clear 23:4 bits
+	u32 triggerValue = originalValue & BITMASK_TO_CLEAR;
 
-    //to trigger clock shutdown write 0x1B632 at [23:4] bits
-    triggerValue = triggerValue | ENABLE_FORCE_SHUTDOWN;
+	//to trigger clock shutdown write 0x1B632 at [23:4] bits
+	triggerValue = triggerValue | ENABLE_FORCE_SHUTDOWN;
 
-     //the bits can be immediately cleared back to 0, as the shutdown state is latched by the hardware
-    IO_SYNC_WRITE32(triggerValue, VMR_EP_UCS_SHUTDOWN) ;
-    IO_SYNC_WRITE32(originalValue, VMR_EP_UCS_SHUTDOWN) ;
+	//the bits can be immediately cleared back to 0, as the shutdown state is latched by the hardware
+	IO_SYNC_WRITE32(triggerValue, VMR_EP_UCS_SHUTDOWN) ;
+	IO_SYNC_WRITE32(originalValue, VMR_EP_UCS_SHUTDOWN) ;
 
-    //offset to read shutdown status
-    shutdown_status = IO_SYNC_READ32(VMR_EP_UCS_CONTROL_STATUS_BASEADDR);
+	//offset to read shutdown status
+	shutdown_status = IO_SYNC_READ32(VMR_EP_UCS_CONTROL_STATUS_BASEADDR);
 
-    if(shutdown_status & 0x01)
-    	VMC_ERR("Clock shutdown due to power or temperature value reaching Critical threshold \n\r");
+	if(shutdown_status & 0x01)
+		VMC_ERR("Clock shutdown due to power or temperature value reaching Critical threshold \n\r");
 
-   return;
+	return;
 }
 
 s8 Temperature_Read_ACAP_Device_Sysmon(snsrRead_t *snsrData)
 {
 	s8 status = XST_FAILURE;
 	float TempReading = 0.0;
-
-	static bool is_sysmon_critical_threshold_reached = false;
 
 	status = XSysMonPsv_ReadTempProcessed(&InstancePtr, XSYSMONPSV_TEMP_MAX, &TempReading);
 	if (status == XST_SUCCESS)
@@ -122,16 +105,7 @@ s8 Temperature_Read_ACAP_Device_Sysmon(snsrRead_t *snsrData)
 	if (TempReading >= TEMP_FPGA_CRITICAL_THRESHOLD)
 	{
 		ucs_clock_shutdown();
-		is_sysmon_critical_threshold_reached = true;
-
 	}
-	if((is_sysmon_critical_threshold_reached == true) && 
-                    (TempReading <  TEMP_FPGA_CRITICAL_THRESHOLD ))
-	{
-		clear_clock_shutdown_status();
-		is_sysmon_critical_threshold_reached = false;
-	}
-
 	return status;
 }
 
@@ -177,15 +151,15 @@ s8 PMBUS_SC_Sensor_Read(snsrRead_t *snsrData)
 
 	if(sensorReading != 0)
 	{
-	    Cl_SecureMemcpy(&snsrData->snsrValue[0],sizeof(sensorReading),&sensorReading,sizeof(sensorReading));
-	    snsrData->sensorValueSize = sizeof(sensorReading);
-	    snsrData->snsrSatus = Vmc_Snsr_State_Normal;
+		Cl_SecureMemcpy(&snsrData->snsrValue[0],sizeof(sensorReading),&sensorReading,sizeof(sensorReading));
+		snsrData->sensorValueSize = sizeof(sensorReading);
+		snsrData->snsrSatus = Vmc_Snsr_State_Normal;
 	}
 	else
 	{
-	    Cl_SecureMemcpy(&snsrData->snsrValue[0],sizeof(sensorReading),&sensorReading,sizeof(sensorReading));
-	    snsrData->snsrSatus = Vmc_Snsr_State_Comms_failure;
-	    VMC_DBG("MSP Sensor Id : %d Data read failed \n\r",snsrData->mspSensorIndex);
+		Cl_SecureMemcpy(&snsrData->snsrValue[0],sizeof(sensorReading),&sensorReading,sizeof(sensorReading));
+		snsrData->snsrSatus = Vmc_Snsr_State_Comms_failure;
+		VMC_DBG("MSP Sensor Id : %d Data read failed \n\r",snsrData->mspSensorIndex);
 	}
 
 	return status;
@@ -237,10 +211,6 @@ s8 Vck5000_Asdm_Read_Power(snsrRead_t *snsrData)
     static u8 count_12vaux_2x4_2x3 = 1;
     static u8 count_12vaux_2x4 = 1;
 
-    static bool is_12vpex_critical_threshold_reached = false;
-    static bool is_12v_aux_2x3_2x4_critical_threshold_reached = false;
-    static bool is_12v_aux_2x4_critical_threshold_reached = false;
-
     if (xSemaphoreTake(vmc_sc_lock, portMAX_DELAY))
     {
     	powerMode =  sc_vmc_data.powerMode;
@@ -271,73 +241,59 @@ s8 Vck5000_Asdm_Read_Power(snsrRead_t *snsrData)
     // shutdown clock only if power reached critical threshold continuously for 1sec (100ms*10)
     if (pexPower >= POWER_12VPEX_CRITICAL_THRESHOLD)
     {
-    	if (count_12vpex == 10)
+    	if (count_12vpex == MAX_COUNT_TO_WAIT_1SEC)
     	{
     		ucs_clock_shutdown();
-    		is_12vpex_critical_threshold_reached = true;
     		count_12vpex = 0;
     	}
     	count_12vpex = count_12vpex + 1;
+    }
+    else /* Reset count value to zero when power values below critical limit and count is less than 10 */
+    {
+    	if ((count_12vpex != 0) && (pexPower < POWER_12VPEX_CRITICAL_THRESHOLD))
+    	{
+    		count_12vpex = 0;
+    	}
     }
 
     if (powerMode == POWER_MODE_300W) // Both 2x3 and 2x4 AUX connected
     {
     	if ((aux0Power >= POWER_12VAUX_2X4_CRITICAL_THRESHOLD) || (aux1Power >= POWER_12VAUX_2X3_CRITICAL_THRESHOLD))
     	{
-    		if (count_12vaux_2x4_2x3 == 10)
+    		if (count_12vaux_2x4_2x3 == MAX_COUNT_TO_WAIT_1SEC)
     		{
     			ucs_clock_shutdown();
-    			is_12v_aux_2x3_2x4_critical_threshold_reached = true;
     			count_12vaux_2x4_2x3 = 0;
     		}
     		count_12vaux_2x4_2x3 = count_12vaux_2x4_2x3 + 1;
+    	}
+    	else /* Reset count value to zero when power values below critical limit and count is less than 10 */
+    	{
+    		if ((count_12vaux_2x4_2x3 != 0) && (aux0Power < POWER_12VAUX_2X4_CRITICAL_THRESHOLD) && (aux1Power < POWER_12VAUX_2X3_CRITICAL_THRESHOLD))
+    		{
+    			count_12vaux_2x4_2x3 = 0;
+    		}
     	}
     }
     else // only 2x4 connected
     {
     	if (aux0Power >= POWER_12VAUX_2X4_CRITICAL_THRESHOLD)
     	{
-    		if (count_12vaux_2x4 == 10)
+    		if (count_12vaux_2x4 == MAX_COUNT_TO_WAIT_1SEC)
     		{
     			ucs_clock_shutdown();
-    			is_12v_aux_2x4_critical_threshold_reached = true;
     			count_12vaux_2x4 = 0;
     		}
     		count_12vaux_2x4 = count_12vaux_2x4 + 1;
     	}
-    }
-
-    /* clear shutdown status flag if asserted before and less than critical value */
-
-    if (pexPower < POWER_12VPEX_CRITICAL_THRESHOLD)
-    {
-    	if (is_12vpex_critical_threshold_reached == true)
+    	else /* Reset count value to zero when power values below critical limit and count is less than 10 */
     	{
-    		clear_clock_shutdown_status();
-    		is_12vpex_critical_threshold_reached = false;
+    		if ((count_12vaux_2x4 != 0) && (aux0Power < POWER_12VAUX_2X4_CRITICAL_THRESHOLD))
+    		{
+    			count_12vaux_2x4 = 0;
+    		}
     	}
-    	count_12vpex = 1;
     }
-
-    if (powerMode == POWER_MODE_300W)
-    {
-    	if(is_12v_aux_2x3_2x4_critical_threshold_reached == true)
-    	{
-    		clear_clock_shutdown_status();
-    		is_12v_aux_2x3_2x4_critical_threshold_reached = false;
-    	}
-    	count_12vaux_2x4_2x3 = 1;
-    }
-    else
-    {
-    	if (is_12v_aux_2x4_critical_threshold_reached == true)
-    	{
-    		clear_clock_shutdown_status();
-    		is_12v_aux_2x4_critical_threshold_reached = false;
-    	}
-    	count_12vaux_2x4 = 1;
-    }
-
     return status;
 }
 
@@ -358,19 +314,11 @@ void sysmon_monitor(void)
 
 void Monitor_Thresholds()
 {
-	static bool is_vccint_temp_critical_threshold_reached = false;
 	u16 sensorReading = sc_vmc_data.sensor_values[eSC_VCCINT_TEMP];
 
 	if (sensorReading >= TEMP_VCCINT_CRITICAL_THRESHOLD)
 	{
 	    ucs_clock_shutdown();
-	    is_vccint_temp_critical_threshold_reached = true;
-	}
-	if((is_vccint_temp_critical_threshold_reached == true) &&
-		(sensorReading <  TEMP_VCCINT_CRITICAL_THRESHOLD ))
-	{
-	    clear_clock_shutdown_status();
-	    is_vccint_temp_critical_threshold_reached = false;
 	}
 }
 

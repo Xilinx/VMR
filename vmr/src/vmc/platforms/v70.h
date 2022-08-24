@@ -8,6 +8,12 @@
 
 #include "../vmc_asdm.h"
 
+/*Power threshold limits for vck5000 */
+#define POWER_12VPEX_CRITICAL_THRESHOLD 69.000
+#define POWER_3V3PEX_CRITICAL_THRESHOLD 10.400
+
+#define V70_TEMP_VCCINT_CRITICAL_THRESHOLD  110.000
+
 u8 V70_Init(void);
 s8 V70_Temperature_Read_Inlet(snsrRead_t *snsrData);
 s8 V70_Temperature_Read_Outlet(snsrRead_t *snsrData);
