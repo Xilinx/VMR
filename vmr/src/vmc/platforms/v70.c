@@ -426,6 +426,8 @@ u8 V70_Init(void)
 	//s8 status = XST_FAILURE;
 	msg_id_handler_ptr = V70_VMC_SC_Comms_Msg;
 	set_total_req_size(V70_MAX_MSGID_COUNT);
+	fetch_boardinfo_ptr = &V70_VMC_Fetch_BoardInfo;
+	
 	Monitor_Sensors = V70_Monitor_Sensors;
 
 	get_supported_sdr_info = V70_Get_Supported_Sdr_Info;
