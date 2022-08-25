@@ -59,7 +59,7 @@ static void vmr_log_collect(uint32_t msg_index_addr, uint32_t msg_buf_addr,
 	(void) strlcpy(log.log_buf, buf, sizeof(log.log_buf));
 
 	/* update log into shared memory */
-	cl_memcpy_toio32(msg_buf_addr + sizeof(log) * log_idx, &log, sizeof(log));
+	cl_memcpy_toio(msg_buf_addr + sizeof(log) * log_idx, &log, sizeof(log));
 
 	log_idx = (log_idx + 1) % VMR_LOG_MAX_RECS;
 	/* update log index into shared memory */
@@ -115,7 +115,7 @@ static void cl_printf_impl(const char *name, uint32_t line, uint8_t log_level,
 	xil_printf("%s", log_buf);
 
 	/* store to shared memory ring buffer */
-	if (cl_memcpy_fromio32(VMR_EP_RPU_SHARED_MEMORY_START, &mem,
+	if (cl_memcpy_fromio(VMR_EP_RPU_SHARED_MEMORY_START, &mem,
 		sizeof(mem)) != -1 && mem.vmr_magic_no == VMR_MAGIC_NO) {
 		uint32_t index_addr = VMR_EP_RPU_SHARED_MEMORY_START +
 			offsetof(struct vmr_shared_mem, log_msg_index);

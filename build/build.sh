@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (C) 2018-2022 Xilinx, Inc. All rights reserved.
 
-TOOL_VERSION="2022.1"
+TOOL_VERSION="2022.2"
 DEFAULT_VITIS="/proj/xbuilds/${TOOL_VERSION}_daily_latest/installs/lin64/Vitis/HEAD/settings64.sh"
 STDOUT_JTAG=2 # 0: uart0; 1: uart1; 2: default to uartlite
 BUILD_XRT=0
@@ -14,6 +14,7 @@ BUILD_CONF_FILE="build.json"
 BUILD_DIR="build_dir"
 BUILD_LOG="build.log"
 REGEN_SHELL="regen_pdi.sh"
+BUILD_CLEAN=0
 
 check_result()
 {
@@ -21,6 +22,7 @@ check_result()
 	typeset ret="$2"
 
 	if [ $2 -ne 0 ];then
+		cat $BUILD_LOG
 		echo "$1 err: $2"
 		exit 1;
 	fi
@@ -438,6 +440,10 @@ done
 # build starts here #
 #####################
 
+echo "=== build log =="
+echo "" > $ROOT_DIR/$BUILD_DIR/$BUILD_LOG
+echo "tail -f $ROOT_DIR/$BUILD_DIR/$BUILD_LOG"
+
 if [[ $BUILD_CLEAN == 1 ]];then
 	build_clean
 	exit 0;
@@ -460,13 +466,13 @@ fi
 XSCT_VERSION=`which xsct|rev|cut -f3 -d"/"|rev`
 echo "Tools version: ${XSCT_VERSION}"
 
-# option1: only build app by vitis
+# only build app by vitis
 if [[ $BUILD_APP == 1 ]];then
 	build_app_incremental
 	exit 0;
 fi
 
-# option2: default build based on cached stable bsp
+# default build based on cached stable bsp
 if [ -z $BUILD_XSA ] || [ $BUILD_XSA == "No" ];then
 	echo "=== No XSA specified, build from stable BSP.";
 	build_clean
@@ -477,8 +483,6 @@ fi
 #####################
 # build entire BSP  #
 #####################
-echo "=== build log =="
-echo "tail -f $ROOT_DIR/$BUILD_DIR/$BUILD_LOG"
 echo "=== Build BSP from xsa: ==="
 ls $BUILD_XSA
 if [ $? -ne 0 ];then

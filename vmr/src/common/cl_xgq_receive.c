@@ -159,7 +159,7 @@ void cl_msg_handle_complete(cl_msg_t *msg)
 
 	if (xSemaphoreTake(msg_complete_lock, portMAX_DELAY)) {
 		xgq_produce(&rpu_xgq, &cq_slot_addr);
-		cl_memcpy_toio32(cq_slot_addr, &cq_cmd, sizeof(struct xgq_com_queue_entry));
+		cl_memcpy_toio(cq_slot_addr, &cq_cmd, sizeof(struct xgq_com_queue_entry));
 		xgq_notify_peer_produced(&rpu_xgq);
 		xSemaphoreGive(msg_complete_lock);
 	} else {
@@ -411,7 +411,7 @@ static inline bool read_vmr_shared_mem(struct vmr_shared_mem *mem)
 {
 	int ret = 0;
 
-	ret = cl_memcpy_fromio32(VMR_EP_RPU_SHARED_MEMORY_START, mem, sizeof(*mem));
+	ret = cl_memcpy_fromio(VMR_EP_RPU_SHARED_MEMORY_START, mem, sizeof(*mem));
 	if (ret == -1 || mem->vmr_magic_no != VMR_MAGIC_NO) {
 		VMR_ERR("read shared memory partition table failed");
 		return false;
@@ -473,7 +473,7 @@ static void init_vmr_status(uint32_t ring_len)
 	mem.vmr_data_start = mem.log_msg_buf_off + mem.log_msg_buf_len;
 	mem.vmr_data_end = VMR_EP_RPU_SHARED_MEMORY_END - VMR_EP_RPU_SHARED_MEMORY_START;
 
-	cl_memcpy_toio32(VMR_EP_RPU_SHARED_MEMORY_START, &mem, sizeof(mem));
+	cl_memcpy_toio(VMR_EP_RPU_SHARED_MEMORY_START, &mem, sizeof(mem));
 
 	/* re-init device stat to 0 */
 	IO_SYNC_WRITE32(0x0, RPU_SHARED_MEMORY_ADDR(mem.vmr_status_off));	

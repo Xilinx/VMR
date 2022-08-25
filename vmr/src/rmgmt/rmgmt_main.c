@@ -78,7 +78,6 @@
 
 
 static struct rmgmt_handler rh = { 0 };
-static char log_msg[1024] = { 0 };
 static bool rmgmt_is_ready = false;
 
 enum pdi_type {
@@ -181,8 +180,8 @@ static int validate_data_payload(struct xgq_vmr_data_payload *payload)
 		return ret;
 	}
 
-	if (size > rh.rh_max_size) {
-		VMR_ERR("size %d is over max %d", size, rh.rh_max_size);
+	if (size > rh.rh_data_max_size) {
+		VMR_ERR("size %d is over max %d", size, rh.rh_data_max_size);
 		return ret;
 	}
 
@@ -256,7 +255,6 @@ static int rmgmt_download_pdi(cl_msg_t *msg, enum pdi_type ptype)
 	u32 address = 0;
 	u32 size = 0;
 	int ret = 0;
-	u32 last_trunk_size = 0;
 
 	ret = validate_data_payload(&msg->data_payload);
 	if (ret)
@@ -267,15 +265,8 @@ static int rmgmt_download_pdi(cl_msg_t *msg, enum pdi_type ptype)
 
 	/* prepare rmgmt handler */
 	rh.rh_data_size = size;
-	if (size & 0x3) {
-		VMR_WARN("size %d is not 32bit aligned, ready last several by ioread8", size);
-		last_trunk_size = size & 0x3;
-	}
 
-	cl_memcpy_fromio32(address, rh.rh_data, size - last_trunk_size);
-	if (last_trunk_size)
-		cl_memcpy_fromio8(address + size - last_trunk_size,
-			rh.rh_data + size - last_trunk_size, last_trunk_size);
+	cl_memcpy_fromio(address, rh.rh_data, size);
 
 	switch (ptype) {
 	case BASE_PDI:
@@ -412,52 +403,66 @@ static u32 rmgmt_rpu_status_query(struct cl_msg *msg, char *buf, u32 size)
 	return count;
 }
 
-static u32 rmgmt_apu_status_query(struct cl_msg *msg, char *buf, u32 size)
+static u32 rmgmt_apu_status_query(char *buf, u32 size)
 {
 	u32 count = 0;
+	int apu_is_ready = cl_rmgmt_apu_is_ready();
 
-	//cl_xgq_apu_identify(msg);
-	count = snprintf(buf, size, "is PS ready: %d\n", cl_rmgmt_apu_is_ready());
+	if (!apu_is_ready)
+		goto done;
 
+	count = cl_rmgmt_apu_identify(buf, size);
+	if (count > size) {
+		VMR_ERR("msg is truncated");
+		return size;
+	}
+
+	count += cl_rmgmt_apu_info(buf + count, size - count);
+	if (count > size) {
+		VMR_ERR("msg is truncated");
+		return size;
+	}
+
+done:
 	return count;
 }
 
 /*
  * shared memory is reserved (a semaphore is hold on host driver) for this op,
- * log_msg will not be touched by other op as well.
+ * rh_log will not be touched by other op as well.
  */
 static int vmr_verbose_info(cl_msg_t *msg)
 {
-	u32 safe_size = sizeof(log_msg);
+	u32 safe_size = rh.rh_log_max_size;
 	u32 dst_addr = RPU_SHARED_MEMORY_ADDR(msg->log_payload.address);
 	u32 count = 0;
 	u32 total_count = 0;
 
-	count = rmgmt_rpu_status_query(msg, log_msg, safe_size);
+	count = rmgmt_rpu_status_query(msg, rh.rh_log, safe_size);
 	if (msg->log_payload.size < total_count + count) {
 		VMR_ERR("log buffer %d is too small, log message %s is truncated",
-			msg->log_payload.size, log_msg);
+			msg->log_payload.size, rh.rh_log);
 		goto done;
 	}		
-	cl_memcpy_toio8(dst_addr + total_count, &log_msg, count);
+	cl_memcpy_toio(dst_addr + total_count, rh.rh_log, count);
 	total_count += count;
 
-	count = rmgmt_apu_status_query(msg, log_msg, safe_size);
+	count = rmgmt_apu_status_query(rh.rh_log, safe_size);
 	if (msg->log_payload.size < total_count + count) {
 		VMR_ERR("log buffer %d is too small, log message %s is truncated",
-			msg->log_payload.size, log_msg);
+			msg->log_payload.size, rh.rh_log);
 		goto done;
 	}
-	cl_memcpy_toio8(dst_addr + total_count, &log_msg, count);
+	cl_memcpy_toio(dst_addr + total_count, rh.rh_log, count);
 	total_count += count;
 
-	count = rmgmt_fpt_status_query(msg, log_msg, safe_size);
+	count = rmgmt_fpt_status_query(msg, rh.rh_log, safe_size);
 	if (msg->log_payload.size < total_count + count) {
 		VMR_ERR("log buffer %d is too small, log message %s is truncated",
-			msg->log_payload.size, log_msg);
+			msg->log_payload.size, rh.rh_log);
 		goto done;
 	}
-	cl_memcpy_toio8(dst_addr + total_count, &log_msg, count);
+	cl_memcpy_toio(dst_addr + total_count, rh.rh_log, count);
 	total_count += count;
 
 done:
@@ -469,18 +474,18 @@ done:
 
 static int vmr_endpoint_info(cl_msg_t *msg)
 {
-	u32 safe_size = sizeof(log_msg);
+	u32 safe_size = rh.rh_log_max_size;
 	u32 dst_addr = RPU_SHARED_MEMORY_ADDR(msg->log_payload.address);
 	u32 count = 0;
 	u32 total_count = 0;
 
-	count = rmgmt_endpoints_query(msg, log_msg, safe_size);
+	count = rmgmt_endpoints_query(msg, rh.rh_log, safe_size);
 	if (msg->log_payload.size < total_count + count) {
 		VMR_ERR("log buffer %d is too small, log message %s is truncated",
-			msg->log_payload.size, log_msg);
+			msg->log_payload.size, rh.rh_log);
 		goto done;
 	}
-	cl_memcpy_toio8(dst_addr + total_count, &log_msg, count);
+	cl_memcpy_toio(dst_addr + total_count, rh.rh_log, count);
 	total_count += count;
 
 done:
@@ -574,10 +579,10 @@ static u32 rmgmt_check_firewall(cl_msg_t *msg)
 	u32 val = check_firewall();
 
 	/*
-	 * copy messge back from log_msg to shared memory
+	 * copy messge back from rh_log to shared memory
 	 */
 	if (val) {
-		u32 safe_size = sizeof(log_msg);
+		u32 safe_size = rh.rh_log_max_size;
 		u32 dst_addr = RPU_SHARED_MEMORY_ADDR(msg->log_payload.address);
 		u32 count = 0;
 		
@@ -585,11 +590,11 @@ static u32 rmgmt_check_firewall(cl_msg_t *msg)
 
 		if (msg->log_payload.size < safe_size) {
 			VMR_ERR("log buffer %d is too small, log message %d is trunked",
-				msg->log_payload.size, sizeof(log_msg));
+				msg->log_payload.size, rh.rh_log_max_size);
 			safe_size = msg->log_payload.size;
 		}
 
-		count = snprintf(log_msg, safe_size,
+		count = snprintf(rh.rh_log, safe_size,
 			"AXI Firewall User is tripped, status: 0x%lx. ", val);
 		if (count > safe_size) 
 			VMR_WARN("log msg is trunked");
@@ -598,10 +603,10 @@ static u32 rmgmt_check_firewall(cl_msg_t *msg)
 			u32 af_base = vmr_afs[i].vmr_ep_address;
 			u32 version = IO_SYNC_READ32(af_base + IP_VERSION);
 
-			count += snprintf(log_msg + count, safe_size - count,
+			count += snprintf(rh.rh_log + count, safe_size - count,
 				"Firewall IP Version: %ld, EP: 0x%lx. ",
 				version, vmr_afs[i].vmr_ep_address);
-			if (count > safe_size) { 
+			if (count >= safe_size) { 
 				VMR_WARN("log msg is trunked");
 				break;
 			}
@@ -609,17 +614,17 @@ static u32 rmgmt_check_firewall(cl_msg_t *msg)
 			if (version < IP_VER_11)
 				continue;
 
-			count += snprintf(log_msg + count, safe_size - count,
+			count += snprintf(rh.rh_log + count, safe_size - count,
 				"ARADDR 0x%llx, AWADDR 0x%llx, ARUSER 0x%lx, AWUSER 0x%lx\n",
 				READ_ARADDR(af_base), READ_AWADDR(af_base),
 				READ_ARUSER(af_base), READ_AWUSER(af_base));
-			if (count > safe_size) { 
+			if (count >= safe_size) { 
 				VMR_WARN("log msg is trunked");
 				break;
 			}
 		}
 
-		cl_memcpy_toio8(dst_addr, &log_msg, MIN(count, safe_size));
+		cl_memcpy_toio(dst_addr, rh.rh_log, MIN(count, safe_size));
 
 		/* set correct size in result payload */
 		msg->log_payload.size = MIN(count, safe_size);
@@ -643,24 +648,24 @@ static u32 rmgmt_log_clock_shutdown(cl_msg_t *msg)
 	u32 val = check_clock_shutdown_status();
 
 	/*
-	 * copy message back from log_msg to shared memory
+	 * copy message back from rh_log to shared memory
 	 */
 	if (val) {
-		u32 safe_size = sizeof(log_msg);
+		u32 safe_size = rh.rh_log_max_size; 
 		u32 dst_addr = RPU_SHARED_MEMORY_ADDR(msg->log_payload.address);
 		u32 count = 0;
 
 		VMR_ERR("clock shutdown status: 0x%x", val);
 
-		if (msg->log_payload.size < sizeof(log_msg)) {
+		if (msg->log_payload.size < rh.rh_log_max_size) {
 			VMR_ERR("log buffer %d is too small, log message will be trunked %d bytes ",
-				msg->log_payload.size, sizeof(log_msg));
+				msg->log_payload.size, rh.rh_log_max_size);
 			safe_size = msg->log_payload.size;
 		}
 
-		count = snprintf(log_msg, safe_size,
+		count = snprintf(rh.rh_log, safe_size,
 			"Clock shutdown due to power or temperature value reaching Critical threshold, status: 0x%lx\n", val);
-		cl_memcpy_toio8(dst_addr, &log_msg, safe_size);
+		cl_memcpy_toio(dst_addr, rh.rh_log, safe_size);
 
 		/* set correct size in result payload */
 		if(safe_size > count)
@@ -758,7 +763,7 @@ static char* eTaskStateName(eTaskState st)
 
 static int vmr_rtos_task_stats(cl_msg_t *msg)
 {
-	u32 safe_size = sizeof(log_msg);
+	u32 safe_size = rh.rh_log_max_size;
 	u32 dst_addr = RPU_SHARED_MEMORY_ADDR(msg->log_payload.address);
 	u32 count = 0;
 	TaskStatus_t *pxTaskStatusArray = NULL;
@@ -769,19 +774,19 @@ static int vmr_rtos_task_stats(cl_msg_t *msg)
 	if (pxTaskStatusArray == NULL)
 		return -ENOMEM;
 
-	count += snprintf(log_msg + count, safe_size - count,
+	count += snprintf(rh.rh_log + count, safe_size - count,
 		"Name\t\tState\tPriority\tStack\tBase\n");    
 
 	uxArraySize = uxTaskGetSystemState(pxTaskStatusArray, uxArraySize, NULL);
 	for (i = 0; i < uxArraySize; i++) {
-		count += snprintf(log_msg + count, safe_size - count,
+		count += snprintf(rh.rh_log + count, safe_size - count,
 			"%-16s%-12s%-4ld\t%ld\t0x%lx\n",
 			pxTaskStatusArray[i].pcTaskName,
 			eTaskStateName(pxTaskStatusArray[i].eCurrentState),
 			pxTaskStatusArray[i].uxBasePriority,
 			pxTaskStatusArray[i].usStackHighWaterMark,
 			(u32)pxTaskStatusArray[i].pxStackBase);    
-		if (count > safe_size) {
+		if (count >= safe_size) {
 			VMR_WARN("log msg is trunked");
 			break;
 		}
@@ -789,7 +794,7 @@ static int vmr_rtos_task_stats(cl_msg_t *msg)
 
 	vPortFree(pxTaskStatusArray);
 
-	cl_memcpy_toio8(dst_addr, &log_msg, MIN(count, safe_size));
+	cl_memcpy_toio(dst_addr, rh.rh_log, MIN(count, safe_size));
 	msg->log_payload.size = MIN(count, safe_size);
 
 	return 0;
@@ -797,14 +802,14 @@ static int vmr_rtos_task_stats(cl_msg_t *msg)
 
 static int vmr_rtos_mem_stats(cl_msg_t *msg)
 {
-	u32 safe_size = sizeof(log_msg);
+	u32 safe_size = rh.rh_log_max_size;
 	u32 dst_addr = RPU_SHARED_MEMORY_ADDR(msg->log_payload.address);
 	u32 count = 0;
 	HeapStats_t hp = {0};
 	
 	vPortGetHeapStats(&hp);
 
-	count += snprintf(log_msg + count, safe_size - count,
+	count += snprintf(rh.rh_log + count, safe_size - count,
 		"Available heap size: %d\n"
 		"Max size of free blocks in bytes: %d\n"
 		"Min size of free blocks in bytes: %d\n"
@@ -823,7 +828,7 @@ static int vmr_rtos_mem_stats(cl_msg_t *msg)
 		VMR_WARN("log msg is trunked");
 	}
 
-	cl_memcpy_toio8(dst_addr, &log_msg, MIN(count, safe_size));
+	cl_memcpy_toio(dst_addr, rh.rh_log, MIN(count, safe_size));
 	msg->log_payload.size = MIN(count, safe_size);
 
 	return 0;
