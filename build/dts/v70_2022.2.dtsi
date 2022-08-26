@@ -115,13 +115,9 @@
     };
 
     aliases {
-	/delete-property/ serial0;
-	/delete-property/ serial1;
-	/delete-property/ serial2;
 	/delete-property/ serial3;
 	/delete-property/ serial4;
 	/delete-property/ serial5;
-	serial0 = &blp_blp_logic_axi_uart_apu;
     };
 
     reserved-memory {
@@ -142,17 +138,6 @@
         r2a_xgq_region: buffer@37000000 {
             no-map;
             reg = <0x0 0x37000000 0x0 0x1000000>;
-        };
-
-        buffer@50100000000{
-		device_type = "memory";
-                no-map;
-                reg = <0x500 0x80000000 0x02 0x00>;
-        };
-        buffer@60000000000{
-		device_type = "memory";
-                no-map;
-                reg = <0x600 0x00 0x02 0x00>;
         };
     };
 
