@@ -105,6 +105,16 @@
         stdout-path = "serial0:115200n8";
     };
 
+    aliases {
+	/delete-property/ serial0;
+	/delete-property/ serial1;
+	/delete-property/ serial2;
+	/delete-property/ serial3;
+	/delete-property/ serial4;
+	/delete-property/ serial5;
+	serial0 = &blp_blp_logic_axi_uart_apu;
+    };
+
     reserved-memory {
         #address-cells = <0x2>;
         #size-cells = <0x2>;
@@ -126,7 +136,7 @@
         };
     };
 
-	zyxclmm_drm@0x20200000000 {
+	zyxclmm_drm@20200000000 {
 		compatible = "xlnx,zocl-versal";
 		status = "okay";
 		memory-region = <&zocl_versal_region>;
