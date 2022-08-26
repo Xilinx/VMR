@@ -96,6 +96,15 @@
 &ulp_plram_ctrl {
     status = "disabled";
 };
+&blp_blp_logic_axi_uart_mgmt_apu {
+    status = "disabled";
+};
+&blp_blp_logic_axi_uart_mgmt_rpu {
+    status = "disabled";
+};
+&blp_blp_logic_axi_uart_rpu {
+    status = "disabled";
+};
 &memoryblp_axi_noc_mc {
     reg = <0x0 0x0 0x0 0x35ff0000 0xc0 0x80000000 0x3 0x80000000>;
 };
