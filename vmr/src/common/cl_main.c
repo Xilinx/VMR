@@ -114,21 +114,22 @@ extern void vApplicationStackOverflowHook(TaskHandle_t xTask, char *pcTaskName)
 
 struct cl_task_handle {
 	app_type_t	cl_task_type;
+	int		cl_task_priority;
 	int (*cl_task_init)(void);
 	void (*cl_task_func)(void *task_args);
 	const char 	*cl_task_name;
 	void 		*cl_task_arg;
 	TaskHandle_t	*cl_task_handle;
 } task_handles[] = {
-	{APP_VMR, cl_xgq_receive_init, cl_xgq_receive_func,
+	{APP_VMR, 2, cl_xgq_receive_init, cl_xgq_receive_func,
 		"XGQ Receive", NULL, &cl_xgq_receive_handle},
-	{APP_VMR,  cl_xgq_program_init, cl_xgq_program_func,
+	{APP_VMR, 1, cl_xgq_program_init, cl_xgq_program_func,
 		"XGQ Program", NULL, &cl_xgq_program_handle},
-	{APP_VMR, cl_xgq_opcode_init, cl_xgq_opcode_func,
+	{APP_VMR, 1, cl_xgq_opcode_init, cl_xgq_opcode_func,
 		"XGQ Operation", NULL, &cl_xgq_opcode_handle},
-	{APP_VMC, cl_vmc_sensor_init, cl_vmc_sensor_func,
+	{APP_VMC, 1, cl_vmc_sensor_init, cl_vmc_sensor_func,
 		"Sensor Monitor", NULL, &cl_vmc_sensor_handle},
-	{APP_VMC, cl_vmc_sc_comms_init, cl_vmc_sc_comms_func,
+	{APP_VMC, 1, cl_vmc_sc_comms_init, cl_vmc_sc_comms_func,
 		"SC Common Handler", NULL, &cl_vmc_sc_comms_handle},
 #ifdef VMC_DEBUG
 	{APP_VMC, cl_uart_demo_init, cl_uart_demo_func,
@@ -165,14 +166,15 @@ static int cl_task_create(struct cl_task_handle *task_handle)
 			task_handle->cl_task_name,
 			TASK_STACK_DEPTH,
 			task_handle->cl_task_arg,
-			tskIDLE_PRIORITY + 1,
+			tskIDLE_PRIORITY + task_handle->cl_task_priority,
 			task_handle->cl_task_handle);
 	if (ret != pdPASS) {
 		VMR_ERR("Failed to create %s Task.", task_handle->cl_task_name);
 		return -EINVAL;
 	}
 
-	VMR_LOG("Successfully create %s Task.", task_handle->cl_task_name);
+	VMR_LOG("Successfully create %s Task, priority %d.", task_handle->cl_task_name,
+		task_handle->cl_task_priority);
 	return 0;
 }
 
