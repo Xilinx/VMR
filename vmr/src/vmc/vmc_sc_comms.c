@@ -389,7 +389,9 @@ void VMC_RX_UART_packet(u8 Expected_Msg_Length)
 
 	if(UART_RTOS_Receive(&uart_vmcsc_log, data, Expected_Msg_Length, &receivedcount, RCV_TIMEOUT_MS(500)) == UART_SUCCESS)
 	{
-		configASSERT(receivedcount <= MAX_VMC_SC_UART_BUF_SIZE);
+		VMR_ASSERT(receivedcount <= MAX_VMC_SC_UART_BUF_SIZE,
+			"fatal error: receivedcount %d > MAX BUF SIZE %d",
+			receivedcount, MAX_VMC_SC_UART_BUF_SIZE);
 		if (receivedcount > 2) { /* Condition to avoid over bound */
 			if (VMC_Validate_SC_Packet(&data[0], receivedcount)) {
 				Cl_SecureMemcpy(g_scData, receivedcount, data, receivedcount);

@@ -64,6 +64,7 @@ void cl_log_dump();
 void cl_uart_printf(const char *name, uint32_t line, uint8_t log_level,
 	const char *app_name, const char *fmt, ...);
 
+void cl_log_init();
 
 #define CL_PRINT(level, app_name, fmt, arg...) \
 	cl_printf(__FUNCTION__, __LINE__, level, app_name, fmt, ##arg)
@@ -103,8 +104,15 @@ void cl_uart_printf(const char *name, uint32_t line, uint8_t log_level,
 #define VMR_DBG(fmt, arg...) \
         CL_DBG(APP_VMR, fmt, ##arg)
 #define VMR_PRNT(fmt, arg...) \
-        CL_PRNT(APP_VMR, fmt, ##arg)
+        CL_ERR(APP_VMR, fmt, ##arg)
 
-void cl_log_init();
+#define VMR_ASSERT(assert, fmt, arg...) 	\
+({						\
+	if (!(assert)) {			\
+		VMR_ERR(fmt, ##arg);		\
+		configASSERT(assert);		\
+	}					\
+})
+
 
 #endif
