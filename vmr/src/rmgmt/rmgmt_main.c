@@ -1013,6 +1013,8 @@ int cl_rmgmt_init( void )
 {	
 	int ret = 0;
 	cl_msg_t msg = { 0 };
+	u32 dtb_offset = 0;
+	u32 dtb_size = 0;
 
 	ret = ospi_flash_init();
 	if (ret != XST_SUCCESS) {
@@ -1033,6 +1035,13 @@ int cl_rmgmt_init( void )
 
 	/* enforce next boot to default image */
 	rmgmt_enable_boot_default(&msg);
+
+	/* copy systemdtb to correct location */
+	if (rmgmt_fpt_get_systemdtb(&msg, &dtb_offset, &dtb_size) == 0) {
+		VMR_WARN("copy system.dtb off 0x%x size 0x%x to 0x%x",
+			dtb_offset, dtb_size, VMR_EP_SYSTEM_DTB);
+		cl_memcpy(VMR_EP_SYSTEM_DTB, dtb_offset, dtb_size);
+	}
 
 	rmgmt_is_ready = true;
 	VMR_LOG("Done. set rmgmt is ready.");
