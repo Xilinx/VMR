@@ -24,7 +24,7 @@ int cl_rmgmt_program_apu_pdi(struct cl_msg *msg);
 int cl_rmgmt_program_xclbin(struct cl_msg *msg);
 
 int cl_rmgmt_apu_channel_probe(void);
-int cl_rmgmt_apu_identify(struct xgq_cmd_resp_identify *id_cmd);
+int cl_rmgmt_apu_identify(char *buf, u32 size);
 int cl_rmgmt_apu_info(char *buf, u32 size);
 int cl_rmgmt_apu_download_xclbin(char *data, u32 size);
 

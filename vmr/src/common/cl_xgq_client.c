@@ -18,7 +18,6 @@
 #include "xgq_cmd_vmr.h"
 #include "cl_xgq_client_plat.h"
 #include "vmr_common.h"
-#include "xgq_cmd_common.h"
 
 #define APU_MAGIC_ID	0x4150 /* AP uint16_t */
 #define APU_XGQ_TIMEOUT	15 /* seconds */
@@ -189,7 +188,7 @@ int cl_rmgmt_apu_download_xclbin(char *data, u32 size)
 	return 0;
 }
 
-static int identify_cmd_complete(struct xgq_cmd_cq *cq_cmd)
+static int identify_cmd_complete(struct xgq_cmd_cq *cq_cmd, char *buf, u32 size)
 {
 	struct xgq_cmd_resp_identify *id_cmd = (struct xgq_cmd_resp_identify *)cq_cmd;
 
@@ -197,12 +196,10 @@ static int identify_cmd_complete(struct xgq_cmd_cq *cq_cmd)
 		return 0;
 
 	VMR_LOG("major.minor %d.%d", id_cmd->major, id_cmd->minor);
-	//Temporary Work around returning length of local buffer
-	//return snprintf(buf, size, "APU XGQ Version: %d.%d\n", id_cmd->major, id_cmd->minor);
-	return 0;
+	return snprintf(buf, size, "APU XGQ Version: %d.%d\n", id_cmd->major, id_cmd->minor);
 }
 
-int cl_rmgmt_apu_identify(struct xgq_cmd_resp_identify *id_cmd)
+int cl_rmgmt_apu_identify(char *buf, u32 size)
 {
 	int rval = 0;
 	uint64_t slot_addr = 0;
@@ -235,9 +232,9 @@ int cl_rmgmt_apu_identify(struct xgq_cmd_resp_identify *id_cmd)
 			continue;
 
 		read_completion(&cq_cmd, slot_addr);
-		rval = identify_cmd_complete(&cq_cmd);
+		rval = identify_cmd_complete(&cq_cmd, buf, size);
 		xgq_notify_peer_consumed(&apu_xgq);
-		id_cmd = (struct xgq_cmd_resp_identify *)(&cq_cmd);
+
 		return rval;
 	}
 
@@ -372,10 +369,6 @@ int cl_rmgmt_apu_channel_probe()
 		return -1;
 	}
 
-	struct xgq_cmd_resp_identify *id_cmd;
-	cl_rmgmt_apu_identify(id_cmd);
-	if(!(id_cmd->major >= 1 && id_cmd->minor >= 0))
-		return -1;
 	xgq_apu_ready = true;
 
 	VMR_WARN("APU is ready.");
