@@ -161,6 +161,11 @@ struct xgq_vmr_head {
 	u32 rcode;
 };
 
+struct xgq_vmr_cmd_identify {
+	uint16_t major;
+	uint16_t minor;
+};
+
 /*TODO: rename request payload and result payload */
 typedef struct cl_msg {
 	struct xgq_vmr_head hdr;
