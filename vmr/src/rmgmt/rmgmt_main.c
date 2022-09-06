@@ -406,12 +406,13 @@ static u32 rmgmt_rpu_status_query(struct cl_msg *msg, char *buf, u32 size)
 static u32 rmgmt_apu_status_query(char *buf, u32 size)
 {
 	u32 count = 0;
+	struct xgq_cmd_resp_identify *id_cmd;
 	int apu_is_ready = cl_rmgmt_apu_is_ready();
 
 	if (!apu_is_ready)
 		goto done;
 
-	count = cl_rmgmt_apu_identify(buf, size);
+	count = cl_rmgmt_apu_identify(id_cmd);
 	if (count > size) {
 		VMR_ERR("msg is truncated");
 		return size;
