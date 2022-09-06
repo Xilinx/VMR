@@ -384,11 +384,15 @@ static int rmgmt_ospi_apu_download(struct rmgmt_handler *rh, u32 len)
 		return 0;
 	}
 
+	/*
+	 * The systemdtb has been loaded when shell starts.
+	 * We just to verify if there is valid systemdtb before loading
+	 * apu pdi.
+	 */
 	if (rmgmt_fpt_get_systemdtb(&msg, &dtb_offset, &dtb_size)) {
 		VMR_ERR("get system.dtb failed");
 		return -1;
 	}
-	cl_memcpy(VMR_EP_SYSTEM_DTB, dtb_offset, dtb_size);
 
 	ret = rmgmt_xclbin_section_info(axlf, PDI, &offset, &size);
 	if (ret) {
