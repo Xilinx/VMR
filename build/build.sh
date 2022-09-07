@@ -493,15 +493,15 @@ fi
 echo "=== (1) Build clean and preparation ..."
 build_clean
 mkdir $BUILD_DIR
-cp $BUILD_XSA $BUILD_DIR/vmr.xsa
-check_result "copy $BUILD_XSA" $?
+#cp $BUILD_XSA $BUILD_DIR/vmr.xsa
+#check_result "copy $BUILD_XSA" $?
 
 
 echo "=== (2) Create entire project, including platform BSP and application  "
 cp create_bsp.tcl $BUILD_DIR
 cd $BUILD_DIR
 start_seconds=$SECONDS
-xsct ./create_bsp.tcl $STDOUT_JTAG > $BUILD_LOG 2>&1
+xsct ./create_bsp.tcl $BUILD_XSA $STDOUT_JTAG > $BUILD_LOG 2>&1
 check_result "Create vmr_platform" $?
 echo "=== Create BSP Took: $((SECONDS - start_seconds)) S"
 

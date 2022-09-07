@@ -1,17 +1,20 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (C) 2018-2022 Xilinx, Inc. All rights reserved.
 
+set i 0; foreach n $argv {set [incr i] $n}
+puts "create with xsa: $1 jtag: $2"
+
 puts "=== set workspace"
 setws . 
 
 puts "=== create entire platform and vmr_app application"
-app create -name vmr_app -hw vmr.xsa -proc blp_cips_pspmc_0_psv_cortexr5_0 -os freertos10_xilinx -template "Empty Application(C)"
+app create -name vmr_app -hw $1 -proc blp_cips_pspmc_0_psv_cortexr5_0 -os freertos10_xilinx -template "Empty Application(C)"
 
-if { [lindex $argv 0] == 0 } {
+if { $2 == 0 } {
 	puts "=== stdout to jtag0"
 	bsp config stdin blp_cips_pspmc_0_psv_sbsauart_0
 	bsp config stdout blp_cips_pspmc_0_psv_sbsauart_0
-} elseif { [lindex $argv 0] == 1 } {
+} elseif { $2 == 1 } {
 	puts "=== stdout to jtag1"
 	bsp config stdin blp_cips_pspmc_0_psv_sbsauart_1
 	bsp config stdout blp_cips_pspmc_0_psv_sbsauart_1
