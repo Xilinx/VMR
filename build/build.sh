@@ -296,8 +296,38 @@ build_app_all() {
 	check_vmr "$BUILD_DIR/vmr_app"
 }
 
+build_vmr_source() {
+	cd $ROOT_DIR/$BUILD_DIR/vmr_app/Debug
+	if [ $? -ne 0 ];then
+		echo "Please rebuild entire project"
+		exit 1;
+	fi
+	
+	start_seconds=$SECONDS
+
+	# copy new source file
+	cd $ROOT_DIR
+	rsync -a ../vmr/src "$BUILD_DIR/vmr_app" --exclude cmc --exclude *.swp
+	make_version_h "$BUILD_DIR/vmr_app"
+
+	cd $ROOT_DIR/$BUILD_DIR/vmr_app/Debug
+	make clean;make -j
+
+	cd $ROOT_DIR
+	check_vmr "$BUILD_DIR/vmr_app"
+
+	echo "=== Make App Took: $((SECONDS - start_seconds)) S"
+}
+
 build_app_incremental() {
 	cd $ROOT_DIR/$BUILD_DIR
+	if [ $? -ne 0 ];then
+		echo "Please rebuild entire project"
+		exit 1;
+	fi
+
+	start_seconds=$SECONDS
+
 	# Remove source and elf file
 	rm -r vmr_app/src
 	rm -r vmr_app/Debug/vmr_app.elf
@@ -308,12 +338,12 @@ build_app_incremental() {
 	make_version_h "$BUILD_DIR/vmr_app"
 
 	cd $BUILD_DIR
-	start_seconds=$SECONDS
 	xsct ./make_app.tcl
-	echo "=== Make App Took: $((SECONDS - start_seconds)) S"
 
 	cd $ROOT_DIR
 	check_vmr "$BUILD_DIR/vmr_app"
+
+	echo "=== Make App Took: $((SECONDS - start_seconds)) S"
 }
 
 build_shell()
@@ -370,13 +400,13 @@ usage() {
     echo "-config <config file.json> config json instead of using default build.json"  
     echo "-clean                     Remove build directories"  
     echo "-xsa <xsa file.xsa>        XSA file"  
-    echo "-app                       Re-build Application only"  
     echo "-config_VMR                Update VMR project too edit in Vitis GUI"
-    echo "-XRT                       Build XRT only"
-    echo "                           Note: only take effect when env has no Vitis env"
     echo "-version                   version.json file"
     echo "-platform                  platform.json file for enable platform specific resources"
     echo "-jtag [0|1|2]              RPU console is on jtag uart 0, 1, or 2 for uartlite 0; APU is always on uartlite 1."
+    echo "-config <json file>        build with pre configured options"
+    echo "-app                       Re-build Vitis Application only"  
+    echo "-vmr                       Re-build vmr source code only, fatest!!!"  
     echo "-help"
     exit $1
 }
@@ -392,6 +422,9 @@ do
 			shift
                         BUILD_CONFIG=$1
                         ;;
+		-vmr)
+			BUILD_VMR=1
+			;;
                 -xsa)
 			shift
                         BUILD_XSA=$1
@@ -466,6 +499,12 @@ fi
 XSCT_VERSION=`which xsct|rev|cut -f3 -d"/"|rev`
 echo "Tools version: ${XSCT_VERSION}"
 
+# only build vmr source code
+if [[ $BUILD_VMR == 1 ]];then
+	build_vmr_source
+	exit 0;
+fi
+
 # only build app by vitis
 if [[ $BUILD_APP == 1 ]];then
 	build_app_incremental
@@ -495,7 +534,6 @@ build_clean
 mkdir $BUILD_DIR
 cp $BUILD_XSA $BUILD_DIR/vmr.xsa
 check_result "copy $BUILD_XSA" $?
-
 
 echo "=== (2) Create entire project, including platform BSP and application  "
 cp create_bsp.tcl $BUILD_DIR
