@@ -188,18 +188,24 @@ int cl_rmgmt_apu_download_xclbin(char *data, u32 size)
 	return 0;
 }
 
-static int identify_cmd_complete(struct xgq_cmd_cq *cq_cmd, char *buf, u32 size)
+static int identify_cmd_complete(struct xgq_cmd_cq *cq_cmd, struct xgq_vmr_cmd_identify *id_cmd)
 {
-	struct xgq_cmd_resp_identify *id_cmd = (struct xgq_cmd_resp_identify *)cq_cmd;
+	struct xgq_cmd_resp_identify *resp_id = (struct xgq_cmd_resp_identify *)cq_cmd;
+	int ret = 0;
 
-	if (cq_cmd_complete_check(cq_cmd))
-		return 0;
+	ret = cq_cmd_complete_check(cq_cmd);
+	if (ret)
+		return ret;
 
-	VMR_LOG("major.minor %d.%d", id_cmd->major, id_cmd->minor);
-	return snprintf(buf, size, "APU XGQ Version: %d.%d\n", id_cmd->major, id_cmd->minor);
+	id_cmd->major = resp_id->major;
+	id_cmd->minor = resp_id->minor;
+
+	VMR_LOG("major.minor %d.%d", resp_id->major, resp_id->minor);
+
+	return 0;
 }
 
-int cl_rmgmt_apu_identify(char *buf, u32 size)
+int cl_rmgmt_apu_identify(struct xgq_vmr_cmd_identify *id_cmd)
 {
 	int rval = 0;
 	uint64_t slot_addr = 0;
@@ -232,7 +238,7 @@ int cl_rmgmt_apu_identify(char *buf, u32 size)
 			continue;
 
 		read_completion(&cq_cmd, slot_addr);
-		rval = identify_cmd_complete(&cq_cmd, buf, size);
+		rval = identify_cmd_complete(&cq_cmd, id_cmd);
 		xgq_notify_peer_consumed(&apu_xgq);
 
 		return rval;
@@ -337,7 +343,8 @@ int cl_rmgmt_apu_channel_probe()
 {
 	uint64_t flags = 0;
 	int ret = 0;
-
+	struct xgq_vmr_cmd_identify id_cmd = {0};
+	
 	if (cl_rmgmt_apu_is_ready()) {
 		VMR_WARN("dup probe, skip");
 		return -1;
@@ -369,6 +376,16 @@ int cl_rmgmt_apu_channel_probe()
 		return -1;
 	}
 
+	ret = cl_rmgmt_apu_identify(&id_cmd);
+	if(ret != 0){
+		VMR_ERR("xgq identify failed: %d,please reset device", ret);
+		return -1;
+	}
+	if(id_cmd.major != 1 && id_cmd.minor != 0){
+		VMR_ERR("unsupported xgq major.minor %d.%d",id_cmd.major,id_cmd.minor);
+		return -1;
+	}
+	
 	xgq_apu_ready = true;
 
 	VMR_WARN("APU is ready.");

@@ -406,12 +406,15 @@ static u32 rmgmt_rpu_status_query(struct cl_msg *msg, char *buf, u32 size)
 static u32 rmgmt_apu_status_query(char *buf, u32 size)
 {
 	u32 count = 0;
+	struct xgq_vmr_cmd_identify id_cmd = {0};
 	int apu_is_ready = cl_rmgmt_apu_is_ready();
 
 	if (!apu_is_ready)
 		goto done;
 
-	count = cl_rmgmt_apu_identify(buf, size);
+	if(cl_rmgmt_apu_identify(&id_cmd) == 0){
+		count = snprintf(buf,size,"APU XGQ Version: %d.%d",id_cmd.major,id_cmd.minor);
+	}
 	if (count > size) {
 		VMR_ERR("msg is truncated");
 		return size;
