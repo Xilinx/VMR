@@ -106,8 +106,11 @@
     status = "disabled";
 };
 &memoryblp_axi_noc_mc_1x {
-    reg = <0x0 0x0 0x0 0x35ff0000 0x500 0x80000000 0x0 0x80000000>;
+    /delete-property/ reg;
+    reg = <0x0 0x0 0x0 0x35ff0000>;
 };
+/delete-node/ &memoryblp_axi_noc_mc_2x;
+
 / {
     chosen {
         bootargs = "console=ttyUL0  earlycon=uartlite_a,0x402020000,115200n8 clk_ignore_unused root=/dev/mmcblk0p2 rw rootwait";
@@ -115,9 +118,13 @@
     };
 
     aliases {
+	/delete-property/ serial0;
+	/delete-property/ serial1;
+	/delete-property/ serial2;
 	/delete-property/ serial3;
 	/delete-property/ serial4;
 	/delete-property/ serial5;
+	serial0 = &blp_blp_logic_axi_uart_apu;
     };
 
     reserved-memory {
@@ -138,6 +145,21 @@
         r2a_xgq_region: buffer@37000000 {
             no-map;
             reg = <0x0 0x37000000 0x0 0x1000000>;
+        };
+
+        buffer@50080000000 {
+            no-map;
+            reg = <0x500 0x80000000 0x0 0x80000000>;
+        };
+
+        buffer@50100000000 {
+            no-map;
+            reg = <0x501 0x0 0x1 0x0>;
+        };
+
+        buffer@60000000000 {
+            no-map;
+            reg = <0x600 0x0 0x02 0x0>;
         };
     };
 
