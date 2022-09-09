@@ -347,23 +347,23 @@ int cl_rmgmt_apu_channel_probe()
 	
 	if (cl_rmgmt_apu_is_ready()) {
 		VMR_WARN("dup probe, skip");
-		return -1;
+		return -ENODEV;
 	}
 
 	ret = cl_memcpy_fromio(VMR_EP_APU_SHARED_MEMORY_START, &mem, sizeof(mem));
 	if (ret == -1) {
 		VMR_ERR("read APU shared memory partition table failed");
-		return -1;
+		return -ENODEV;
 	}
 	if (mem.apu_channel_ready == 0) {
 		VMR_DBG("apu channel is not ready yet");
-		return -1;
+		return -ENODEV;
 	}
 
 	semaData = xSemaphoreCreateMutex();
 	if (semaData == NULL) {
 		VMR_ERR("no more memory for semaData creation");
-		return -1;
+		return -ENOMEM;
 	}
 
 	VMR_DBG("mem %x %x", mem.apu_channel_ready, mem.apu_xgq_ring_buffer);
@@ -373,23 +373,32 @@ int cl_rmgmt_apu_channel_probe()
 		VMR_EP_APU_SQ_BASE, VMR_EP_APU_CQ_BASE);
 	if (ret != 0) {
 		VMR_ERR("xgq_attach failed: %d, please reset device", ret);
-		return -1;
+		goto failure;
 	}
 
-	ret = cl_rmgmt_apu_identify(&id_cmd);
-	if(ret != 0){
-		VMR_ERR("xgq identify failed: %d,please reset device", ret);
-		return -1;
-	}
-	if(id_cmd.major != 1 && id_cmd.minor != 0){
-		VMR_ERR("unsupported xgq major.minor %d.%d",id_cmd.major,id_cmd.minor);
-		return -1;
-	}
-	
+	/*
+	 * After xgq_attach, we mark apu_ready to true.
+	 * If identify or version is not supported, we should stop
+	 * continue probing APU again
+	 */
 	xgq_apu_ready = true;
+	ret = cl_rmgmt_apu_identify(&id_cmd);
+	if (ret != 0) {
+		VMR_ERR("xgq identify failed: %d, please reset device", ret);
+		goto failure;
+	}
+	if (id_cmd.major != 1 && id_cmd.minor != 0) {
+		VMR_WARN("unsupported xgq major.minor %d.%d", id_cmd.major, id_cmd.minor);
+		goto failure;
+	}
 
 	VMR_WARN("APU is ready.");
-	return 0;
+	return ret;
+failure:
+	vSemaphoreDelete(semaData);
+	xgq_apu_ready = false;
+
+	return ret;
 }
 
 int cl_rmgmt_apu_is_ready()
