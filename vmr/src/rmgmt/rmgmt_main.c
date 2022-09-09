@@ -413,7 +413,7 @@ static u32 rmgmt_apu_status_query(char *buf, u32 size)
 		goto done;
 
 	if(cl_rmgmt_apu_identify(&id_cmd) == 0){
-		count = snprintf(buf,size,"APU XGQ Version: %d.%d",id_cmd.major,id_cmd.minor);
+		count = snprintf(buf,size,"APU XGQ Version: %d.%d\n",id_cmd.major,id_cmd.minor);
 	}
 	if (count > size) {
 		VMR_ERR("msg is truncated");

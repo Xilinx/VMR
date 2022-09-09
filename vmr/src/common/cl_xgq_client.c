@@ -373,6 +373,7 @@ int cl_rmgmt_apu_channel_probe()
 		VMR_EP_APU_SQ_BASE, VMR_EP_APU_CQ_BASE);
 	if (ret != 0) {
 		VMR_ERR("xgq_attach failed: %d, please reset device", ret);
+		ret = -EINVAL;
 		goto failure;
 	}
 
@@ -385,10 +386,12 @@ int cl_rmgmt_apu_channel_probe()
 	ret = cl_rmgmt_apu_identify(&id_cmd);
 	if (ret != 0) {
 		VMR_ERR("xgq identify failed: %d, please reset device", ret);
+		ret = -EINVAL;
 		goto failure;
 	}
 	if (id_cmd.major != 1 && id_cmd.minor != 0) {
 		VMR_WARN("unsupported xgq major.minor %d.%d", id_cmd.major, id_cmd.minor);
+		ret = -EINVAL;
 		goto failure;
 	}
 
