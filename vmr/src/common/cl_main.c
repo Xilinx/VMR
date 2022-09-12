@@ -304,7 +304,7 @@ static void cl_main_task_func(void *task_args)
 		/* check APU status every second */
 		vTaskDelay(pdMS_TO_TICKS(1000));
 		int rVal = cl_rmgmt_apu_channel_probe();
-		if ((rVal != -ENOMEM && rVal != -ENODEV) || rVal == 0 || rVal == -EINVAL)
+		if (rVal != -ENOMEM)
 			break;
 	}
 
