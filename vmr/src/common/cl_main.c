@@ -303,8 +303,8 @@ static void cl_main_task_func(void *task_args)
 	while (1) {
 		/* check APU status every second */
 		vTaskDelay(pdMS_TO_TICKS(1000));
-
-		if (cl_rmgmt_apu_channel_probe() == 0)
+		int rVal = cl_rmgmt_apu_channel_probe();
+		if (rVal != -ENODEV)
 			break;
 	}
 

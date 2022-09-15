@@ -7,6 +7,7 @@
 #define COMMON_RMGMT_H
 
 struct cl_msg;
+struct xgq_vmr_cmd_identify;
 
 int cl_rmgmt_fpt_get_debug_type(struct cl_msg *msg, u8 *debug_type);
 int cl_rmgmt_enable_boot_default(struct cl_msg *msg);
@@ -24,7 +25,7 @@ int cl_rmgmt_program_apu_pdi(struct cl_msg *msg);
 int cl_rmgmt_program_xclbin(struct cl_msg *msg);
 
 int cl_rmgmt_apu_channel_probe(void);
-int cl_rmgmt_apu_identify(char *buf, u32 size);
+int cl_rmgmt_apu_identify(struct xgq_vmr_cmd_identify *id_cmd);
 int cl_rmgmt_apu_info(char *buf, u32 size);
 int cl_rmgmt_apu_download_xclbin(char *data, u32 size);
 
