@@ -27,7 +27,7 @@ Help()
 
 # script vars (change if required)
 VMR=""
-TOOL_VERSION="2022.1"
+TOOL_VERSION="2022.2"
 DEFAULT_VITIS="/proj/xbuilds/${TOOL_VERSION}_daily_latest/installs/lin64/Vitis/HEAD/settings64.sh"
 
 ############################################################
@@ -98,7 +98,7 @@ con
 
 ' > /tmp/scripts/vmr.tcl
 
-# stop XRT drivers
+echo "stop XRT drivers"
 rmmod xocl;rmmod xclmgmt
 
 # upgrading vmr.elf
@@ -109,12 +109,11 @@ if [ $ERR -ne 0 ];then
     echo "upgrade vmr error: $ERR"
     exit 1;
 fi
-echo "upgrade vmr done, reload XRT drivers..."
 
+echo "upgrade vmr done, reload XRT drivers..."
 modprobe xocl;modprobe xclmgmt
 
 #clean up
 rm -rf /tmp/scripts
-
 printf "\n $0 complete.\n"
 
