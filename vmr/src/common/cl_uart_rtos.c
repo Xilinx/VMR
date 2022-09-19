@@ -26,8 +26,8 @@
 #define UART_RTOS_TASK_STACK_SIZE	(configMINIMAL_STACK_SIZE + 100)
 #define UART_RTOS_TASK_PRIORITY		(5)
 
-#define WELCOME_MSG							"\n\rHello from UART_RTOS to you!\n\r"
-#define UART_TX_FIFO_THRESHOLD				(XUARTPSV_UARTIFLS_TXIFLSEL_1_8)
+#define WELCOME_MSG				"\n\rHello from UART_RTOS to you!\n\r"
+#define UART_TX_FIFO_THRESHOLD			(XUARTPSV_UARTIFLS_TXIFLSEL_1_8)
 
 /* The FIFO triggers at 2 bytes larger than FIFO trigger level */
 #define UART_TX_FIFO_THRESHOLD_TRIGGER		(UART_TX_FIFO_THRESHOLD + 2)
@@ -268,7 +268,7 @@ static int32_t UART_Config(uart_rtos_handle_t *handle, XUartPsv *UartInstPtr,
 	 */
 	XUartPsv_SetHandler(UartInstPtr, (XUartPsv_Handler)UART_RTOS_Handler, handle);
 
-	XUartPsv_SetRxFifoThreshold(UartInstPtr, XUARTPSV_UARTIFLS_RXIFLSEL_1_8);
+	XUartPsv_SetRxFifoThreshold(UartInstPtr, XUARTPSV_UARTIFLS_RXIFLSEL_1_2);
 	XUartPsv_SetTxFifoThreshold(UartInstPtr, UART_TX_FIFO_THRESHOLD);
 
 	/*
@@ -326,6 +326,85 @@ static int32_t UART_RTOS_Deinit(uart_rtos_handle_t *handle)
 
 }
 
+/**************************************************************************/
+/**
+*
+* This function acquires the semaphore passed to it.
+*
+* @param	sem_data is a semaphore.
+*
+* @return	status.
+*
+* @note
+*
+**************************************************************************/
+bool uart_shm_acquire(SemaphoreHandle_t sem_data)
+{
+	if (xSemaphoreTake(sem_data, 0) != pdTRUE) {
+		return false;
+	}
+
+	return true;
+}
+
+/**************************************************************************/
+/**
+*
+* This function releases the semaphore passed to it.
+*
+* @param	sem_data is a semaphore.
+*
+* @return	status.
+*
+* @note
+*
+**************************************************************************/
+bool uart_shm_release(SemaphoreHandle_t sem_data)
+{
+	if (xSemaphoreGive(sem_data) != pdTRUE) {
+		return false;
+	}
+
+	return true;
+}
+
+/**************************************************************************/
+/**
+*
+* This function enables the interrupt id passed to it.
+*
+* @param	InterruptID is a interrupt index.
+*
+* @return	void.
+*
+* @note
+*
+**************************************************************************/
+void uart_enable_interrupt(u8 InterruptID)
+{
+	vPortEnableInterrupt(InterruptID);
+	portNOP();
+	portNOP();
+}
+
+/**************************************************************************/
+/**
+*
+* This function disables the interrupt id passed to it.
+*
+* @param	InterruptID is a interrupt index.
+*
+* @return	void.
+*
+* @note
+*
+**************************************************************************/
+void uart_disable_interrupt(u8 InterruptID)
+{
+	vPortDisableInterrupt(InterruptID);
+	portNOP();
+	portNOP();
+}
 
 /**************************************************************************/
 /**
@@ -347,16 +426,14 @@ static int32_t UART_RTOS_Deinit(uart_rtos_handle_t *handle)
 * @note
 *
 **************************************************************************/
-int32_t UART_RTOS_Send(uart_rtos_handle_t *handle, uint8_t *buf, uint32_t size)
+UART_STATUS UART_RTOS_Send(uart_rtos_handle_t *handle, uint8_t *buf, uint32_t size)
 {
-
 	EventBits_t ev;
 	UART_STATUS retVal = UART_SUCCESS;
-	//uint32_t byteSent = 0;
 
 	if(handle == NULL)
 	{
-		return UART_ERROR_GENERIC;
+		return UART_INVALID_HANDLE;
 	}
 	if(buf == NULL)
 	{
@@ -367,21 +444,22 @@ int32_t UART_RTOS_Send(uart_rtos_handle_t *handle, uint8_t *buf, uint32_t size)
 		return UART_ERROR_GENERIC;
 	}
 
-	if(pdFALSE == xSemaphoreTake(handle->txSem,0))
-	{
+	if (!uart_shm_acquire(handle->txSem)) {
 		return UART_ERROR_SEMAPHORE;
 	}
-
-
+	
+#ifdef VMC_DEBUG
+	/* Enable the send UART interrupt before sending only if demomenu is enabled,
+	 * as we previously disabled the interrupt after a successful receive. */
+	uart_enable_interrupt(handle->uart_IRQ_ID);
+#endif
 	/*
 	 * Send the buffer using the UART and ignore the number of bytes sent
 	 * as the return value since we are using it in interrupt mode.
 	 */
 	XUartPsv_Send(&handle->uartPsv, buf, size);
-	//xil_printf("\n\rbytes: %d", byteSent);
 	if(size >= UART_TX_FIFO_THRESHOLD_TRIGGER)
 	{
-
 		ev = xEventGroupWaitBits(handle->txEvent, UART_RTOS_COMPLETE, pdTRUE, pdFALSE, portMAX_DELAY);
 		if(!(ev & UART_RTOS_COMPLETE))
 		{
@@ -389,24 +467,17 @@ int32_t UART_RTOS_Send(uart_rtos_handle_t *handle, uint8_t *buf, uint32_t size)
 		}
 	}
 
-	if(pdFALSE == xSemaphoreGive(handle->txSem))
-	{
-		retVal = UART_ERROR_SEMAPHORE;
+	if (!uart_shm_release(handle->txSem)) {
+		return UART_ERROR_SEMAPHORE;
 	}
 
 	return retVal;
 }
 
-
-
-
-
 /**************************************************************************/
 /**
 *
-* This function is called to receive data bytes.
-* It waits until all requested received bytes are received or an error occurs.
-*
+* This function is called to set the receiver buffer before sending data bytes.
 *
 * @param	handle is a pointer to the instance of the UART RTOS driver handler.
 *
@@ -416,54 +487,88 @@ int32_t UART_RTOS_Send(uart_rtos_handle_t *handle, uint8_t *buf, uint32_t size)
 *
 * @param 	received is a pointer which returns number of received bytes.
 *
-* @return	XST_SUCCESS if successful, otherwise XST_FAILURE.
+* @return	UART_STATUS.
 *
 * @note
 *
 **************************************************************************/
-int32_t UART_RTOS_Receive(uart_rtos_handle_t *handle, uint8_t *buf, uint32_t size, uint32_t *received,uint32_t timeout){
-
-
-	EventBits_t ev;
+UART_STATUS UART_RTOS_Receive_Set_Buffer(uart_rtos_handle_t *handle, uint8_t *buf, uint32_t size, uint32_t *received)
+{
 	UART_STATUS retVal = UART_SUCCESS;
 
-	if(received == NULL)
+	if (handle == NULL)
+	{
+		return UART_INVALID_HANDLE;
+	}
+	if (received == NULL)
 	{
 		return UART_ERROR_GENERIC;
 	}
-	if(handle == NULL)
+	if (buf == NULL)
 	{
 		return UART_ERROR_GENERIC;
-	}
-	if(buf == NULL)
-	{
-		return UART_ERROR_GENERIC;
-	}
-	if(size == 0)
-	{
-		*received = 0;
-		return UART_SUCCESS;
 	}
 
-	if(pdFALSE == xSemaphoreTake(handle->rxSem,0))
-	{
+	if (!uart_shm_acquire(handle->rxSem)) {
 		return UART_ERROR_SEMAPHORE;
 	}
 
-	/* To avoid messing up remaining/requested bytes variables and buffer pointer if RX hardware interrupt triggers in the mean time. */
+	/**
+	 * Disable interrupt to before setting RX buffer variables, otherwise we may face memory leak.
+	 */
+	uart_disable_interrupt(handle->uart_IRQ_ID);
+	*received = XUartPsv_Recv(&handle->uartPsv, buf, size);
+	uart_enable_interrupt(handle->uart_IRQ_ID);
 
-	vPortDisableInterrupt(handle->uart_IRQ_ID);
-	portNOP();
-	portNOP();
-	XUartPsv_Recv(&handle->uartPsv, buf, size);
-	vPortEnableInterrupt(handle->uart_IRQ_ID);
+	return retVal;
+}
+
+/**************************************************************************/
+/**
+*
+* This function is called to wait for the requested amount of time to receive the
+* number of bytes that we set through the UART_RTOS_Receive_Set_Buffer() API.
+*
+* @param	handle is a pointer to the instance of the UART RTOS driver handler.
+*
+* @param 	received is a pointer which returns number of received bytes.
+*
+* @param 	timeout is the amount of time this API will wait to receive the
+* 			requested amount of bytes.
+*
+* @return	UART_STATUS.
+*
+* @note
+*
+**************************************************************************/
+UART_STATUS UART_RTOS_Receive_Wait(uart_rtos_handle_t *handle, uint32_t *received, uint32_t timeout)
+{
+	EventBits_t ev;
+	UART_STATUS retVal = UART_SUCCESS;
+
+	if (handle == NULL)
+	{
+		return UART_INVALID_HANDLE;
+	}
+	if (received == NULL)
+	{
+		return UART_ERROR_GENERIC;
+	}
 
 	ev = xEventGroupWaitBits(handle->rxEvent, UART_RTOS_COMPLETE | UART_RTOS_RX_ERROR, pdTRUE, pdFALSE,(const TickType_t)timeout);
-	if((ev & UART_RTOS_COMPLETE))
+
+	/**
+	 * Disable interrupt to be in control of incoming packets.
+	 * We need to get prepared to read incoming data first by calling UART_RTOS_Receive_Set,
+	 * otherwise, we will go out of sync.
+	 */
+	uart_disable_interrupt(handle->uart_IRQ_ID);
+
+	if ((ev & UART_RTOS_COMPLETE))
 	{
 		*received = handle->cb_msg.receivedBytes;
 	}
-	else if((ev & UART_RTOS_RX_ERROR))
+	else if ((ev & UART_RTOS_RX_ERROR))
 	{
 		*received = 0;
 		retVal = UART_ERROR_EVENT;
@@ -474,9 +579,8 @@ int32_t UART_RTOS_Receive(uart_rtos_handle_t *handle, uint8_t *buf, uint32_t siz
 		xil_printf("\n\rCL_ERR: UART_RTOS_RX timed-out!\n\r");
 	}
 
-	if(pdFALSE == xSemaphoreGive(handle->rxSem))
-	{
-		retVal = UART_ERROR_SEMAPHORE;
+	if (!uart_shm_release(handle->rxSem)) {
+		return UART_ERROR_SEMAPHORE;
 	}
 
 	return retVal;

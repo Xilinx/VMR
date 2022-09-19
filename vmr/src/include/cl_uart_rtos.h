@@ -30,6 +30,7 @@ typedef enum _UART_STATUS{
 	UART_ERROR_SEMAPHORE = -2,
 	UART_ERROR_EVENT = -3,
 	UART_ERROR_TIMEOUT = -4,
+	UART_INVALID_HANDLE = -5,
 	UART_ERROR_GENERIC = -100,
 }UART_STATUS;
 
@@ -59,12 +60,16 @@ typedef struct _uart_rtos_config_t{
 	XScuGic 			INTC;
 }uart_rtos_config_t;
 
-int32_t UART_RTOS_Send(uart_rtos_handle_t *handle, uint8_t *buf, uint32_t size);
-int32_t UART_RTOS_Receive(uart_rtos_handle_t *handle, uint8_t *buf, uint32_t size, uint32_t *received,uint32_t timeout);
+void uart_enable_interrupt(u8 InterruptID);
+void uart_disable_interrupt(u8 InterruptID);
+bool uart_shm_acquire(SemaphoreHandle_t sem_data);
+bool uart_shm_release(SemaphoreHandle_t sem_data);
+UART_STATUS UART_RTOS_Send(uart_rtos_handle_t *handle, uint8_t *buf, uint32_t size);
+UART_STATUS UART_RTOS_Receive_Set_Buffer(uart_rtos_handle_t *handle, uint8_t *buf, uint32_t size, uint32_t *received);
+UART_STATUS UART_RTOS_Receive_Wait(uart_rtos_handle_t *handle, uint32_t *received, uint32_t timeout);
 int32_t UART_RTOS_Enable(uart_rtos_config_t *uartConfig, ePlatformType curr_platform);
 int32_t UART_RTOS_Disable(uart_rtos_handle_t *handle);
 int32_t UART_RTOS_Debug_Enable(uart_rtos_handle_t *handle, ePlatformType curr_platform);
 int32_t UART_VMC_SC_Enable(uart_rtos_handle_t *handle, ePlatformType curr_platform);
-
 
 #endif
