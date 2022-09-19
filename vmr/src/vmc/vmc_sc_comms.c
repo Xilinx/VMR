@@ -288,18 +288,38 @@ bool Parse_SC_Data(u8 *Payload, u8 expected_msgid)
 	return true;
 }
 
-bool VMC_TX_UART_packet(u8 Message_id , u8 Flags, u8 Payloadlength, u8 *Payload)
+/**
+  * @brief  Read full receiver fifo to clear all unwanted data that we received.
+  * @param  buff: Pointer to receive data buffer.
+  * @param  size: Max amount of data to be cleared.
+  * @retval Status
+  */
+bool VMC_Recover_UART(u8 *buff, u32 size)
 {
-	static u8 buf[MAX_VMC_SC_UART_BUF_SIZE] = {0x00};
-	u8 i = 0;
-	u8 length = 0;
+	UART_STATUS uart_ret_val = UART_ERROR_GENERIC;
+	u32 rcvd_cnt = 0;
+
+	uart_ret_val = UART_RTOS_Receive_Set_Buffer(&uart_vmcsc_log, buff, size, &rcvd_cnt);
+	if (UART_SUCCESS != uart_ret_val)
+		return false;
+
+	uart_ret_val = UART_RTOS_Receive_Wait(&uart_vmcsc_log, &rcvd_cnt, RCV_TIMEOUT_MS(2000));
+	if (UART_SUCCESS != uart_ret_val) {
+		VMC_DBG("UART buffer flushed");
+	}
+
+	Cl_SecureMemset(buff, 0x00, size);
+
+	return true;
+}
+
+void VMC_Uart_Frame_Tx_packet(u8 msg_id, u8 payload_len, u8 *tx_buff, u8 *length, u8 *payload)
+{
 	u16 checksum = 0;
-	int32_t retVal;
+	u8 len = 0;
+	vmc_sc_uart_cmd pkt_framing = { 0 };
 
-	vmc_sc_uart_cmd pkt_framing = {0};
-
-	Cl_SecureMemset(buf, 0x00, MAX_VMC_SC_UART_BUF_SIZE);
-	Cl_SecureMemset(&pkt_framing,0x00,sizeof(vmc_sc_uart_cmd));
+	Cl_SecureMemset(&pkt_framing, 0x00, sizeof(vmc_sc_uart_cmd));
 
 	pkt_framing.SOP[0] = ESCAPE_CHAR;
 	pkt_framing.SOP[1] = STX;
@@ -307,98 +327,121 @@ bool VMC_TX_UART_packet(u8 Message_id , u8 Flags, u8 Payloadlength, u8 *Payload)
 	pkt_framing.EOP[0] = ESCAPE_CHAR;
 	pkt_framing.EOP[1] = ETX;
 
-	pkt_framing.MessageID = Message_id;
+	pkt_framing.MessageID = msg_id;
 	pkt_framing.Flags = Flags;
-	pkt_framing.PayloadLength = Payloadlength;
+	pkt_framing.PayloadLength = payload_len;
 
-	if(pkt_framing.PayloadLength)
-	{
-	    for(i = 0; i < pkt_framing.PayloadLength; ++i)
-	    {
-	    	pkt_framing.Payload[i] = Payload[i];
-	    }
+	if (pkt_framing.PayloadLength) {
+		for (int i = 0; i < pkt_framing.PayloadLength; ++i) {
+			pkt_framing.Payload[i] = payload[i];
+		}
 	}
 
 	checksum = calculate_checksum(&pkt_framing);
 	pkt_framing.Checksum[0] = checksum & (0x00FF);
 	pkt_framing.Checksum[1] = (checksum >> 8);
 
-	(void)Cl_SecureMemcpy(&buf[0],SOP_SIZE, &pkt_framing.SOP[0], SOP_SIZE);
-	length += SOP_SIZE;
+	(void) Cl_SecureMemcpy(&tx_buff[0], SOP_SIZE, &pkt_framing.SOP[0], SOP_SIZE);
+	len += SOP_SIZE;
 
 	/* MessageID */
-	if (pkt_framing.MessageID == ESCAPE_CHAR)
-	{
-		buf[length++] = ESCAPE_CHAR;
+	if (pkt_framing.MessageID == ESCAPE_CHAR) {
+		tx_buff[len++] = ESCAPE_CHAR;
 	}
-	buf[length++] = pkt_framing.MessageID;
+	tx_buff[len++] = pkt_framing.MessageID;
 
 	/* Add flags */
-	if (pkt_framing.Flags == ESCAPE_CHAR)
-	{
-		buf[length++] = ESCAPE_CHAR;
+	if (pkt_framing.Flags == ESCAPE_CHAR) {
+		tx_buff[len++] = ESCAPE_CHAR;
 	}
-	buf[length++] = pkt_framing.Flags;
+	tx_buff[len++] = pkt_framing.Flags;
 
 	/* Add payload length */
-	if (pkt_framing.PayloadLength == ESCAPE_CHAR)
-	{
-		buf[length++] = ESCAPE_CHAR;
+	if (pkt_framing.PayloadLength == ESCAPE_CHAR) {
+		tx_buff[len++] = ESCAPE_CHAR;
 	}
-	buf[length++] = pkt_framing.PayloadLength;
+	tx_buff[len++] = pkt_framing.PayloadLength;
 
 	/* Add payload */
-	for(i = 0; i < pkt_framing.PayloadLength; i++)
-	{
-		if (pkt_framing.Payload[i] == ESCAPE_CHAR)
-		{
-			buf[length++] = ESCAPE_CHAR;
+	for (int i = 0; i < pkt_framing.PayloadLength; i++) {
+		if (pkt_framing.Payload[i] == ESCAPE_CHAR) {
+			tx_buff[len++] = ESCAPE_CHAR;
 		}
-		buf[length++] = pkt_framing.Payload[i];
-
+		tx_buff[len++] = pkt_framing.Payload[i];
 	}
 
 	/* Add checksum */
-	for(i = 0; i < CHECKSUM_SIZE; i++)
-	{
-		if (pkt_framing.Checksum[i] == ESCAPE_CHAR)
-		{
-			buf[length++] = ESCAPE_CHAR;
+	for (int i = 0; i < CHECKSUM_SIZE; i++) {
+		if (pkt_framing.Checksum[i] == ESCAPE_CHAR) {
+			tx_buff[len++] = ESCAPE_CHAR;
 		}
-		buf[length++] = pkt_framing.Checksum[i];
-
+		tx_buff[len++] = pkt_framing.Checksum[i];
 	}
 
 	/* Add EOP */
-	(void)Cl_SecureMemcpy(&buf[length], EOP_SIZE, &pkt_framing.EOP[0], EOP_SIZE);
-	length += EOP_SIZE;
-
-	retVal = UART_RTOS_Send(&uart_vmcsc_log,&buf[0],length);
-	if(retVal == UART_SUCCESS){
-		return true;
-	}
-	return false;
+	(void) Cl_SecureMemcpy(&tx_buff[len], EOP_SIZE, &pkt_framing.EOP[0], EOP_SIZE);
+	len += EOP_SIZE;
+	*length = len;
 }
 
-void VMC_RX_UART_packet(u8 Expected_Msg_Length)
+bool VMC_UART_CMD_Transaction(u8 Message_id, u8 Flags, u8 Payloadlength, u8 *Payload, u8 Expected_Msg_Length)
 {
-	u32 receivedcount = 0;
-	static u8 data[MAX_VMC_SC_UART_BUF_SIZE] = {0x00};
+	UART_STATUS uart_ret_val = UART_ERROR_GENERIC;
 
-	Cl_SecureMemset(data,0x00,MAX_VMC_SC_UART_BUF_SIZE);
+	static u8 tx_buf[MAX_VMC_SC_UART_BUF_SIZE] = { 0x00 };
+	static u8 rx_buf[MAX_VMC_SC_UART_BUF_SIZE] = { 0x00 };
+	u8 length = 0;
+	u32 received_count = 0;
+	bool ret_val = false;
 
-	if(UART_RTOS_Receive(&uart_vmcsc_log, data, Expected_Msg_Length, &receivedcount, RCV_TIMEOUT_MS(500)) == UART_SUCCESS)
-	{
-		VMR_ASSERT(receivedcount <= MAX_VMC_SC_UART_BUF_SIZE,
-			"fatal error: receivedcount %d > MAX BUF SIZE %d",
-			receivedcount, MAX_VMC_SC_UART_BUF_SIZE);
-		if (receivedcount > 2) { /* Condition to avoid over bound */
-			if (VMC_Validate_SC_Packet(&data[0], receivedcount)) {
-				Cl_SecureMemcpy(g_scData, receivedcount, data, receivedcount);
+	Cl_SecureMemset(rx_buf, 0x00, MAX_VMC_SC_UART_BUF_SIZE);
+	Cl_SecureMemset(tx_buf, 0x00, MAX_VMC_SC_UART_BUF_SIZE);
+
+	uart_ret_val = UART_RTOS_Receive_Set_Buffer(&uart_vmcsc_log, &rx_buf[0], Expected_Msg_Length, &received_count);
+	if (UART_SUCCESS != uart_ret_val)
+		return false;
+
+	VMC_Uart_Frame_Tx_packet(Message_id, Payloadlength, tx_buf, &length, Payload);
+
+	uart_ret_val = UART_RTOS_Send(&uart_vmcsc_log, &tx_buf[0], length);
+	if (UART_SUCCESS != uart_ret_val) {
+		ret_val = false;
+		uart_disable_interrupt(uart_vmcsc_log.uart_IRQ_ID);
+		if (!uart_shm_release(uart_vmcsc_log.rxSem))
+			ret_val = false;
+		return ret_val;
+	}
+	uart_ret_val = UART_RTOS_Receive_Wait(&uart_vmcsc_log, &received_count,	RCV_TIMEOUT_MS(500));
+	if (UART_SUCCESS == uart_ret_val) {
+		(Expected_Msg_Length == received_count) ? (ret_val = true) : (ret_val =	false);
+
+		VMR_ASSERT(received_count <= MAX_VMC_SC_UART_BUF_SIZE,
+				"fatal error: received_count %d > MAX BUF SIZE %d",
+				received_count, MAX_VMC_SC_UART_BUF_SIZE);
+		if (received_count > MIN_BYTE_CNT_FOR_SC_PKT_VALIDATION) { /* Condition to avoid over bound */
+			if (VMC_Validate_SC_Packet(&rx_buf[0], received_count)) {
+				Cl_SecureMemcpy(g_scData, received_count, rx_buf, received_count);
 				isPacketReceived = true;
+			} else {
+				bool flush_ret = false;
+				received_count = 0;
+				flush_ret = VMC_Recover_UART(rx_buf, MAX_VMC_SC_UART_BUF_SIZE);
+				if (flush_ret)
+					VMC_DBG("Recovering UART !!");
 			}
+		} else {
+			ret_val = false;
+		}
+	} else {
+		ret_val = false;
+		uart_disable_interrupt(uart_vmcsc_log.uart_IRQ_ID);
+		if (uart_ret_val == UART_ERROR_GENERIC) {
+			if (!uart_shm_release(uart_vmcsc_log.rxSem))
+				return false;
 		}
 	}
+
+	return ret_val;
 }
 
 void Get_Sensor_Response_Length(u8 Data)
@@ -407,8 +450,9 @@ void Get_Sensor_Response_Length(u8 Data)
 	u8 payloadLength = 1;
 
 	scPayload[0] = Data;
-	VMC_TX_UART_packet(MSP432_COMMS_VMC_GET_RESP_SIZE_REQ,MSP432_COMMS_NO_FLAG,payloadLength,scPayload);
-	VMC_RX_UART_packet(Expected_Msg_Length);
+	VMC_UART_CMD_Transaction(MSP432_COMMS_VMC_GET_RESP_SIZE_REQ,
+			MSP432_COMMS_NO_FLAG, payloadLength, scPayload,
+			Expected_Msg_Length);
 	if(isPacketReceived)
 	{
 		Parse_SC_Data(g_scData, MSP432_COMMS_VMC_GET_RESP_SIZE_RESP);
@@ -420,135 +464,126 @@ void Get_Sensor_Response_Length(u8 Data)
 
 void VMC_SC_COMMS_Tx_Rx(u8 messageID)
 {
-    u8 buf[32] = {0x00};
+	u8 buf[32] = { 0x00 };
 
-    switch(messageID)
-    {
-        case SC_COMMS_RX_VOLT_SNSR:
-        {
-        	VMC_TX_UART_packet(SC_COMMS_RX_VOLT_SNSR, MSP432_COMMS_NO_FLAG, 0x00, buf);
-            VMC_RX_UART_packet(sc_vmc_data.voltSensorLength);
-            if(isPacketReceived)
-            {
-                Parse_SC_Data(g_scData, SC_COMMS_RX_VOLT_SNSR_RESP);
-                isPacketReceived = false;
-            }
-            Cl_SecureMemset(g_scData,0x00,MAX_VMC_SC_UART_BUF_SIZE);
-            g_scDataCount = 0;
-            break;
-        }
-        case SC_COMMS_RX_POWER_SNSR:
-        {
-        	VMC_TX_UART_packet(SC_COMMS_RX_POWER_SNSR, MSP432_COMMS_NO_FLAG, 0x00, buf);
-        	VMC_RX_UART_packet(sc_vmc_data.powerSensorLength);
-            if(isPacketReceived)
-            {
-            	Parse_SC_Data(g_scData, SC_COMMS_RX_POWER_SNSR_RESP);
-            	isPacketReceived = false;
-            }
-            Cl_SecureMemset(g_scData,0x00,MAX_VMC_SC_UART_BUF_SIZE);
-            g_scDataCount = 0;
-            break;
-        }
-        case SC_COMMS_RX_TEMP_SNSR:
-        {
-        	VMC_TX_UART_packet(SC_COMMS_RX_TEMP_SNSR, MSP432_COMMS_NO_FLAG, 0x00, buf);
-            VMC_RX_UART_packet(sc_vmc_data.tempSensorLength);
-            if(isPacketReceived)
-            {
-            	Parse_SC_Data(g_scData, SC_COMMS_RX_TEMP_SNSR_RESP);
-            	isPacketReceived = false;
-            }
-            Cl_SecureMemset(g_scData,0x00,MAX_VMC_SC_UART_BUF_SIZE);
-            g_scDataCount = 0;
-            break;
-        }
-        case SC_COMMS_TX_I2C_SNSR:
-        {
-            u8 payloadLength = 0;
-            Cl_SecureMemset(scPayload ,0x00,MAX_VMC_SC_UART_BUF_SIZE);
-            payloadLength = Asdm_Send_I2C_Sensors_SC(scPayload);
-            VMC_TX_UART_packet(SC_COMMS_TX_I2C_SNSR, MSP432_COMMS_NO_FLAG, payloadLength, scPayload);
-            VMC_RX_UART_packet(MSP432_COMMS_GENERAL_RESP_LEN);
-            if(isPacketReceived)
-            {
-                Parse_SC_Data(g_scData, SC_COMMS_RX_I2C_SNSR_RESP);
-                isPacketReceived = false;
-            }
-            Cl_SecureMemset(g_scData,0x00,MAX_VMC_SC_UART_BUF_SIZE);
-            g_scDataCount = 0;
-            break;
-        }
-        case SC_COMMS_TX_BOARD_INFO:
-        {
-        	u8 payloadLength = 0;
-        	Cl_SecureMemset(scPayload, 0x00, MAX_VMC_SC_UART_BUF_SIZE);
-        	if(fetch_boardinfo_ptr != NULL) {
-        		payloadLength = (*fetch_boardinfo_ptr)(scPayload);
-        	} else {
-        		payloadLength = 0;
-        		break;
-        	}
-        	if (payloadLength < 0) {
-        		VMC_ERR("BoardInfo Size exceeding UART Max Payload Size");
-        		break;
-        	}
-        	VMC_TX_UART_packet(SC_COMMS_TX_BOARD_INFO, MSP432_COMMS_NO_FLAG, payloadLength, scPayload);
-        	VMC_RX_UART_packet(MSP432_COMMS_GENERAL_RESP_LEN);
-        	if (isPacketReceived) {
-        		Parse_SC_Data(g_scData, SC_COMMS_RX_BOARD_INFO_RESP);
-        		isPacketReceived = false;
-        	}
-        	Cl_SecureMemset(g_scData, 0x00, MAX_VMC_SC_UART_BUF_SIZE);
-        	g_scDataCount = 0;
-        	break;
-        }
-        case MSP432_COMMS_VMC_VERSION_POWERMODE_REQ:
-        {
-            u8  Expected_Msg_Length = 18;
-            VMC_TX_UART_packet(MSP432_COMMS_VMC_VERSION_POWERMODE_REQ,
-                            MSP432_COMMS_NO_FLAG,0x00,buf);
-            VMC_RX_UART_packet(Expected_Msg_Length);
-            if(isPacketReceived)
-            {
-                Parse_SC_Data(g_scData, MSP432_COMMS_VMC_VERSION_POWERMODE_RESP);
-                isPacketReceived = false;
-            }
-            Cl_SecureMemset(g_scData,0x00,MAX_VMC_SC_UART_BUF_SIZE);
-            g_scDataCount = 0;
-            break;
-        }
-        case MSP432_COMMS_VMC_ACTIVE_REQ:
-        {
-            u8 Expected_Msg_Length = vmc_get_active_resp_len();
-            VMC_TX_UART_packet(MSP432_COMMS_VMC_ACTIVE_REQ,MSP432_COMMS_NO_FLAG,0x00,buf);
-            VMC_RX_UART_packet(Expected_Msg_Length);
-            if(isPacketReceived)
-            {
-                Parse_SC_Data(g_scData, MSP432_COMMS_MSG_GOOD);
-                isPacketReceived = false;
-            }
-            Cl_SecureMemset(g_scData,0x00,MAX_VMC_SC_UART_BUF_SIZE);
-            g_scDataCount = 0;
-            break;
-        }
-        case MSP432_COMMS_VMC_GET_RESP_SIZE_REQ:
-        {
-        	Get_Sensor_Response_Length(SC_COMMS_RX_VOLT_SNSR);
-        	Get_Sensor_Response_Length(SC_COMMS_RX_POWER_SNSR);
-        	Get_Sensor_Response_Length(SC_COMMS_RX_TEMP_SNSR);
+	switch (messageID) {
+	case SC_COMMS_RX_VOLT_SNSR:
+	{
+		VMC_UART_CMD_Transaction(SC_COMMS_RX_VOLT_SNSR, MSP432_COMMS_NO_FLAG,
+				0x00, buf, sc_vmc_data.voltSensorLength);
+		if (isPacketReceived) {
+			Parse_SC_Data(g_scData, SC_COMMS_RX_VOLT_SNSR_RESP);
+			isPacketReceived = false;
+		}
+		Cl_SecureMemset(g_scData, 0x00, MAX_VMC_SC_UART_BUF_SIZE);
+		g_scDataCount = 0;
+		break;
+	}
+	case SC_COMMS_RX_POWER_SNSR:
+	{
+		VMC_UART_CMD_Transaction(SC_COMMS_RX_POWER_SNSR, MSP432_COMMS_NO_FLAG,
+				0x00, buf, sc_vmc_data.powerSensorLength);
+		if (isPacketReceived) {
+			Parse_SC_Data(g_scData, SC_COMMS_RX_POWER_SNSR_RESP);
+			isPacketReceived = false;
+		}
+		Cl_SecureMemset(g_scData, 0x00, MAX_VMC_SC_UART_BUF_SIZE);
+		g_scDataCount = 0;
+		break;
+	}
+	case SC_COMMS_RX_TEMP_SNSR:
+	{
+		VMC_UART_CMD_Transaction(SC_COMMS_RX_TEMP_SNSR, MSP432_COMMS_NO_FLAG,
+				0x00, buf, sc_vmc_data.tempSensorLength);
+		if (isPacketReceived) {
+			Parse_SC_Data(g_scData, SC_COMMS_RX_TEMP_SNSR_RESP);
+			isPacketReceived = false;
+		}
+		Cl_SecureMemset(g_scData, 0x00, MAX_VMC_SC_UART_BUF_SIZE);
+		g_scDataCount = 0;
+		break;
+	}
+	case SC_COMMS_TX_I2C_SNSR:
+	{
+		u8 payloadLength = 0;
+		Cl_SecureMemset(scPayload, 0x00, MAX_VMC_SC_UART_BUF_SIZE);
+		payloadLength = Asdm_Send_I2C_Sensors_SC(scPayload);
+		VMC_UART_CMD_Transaction(SC_COMMS_TX_I2C_SNSR, MSP432_COMMS_NO_FLAG,
+				payloadLength, scPayload, MSP432_COMMS_GENERAL_RESP_LEN);
+		if (isPacketReceived) {
+			Parse_SC_Data(g_scData, SC_COMMS_RX_I2C_SNSR_RESP);
+			isPacketReceived = false;
+		}
+		Cl_SecureMemset(g_scData, 0x00, MAX_VMC_SC_UART_BUF_SIZE);
+		g_scDataCount = 0;
+		break;
+	}
+	case SC_COMMS_TX_BOARD_INFO:
+	{
+		u8 payloadLength = 0;
+		Cl_SecureMemset(scPayload, 0x00, MAX_VMC_SC_UART_BUF_SIZE);
+		if (fetch_boardinfo_ptr != NULL) {
+			payloadLength = (*fetch_boardinfo_ptr)(scPayload);
+		} else {
+			payloadLength = 0;
+			break;
+		}
+		if (payloadLength < 0) {
+			VMC_ERR("BoardInfo Size exceeding UART Max Payload Size");
+			break;
+		}
+		VMC_UART_CMD_Transaction(SC_COMMS_TX_BOARD_INFO, MSP432_COMMS_NO_FLAG,
+				payloadLength, scPayload, MSP432_COMMS_GENERAL_RESP_LEN);
+		if (isPacketReceived) {
+			Parse_SC_Data(g_scData, SC_COMMS_RX_BOARD_INFO_RESP);
+			isPacketReceived = false;
+		}
+		Cl_SecureMemset(g_scData, 0x00, MAX_VMC_SC_UART_BUF_SIZE);
+		g_scDataCount = 0;
+		break;
+	}
+	case MSP432_COMMS_VMC_VERSION_POWERMODE_REQ:
+	{
+		u8 Expected_Msg_Length = 18;
+		VMC_UART_CMD_Transaction(MSP432_COMMS_VMC_VERSION_POWERMODE_REQ,
+		MSP432_COMMS_NO_FLAG, 0x00, buf, Expected_Msg_Length);
+		if (isPacketReceived) {
+			Parse_SC_Data(g_scData, MSP432_COMMS_VMC_VERSION_POWERMODE_RESP);
+			isPacketReceived = false;
+		}
+		Cl_SecureMemset(g_scData, 0x00, MAX_VMC_SC_UART_BUF_SIZE);
+		g_scDataCount = 0;
+		break;
+	}
+	case MSP432_COMMS_VMC_ACTIVE_REQ:
+	{
+		u8 Expected_Msg_Length = vmc_get_active_resp_len();
+		VMC_UART_CMD_Transaction(MSP432_COMMS_VMC_ACTIVE_REQ,
+		MSP432_COMMS_NO_FLAG, 0x00, buf, Expected_Msg_Length);
+		if (isPacketReceived) {
+			Parse_SC_Data(g_scData, MSP432_COMMS_MSG_GOOD);
+			isPacketReceived = false;
+		}
+		Cl_SecureMemset(g_scData, 0x00, MAX_VMC_SC_UART_BUF_SIZE);
+		g_scDataCount = 0;
+		break;
+	}
+	case MSP432_COMMS_VMC_GET_RESP_SIZE_REQ:
+	{
+		Get_Sensor_Response_Length(SC_COMMS_RX_VOLT_SNSR);
+		Get_Sensor_Response_Length(SC_COMMS_RX_POWER_SNSR);
+		Get_Sensor_Response_Length(SC_COMMS_RX_TEMP_SNSR);
 
-        	if((sc_vmc_data.voltSensorLength != 0) &&
-        			(sc_vmc_data.powerSensorLength != 0 ) &&
-					(sc_vmc_data.tempSensorLength   != 0 ))
-        	{
-        		vmc_set_snsr_resp_status(true);
-        	}
-        	break;
-        }
-        default:
-            break;
-    }
+		if ((sc_vmc_data.voltSensorLength != 0)
+				&& (sc_vmc_data.powerSensorLength != 0)
+				&& (sc_vmc_data.tempSensorLength != 0)) {
+			vmc_set_snsr_resp_status(true);
+		}
+		break;
+	}
+	default:
+		break;
+	}
 }
 
 void VMC_SC_UART_Messages_All()

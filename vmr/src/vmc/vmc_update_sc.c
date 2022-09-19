@@ -520,26 +520,48 @@ static int get_fpt_sc_version(cl_msg_t *msg, struct fpt_sc_version *version)
 static bool do_uart_transaction(u8 *send_buf, u32 bytes_to_send, bool recv_resp, u32 bytes_to_recv)
 {
 	bool ret_value = false;
+	UART_STATUS uart_ret_val = UART_ERROR_GENERIC;
 
 	/* Clean up the receiver buffer and count before every transaction. */
 	Cl_SecureMemset(rcv_bufr, 0xFF, sizeof(rcv_bufr));
 	rcvd_byte_count = 0x00;
 
-	if (UART_SUCCESS == UART_RTOS_Send(&uart_vmcsc_log, &send_buf[0], bytes_to_send)) {
+	if (recv_resp) {
+		uart_ret_val = UART_RTOS_Receive_Set_Buffer(&uart_vmcsc_log, &rcv_bufr[0], bytes_to_recv, &rcvd_byte_count);
+		if (UART_SUCCESS != uart_ret_val)
+			return false;
+	} else {
+		uart_enable_interrupt(uart_vmcsc_log.uart_IRQ_ID);
+	}
+
+	uart_ret_val = UART_RTOS_Send(&uart_vmcsc_log, &send_buf[0], bytes_to_send);
+	if (UART_SUCCESS == uart_ret_val) {
 		ret_value = true;
 	} else {
+		if (recv_resp) {
+			if (!uart_shm_release(uart_vmcsc_log.rxSem))
+				return false;
+		}
 		ret_value = false;
 		VMC_ERR("Uart Send Error. Retrying !!");
 	}
+
 	if ((recv_resp) && (ret_value)) {
-		if (UART_SUCCESS == UART_RTOS_Receive(&uart_vmcsc_log, &rcv_bufr[0],
-				bytes_to_recv, &rcvd_byte_count, RCV_TIMEOUT_MS(2000))) {
+		uart_ret_val = UART_RTOS_Receive_Wait(&uart_vmcsc_log, &rcvd_byte_count, RCV_TIMEOUT_MS(2000));
+		if (UART_SUCCESS == uart_ret_val) {
 			(bytes_to_recv == rcvd_byte_count) ? (ret_value = true) : (ret_value = false);
 		} else {
-			VMC_ERR("Uart Receive Error. Retrying !!");
+			if (uart_ret_val == UART_ERROR_GENERIC) {
+				if (!uart_shm_release(uart_vmcsc_log.rxSem))
+					return false;
+			}
 			ret_value = false;
+			VMC_ERR("Uart Receive Error. Retrying !!");
 		}
+	} else {
+		uart_disable_interrupt(uart_vmcsc_log.uart_IRQ_ID);
 	}
+
 	return ret_value;
 }
 
@@ -725,10 +747,23 @@ static void enable_sc_bsl(void)
 static void sync_vmc_bsl(void)
 {
 	static u8 retry_count = 0;
+	u8 bytes_to_rcv = BSL_SYNCED_RESP_SIZE;
 	u8 syncbuf[BSL_SYNCED_REQ_SIZE] = { BSL_SYNC_REQ_CHAR };
 
 	VMC_LOG("CMD : BSL SYNCED ");
-	if (do_uart_transaction(&syncbuf[0], BSL_SYNCED_REQ_SIZE, TRUE, BSL_SYNCED_RESP_SIZE)) {
+
+	/**
+	 * The auto baudrate negotiation in the VCK5000 BSL sends a 1-byte sync char,
+	 * but in v70, which utilizes the most recent BSL, the auto baudrate negotiation
+	 * is deactivated and the baudrate is fixed to 115200.
+	 * The v70 BSL will look for a valid command when it boots up.
+	 * As sync char(0xFF) is an invalid command for BSL,
+	 * it will send sync char response + unknown command upon getting the request.
+	 */
+	if (eVCK5000 != Vmc_Get_PlatformType())
+		bytes_to_rcv = (BSL_SYNCED_RESP_SIZE + BSL_UNKNOWN_MSG_RESP_SIZE);
+
+	if (do_uart_transaction(&syncbuf[0], BSL_SYNCED_REQ_SIZE, TRUE, bytes_to_rcv)) {
 		/* Check if we received a successful/expected response. */
 		if (rcv_bufr[0] == BSL_SYNC_SUCCESS) {
 			retry_count = 0;
@@ -941,14 +976,16 @@ static void loadpc_bsl(void)
 	u8 load_pc[BSL_LOAD_PC_REQ_SIZE] = { BSL_MSG_HEADER, 0x05, 0x00, CMD_LOAD_PC_32, 0x01, 0x02, 00, 00, 0xB8, 0x66 };
 
 	VMC_LOG("CMD : BSL LOAD PC 32 ");
-	if (do_uart_transaction(&load_pc[0], BSL_LOAD_PC_REQ_SIZE, FALSE, 0)) {
-		update_progress += 1;
-		if (update_progress == 100)
-			VMC_LOG("Update Complete : %d%% ",update_progress);
+	if (do_uart_transaction(&load_pc[0], BSL_LOAD_PC_REQ_SIZE, TRUE, BSL_LOAD_PC_RESP_SIZE)) {
+		if (rcv_bufr[0] == BSL_LOAD_PC_SUCCESS_RESP) {
+			update_progress += 1;
+			if (update_progress == 100)
+				VMC_LOG("Update Complete : %d%% ",update_progress);
 
-		VMC_LOG("SC Application Loaded !! ");
-		update_status = eStatus_Success;
-		update_state = eSc_State_Idle;
+			VMC_LOG("SC Application Loaded !! ");
+			update_status = eStatus_Success;
+			update_state = eSc_State_Idle;
+		}
 	}
 }
 

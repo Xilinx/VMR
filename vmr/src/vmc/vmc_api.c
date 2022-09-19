@@ -99,11 +99,20 @@ void VMC_Printf(char *filename, u32 line, u8 log_level, const char *fmt, ...)
 
 s32 VMC_User_Input_Read(char *ReadChar, u32 *receivedBytes)
 {
+    UART_STATUS uart_ret_val = UART_ERROR_EVENT;
+    
     if (VMC_GetLogLevel() != VMC_LOG_LEVEL_NONE)
     {
-    	if(UART_RTOS_Receive(&uart_log, (u8 *)ReadChar, 1, receivedBytes,portMAX_DELAY) ==  UART_SUCCESS)
+    	uart_ret_val = UART_RTOS_Receive_Set_Buffer(&uart_log, (u8 *)ReadChar, 1, receivedBytes);
+    	if (UART_SUCCESS == uart_ret_val)
     	{
-  	    return UART_SUCCESS;
+    		uart_ret_val = UART_RTOS_Receive_Wait(&uart_log, receivedBytes, portMAX_DELAY);
+    		if (UART_SUCCESS == uart_ret_val) {
+    			return UART_SUCCESS;
+    		} else if (uart_ret_val == UART_ERROR_GENERIC) {
+    			if (!uart_shm_release(uart_log.rxSem))
+    				return UART_ERROR_GENERIC;
+    		}
     	}
     }
     else
@@ -118,7 +127,7 @@ s32 VMC_User_Input_Read(char *ReadChar, u32 *receivedBytes)
 
 void Debug_Printf(char *filename, u32 line, u8 log_level, const char *fmt, va_list *argp)
 {
-    s8 uart_rtos_status = UART_ERROR_GENERIC;
+    UART_STATUS uart_rtos_status = UART_ERROR_GENERIC;
     u8 msg_idx = 0;
     u16 max_msg_size = MAX_LOG_SIZE;
     if (log_level < sensor_glvr.logging_level)
@@ -144,11 +153,12 @@ void Debug_Printf(char *filename, u32 line, u8 log_level, const char *fmt, va_li
 	max_msg_size -= msg_idx;
 	vsnprintf(&LogBuf[msg_idx], max_msg_size, fmt, *argp);
 
-        if((uart_rtos_status = UART_RTOS_Send(&uart_log, (u8 *)LogBuf, MAX_LOG_SIZE)) != UART_SUCCESS){
-            xil_printf("Failed to send UART_RTOS: %d \n\r", uart_rtos_status);
-        }
+	uart_rtos_status = UART_RTOS_Send(&uart_log, (u8 *)LogBuf, MAX_LOG_SIZE);
+	if (uart_rtos_status != UART_SUCCESS) {
+		xil_printf("Failed to send UART_RTOS: %d \n\r", uart_rtos_status);
+	}
 
-	Cl_SecureMemset(LogBuf , '\0' , MAX_LOG_SIZE);
+	Cl_SecureMemset(LogBuf , '\0', MAX_LOG_SIZE);
 	xSemaphoreGive(vmc_debug_logbuf_lock);
     }
     else
@@ -164,13 +174,13 @@ void BoardInfoTest(void)
 	u16 mac_num = 0;
 
 	//VMC_LOG("\n\rTBD: Board Info to be printed! %d",1000);
-	VMC_DMO( "EEPROM Version         : %s \n\r",board_info.eeprom_version);
+	VMC_DMO( "EEPROM Version        : %s \n\r",board_info.eeprom_version);
 	VMC_DMO( "product name          : %s \n\r",board_info.product_name);
 	VMC_DMO( "board rev             : %s \n\r",board_info.board_rev);
 	VMC_DMO( "board serial          : %s \n\r",board_info.board_serial);
 
 	/* Print MAC info */
-	VMR_LOG("Board MAC%d            : %02x:%02x:%02x:%02x:%02x:%02x\n\r", mac_num,
+	VMC_DMO("Board MAC%d            : %02x:%02x:%02x:%02x:%02x:%02x\n\r", mac_num,
 						board_info.board_mac[mac_num][0],
 						board_info.board_mac[mac_num][1],
 						board_info.board_mac[mac_num][2],
@@ -236,7 +246,7 @@ void BoardInfoTest(void)
                                                           board_info.OEM_ID[1],
                                                           board_info.OEM_ID[0]);
 
-	VMR_LOG( "Capability            : %02x%02x\n\r", board_info.capability[1],
+	VMC_DMO( "Capability            : %02x%02x\n\r", board_info.capability[1],
 							 board_info.capability[0]);
 }
 

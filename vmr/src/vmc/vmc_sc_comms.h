@@ -113,6 +113,8 @@ typedef s32 (*Fetch_BoardInfo_Func)(u8 *);
 #define SC_COMMS_TX_BOARD_INFO  (0xF7)
 #define SC_COMMS_RX_BOARD_INFO_RESP (0xF8)
 
+#define MIN_BYTE_CNT_FOR_SC_PKT_VALIDATION	(0x02)
+
 typedef enum return_error_codes {
     FIELD_PARSE_SUCCESSFUL,                 /* The current field was parsed successfully */
     MSP432_COMMS_CHKSUM_ERR,                /* did not match for message */
@@ -188,6 +190,7 @@ bool vmc_get_boardInfo_status();
 void vmc_set_boardInfo_status(bool value);
 u8 get_total_req_size();
 void set_total_req_size(u8 value);
+bool VMC_UART_CMD_Transaction(u8 Message_id , u8 Flags, u8 Payloadlength, u8 *Payload, u8 Expected_Msg_Length);
 
 
 #endif /* INC_VMC_VMC_SC_COMMS_H_ */
