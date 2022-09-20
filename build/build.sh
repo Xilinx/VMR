@@ -428,6 +428,9 @@ do
                 -xsa)
 			shift
                         BUILD_XSA=$1
+			if [ -z $BUILD_XSA ]; then
+				usage 1
+			fi
                         ;;
                 -clean)
                         BUILD_CLEAN=1
@@ -486,8 +489,17 @@ fi
 # load build.json to set options if the option is not explicitly set
 # this will make sure pipeline automation script pick up correct TA
 # submit PR to pipeline to move build.json forward.
+#
+# Note: exclude -xsa -vmr -app, because these 3 options should
+#       not be linked to the json files, instead they should
+#       pick VITIS from env or default value if env is not set.
 #####################
-load_build_info $BUILD_CONFIG
+if [ -z $BUILD_XSA ] && [ -z $BUILD_VMR ] && [ -z $BUILD_APP ]; then
+	echo "=== start loading config from json files"
+	load_build_info $BUILD_CONFIG
+else
+	echo "=== skip loading config from json files"
+fi
 
 which xsct
 if [ $? -ne 0 ];then
