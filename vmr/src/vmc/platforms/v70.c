@@ -280,27 +280,16 @@ void V70_Voltage_Monitor_3v3_AUX()
 
 void V70_Power_Monitor()
 {
-	u8 status = XST_FAILURE;
 	float power_12v_pex = 0.0;
 	float power_3v3_pex = 0.0;
 
 	static u8 count_12vpex = 1;
 	static u8 count_3v3pex = 1;
 
-	status = INA3221_ReadPower(i2c_main, SLAVE_ADDRESS_INA3221, 0, &power_12v_pex);
-	if(XST_SUCCESS != status)
-	{
-		VMC_ERR("Failed to read 12v Pex power");
-	}
+	power_12v_pex = sensor_glvr.sensor_readings.current[e12V_PEX] * sensor_glvr.sensor_readings.voltage[e12V_PEX];
+	power_3v3_pex = sensor_glvr.sensor_readings.current[e3V3_PEX] * sensor_glvr.sensor_readings.voltage[e3V3_PEX];
 
-	status = INA3221_ReadPower(i2c_main, SLAVE_ADDRESS_INA3221, 1, &power_3v3_pex);
-	if(XST_SUCCESS != status)
-	{
-		VMC_ERR("Failed to read 3v3 Pex power");
-	}
-
-	/* Divide by 1000 to convert to Watts */
-	sensor_glvr.sensor_readings.total_power = (power_12v_pex + power_3v3_pex)/1000.0;
+	sensor_glvr.sensor_readings.total_power = (power_12v_pex + power_3v3_pex);
 
 	// shutdown clock only if power reached critical threshold continuously for 1sec (100ms*10)
 	if (power_12v_pex >= POWER_12VPEX_CRITICAL_THRESHOLD)
