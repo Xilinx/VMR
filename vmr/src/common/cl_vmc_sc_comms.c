@@ -53,11 +53,8 @@ void cl_vmc_sc_comms_func(void *task_args)
 		if (cl_recv_from_queue_nowait(&msg, CL_QUEUE_SCFW_REQ) == 0) {
 			ret = process_scfw_msg(&msg);
 			/* set correct rcode based on scfw program */
-			/*TODO: Here we need to return the ret value so that XRT will get
-			 * a valid error code if SC update fails in the middle. 
-			 * To enable this, we need a new XRT version. We will enable this in sync with XRT changes. */
 			VMR_ERR("SCFW Update return code: %02x", ret);
-			cl_msg_set_rcode(&msg, 0);
+			cl_msg_set_rcode(&msg, ret);
 			/* send msg back via SCFW Response Queue */
 			(void) cl_send_to_queue(&msg, CL_QUEUE_SCFW_RESP);
 		}
