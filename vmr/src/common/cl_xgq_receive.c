@@ -155,6 +155,9 @@ void cl_msg_handle_complete(cl_msg_t *msg)
 					scaling_params.limits.throttle_limit_pwr;
 
 
+	} else if (msg->hdr.type == CL_MSG_VMR_IDENTIFY){
+		cmd_cp->cq_identify_payload.major = msg->hdr.version_major;
+		cmd_cp->cq_identify_payload.minor = msg->hdr.version_minor;
 	}
 
 	if (xSemaphoreTake(msg_complete_lock, portMAX_DELAY)) {
@@ -343,6 +346,8 @@ static struct xgq_cmd_handler xgq_cmd_handlers[] = {
 	{XGQ_CMD_OP_SENSOR, CL_MSG_SENSOR, "SENSOR", sensor_handle, CL_QUEUE_OPCODE},
 	{XGQ_CMD_OP_PROGRAM_SCFW, CL_MSG_PROGRAM_SCFW, "PROGRAM SCFW", NULL, CL_QUEUE_PROGRAM},
 	{XGQ_CMD_OP_CLOCK_THROTTLING, CL_MSG_CLK_THROTTLING, "CLOCK THROTTLING", clk_scaling_handle, CL_QUEUE_OPCODE},
+	{XGQ_CMD_OP_IDENTIFY, CL_MSG_VMR_IDENTIFY, "VMR IDENTIFY", NULL, CL_QUEUE_OPCODE},
+
 };
 
 /*

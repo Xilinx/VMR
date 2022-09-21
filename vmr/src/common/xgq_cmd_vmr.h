@@ -1,7 +1,39 @@
-/******************************************************************************
- * Copyright (C) 2022 Xilinx, Inc.  All rights reserved.
- * SPDX-License-Identifier: MIT
- *******************************************************************************/
+/*
+ *  Copyright (C) 2021-2022, Xilinx Inc
+ *
+ *  This file is dual licensed.  It may be redistributed and/or modified
+ *  under the terms of the Apache 2.0 License OR version 2 of the GNU
+ *  General Public License.
+ *
+ *  Apache License Verbiage
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ *
+ *  GPL license Verbiage:
+ *
+ *  This program is free software; you can redistribute it and/or
+ *  modify it under the terms of the GNU General Public License as
+ *  published by the Free Software Foundation; either version 2 of the
+ *  License, or (at your option) any later version.  This program is
+ *  distributed in the hope that it will be useful, but WITHOUT ANY
+ *  WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ *  FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public
+ *  License for more details.  You should have received a copy of the
+ *  GNU General Public License along with this program; if not, write
+ *  to the Free Software Foundation, Inc., 59 Temple Place, Suite 330,
+ *  Boston, MA 02111-1307 USA
+ *
+ */
 
 #ifndef XGQ_CMD_VMR_H
 #define XGQ_CMD_VMR_H
@@ -13,6 +45,14 @@
 
 /* The Clock IP use index 0 for data, 1 for kernel, 2 for sys, 3 for sys1 */ 
 #define XGQ_CLOCK_WIZ_MAX_RES           4
+
+/**
+ * clock scaling request types
+ */
+enum xgq_cmd_clk_scaling_app_id {
+	XGQ_CMD_CLK_THROTTLING_AID_READ		= 0x1,
+	XGQ_CMD_CLK_THROTTLING_AID_CONFIGURE	= 0x2,
+};
 
 /**
  * sensor data request types
@@ -46,14 +86,6 @@ enum xgq_cmd_clock_req_type {
 	XGQ_CMD_CLOCK_WIZARD 		= 0x0,
 	XGQ_CMD_CLOCK_COUNTER		= 0x1,
 	XGQ_CMD_CLOCK_SCALE		= 0x2,
-};
-
-/**
- * clock scaling request types
- */
-enum xgq_cmd_clock_scaling_req_type {
-	XGQ_CMD_CLK_SCALING_GET_STATUS	= 0x1,
-	XGQ_CMD_CLK_SCALING_SET_OVERRIDE= 0x2,
 };
 
 /**
@@ -191,23 +223,23 @@ struct xgq_cmd_vmr_control_payload {
 };
 
 /**
- * struct xgq_cmd_clk_scaling_payload: clock scaling request command
+ * struct xgq_cmd_clk_scaling_payload: clock_scaling configuration request command
  *
- * @aid:			Application Id or command code
- * @scaling_en:			Enable Clock Throttling
- * @pwr_scaling_ovrd_limit:	Set Override for Power Throttling
- * @temp_scaling_ovrd_limit:	Set Override for Temperature Throttling
- * @rsvd:			reserved
+ * @aid: Clock scaling API ID which decides API in VMC.
+ *          0x1 - READ_CLOCK_THROTTLING_CONFIGURATION
+ *          0x2 - SET_CLOCK_THROTTLING_CONFIGURATION
+ * @scaling_enable: enable or disable flag
+ * @pwr_ovrd: power override value
+ * @temp_ovrd: temperature override value
  *
- * This payload is used for Enable and/or Override Clock Throttling Limits.
+ * This payload is used for clock scaling configuration report.
  */
-
 struct xgq_cmd_clk_scaling_payload {
-    uint32_t aid:3;
-    uint32_t scaling_en:1;
-    uint32_t pwr_scaling_ovrd_limit:16;
-    uint32_t temp_scaling_ovrd_limit:8;
-    uint32_t rsvd1:4;
+	uint32_t aid:3;
+	uint32_t scaling_en:1;
+	uint32_t pwr_scaling_ovrd_limit:16;
+	uint32_t temp_scaling_ovrd_limit:8;
+	uint32_t rsvd1:4;
 };
 
 /**
@@ -221,7 +253,7 @@ struct xgq_cmd_clk_scaling_payload {
  * @xclbin_payload:
  * @sensor_payload:
  * @vmr_control_payload:
- * @clock_scaling_payload:
+ * @clk_scaling_payload:
  */
 struct xgq_cmd_sq {
 	struct xgq_cmd_sq_hdr hdr;
@@ -287,6 +319,22 @@ struct xgq_cmd_cq_data_payload {
 };
 
 /**
+ * struct xgq_cmd_cq_clk_scaling_payload: clock scaling status payload
+ *
+ * clock scaling status
+ */
+struct xgq_cmd_cq_clk_scaling_payload {
+	uint8_t has_clk_scaling:1;
+	uint8_t clk_scaling_mode:2;
+	uint8_t clk_scaling_en:1;
+	uint8_t rsvd:4;
+	uint8_t temp_shutdown_limit;
+	uint8_t temp_scaling_limit;
+	uint16_t pwr_shutdown_limit;
+	uint16_t pwr_scaling_limit;
+};
+
+/**
  * struct xgq_cmd_cq_vmr_payload: vmr device status payload
  *
  * bitfields for indicting flash partition statistics.
@@ -312,21 +360,11 @@ struct xgq_cmd_cq_vmr_payload {
 	uint16_t boot_on_offset;
 };
 
-/*
- * struct xgq_cmd_cq_clk_scaling_payload: clock scaling status payload
- *
- * clock scaling status
-*/
-struct xgq_cmd_cq_clk_scaling_payload {
-    uint8_t has_clk_scaling:1;
-    uint8_t clk_scaling_mode:2;
-    uint8_t clk_scaling_en:1;
-    uint8_t rsvd:4;
-    uint8_t temp_shutdown_limit;
-    uint8_t temp_scaling_limit;
-    uint16_t pwr_shutdown_limit;
-    uint16_t pwr_scaling_limit;
+struct xgq_cmd_cq_id_payload {
+	uint16_t major;
+	uint16_t minor;
 };
+
 /*
  * struct xgq_cmd_cq: vmr completion command
  *
@@ -335,10 +373,7 @@ struct xgq_cmd_cq_clk_scaling_payload {
  * @default_payload: 	payload definitions in a union
  * @clock_payload:
  * @sensor_payload:
- * @vmr_payload:
- * @log_payload:
- * @xclbin_payload
- * @clk_scaling_payload
+ * @multiboot_payload:
  */
 struct xgq_cmd_cq {
 	struct xgq_cmd_cq_hdr hdr;
@@ -349,7 +384,8 @@ struct xgq_cmd_cq {
 		struct xgq_cmd_cq_vmr_payload		cq_vmr_payload;
 		struct xgq_cmd_cq_log_page_payload	cq_log_payload;
 		struct xgq_cmd_cq_data_payload		cq_xclbin_payload;
-		struct xgq_cmd_cq_clk_scaling_payload	cq_clk_scaling_payload;
+		struct xgq_cmd_cq_clk_scaling_payload cq_clk_scaling_payload;
+		struct xgq_cmd_cq_id_payload		cq_identify_payload;
 	};
 	uint32_t rcode;
 };

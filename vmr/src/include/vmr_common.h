@@ -14,6 +14,9 @@
 #define ENODEV	19
 #define EINVAL	22
 
+#define VMR_VERSION_MAJOR 1
+#define VMR_VERSION_MINOR 0 
+
 #define OCL_MAX_ID	3
 #define OCL_MAX_NUM	4
 

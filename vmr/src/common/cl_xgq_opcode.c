@@ -44,6 +44,12 @@ static int opcode_vmc_clk_throttling(cl_msg_t *msg)
 	return cl_vmc_clk_scaling(msg);
 }
 
+static int opcode_vmr_identify(cl_msg_t *msg)
+{
+	msg->hdr.version_major = VMR_VERSION_MAJOR;
+	msg->hdr.version_minor = VMR_VERSION_MINOR;
+}
+
 struct opcode_handle {
 	const char 	*msg_type_name;
 	cl_msg_type_t	msg_type;
@@ -54,6 +60,7 @@ struct opcode_handle {
 	{"VMR CONTROL", CL_MSG_VMR_CONTROL, opcode_vmr_control},
 	{"SENSOR", CL_MSG_SENSOR, opcode_vmc_sensor},
 	{"CLOCK THROTTLING", CL_MSG_CLK_THROTTLING, opcode_vmc_clk_throttling},
+	{"VMR IDENTIFY CMD", CL_MSG_VMR_IDENTIFY, opcode_vmr_identify},
 };
 
 static void process_program_msg(cl_msg_t *msg)

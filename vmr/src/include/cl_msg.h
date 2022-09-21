@@ -17,6 +17,7 @@ typedef enum cl_msg_type {
 	CL_MSG_VMR_CONTROL,
 	CL_MSG_PROGRAM_SCFW,
 	CL_MSG_CLK_THROTTLING,
+	CL_MSG_VMR_IDENTIFY,
 } cl_msg_type_t;
 
 typedef enum cl_sensor_type {
@@ -154,10 +155,10 @@ struct xgq_vmr_clk_scaling_payload {
 };
 
 struct xgq_vmr_head {
-	u16 version;
+	u16 version_major;
+	u16 version_minor;
 	u16 type;
 	u16 cid;
-	u16 pad;
 	u32 rcode;
 };
 
