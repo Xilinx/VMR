@@ -156,8 +156,8 @@ void cl_msg_handle_complete(cl_msg_t *msg)
 
 
 	} else if (msg->hdr.type == CL_MSG_VMR_IDENTIFY){
-		cmd_cp->cq_identify_payload.major = msg->hdr.version_major;
-		cmd_cp->cq_identify_payload.minor = msg->hdr.version_minor;
+		cmd_cq->cq_identify_payload.major = msg->hdr.version_major;
+		cmd_cq->cq_identify_payload.minor = msg->hdr.version_minor;
 	}
 
 	if (xSemaphoreTake(msg_complete_lock, portMAX_DELAY)) {

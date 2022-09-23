@@ -48,6 +48,7 @@ static int opcode_vmr_identify(cl_msg_t *msg)
 {
 	msg->hdr.version_major = VMR_VERSION_MAJOR;
 	msg->hdr.version_minor = VMR_VERSION_MINOR;
+	return 0;
 }
 
 struct opcode_handle {

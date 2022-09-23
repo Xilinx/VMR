@@ -89,6 +89,14 @@ enum xgq_cmd_clock_req_type {
 };
 
 /**
+ * clock scaling request types
+ */
+enum xgq_cmd_clock_scaling_req_type {
+	XGQ_CMD_CLK_SCALING_GET_STATUS	= 0x1,
+	XGQ_CMD_CLK_SCALING_SET_OVERRIDE= 0x2,
+};
+
+/**
  * multi-boot operation request types
  */
 enum xgq_cmd_vmr_control_type {
