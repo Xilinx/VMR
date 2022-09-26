@@ -15,6 +15,8 @@ BUILD_DIR="build_dir"
 BUILD_LOG="build.log"
 REGEN_SHELL="regen_pdi.sh"
 BUILD_CLEAN=0
+CURRENT_DIR=$(dirname "$0")
+BASE_NAME=$(basename "$0")
 
 check_result()
 {
@@ -49,10 +51,20 @@ default_env() {
 }
 
 build_clean() {
+	typeset start_seconds=$SECONDS
+
 	echo "=== Remove build directories ==="
 	rm -rf xsa .metadata vmr_platform vmr_system vmr 
 	rm -rf build_tmp_dir
 	rm -rf $BUILD_DIR
+	echo "=== Update submodules ==="
+	if [ -f "$BUILD_DIR/../.gitmodules" ];then
+		cd $BUILD_DIR/../
+		git submodule update --init
+		cd $BUILD_DIR
+	fi
+
+	echo "=== build_clean Took: $((SECONDS - start_seconds)) S"
 }
 
 append_stable_bsp() {
@@ -371,6 +383,43 @@ build_shell()
 	fi
 }
 
+diff_xgq_cmd_headers() {
+	echo "=== diff log is in $ROOT_DIR/diff.log"
+
+	cd $ROOT_DIR/../
+	git submodule update --remote --merge
+	cd $ROOT_DIR
+
+	echo "" > $ROOT_DIR/diff.log
+
+	tail -n +5 $ROOT_DIR/../vmr/src/common/xgq_cmd_common.h > /tmp/xgq_cmd_common.h.vmr
+	tail -n +37 $ROOT_DIR/../XRT/src/runtime_src/core/include/xgq_cmd_common.h > /tmp/xgq_cmd_common.h.xrt
+
+	echo "=== diff of xgq_cmd_common.h ===" >> $ROOT_DIR/diff.log
+	diff /tmp/xgq_cmd_common.h.vmr /tmp/xgq_cmd_common.h.xrt >> $ROOT_DIR/diff.log
+	if [ $? -ne 0 ];then
+		echo "WARN!!! please make xgq_cmd_common.h the same between XRT and VMR"
+	fi
+
+	tail -n +5 $ROOT_DIR/../vmr/src/common/xgq_cmd_vmr.h > /tmp/xgq_cmd_vmr.h.vmr
+	tail -n +37 $ROOT_DIR/../XRT/src/runtime_src/core/include/xgq_cmd_vmr.h > /tmp/xgq_cmd_vmr.h.xrt
+
+	echo "=== diff of xgq_cmd_vmr.h ===" >> $ROOT_DIR/diff.log
+	diff /tmp/xgq_cmd_vmr.h.vmr /tmp/xgq_cmd_vmr.h.xrt >> $ROOT_DIR/diff.log
+	if [ $? -ne 0 ];then
+		echo "WARN!!! please make xgq_cmd_vmr.h the same between XRT and VMR"
+	fi
+}
+
+build_checking() {
+	XRT=$ROOT_DIR/../XRT
+	if [ -z $XRT ];then
+		echo "=== XRT submodule doesn't exist, skip checking ==="
+	else
+		diff_xgq_cmd_headers
+	fi
+}
+
 # Obsolated since 2022.1 #
 build_bsp_stable() {
 	echo "=== since 2022.1 release, do not support build -stable anymore, exit";exit 0;
@@ -514,12 +563,14 @@ echo "Tools version: ${XSCT_VERSION}"
 # only build vmr source code
 if [[ $BUILD_VMR == 1 ]];then
 	build_vmr_source
+	build_checking
 	exit 0;
 fi
 
 # only build app by vitis
 if [[ $BUILD_APP == 1 ]];then
 	build_app_incremental
+	build_checking
 	exit 0;
 fi
 
@@ -565,3 +616,6 @@ echo "=== (4) Build shell "
 start_seconds=$SECONDS
 build_shell
 echo "=== Build Shell Took: $((SECONDS - start_seconds)) S"
+
+echo "=== (5) Build env check "
+build_checking
