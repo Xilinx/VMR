@@ -27,6 +27,21 @@
 #define TASK_STACK_DEPTH 	0x10000
 
 /*
+ * On Single CPU system. We enabled time slicing preemption.
+ * All common service tasks should have same priority as 1.
+ * Critical service tasks should have higher priority as 2.
+ * Important!!!
+ *   - The higher priority tasks should give lower task chance by vTaskDelay or
+ *     sleep on lock. Yield won't work because it will not put current task to
+ *     sleep status.
+ *
+ *   - Only change task priorities when you clearly understand the FreeRTOS
+ *     task scheduling.
+ */
+#define TASK_PRIORITY_1		1
+#define TASK_PRIORITY_2		2
+
+/*
  * VMR (Versal Management Runtime) design diagram.
  *
  * 1) VMR start diagram
@@ -121,18 +136,18 @@ struct cl_task_handle {
 	void 		*cl_task_arg;
 	TaskHandle_t	*cl_task_handle;
 } task_handles[] = {
-	{APP_VMR, 2, cl_xgq_receive_init, cl_xgq_receive_func,
+	{APP_VMR, TASK_PRIORITY_2, cl_xgq_receive_init, cl_xgq_receive_func,
 		"XGQ Receive", NULL, &cl_xgq_receive_handle},
-	{APP_VMR, 1, cl_xgq_program_init, cl_xgq_program_func,
+	{APP_VMR, TASK_PRIORITY_1, cl_xgq_program_init, cl_xgq_program_func,
 		"XGQ Program", NULL, &cl_xgq_program_handle},
-	{APP_VMR, 1, cl_xgq_opcode_init, cl_xgq_opcode_func,
+	{APP_VMR, TASK_PRIORITY_1, cl_xgq_opcode_init, cl_xgq_opcode_func,
 		"XGQ Operation", NULL, &cl_xgq_opcode_handle},
-	{APP_VMC, 1, cl_vmc_sensor_init, cl_vmc_sensor_func,
+	{APP_VMC, TASK_PRIORITY_1, cl_vmc_sensor_init, cl_vmc_sensor_func,
 		"Sensor Monitor", NULL, &cl_vmc_sensor_handle},
-	{APP_VMC, 1, cl_vmc_sc_comms_init, cl_vmc_sc_comms_func,
+	{APP_VMC, TASK_PRIORITY_1, cl_vmc_sc_comms_init, cl_vmc_sc_comms_func,
 		"SC Common Handler", NULL, &cl_vmc_sc_comms_handle},
 #ifdef VMC_DEBUG
-	{APP_VMC, cl_uart_demo_init, cl_uart_demo_func,
+	{APP_VMC, TASK_PRIORITY_1, cl_uart_demo_init, cl_uart_demo_func,
 		"Uart Demo", NULL, &cl_uart_demo_handle},
 #endif
 };
