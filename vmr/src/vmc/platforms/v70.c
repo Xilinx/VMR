@@ -16,6 +16,7 @@
 #include "vmr_common.h"
 #include "../vmc_sc_comms.h"
 #include "../vmc_sensors.h"
+#include "../clock_throttling.h"
 
 #define SLAVE_ADDRESS_LM75_0_V70  (0x48)
 #define SLAVE_ADDRESS_LM75_1_V70  (0x4A)
@@ -26,6 +27,7 @@
 extern Vmc_Sensors_Gl_t sensor_glvr;
 extern msg_id_ptr msg_id_handler_ptr;
 extern Fetch_BoardInfo_Func fetch_boardinfo_ptr;
+extern clk_throttling_params_t g_clk_throttling_params;
 
 static u8 i2c_main = LPD_I2C_0;
 
@@ -46,6 +48,9 @@ u8 V70_VMC_SC_Comms_Msg[] = {
 extern platform_sensors_monitor_ptr Monitor_Sensors;
 extern supported_sdr_info_ptr get_supported_sdr_info;
 extern asdm_update_record_count_ptr asdm_update_record_count;
+
+Clock_Throttling_Profile_t clock_throttling_v70;
+extern Clock_Throttling_Handle_t clock_throttling_std_algorithm;
 
 void V70_Voltage_Monitor_12V_PEX(void);
 void V70_Current_Monitor_12V_PEX(void);
@@ -220,8 +225,7 @@ void V70_Voltage_Monitor_12V_PEX()
 		VMC_ERR("Failed to read 12vPex voltage");
 	}
 
-	/* Divide by 1000 to convert to milli Volts */
-	sensor_glvr.sensor_readings.voltage[e12V_PEX] = (volatge/1000.0);
+	sensor_glvr.sensor_readings.voltage[e12V_PEX] = volatge;
 }
 
 void V70_Current_Monitor_12V_PEX()
@@ -234,8 +238,7 @@ void V70_Current_Monitor_12V_PEX()
 		VMC_ERR("Failed to read 12vPex current");
 	}
 
-	/* Divide by 1000 to convert to milli Amps */
-	sensor_glvr.sensor_readings.current[e12V_PEX] = (current/1000.0);
+	sensor_glvr.sensor_readings.current[e12V_PEX] = current;
 }
 
 void V70_Voltage_Monitor_3v3_PEX()
@@ -247,8 +250,8 @@ void V70_Voltage_Monitor_3v3_PEX()
 	{
 		VMC_ERR("Failed to read 3v3 pex voltage");
 	}
-	/* Divide by 1000 to convert to milli Volts */
-	sensor_glvr.sensor_readings.voltage[e3V3_PEX] = (volatge/1000.0);
+
+	sensor_glvr.sensor_readings.voltage[e3V3_PEX] = volatge;
 }
 
 void V70_Current_Monitor_3v3_PEX()
@@ -260,8 +263,8 @@ void V70_Current_Monitor_3v3_PEX()
 	{
 		VMC_ERR("Failed to read 3v3 Pex current");
 	}
-	/* Divide by 1000 to convert to milli Amps */
-	sensor_glvr.sensor_readings.current[e3V3_PEX] = (current/1000.0);
+
+	sensor_glvr.sensor_readings.current[e3V3_PEX] = current;
 }
 
 void V70_Voltage_Monitor_3v3_AUX()
@@ -274,8 +277,7 @@ void V70_Voltage_Monitor_3v3_AUX()
 		VMC_ERR("Failed to read 3v3 Aux voltage");
 	}
 
-	/* Divide by 1000 to convert to milli Volts */
-	sensor_glvr.sensor_readings.voltage[e3V3_AUX] = (volatge/1000.0);
+	sensor_glvr.sensor_readings.voltage[e3V3_AUX] = volatge;
 }
 
 void V70_Power_Monitor()
@@ -286,13 +288,13 @@ void V70_Power_Monitor()
 	static u8 count_12vpex = 1;
 	static u8 count_3v3pex = 1;
 
-	power_12v_pex = sensor_glvr.sensor_readings.current[e12V_PEX] * sensor_glvr.sensor_readings.voltage[e12V_PEX];
-	power_3v3_pex = sensor_glvr.sensor_readings.current[e3V3_PEX] * sensor_glvr.sensor_readings.voltage[e3V3_PEX];
+	power_12v_pex = (sensor_glvr.sensor_readings.current[e12V_PEX]/1000.0) * (sensor_glvr.sensor_readings.voltage[e12V_PEX]/1000.0);
+	power_3v3_pex = (sensor_glvr.sensor_readings.current[e3V3_PEX]/1000.0) * (sensor_glvr.sensor_readings.voltage[e3V3_PEX]/1000.0);
 
 	sensor_glvr.sensor_readings.total_power = (power_12v_pex + power_3v3_pex);
-
+	
 	// shutdown clock only if power reached critical threshold continuously for 1sec (100ms*10)
-	if (power_12v_pex >= POWER_12VPEX_CRITICAL_THRESHOLD)
+	if ((power_12v_pex) >= POWER_12VPEX_CRITICAL_THRESHOLD)
 	{
 		if (count_12vpex == MAX_COUNT_TO_WAIT_1SEC)
 		{
@@ -303,12 +305,12 @@ void V70_Power_Monitor()
 	}
 	else /* Reset count value to zero when power values below critical limit and count is less than 10 */
 	{
-		if ((count_12vpex != 0) && (power_12v_pex < POWER_12VPEX_CRITICAL_THRESHOLD))
+		if ((count_12vpex != 0) && ((power_12v_pex) < POWER_12VPEX_CRITICAL_THRESHOLD))
 		{
 			count_12vpex = 0;
 		}
 	}
-	if (power_3v3_pex >= POWER_3V3PEX_CRITICAL_THRESHOLD)
+	if ((power_3v3_pex) >= POWER_3V3PEX_CRITICAL_THRESHOLD)
 	{
 		if (count_3v3pex == MAX_COUNT_TO_WAIT_1SEC)
 		{
@@ -319,7 +321,7 @@ void V70_Power_Monitor()
 	}
 	else /* Reset count value to zero when power values below critical limit and count is less than 10 */
 	{
-		if ((count_3v3pex != 0) && (power_3v3_pex < POWER_3V3PEX_CRITICAL_THRESHOLD))
+		if ((count_3v3pex != 0) && ((power_3v3_pex) < POWER_3V3PEX_CRITICAL_THRESHOLD))
 		{
 			count_3v3pex = 0;
 		}
@@ -356,8 +358,8 @@ s8 V70_Asdm_Read_Power(snsrRead_t *snsrData) {
 s8 V70_Asdm_Read_Voltage_12v(snsrRead_t *snsrData) {
 
 	s8 status = XST_SUCCESS;
-	/* Multiply by 1000 to convert to Volts */
-	u16 voltage = (sensor_glvr.sensor_readings.voltage[e12V_PEX]* 1000);
+
+	u16 voltage = sensor_glvr.sensor_readings.voltage[e12V_PEX];
 
 	Cl_SecureMemcpy(&snsrData->snsrValue[0],sizeof(voltage),&voltage,sizeof(voltage));
 	snsrData->sensorValueSize = sizeof(voltage);
@@ -369,8 +371,8 @@ s8 V70_Asdm_Read_Voltage_12v(snsrRead_t *snsrData) {
 s8 V70_Asdm_Read_Voltage_3v3(snsrRead_t *snsrData) {
 
 	s8 status = XST_SUCCESS;
-	/* Multiply by 1000 to convert to Volts */
-	u16 voltage = (sensor_glvr.sensor_readings.voltage[e3V3_PEX]* 1000);
+
+	u16 voltage = sensor_glvr.sensor_readings.voltage[e3V3_PEX];
 
 	Cl_SecureMemcpy(&snsrData->snsrValue[0],sizeof(voltage),&voltage,sizeof(voltage));
 	snsrData->sensorValueSize = sizeof(voltage);
@@ -382,7 +384,7 @@ s8 V70_Asdm_Read_Voltage_3v3(snsrRead_t *snsrData) {
 s8 V70_Asdm_Read_Current_12v(snsrRead_t *snsrData) {
 
 	s8 status = XST_SUCCESS;
-	u16 current = (sensor_glvr.sensor_readings.current[e12V_PEX]* 1000);
+	u16 current = sensor_glvr.sensor_readings.current[e12V_PEX];
 
 	Cl_SecureMemcpy(&snsrData->snsrValue[0],sizeof(current),&current,sizeof(current));
 	snsrData->sensorValueSize = sizeof(current);
@@ -394,7 +396,7 @@ s8 V70_Asdm_Read_Current_12v(snsrRead_t *snsrData) {
 s8 V70_Asdm_Read_Current_3v3(snsrRead_t *snsrData) {
 
 	s8 status = XST_SUCCESS;
-	u16 current = (sensor_glvr.sensor_readings.current[e3V3_PEX] * 1000);
+	u16 current = sensor_glvr.sensor_readings.current[e3V3_PEX];
 
 	Cl_SecureMemcpy(&snsrData->snsrValue[0],sizeof(current),&current,sizeof(current));
 	snsrData->sensorValueSize = sizeof(current);
@@ -454,7 +456,47 @@ void V70_Monitor_Sensors()
 	/* Read Power Sensors */
 	V70_Power_Monitor();
 }
+static void v70_clk_scaling_params_init() {
 
+	g_clk_throttling_params.is_clk_scaling_supported = true;
+	g_clk_throttling_params.clk_scaling_mode = eCLK_SCALING_MODE_BOTH;
+	g_clk_throttling_params.clk_scaling_enable = false;
+	g_clk_throttling_params.limits.shutdown_limit_temp = V70_TEMP_FPGA_CRITICAL_THRESHOLD_LIMIT;
+	g_clk_throttling_params.limits.shutdown_limit_pwr = V70_POWER_CRITICAL_THRESHOLD_LIMIT;
+	g_clk_throttling_params.limits.throttle_limit_temp = V70_TEMP_THROTTLING_THRESHOLD_LIMIT;
+	g_clk_throttling_params.limits.throttle_limit_pwr = V70_POWER_THROTTLING_THRESHOLD_LIMIT;
+	return;
+}
+void Build_clock_throttling_profile_V70(Clock_Throttling_Profile_t * pProfile)
+{
+	pProfile->NumberOfSensors = V70_NUM_POWER_RAILS;
+
+	pProfile->VoltageSensorID[0] = e12V_PEX;
+	pProfile->VoltageSensorID[1] = e3V3_PEX;
+
+	pProfile->CurrentSensorID[0] = e12V_PEX;
+	pProfile->CurrentSensorID[1] = e3V3_PEX;
+
+	pProfile->throttlingThresholdCurrent[0] = V70_PEX_12V_I_IN_THROTTLING_LIMIT;
+	pProfile->throttlingThresholdCurrent[1] = V70_PEX_3V3_I_IN_THROTTLING_LIMIT;
+
+	pProfile->NominalVoltage[0] = NOMINAL_VOLTAGE_12V_IN_MV;
+	pProfile->NominalVoltage[1] = NOMINAL_VOLTAGE_3V3_IN_MV;
+	pProfile->IdlePower = V70_IDLE_POWER;
+
+	pProfile->FPGATempThrottlingLimit = V70_FPGA_THROTTLING_TEMP_LIMIT;
+	pProfile->VccIntTempThrottlingLimit = V70_FPGA_THROTTLING_TEMP_LIMIT;
+	pProfile->PowerThrottlingLimit = V70_POWER_THROTTLING_THRESHOLD_LIMIT;
+
+	pProfile->bVCCIntThermalThrottling = true;
+	pProfile->TempGainKpFPGA    = V70_TEMP_GAIN_KP_FPGA;
+	pProfile->TempGainKi        = V70_TEMP_GAIN_KI;
+	pProfile->TempGainKpVCCInt  = V70_TEMP_GAIN_KP_VCCINT;
+	pProfile->TempGainKaw       = V70_TEMP_GAIN_KAW;
+
+	pProfile->IntegrataionSumInitial = V70_INTEGRATION_SUM_INITIAL;
+
+}
 u8 V70_Init(void)
 {
 	//s8 status = XST_FAILURE;
@@ -463,6 +505,14 @@ u8 V70_Init(void)
 	fetch_boardinfo_ptr = &V70_VMC_Fetch_BoardInfo;
 	
 	Monitor_Sensors = V70_Monitor_Sensors;
+
+	v70_clk_scaling_params_init();
+
+	/* platform specific initialization */
+	Build_clock_throttling_profile_V70(&clock_throttling_v70);
+
+	/* clock throttling initialization */
+	ClockThrottling_Initialize(&clock_throttling_std_algorithm, &clock_throttling_v70);
 
 	get_supported_sdr_info = V70_Get_Supported_Sdr_Info;
 	asdm_update_record_count = V70_Asdm_Update_Record_Count;

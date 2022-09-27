@@ -20,6 +20,8 @@ typedef enum {
 	e3V3_PEX,
 	e3V3_AUX,
 	eVCCINT,
+	e12V_AUX0,
+	e12V_AUX1,
 	eElectrical_Sensor_Max,
 }eElectrical_sensors_t;
 

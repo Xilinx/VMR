@@ -10,6 +10,9 @@
 #define ACTIVITY_MAX            (128)
 #define CLOCK_THROTTLING_AVERAGE_SIZE 10
 
+#define NOMINAL_VOLTAGE_12V_IN_MV 12000
+#define NOMINAL_VOLTAGE_3V3_IN_MV 3300
+
 #define MASK_CLOCKTHROTTLING_DISABLE_THROTTLING (0 << 20)
 #define MASK_CLOCKTHROTTLING_ENABLE_THROTTLING  (1 << 20)
 #define MASK_CLEAR_LATCHEDSHUTDOWNCLOCKS        (1 << 16)
@@ -22,7 +25,7 @@
 #define VCK5000_AUX_12V_I_IN_THROTTLING_LIMIT_2X3   6250
 #define VCK5000_AUX_12V_I_IN_THROTTLING_LIMIT_2X4   12500
 
-typedef struct __attribute__((packed)) Build_Clock_Throttling_Profile
+typedef struct __attribute__((packed)) Clock_Throttling_Profile_s
 {
 	u8	NumberOfSensors;
 	u8	VoltageSensorID[5];
@@ -31,6 +34,9 @@ typedef struct __attribute__((packed)) Build_Clock_Throttling_Profile
 	u16	throttlingThresholdCurrent[5];
 	float	IdlePower; //in uW
 	bool	bVCCIntThermalThrottling;
+	u32	FPGATempThrottlingLimit;
+	u32	VccIntTempThrottlingLimit;
+	u16	PowerThrottlingLimit;
 
 	float	TempGainKpFPGA;
 	float	TempGainKi;
@@ -39,32 +45,32 @@ typedef struct __attribute__((packed)) Build_Clock_Throttling_Profile
 
 	float	IntegrataionSumInitial;
 
-}Build_Clock_Throttling_Profile;
+}Clock_Throttling_Profile_t;
 
-typedef struct __attribute__((packed)) Clock_Throttling_Rail_Type
+typedef struct __attribute__((packed)) Clock_Throttling_Rail_Type_s
 {
 	u16    Voltage;
 	u16    Current;
 	u16    throttlingThresholdCurrent;
 
-} Clock_Throttling_Rail_Type;
+} Clock_Throttling_Rail_Type_t;
 
-typedef struct __attribute__((packed)) Clock_Throttling_Per_Rail_Type
+typedef struct __attribute__((packed)) Clock_Throttling_Per_Rail_Type_s
 {
 	u8				VoltageSensorID;
 	u8 				CurrentSensorID;
-	Clock_Throttling_Rail_Type	PreviousReading;
-	Clock_Throttling_Rail_Type	LatestReading;
+	Clock_Throttling_Rail_Type_t	PreviousReading;
+	Clock_Throttling_Rail_Type_t	LatestReading;
 	u16				NominalVoltage;
 	u32				MeasuredPower;
 	u32				ThrottledThresholdPower;
 	float				RailNormalizedPower;
-}Clock_Throttling_Per_Rail_Type;
+}Clock_Throttling_Per_Rail_Type_t;
 
-typedef struct __attribute__((packed)) Clock_Throttling_Algorithm
+typedef struct __attribute__((packed)) Clock_Throttling_Handle_s
 {
 	u8					NumberOfRailsMonitored;
-	Clock_Throttling_Per_Rail_Type		RailParameters[MAX_RAILS_MONITORED];
+	Clock_Throttling_Per_Rail_Type_t		RailParameters[MAX_RAILS_MONITORED];
 	u32					BoardThrottlingThresholdPower;
 	u32					BoardMeasuredPower;
 	float					UserNormalizedPower;
@@ -88,11 +94,11 @@ typedef struct __attribute__((packed)) Clock_Throttling_Algorithm
 	float					VccIntThermalNormalisedPower;
 
 	float					FPGAMeasuredTemp;
-	u32					FPGAThrottlingTempLimit;
+	u32					FPGATempThrottlingLimit;
 
 	bool					bVccIntThermalThrottlingEnabled;
 	float					VccIntMeasuredTemp;
-	u32					VccIntThrottlingTempLimit;
+	u32					VccIntTempThrottlingLimit;
 
 	bool					ThermalThrottlingLoopJustEnabled;
 	float					IntegrataionSum;
@@ -115,9 +121,26 @@ typedef struct __attribute__((packed)) Clock_Throttling_Algorithm
 	bool					bUserThrottlingTempLimitEnabled;
 	u32					XRTSuppliedBoardThrottlingThresholdPower;
 	u32					XRTSuppliedUserThrottlingTempLimit;
+	u16					PowerThrottlingLimit;
 
-}Clock_Throttling_Algorithm;
+}Clock_Throttling_Handle_t;
 
-void clock_throttling_algorithm_temperature(Clock_Throttling_Algorithm  *pContext );
-void clock_throttling_algorithm_power(Clock_Throttling_Algorithm  *pContext );
-void ClockThrottling_Initialize(Clock_Throttling_Algorithm  *pContext, Build_Clock_Throttling_Profile *pThrottling);
+typedef enum {
+	eCLK_SCALING_MODE_PWR  = 0x0,
+	eCLK_SCALING_MODE_TEMP = 0x1,
+	eCLK_SCALING_MODE_BOTH = 0x2
+}eClk_scaling_mode_t;
+
+typedef struct __attribute__((packed)) Moving_Average_s
+{
+	float * buffer;
+	long sum;
+	u8 pos;
+	u8 length;
+	bool is_filled;
+}Moving_Average_t;
+
+
+void clock_throttling_algorithm_temperature(Clock_Throttling_Handle_t  *pContext );
+void clock_throttling_algorithm_power(Clock_Throttling_Handle_t  *pContext );
+void ClockThrottling_Initialize(Clock_Throttling_Handle_t  *pContext, Clock_Throttling_Profile_t *pThrottling);

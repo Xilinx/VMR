@@ -48,7 +48,7 @@ platform_sensors_monitor_ptr Monitor_Sensors;
 
 extern SemaphoreHandle_t vmc_sc_lock;
 
-extern Clock_Throttling_Algorithm  clock_throttling_std_algorithm;
+extern Clock_Throttling_Handle_t  clock_throttling_std_algorithm;
 extern SC_VMC_Data sc_vmc_data;
 
 Vmc_Sensors_Gl_t sensor_glvr = {
@@ -56,7 +56,7 @@ Vmc_Sensors_Gl_t sensor_glvr = {
 	.clk_throttling_enabled = 0,
 };
 
-clk_throttling_params_t g_clk_trottling_params;
+clk_throttling_params_t g_clk_throttling_params;
 
 int cl_vmc_clk_throttling_enable()
 {
@@ -85,10 +85,10 @@ void ucs_clock_shutdown()
 	// offset for clock shutdown
 	u32 originalValue = IO_SYNC_READ32(VMR_EP_UCS_SHUTDOWN);
 
-	// clear 23:4 bits
+	// clear 19:4 bits
 	u32 triggerValue = originalValue & BITMASK_TO_CLEAR;
 
-	//to trigger clock shutdown write 0x1B632 at [23:4] bits
+	//to trigger clock shutdown write 0xDB190 at [19:4] bits
 	triggerValue = triggerValue | ENABLE_FORCE_SHUTDOWN;
 
 	//the bits can be immediately cleared back to 0, as the shutdown state is latched by the hardware
@@ -404,7 +404,7 @@ done:
 void cl_vmc_get_clk_throttling_params(clk_throttling_params_t *pParams)
 {
 	Cl_SecureMemcpy(pParams, sizeof(clk_throttling_params_t),
-				&g_clk_trottling_params, sizeof(clk_throttling_params_t));
+				&g_clk_throttling_params, sizeof(clk_throttling_params_t));
 	return;
 }
 
@@ -423,7 +423,7 @@ int validate_clk_scaling_payload(struct xgq_vmr_clk_scaling_payload *payload)
 		return ret;
 	}
 
-	if (payload->pwr_scaling_ovrd_limit > POWER_THROTTLING_THRESOLD_LIMIT) {
+	if (payload->pwr_scaling_ovrd_limit > clock_throttling_std_algorithm.PowerThrottlingLimit) {
 	    VMC_ERR("invalid Power Limit %d", payload->pwr_scaling_ovrd_limit);
 	    return ret;
 	}
@@ -447,40 +447,40 @@ int vmc_get_clk_throttling_status(cl_msg_t *msg)
 
 int vmc_set_clk_throttling_override(cl_msg_t *msg)
 {
-	VMR_LOG("Clock Throttling Override En:%d Pwr:%d Temp:%d",
+	VMC_ERR("Clock Throttling Override En:%d Pwr:%d Temp:%d",
 			msg->clk_scaling_payload.scaling_en,
 			msg->clk_scaling_payload.pwr_scaling_ovrd_limit,
 			msg->clk_scaling_payload.temp_scaling_ovrd_limit);
 	
-	g_clk_trottling_params.limits_update_req = (u8) true;
-	g_clk_trottling_params.clk_scaling_enable = msg->clk_scaling_payload.scaling_en;
+	g_clk_throttling_params.limits_update_req = (u8) true;
+	g_clk_throttling_params.clk_scaling_enable = msg->clk_scaling_payload.scaling_en;
 	
 	/*
 	 * Apply limits only if Scaling is enabled.
 	 * If limits are sent 0 from XRT, apply default limits
 	 */
-	if(g_clk_trottling_params.clk_scaling_enable) {
-		
+	if(g_clk_throttling_params.clk_scaling_enable) {
+
 		if(msg->clk_scaling_payload.temp_scaling_ovrd_limit > 0) {
 			
-			g_clk_trottling_params.limits.throttle_limit_temp = 
+			g_clk_throttling_params.limits.throttle_limit_temp =
 				msg->clk_scaling_payload.temp_scaling_ovrd_limit;
-			g_clk_trottling_params.temp_throttling_enabled = true;
+			g_clk_throttling_params.temp_throttling_enabled = true;
 		}
 		
 		if(msg->clk_scaling_payload.pwr_scaling_ovrd_limit > 0) {
 			
-			g_clk_trottling_params.limits.throttle_limit_pwr = 
+			g_clk_throttling_params.limits.throttle_limit_pwr =
 				msg->clk_scaling_payload.pwr_scaling_ovrd_limit;
-			g_clk_trottling_params.power_throttling_enabled = true;
+			g_clk_throttling_params.power_throttling_enabled = true;
 		}
 	} else  {
 		/* Clock Throttling Disabled*/
-		g_clk_trottling_params.temp_throttling_enabled = false;
-		g_clk_trottling_params.power_throttling_enabled = false;
+		g_clk_throttling_params.temp_throttling_enabled = false;
+		g_clk_throttling_params.power_throttling_enabled = false;
 		/* Set the default value*/
-		g_clk_trottling_params.limits.throttle_limit_temp  = FPGA_THROTTLING_TEMP_LIMIT;
-		g_clk_trottling_params.limits.throttle_limit_pwr = POWER_THROTTLING_THRESOLD_LIMIT;
+		g_clk_throttling_params.limits.throttle_limit_temp  = clock_throttling_std_algorithm.FPGATempThrottlingLimit;
+		g_clk_throttling_params.limits.throttle_limit_pwr = clock_throttling_std_algorithm.PowerThrottlingLimit;
 	}
 	
 	return 0;
@@ -555,24 +555,24 @@ s8 Asdm_Read_Power(snsrRead_t *snsrData)
 void Clock_throttling()
 {
 	/* Check if we have received update request from XRT */
-	if(g_clk_trottling_params.limits_update_req) {
+	if(g_clk_throttling_params.limits_update_req) {
 		clock_throttling_std_algorithm.FeatureEnabled = 
-						g_clk_trottling_params.clk_scaling_enable;
+						g_clk_throttling_params.clk_scaling_enable;
 
 		/* Update override status */
 		clock_throttling_std_algorithm.bUserThrottlingTempLimitEnabled = 
-					g_clk_trottling_params.temp_throttling_enabled;
+					g_clk_throttling_params.temp_throttling_enabled;
 		clock_throttling_std_algorithm.PowerOverRideEnabled = 
-					g_clk_trottling_params.power_throttling_enabled;
+					g_clk_throttling_params.power_throttling_enabled;
 		
 		/* Update the Override limits */
 		clock_throttling_std_algorithm.XRTSuppliedUserThrottlingTempLimit = 
-					g_clk_trottling_params.limits.throttle_limit_temp;
+					g_clk_throttling_params.limits.throttle_limit_temp;
 		clock_throttling_std_algorithm.XRTSuppliedBoardThrottlingThresholdPower = 
-					(g_clk_trottling_params.limits.throttle_limit_pwr * WATTS_TO_MICROWATTS);
+					(g_clk_throttling_params.limits.throttle_limit_pwr * WATTS_TO_MICROWATTS);
 
 		/* Update done, clear the flag */
-		g_clk_trottling_params.limits_update_req = false;
+		g_clk_throttling_params.limits_update_req = false;
 	}
 
 	clock_throttling_algorithm_power(&clock_throttling_std_algorithm);
