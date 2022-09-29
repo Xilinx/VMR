@@ -57,12 +57,7 @@ build_clean() {
 	rm -rf xsa .metadata vmr_platform vmr_system vmr 
 	rm -rf build_tmp_dir
 	rm -rf $BUILD_DIR
-	echo "=== Update submodules ==="
-	if [ -f "$BUILD_DIR/../.gitmodules" ];then
-		cd $BUILD_DIR/../
-		git submodule update --init
-		cd $BUILD_DIR
-	fi
+
 
 	echo "=== build_clean Took: $((SECONDS - start_seconds)) S"
 }
@@ -362,7 +357,8 @@ build_shell()
 {
 	cd $ROOT_DIR
 	if [ -z $BUILD_SHELL ] || [ ! $BUILD_SHELL = "yes" ] || [ ! -f $REGEN_SHELL ];then
-		echo "Skip Build Shell";exit 0;
+		echo "Skip Build Shell"
+		return
 	fi
 
 	cp $REGEN_SHELL $BUILD_DIR
@@ -385,11 +381,6 @@ build_shell()
 
 diff_xgq_cmd_headers() {
 	echo "=== diff log is in $ROOT_DIR/diff.log"
-
-	cd $ROOT_DIR/../
-	git submodule update --remote --merge
-	cd $ROOT_DIR
-
 	echo "" > $ROOT_DIR/diff.log
 
 	tail -n +5 $ROOT_DIR/../vmr/src/common/xgq_cmd_common.h > /tmp/xgq_cmd_common.h.vmr
@@ -412,6 +403,19 @@ diff_xgq_cmd_headers() {
 }
 
 build_checking() {
+	echo "=== Update submodules ==="
+	if [ -f "$ROOT_DIR/../.gitmodules" ];then
+		cd $ROOT_DIR/../
+		echo "init submodule"
+		git submodule update --init
+		echo "update submodule"
+		git submodule update --remote --merge
+		cd $ROOT_DIR
+	else
+		echo "=== skip ${FUNCNAME[0]} ==="
+		return
+	fi
+
 	XRT=$ROOT_DIR/../XRT
 	if [ -z $XRT ];then
 		echo "=== XRT submodule doesn't exist, skip checking ==="
