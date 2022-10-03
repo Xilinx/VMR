@@ -145,18 +145,17 @@
 
         vdu_zocl_versal_region0: buffer@50100000000 {
 	    compatible = "shared-dma-pool";
-	    resuable;
+	    reusable;
             no-map;
-            reg = <0x501 0x0 0x0 0x80000000>;
+            reg = <0x501 0x0 0x0 0x7fffffff>;
         };
-
+	
 	vdu_zocl_versal_region1: buffer@50180000000 {
-		compatible = "shared-dma-pool";
-		resuable;
-		no-map;
-		reg = <0x501 0x80000000 0x0 0x80000000>;
-	};
-
+	    compatible = "shared-dma-pool";
+	    reusable;
+            no-map;
+            reg = <0x501 0x80000000 0x0 0x7fffffff>;
+        };
 
         zocl_versal_region1: buffer@60000000000 {
             no-map;
@@ -168,7 +167,7 @@
 	zyxclmm_drm@20200000000 {
 		compatible = "xlnx,zocl-versal";
 		status = "okay";
-		memory-region = <&vdu_zocl_versal_region1>;
+		memory-region = <&zocl_versal_region1>;
 		reg = <0x202 0x0 0x0 0x100000>;
 	};
 
@@ -219,31 +218,9 @@
 		interrupts = <0x00 0x63 0x04>;
 		reg = <0x204 0xa4120000 0x00 0x100000>;
 		al,devicename = "allegroDecodeIP1";
-		memory-region = <&vdu_zocl_versal_region0>;
+		memory-region = <&vdu_zocl_versal_region1>;
 		xlnx,vdu = <&myvdu>;	
 	};
-
-	al5d@204a4220000 {
-		compatible = "al,al5d";
-		interrupt-names = "vdu_host_interrupt1";
-		interrupt-parent = <&gic>;
-		interrupts = <0x00 0x63 0x04>;
-		reg = <0x204 0xa4220000 0x00 0x100000>;
-		al,devicename = "allegroDecodeIP2";
-		memory-region = <&vdu_zocl_versal_region1>;
-		xlnx,vdu = <&myvdu>;
-	};
-		
-	al5d@204a4320000 {
-		compatible = "al,al5d";
-		interrupt-names = "vdu_host_interrupt1";
-		interrupt-parent = <&gic>;
-		interrupts = <0x00 0x63 0x04>;
-		reg = <0x204 0xa4320000 0x00 0x100000>;
-		al,devicename = "allegroDecodeIP3";
-		memory-region = <&vdu_zocl_versal_region1>;
-		xlnx,vdu = <&myvdu>;
-	};	
 
 
 };
