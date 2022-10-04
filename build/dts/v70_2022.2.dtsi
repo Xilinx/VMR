@@ -150,9 +150,9 @@
             reg = <0x501 0x0 0x0 0xbfffffff>;
         };
 	
-        zocl_versal_region1: buffer@60000000000 {
+        zocl_versal_region1: buffer@501C0000000 {
             no-map;
-            reg = <0x600 0x0 0x2 0x0>;
+            reg = <0x501 0xc0000000 0x0 0x3fffffff>;
         };
 
     };
