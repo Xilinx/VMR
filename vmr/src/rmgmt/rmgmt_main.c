@@ -800,7 +800,7 @@ static int vmr_rtos_task_stats(cl_msg_t *msg)
 			}
 			else{
 				count += snprintf(rh.rh_log + count, safe_size - count,
-				"%-16s%-12s%-4ld\t%ld\t0x%lx\t<1%%r\n",
+				"%-16s%-12s%-4ld\t%ld\t0x%lx\t<1%%\n",
 				pxTaskStatusArray[i].pcTaskName,
 				eTaskStateName(pxTaskStatusArray[i].eCurrentState),
 				pxTaskStatusArray[i].uxBasePriority,

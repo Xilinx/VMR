@@ -30,6 +30,7 @@ bsp setlib xilmailbox
 bsp getlibs
 puts "=== customize FreeRTOS heap size 0x16000000 (352M)"
 bsp config total_heap_size 0x16000000
+bsp config generate_runtime_stats 1
 
 platform write
 platform active
