@@ -105,6 +105,7 @@
 &blp_blp_logic_axi_uart_rpu {
     status = "disabled";
 };
+/delete-node/ &ulp_vdu;
 
 / {
     chosen {
@@ -142,14 +143,16 @@
 	    reg = <0x0 0x38000000 0x0 0x48000000>;
 	};
 
-        vdu_zocl_versal_region: buffer@50100000000 {
+        vdu_zocl_versal_region0: buffer@50100000000 {
+	    compatible = "shared-dma-pool";
+	    reusable;
             no-map;
-            reg = <0x501 0x0 0x1 0x0>;
+            reg = <0x501 0x0 0x0 0xbfffffff>;
         };
-
-        zocl_versal_region: buffer@60000000000 {
+	
+        zocl_versal_region1: buffer@501C0000000 {
             no-map;
-            reg = <0x600 0x0 0x2 0x0>;
+            reg = <0x501 0xc0000000 0x0 0x3fffffff>;
         };
 
     };
@@ -157,7 +160,7 @@
 	zyxclmm_drm@20200000000 {
 		compatible = "xlnx,zocl-versal";
 		status = "okay";
-		memory-region = <&zocl_versal_region>;
+		memory-region = <&zocl_versal_region1>;
 		reg = <0x202 0x0 0x0 0x100000>;
 	};
 
@@ -180,4 +183,37 @@
 		xlnx,xgq_device = <&blp_blp_logic_gcq_r2a>;
 		interrupt-names = "irq_sq";
 	};
+
+	myvdu: vdu@204a4000000 {
+        	compatible = "xlnx,vdu-1.0";
+        	xlnx,core_clk = <720>;
+		xlnx,mcu_clk = <515>;
+        	xlnx,enable_dpll;
+        	xlnx,ref_clk = <100>;
+		reset-gpio = <&blp_blp_logic_aresetn_apu_vdu_gpio 0x0 0x01>; 
+        };
+
+        al5d@204a4020000 {
+        	compatible = "al,al5d";
+        	interrupt-names = "vdu_host_interrupt0";
+        	interrupt-parent = <&gic>;
+        	interrupts = <0x00 0x63 0x04>;
+        	reg = <0x204 0xa4020000 0x00 0x100000>;
+        	memory-region = <&vdu_zocl_versal_region0>;
+        	al,devicename = "allegroDecodeIP0";
+        	xlnx,vdu = <&myvdu>;
+        };
+	
+	al5d@204a4120000 {
+		compatible = "al,al5d";
+		interrupt-names = "vdu_host_interrupt1";
+		interrupt-parent = <&gic>;
+		interrupts = <0x00 0x63 0x04>;
+		reg = <0x204 0xa4120000 0x00 0x100000>;
+		al,devicename = "allegroDecodeIP1";
+		memory-region = <&vdu_zocl_versal_region0>;
+		xlnx,vdu = <&myvdu>;	
+	};
+
+
 };
