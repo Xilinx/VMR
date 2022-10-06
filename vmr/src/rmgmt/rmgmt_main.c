@@ -783,10 +783,12 @@ static int vmr_rtos_task_stats(cl_msg_t *msg)
 
 	uxArraySize = uxTaskGetSystemState(pxTaskStatusArray, uxArraySize, &totalruntime);
 	totalruntime /= 100UL;
-
-	if(totalruntime > 0){
-		for (i = 0; i < uxArraySize; i++) {
+	
+	for (i = 0; i < uxArraySize; i++) {
+		if(totalruntime > 0){
+			/*total runtime is checked to avoid divide by zero error*/
 			percentage_time = pxTaskStatusArray[i].ulRunTimeCounter / totalruntime;
+			
 			/*If Percentage Run Time = 0 then task has consumed less than 1% of the Total Run Time. */
 			if(percentage_time > 0UL){
 				count += snprintf(rh.rh_log + count, safe_size - count,
@@ -807,24 +809,24 @@ static int vmr_rtos_task_stats(cl_msg_t *msg)
 				pxTaskStatusArray[i].usStackHighWaterMark,
 				(u32)pxTaskStatusArray[i].pxStackBase);
 			}
-			if (count >= safe_size) {
-				VMR_WARN("log msg is trunked");
-				break;
-			}
 		}
-		vPortFree(pxTaskStatusArray);
-		cl_memcpy_toio(dst_addr, rh.rh_log, MIN(count, safe_size));
-		msg->log_payload.size = MIN(count, safe_size);
+		else{
+			count += snprintf(rh.rh_log + count, safe_size - count,
+			"%-16s%-12s%-4ld\t%ld\t0x%lx\t<1%%\n",
+			pxTaskStatusArray[i].pcTaskName,
+			eTaskStateName(pxTaskStatusArray[i].eCurrentState),
+			pxTaskStatusArray[i].uxBasePriority,
+			pxTaskStatusArray[i].usStackHighWaterMark,
+			(u32)pxTaskStatusArray[i].pxStackBase);
+		}
+		if (count >= safe_size) {
+			VMR_WARN("log msg is trunked or Array Buffer Size Overflow");
+			break;
+		}
 	}
-	else{
-		/*
-			TO DO
-			Symptom:- Tripping the sysfs node access at XRT with error message :- "Invalid Argument"
-			1) Warn the User to verify if configGENERATE_RUN_TIME_STATS  is 1 in bsp ctl file.
-			2) Any Task level recovery APIs in Free RTOS (Total Runtime Cannot be Zero).
-			3) For Graceful Completion, we can simply report < 1% as this feature is used for Debug Purpose only.
-		*/
-	}
+	vPortFree(pxTaskStatusArray);
+	cl_memcpy_toio(dst_addr, rh.rh_log, MIN(count, safe_size));
+	msg->log_payload.size = MIN(count, safe_size);
 
 	return 0;
 }
