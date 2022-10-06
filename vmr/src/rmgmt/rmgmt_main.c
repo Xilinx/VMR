@@ -779,7 +779,7 @@ static int vmr_rtos_task_stats(cl_msg_t *msg)
 		return -ENOMEM;
 
 	count += snprintf(rh.rh_log + count, safe_size - count,
-		"Name\t\tState\tPriority\tStack\tBase\n");    
+		"Name\t\tState\tPriority\tStack\tBase\t\tRun Time\n");    
 
 	uxArraySize = uxTaskGetSystemState(pxTaskStatusArray, uxArraySize, &totalruntime);
 	totalruntime /= 100UL;
@@ -790,7 +790,7 @@ static int vmr_rtos_task_stats(cl_msg_t *msg)
 			/*If Percentage Run Time = 0 then task has consumed less than 1% of the Total Run Time. */
 			if(percentage_time > 0UL){
 				count += snprintf(rh.rh_log + count, safe_size - count,
-				"%-16s%-12s%-4ld\t%ld\t0x%lx\t%lu\n",
+				"%-16s%-12s%-4ld\t%ld\t0x%lx\t%lu%%\n",
 				pxTaskStatusArray[i].pcTaskName,
 				eTaskStateName(pxTaskStatusArray[i].eCurrentState),
 				pxTaskStatusArray[i].uxBasePriority,
@@ -815,6 +815,15 @@ static int vmr_rtos_task_stats(cl_msg_t *msg)
 		vPortFree(pxTaskStatusArray);
 		cl_memcpy_toio(dst_addr, rh.rh_log, MIN(count, safe_size));
 		msg->log_payload.size = MIN(count, safe_size);
+	}
+	else{
+		/*
+			TO DO
+			Symptom:- Tripping the sysfs node access at XRT with error message :- "Invalid Argument"
+			1) Warn the User to verify if configGENERATE_RUN_TIME_STATS  is 1 in bsp ctl file.
+			2) Any Task level recovery APIs in Free RTOS (Total Runtime Cannot be Zero).
+			3) For Graceful Completion, we can simply report < 1% as this feature is used for Debug Purpose only.
+		*/
 	}
 
 	return 0;
