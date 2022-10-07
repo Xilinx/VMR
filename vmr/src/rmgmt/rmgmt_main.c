@@ -771,6 +771,7 @@ static int vmr_rtos_task_stats(cl_msg_t *msg)
 	u32 count = 0;
 	TaskStatus_t *pxTaskStatusArray = NULL;
 	volatile UBaseType_t uxArraySize, i;
+	unsigned long totalruntime, percentage_time;
 	
 	uxArraySize = uxTaskGetNumberOfTasks();
 	pxTaskStatusArray = pvPortMalloc( uxArraySize * sizeof(TaskStatus_t));
@@ -778,25 +779,52 @@ static int vmr_rtos_task_stats(cl_msg_t *msg)
 		return -ENOMEM;
 
 	count += snprintf(rh.rh_log + count, safe_size - count,
-		"Name\t\tState\tPriority\tStack\tBase\n");    
+		"Name\t\tState\tPriority\tStack\tBase\t\tRun Time\n");    
 
-	uxArraySize = uxTaskGetSystemState(pxTaskStatusArray, uxArraySize, NULL);
+	uxArraySize = uxTaskGetSystemState(pxTaskStatusArray, uxArraySize, &totalruntime);
+	totalruntime /= 100UL;
+	
 	for (i = 0; i < uxArraySize; i++) {
-		count += snprintf(rh.rh_log + count, safe_size - count,
-			"%-16s%-12s%-4ld\t%ld\t0x%lx\n",
+		if(totalruntime > 0){
+			/*total runtime is checked to avoid divide by zero error*/
+			percentage_time = pxTaskStatusArray[i].ulRunTimeCounter / totalruntime;
+			
+			/*If Percentage Run Time = 0 then task has consumed less than 1% of the Total Run Time. */
+			if(percentage_time > 0UL){
+				count += snprintf(rh.rh_log + count, safe_size - count,
+				"%-16s%-12s%-4ld\t%ld\t0x%lx\t%lu%%\n",
+				pxTaskStatusArray[i].pcTaskName,
+				eTaskStateName(pxTaskStatusArray[i].eCurrentState),
+				pxTaskStatusArray[i].uxBasePriority,
+				pxTaskStatusArray[i].usStackHighWaterMark,
+				(u32)pxTaskStatusArray[i].pxStackBase,
+				percentage_time);
+			}
+			else{
+				count += snprintf(rh.rh_log + count, safe_size - count,
+				"%-16s%-12s%-4ld\t%ld\t0x%lx\t<1%%\n",
+				pxTaskStatusArray[i].pcTaskName,
+				eTaskStateName(pxTaskStatusArray[i].eCurrentState),
+				pxTaskStatusArray[i].uxBasePriority,
+				pxTaskStatusArray[i].usStackHighWaterMark,
+				(u32)pxTaskStatusArray[i].pxStackBase);
+			}
+		}
+		else{
+			count += snprintf(rh.rh_log + count, safe_size - count,
+			"%-16s%-12s%-4ld\t%ld\t0x%lx\t<1%%\n",
 			pxTaskStatusArray[i].pcTaskName,
 			eTaskStateName(pxTaskStatusArray[i].eCurrentState),
 			pxTaskStatusArray[i].uxBasePriority,
 			pxTaskStatusArray[i].usStackHighWaterMark,
-			(u32)pxTaskStatusArray[i].pxStackBase);    
+			(u32)pxTaskStatusArray[i].pxStackBase);
+		}
 		if (count >= safe_size) {
-			VMR_WARN("log msg is trunked");
+			VMR_WARN("log msg is trunked or Array Buffer Size Overflow");
 			break;
 		}
 	}
-
 	vPortFree(pxTaskStatusArray);
-
 	cl_memcpy_toio(dst_addr, rh.rh_log, MIN(count, safe_size));
 	msg->log_payload.size = MIN(count, safe_size);
 
