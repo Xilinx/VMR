@@ -1,3 +1,8 @@
+/******************************************************************************
+* Copyright (C) 2020 Xilinx, Inc.  All rights reserved.
+* SPDX-License-Identifier: MIT
+*******************************************************************************/
+
 #ifndef __CL_XGQ_RECEIVE_PLAT_H_
 #define __CL_XGQ_RECEIVE_PLAT_H_
 
