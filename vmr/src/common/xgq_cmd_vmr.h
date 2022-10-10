@@ -15,8 +15,16 @@
 #define XGQ_CLOCK_WIZ_MAX_RES           4
 
 /* VMR Identify Command Version Major and Minor Numbers */
-#define VMR_IDENTIFY_CMD_MAJOR			1
-#define VMR_IDENTIFY_CMD_MINOR			0
+#define VMR_IDENTIFY_CMD_MAJOR		1
+#define VMR_IDENTIFY_CMD_MINOR		0
+
+/**
+ * clock scaling request types
+ */
+enum xgq_cmd_clk_scaling_app_id {
+	XGQ_CMD_CLK_THROTTLING_AID_READ		= 0x1,
+	XGQ_CMD_CLK_THROTTLING_AID_CONFIGURE	= 0x2,
+};
 
 /**
  * sensor data request types
@@ -207,11 +215,11 @@ struct xgq_cmd_vmr_control_payload {
  */
 
 struct xgq_cmd_clk_scaling_payload {
-    uint32_t aid:3;
-    uint32_t scaling_en:1;
-    uint32_t pwr_scaling_ovrd_limit:16;
-    uint32_t temp_scaling_ovrd_limit:8;
-    uint32_t rsvd1:4;
+	uint32_t aid:3;
+	uint32_t scaling_en:1;
+	uint32_t pwr_scaling_ovrd_limit:16;
+	uint32_t temp_scaling_ovrd_limit:8;
+	uint32_t rsvd1:4;
 };
 
 /**
@@ -225,7 +233,7 @@ struct xgq_cmd_clk_scaling_payload {
  * @xclbin_payload:
  * @sensor_payload:
  * @vmr_control_payload:
- * @clock_scaling_payload:
+ * @clk_scaling_payload:
  */
 struct xgq_cmd_sq {
 	struct xgq_cmd_sq_hdr hdr;
@@ -290,6 +298,22 @@ struct xgq_cmd_cq_data_payload {
 	uint32_t resvd1;
 };
 
+/*
+ * struct xgq_cmd_cq_clk_scaling_payload: clock scaling status payload
+ *
+ * clock scaling status
+ */
+struct xgq_cmd_cq_clk_scaling_payload {
+	uint8_t has_clk_scaling:1;
+	uint8_t clk_scaling_mode:2;
+	uint8_t clk_scaling_en:1;
+	uint8_t rsvd:4;
+	uint8_t temp_shutdown_limit;
+	uint8_t temp_scaling_limit;
+	uint16_t pwr_shutdown_limit;
+	uint16_t pwr_scaling_limit;
+};
+
 /**
  * struct xgq_cmd_cq_vmr_payload: vmr device status payload
  *
@@ -314,22 +338,6 @@ struct xgq_cmd_cq_vmr_payload {
 	uint32_t program_progress:7;
 	uint16_t resvd2:6;
 	uint16_t boot_on_offset;
-};
-
-/*
- * struct xgq_cmd_cq_clk_scaling_payload: clock scaling status payload
- *
- * clock scaling status
-*/
-struct xgq_cmd_cq_clk_scaling_payload {
-    uint8_t has_clk_scaling:1;
-    uint8_t clk_scaling_mode:2;
-    uint8_t clk_scaling_en:1;
-    uint8_t rsvd:4;
-    uint8_t temp_shutdown_limit;
-    uint8_t temp_scaling_limit;
-    uint16_t pwr_shutdown_limit;
-    uint16_t pwr_scaling_limit;
 };
 
 /*
