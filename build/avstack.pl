@@ -1,4 +1,8 @@
 #!/usr/bin/perl -w
+
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (C) 2018-2022 Xilinx, Inc. All rights reserved.
+
 # avstack.pl: AVR stack checker
 # Copyright (C) 2013 Daniel Beer <dlbeer@gmail.com>
 #
