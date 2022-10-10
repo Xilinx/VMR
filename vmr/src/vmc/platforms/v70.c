@@ -406,7 +406,7 @@ s8 V70_Asdm_Read_Current_3v3(snsrRead_t *snsrData) {
 s8 V70_Asdm_Read_Current_Vccint(snsrRead_t *snsrData)
 {
 	s8 status = XST_SUCCESS;
-	u16 current = (sensor_glvr.sensor_readings.current[eVCCINT] * 1000);
+	u32 current = (sensor_glvr.sensor_readings.current[eVCCINT] * 1000);
 
 	Cl_SecureMemcpy(&snsrData->snsrValue[0],sizeof(current),&current,sizeof(current));
 	snsrData->sensorValueSize = sizeof(current);

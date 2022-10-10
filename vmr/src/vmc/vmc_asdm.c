@@ -417,7 +417,7 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
 	{
 	    .repoType = CurrentSDR,
 	    .sensorName = VCCINT_NAME,
-	    .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_2B,
+	    .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_4B,
 	    .snsrUnitModifier = -3,
 	    .supportedThreshold = SNSR_MAX_VAL | SNSR_AVG_VAL ,
 	    .sampleCount = 0x1,
