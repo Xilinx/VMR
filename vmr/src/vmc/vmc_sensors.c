@@ -28,8 +28,8 @@
 #include "platforms/vck5000.h"
 #include "platforms/v70.h"
 
-#define BITMASK_TO_CLEAR	0xFF00000F
-#define ENABLE_FORCE_SHUTDOWN	0x001B6320
+#define BITMASK_TO_CLEAR	0xFFF0000F
+#define ENABLE_FORCE_SHUTDOWN	0x000DB190
 
 static int vmc_sysmon_is_ready = 0;
 /* TODO: init those to a certain value */
