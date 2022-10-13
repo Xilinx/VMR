@@ -35,8 +35,10 @@ Help()
 ############################################################
 
 # script vars (change if required)
-xsa=/opt/xilinx/platforms/xilinx_vck5000_gen4x8_xdma_2_202210_1/hw/xilinx_vck5000_gen4x8_xdma_2_202210_1.xsa
-xsabin=/opt/xilinx/firmware/vck5000/gen4x8-xdma/base/partition.xsabin
+#xsa=/opt/xilinx/platforms/xilinx_vck5000_gen4x8_xdma_2_202210_1/hw/xilinx_vck5000_gen4x8_xdma_2_202210_1.xsa
+xsa=/opt/xilinx/platforms/xilinx_v70_gen5x8_qdma_2_202220_1/hw/xilinx_v70_gen5x8_qdma_2_202220_1.xsa
+#xsabin=/opt/xilinx/firmware/vck5000/gen4x8-xdma/base/partition.xsabin
+xsabin=/opt/xilinx/firmware/v70/gen5x8-qdma/base/partition.xsabin
 vmr=""
 skip_plm=0
 AIE2=0
@@ -140,6 +142,21 @@ file rename -force ./plm/Debug/plm.elf ./plm.elf
 app remove plm
 ' > scripts/plm_gen.tcl
 
+# generate tcl script to generate plm.elf with uart swap
+printf "%s\n" '
+set i 0; foreach n $argv {set [incr i] $n}
+puts "Generating vck5000 plm.elf for $1"
+# Update the plm.elf file with swapped UARTs
+# Unique to V70
+setws .
+app create -name plm -template {versal PLM} -proc blp_cips_pspmc_0_psv_pmc_0 -hw $1 -os standalone
+bsp config stdout blp_cips_pspmc_0_psv_sbsauart_0
+bsp config stdin blp_cips_pspmc_0_psv_sbsauart_0
+app build -name plm
+file rename -force ./plm/Debug/plm.elf ./plm.elf
+' > scripts/plm_gen_v70.tcl
+
+
 # if not skipped (-s option) generate new plm.elf
 if [ $skip_plm -eq 0 ]; then
     printf "\nGenerating plm.elf for xsa...\n"
@@ -148,7 +165,13 @@ if [ $skip_plm -eq 0 ]; then
     mkdir plm
     cd plm
     export FORCE_MARK_AS_EDGE_XSA=1
-    xsct ../scripts/plm_gen.tcl $xsa
+
+    if [ $AIE2 == "1" ];then
+        xsct ../scripts/plm_gen_v70.tcl $xsa
+    else
+        xsct ../scripts/plm_gen.tcl $xsa
+    fi
+
     cp plm.elf ../
     cd ..
 fi
@@ -161,6 +184,7 @@ fi
 rm -rf bins
 mkdir bins
 pdi=bins/base.pdi
+vmr_bif=scripts/vmr.bif
 rebuild_bif=scripts/rebuild.bif
 aie2_rebuild_bif=scripts/aie2_rebuild.bif
 
@@ -208,6 +232,19 @@ if [ "$bin_list" != "$golden_list" ]; then
     diff  <(echo "$bin_list" ) <(echo "$golden_list")
     exit 1
 fi
+
+# create BIF file to vmr partial PDI
+printf "%s\n" 'vmr_bif:
+{
+ id_code = 0x04cd7093
+ extended_id_code = 0x01
+ id = 0x2
+ image
+ {
+  name = rpu_test, id = 0x1c000000
+  { core = r5-0, file = _VMR_FILE_ }
+ }
+}' > $vmr_bif
 
 # create BIF file to rebuild PDI - based on combination of BIF files used in original build process
 printf "%s\n" 'new_bif:
@@ -263,7 +300,7 @@ printf "%s\n" 'new_bif:
 # aie2 version bif for
 printf "%s\n" 'new_bif:
 {
- id_code = 0x04cd0093
+ id_code = 0x04cd7093
  extended_id_code = 0x01
  id = 0x2
  image
@@ -291,7 +328,7 @@ printf "%s\n" 'new_bif:
  }
  image
  {
-  name = aie_subsys, id = 0x421c005
+  name = aie_subsys, id = 0x421c028
   partition { id = 0x07, type = cdo, file = bins/aie2_subsys_7.bin }
  }
  image
@@ -329,15 +366,22 @@ sed -i 's,_PSM_FILE_,'$psm_path',' $rebuild_bif
 # replace _VMR_FILE_ with -v script argument
 sed -i 's,_VMR_FILE_,'$vmr',' $rebuild_bif
 
+# replace _VMR_FILE_ with -v script argument
+sed -i 's,_VMR_FILE_,'$vmr',' $vmr_bif
+
 # rebuild the pdi from the binary sources and repackage as xsabin as well
 printf "\nRebuilding PDI and new XSABIN...\n"
 sleep 1
 rm -f rebuilt.*
+rm -f vmr.pdi
 bootgen -arch versal -image $rebuild_bif -w -o rebuilt.pdi
 xclbinutil --input $xsabin --replace-section PDI:RAW:rebuilt.pdi --output rebuilt.xsabin
 
+printf "\nRebuilding vmr.pdi partial PDI...\n"
+bootgen -arch versal -image $vmr_bif -w -o vmr.pdi
+
 printf "\nScript complete....\n"
 printf "  Generated the following files:\n"
-printf "    rebuilt.pdi\n"
-printf "    rebuilt.xsabin\n\n"
-
+realpath vmr.pdi
+realpath rebuilt.pdi
+realpath rebuilt.xsabin

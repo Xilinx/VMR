@@ -296,7 +296,7 @@ static int rmgmt_fpga_download(struct rmgmt_handler *rh, u32 len)
 			goto done;
 	}
 
-	ret = cl_rmgmt_apu_download_xclbin((char *)rh->rh_data, rh->rh_data_size);
+	ret = rmgmt_apu_download_xclbin(rh);
 	if (ret == -ENODEV) {
 		VMR_LOG("skip apu download xclbin ret: %d", ret);
 		ret = 0;

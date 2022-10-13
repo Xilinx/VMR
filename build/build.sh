@@ -407,9 +407,9 @@ build_checking() {
 	if [ -f "$ROOT_DIR/../.gitmodules" ];then
 		cd $ROOT_DIR/../
 		echo "init submodule"
-		git submodule update --init
+		git submodule update --init > /dev/null 2>&1
 		echo "update submodule"
-		git submodule update --remote --merge
+		git submodule update --remote --merge > /dev/null 2>&1
 		cd $ROOT_DIR
 	else
 		echo "=== skip ${FUNCNAME[0]} ==="

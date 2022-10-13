@@ -33,16 +33,9 @@
 
 #define MDELAY(n) vTaskDelay( pdMS_TO_TICKS(n) )
 
-struct rmgmt_handler {
-	u32 rh_base;   /* obsolated */
-	u32 rh_boot_on_offset;
-	u32 rh_data_max_size;
-	u32 rh_data_size;
-	u32 rh_log_max_size; 
-	char *rh_log;	/* static malloc and never free */
-	u8   *rh_data; 	/* static malloc and never free */
-	bool rh_already_flashed; /* enforce reset/reboot after successfully flashed */
-};
+struct xgq_vmr_cmd_identify;
+struct rmgmt_handler;
+struct cl_msg;
 
 static void inline axigate_freeze()
 {
@@ -65,4 +58,17 @@ static void inline ucs_start()
 }
 
 u32 rmgmt_boot_on_offset();
+
+int rmgmt_apu_identify(struct xgq_vmr_cmd_identify *id_cmd);
+int rmgmt_apu_info(char *buf, u32 size);
+int rmgmt_apu_download_xclbin(struct rmgmt_handler *rh);
+
+int rmgmt_fpt_get_debug_type(struct cl_msg *msg, u8 *debug_type);
+int rmgmt_enable_boot_default(struct cl_msg *msg);
+int rmgmt_enable_boot_backup(struct cl_msg *msg);
+int rmgmt_fpt_debug(struct cl_msg *msg);
+u32 rmgmt_boot_on_offset();
+
+int rmgmt_is_ready(void);
+
 #endif

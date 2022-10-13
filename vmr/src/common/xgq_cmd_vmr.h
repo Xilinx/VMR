@@ -176,6 +176,7 @@ struct xgq_cmd_data_payload {
 	uint32_t flash_type:4;
 	uint32_t rsvd1:24;
 	uint32_t pad1;
+	uint64_t priv;
 };
 
 enum xgq_cmd_flash_type {
