@@ -156,12 +156,12 @@
 	    compatible = "shared-dma-pool";
 	    reusable;
             no-map;
-            reg = <0x501 0x0 0x0 0xbfffffff>;
+            reg = <0x501 0x0 0x0 0x7fffffff>;
         };
 	
-        zocl_versal_region1: buffer@501C0000000 {
+        zocl_versal_region1: buffer@50180000000 {
             no-map;
-            reg = <0x501 0xc0000000 0x0 0x3fffffff>;
+            reg = <0x501 0x80000000 0x0 0x7fffffff>;
         };
 
     };
