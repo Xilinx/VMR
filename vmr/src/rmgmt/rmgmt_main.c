@@ -78,7 +78,7 @@
 
 
 static struct rmgmt_handler rh = { 0 };
-static bool rmgmt_is_ready = false;
+static bool rmgmt_is_ready_flag = false;
 
 enum pdi_type {
 	BASE_PDI = 0,
@@ -265,6 +265,8 @@ static int rmgmt_download_pdi(cl_msg_t *msg, enum pdi_type ptype)
 
 	/* prepare rmgmt handler */
 	rh.rh_data_size = size;
+	/* pass in private address */
+	rh.rh_data_priv = &msg->data_payload.priv;
 
 	cl_memcpy_fromio(address, rh.rh_data, size);
 
@@ -412,7 +414,7 @@ static u32 rmgmt_apu_status_query(char *buf, u32 size)
 	if (!apu_is_ready)
 		goto done;
 
-	if(cl_rmgmt_apu_identify(&id_cmd) == 0){
+	if(rmgmt_apu_identify(&id_cmd) == 0){
 		count = snprintf(buf,size,"APU XGQ Version: %d.%d\n",id_cmd.major,id_cmd.minor);
 	}
 	if (count > size) {
@@ -420,7 +422,7 @@ static u32 rmgmt_apu_status_query(char *buf, u32 size)
 		return size;
 	}
 
-	count += cl_rmgmt_apu_info(buf + count, size - count);
+	count += rmgmt_apu_info(buf + count, size - count);
 	if (count > size) {
 		VMR_ERR("msg is truncated");
 		return size;
@@ -934,7 +936,7 @@ static void rmgmt_set_multiboot_to_backup(cl_msg_t *msg)
 	rmgmt_set_multiboot(MULTIBOOT_OFF(msg->multiboot_payload.backup_partition_offset));
 }
 
-static int rmgmt_enable_boot_default(cl_msg_t *msg)
+int rmgmt_enable_boot_default(cl_msg_t *msg)
 {
 	int ret = 0;
 
@@ -951,7 +953,7 @@ static int rmgmt_enable_boot_default(cl_msg_t *msg)
 	return 0;
 }
 
-static int rmgmt_enable_boot_backup(cl_msg_t *msg)
+int rmgmt_enable_boot_backup(cl_msg_t *msg)
 {
 	int ret = 0;
 
@@ -968,19 +970,9 @@ static int rmgmt_enable_boot_backup(cl_msg_t *msg)
 	return 0;
 }
 
-u32 cl_rmgmt_boot_on_offset()
+u32 rmgmt_boot_on_offset()
 {
 	return rh.rh_boot_on_offset;
-}
-
-int cl_rmgmt_enable_boot_default(cl_msg_t *msg)
-{
-	return rmgmt_enable_boot_default(msg);
-}
-
-int cl_rmgmt_enable_boot_backup(cl_msg_t *msg)
-{
-	return rmgmt_enable_boot_backup(msg);
 }
 
 int cl_rmgmt_fpt_query(cl_msg_t *msg)
@@ -989,17 +981,12 @@ int cl_rmgmt_fpt_query(cl_msg_t *msg)
 	return 0;
 }
 
-int cl_rmgmt_fpt_get_debug_type(cl_msg_t *msg, u8 *debug_type)
-{
-	return rmgmt_fpt_get_debug_type((struct cl_msg *)msg, debug_type);
-}
-
-int cl_rmgmt_fpt_debug(cl_msg_t *msg)
+int rmgmt_fpt_debug(cl_msg_t *msg)
 {
 	return rmgmt_fpt_set_debug_type(msg);
 }
 
-int cl_rmgmt_program_sc(cl_msg_t *msg)
+int rmgmt_program_sc(cl_msg_t *msg)
 {
 	VMR_WARN("Obsolated cmd, ignore");
 	return 0;
@@ -1010,11 +997,11 @@ struct xgq_vmr_op {
 	const char 	*op_name;
 	int (*op_handle)(cl_msg_t *msg);
 } xgq_vmr_op_table[] = {
-	{ CL_MULTIBOOT_DEFAULT, "MULTIBOOT_DEFAULT", cl_rmgmt_enable_boot_default },
-	{ CL_MULTIBOOT_BACKUP, "MULTIBOOT_BACKUP", cl_rmgmt_enable_boot_backup },
+	{ CL_MULTIBOOT_DEFAULT, "MULTIBOOT_DEFAULT", rmgmt_enable_boot_default },
+	{ CL_MULTIBOOT_BACKUP, "MULTIBOOT_BACKUP", rmgmt_enable_boot_backup },
 	{ CL_VMR_QUERY, "VMR_QUERY", cl_rmgmt_fpt_query },
-	{ CL_VMR_DEBUG, "VMR_DEBUG", cl_rmgmt_fpt_debug },
-	{ CL_PROGRAM_SC, "PROGRAM_SC", cl_rmgmt_program_sc },
+	{ CL_VMR_DEBUG, "VMR_DEBUG", rmgmt_fpt_debug },
+	{ CL_PROGRAM_SC, "PROGRAM_SC", rmgmt_program_sc },
 };
 
 int cl_rmgmt_vmr_control(cl_msg_t *msg)
@@ -1035,9 +1022,9 @@ done:
 	return ret;	
 }
 
-int cl_rmgmt_is_ready()
+int rmgmt_is_ready()
 {
-	return rmgmt_is_ready == true;
+	return rmgmt_is_ready_flag == true;
 }
 
 int cl_rmgmt_init( void )
@@ -1074,7 +1061,7 @@ int cl_rmgmt_init( void )
 		cl_memcpy(VMR_EP_SYSTEM_DTB, dtb_offset, dtb_size);
 	}
 
-	rmgmt_is_ready = true;
+	rmgmt_is_ready_flag = true;
 	VMR_LOG("Done. set rmgmt is ready.");
 	return 0;
 }

@@ -43,8 +43,10 @@ static void read_completion(struct xgq_cmd_cq *cq_cmd, uint64_t addr)
 
 static bool shm_acquire_data(u32 *addr_off, u32 *size)
 {
-	if (xSemaphoreTake(semaData, portMAX_DELAY) != pdTRUE)
+	if (xSemaphoreTake(semaData, portMAX_DELAY) != pdTRUE) {
+		VMR_ERR("semaData lock is busy");
 		return false;
+	}
 
 	*addr_off = mem.apu_xgq_ring_buffer + APU_RING_BUFFER_SIZE;
 	*size = VMR_EP_APU_SHARED_MEMORY_END - APU_SHARED_MEMORY_ADDR(*addr_off) + 1;
@@ -86,7 +88,7 @@ static u32 xclbin_cmd_complete(struct xgq_cmd_cq *cq_cmd)
 }
 
 u32 cl_xgq_apu_download_trunk(char *data, u32 trunk_size, u32 remain_size,
-	u32 base_off)
+	u32 base_off, void *priv)
 {
 	int rval = 0;
 	uint64_t slot_addr = 0;
@@ -100,12 +102,15 @@ u32 cl_xgq_apu_download_trunk(char *data, u32 trunk_size, u32 remain_size,
 		return -ENODEV;
 	}
 
-	VMR_LOG("send trunk size %d, remain %d, base %d", trunk_size, remain_size, base_off);
-
 	payload = &sq_cmd.xclbin_payload;
 	payload->address = base_off;
 	payload->size = trunk_size;
 	payload->remain_size = remain_size;
+	payload->priv = priv ? *(uint64_t *)priv : 0;
+
+	VMR_LOG("send trunk size %d, remain %d, base %d, priv %llu",
+		trunk_size, remain_size, base_off, payload->priv);
+
 	cl_memcpy_toio(APU_SHARED_MEMORY_ADDR(base_off), data, trunk_size);
 
 	sq_cmd.hdr.opcode = XGQ_CMD_OP_LOAD_XCLBIN;
@@ -142,28 +147,34 @@ u32 cl_xgq_apu_download_trunk(char *data, u32 trunk_size, u32 remain_size,
 	return 0;
 }
 
-int cl_rmgmt_apu_download_xclbin(char *data, u32 size)
+int rmgmt_apu_download_xclbin(struct rmgmt_handler *rh)
 {
 	u32 base_off = 0;
 	u32 data_size = 0;
-	u32 remain_size = size;
+	u32 remain_size = 0;
 	u32 offset = 0;
 	u32 count = 0;
+	char *data = NULL;
+	u32 size = 0;
+	void *priv = NULL;
 
 	if (!cl_rmgmt_apu_is_ready())
 		return -ENODEV;
+
+	data = (char *)rh->rh_data;
+	size = rh->rh_data_size;
+	priv = rh->rh_data_priv;
+	remain_size = size;
+	if (data == NULL || size == 0) {
+		VMR_ERR("invalid request, data is NULL or size %d is 0", size);
+		return -EINVAL;
+	}
 
 	if (!shm_acquire_data(&base_off, &data_size))
 		return -EBUSY;
 
 	VMR_LOG("base 0x%x, data size %d, total size %d", base_off, data_size, size);
-	/* Test first and last several bytes */
-	/*
-	for (int i = 0; i < 8; i++)
-		VMR_LOG("%x", data[i]);
-	for (int i = size - 8; i < size; i++)
-		VMR_LOG("%x", data[i]);
-	*/
+
 	/* set to 1M for test only */
 	//data_size = 0x100000;
 
@@ -172,7 +183,7 @@ int cl_rmgmt_apu_download_xclbin(char *data, u32 size)
 		remain_size = remain_size - trunk_size;
 		
 		count = cl_xgq_apu_download_trunk(data + offset, trunk_size,
-			remain_size, base_off);
+			remain_size, base_off, priv);
 		if (count != trunk_size) {
 			VMR_ERR("failed count %d != trunk_size %d", count, trunk_size);
 			shm_release_data();
@@ -205,7 +216,7 @@ static int identify_cmd_complete(struct xgq_cmd_cq *cq_cmd, struct xgq_vmr_cmd_i
 	return 0;
 }
 
-int cl_rmgmt_apu_identify(struct xgq_vmr_cmd_identify *id_cmd)
+int rmgmt_apu_identify(struct xgq_vmr_cmd_identify *id_cmd)
 {
 	int rval = 0;
 	uint64_t slot_addr = 0;
@@ -275,7 +286,7 @@ static int log_page_cmd_complete(struct xgq_cmd_cq *cq_cmd, u32 address, u32 log
 	return (cl_memcpy_fromio(APU_SHARED_MEMORY_ADDR(address), buf, size) != size) ? 0 : size;
 }
 
-int cl_rmgmt_apu_info(char *buf, u32 size)
+int rmgmt_apu_info(char *buf, u32 size)
 {
 	int rval = 0;
 	uint64_t slot_addr = 0;
@@ -383,7 +394,7 @@ int cl_rmgmt_apu_channel_probe()
 	 * continue probing APU again
 	 */
 	xgq_apu_ready = true;
-	ret = cl_rmgmt_apu_identify(&id_cmd);
+	ret = rmgmt_apu_identify(&id_cmd);
 	if (ret != 0) {
 		VMR_ERR("xgq identify failed: %d, please reset device", ret);
 		ret = -EINVAL;

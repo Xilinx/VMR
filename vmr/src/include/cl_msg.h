@@ -78,6 +78,7 @@ struct xgq_vmr_data_payload {
 	uint32_t flash_to_legacy:1;
 	uint32_t rsvd1:26;
 	uint32_t pad1;
+	uint64_t priv;
 };
 
 struct xgq_vmr_log_payload {

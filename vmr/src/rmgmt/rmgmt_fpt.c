@@ -287,7 +287,7 @@ void rmgmt_boot_fpt_query(struct cl_msg *msg)
 
 
 	/* We should use the cached boot_offset saved right after boot */
-	boot_on_offset = cl_rmgmt_boot_on_offset();
+	boot_on_offset = rmgmt_boot_on_offset();
 	msg->multiboot_payload.boot_on_offset = boot_on_offset;
 
 	if (boot_on_offset ==

@@ -192,6 +192,8 @@ int xclbin_handle(cl_msg_t *msg, struct xgq_cmd_sq *sq)
 {
 	msg->data_payload.address = (u32)sq->xclbin_payload.address;
 	msg->data_payload.size = (u32)sq->xclbin_payload.size;
+	msg->data_payload.priv = sq->xclbin_payload.priv;
+
 	return 0;
 }
 
@@ -199,6 +201,7 @@ int pdi_handle(cl_msg_t *msg, struct xgq_cmd_sq *sq)
 {
 	msg->data_payload.address = (u32)sq->pdi_payload.address;
 	msg->data_payload.size = (u32)sq->pdi_payload.size;
+	msg->data_payload.priv = sq->xclbin_payload.priv;
 
 	switch (sq->pdi_payload.flash_type) {
 	case XGQ_CMD_FLASH_NO_BACKUP:
