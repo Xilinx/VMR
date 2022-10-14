@@ -31,7 +31,7 @@ typedef struct  __attribute__((packed)) {
 }clk_throttling_params_t;
 
 
-int cl_vmc_sensor(struct cl_msg *msg);
+int cl_vmc_sensor_request(struct cl_msg *msg);
 int cl_vmc_is_ready(void);
 void cl_vmc_sc_tx_rx_data(void);
 void cl_vmc_monitor_sensors();
@@ -50,4 +50,6 @@ int cl_vmc_sysmon_is_ready(void);
 
 int cl_vmc_clk_scaling(struct cl_msg *msg);
 void cl_vmc_get_clk_throttling_params(clk_throttling_params_t *params);
+int cl_vmc_clk_throttling_disable();
+int cl_vmc_clk_throttling_enable();
 #endif

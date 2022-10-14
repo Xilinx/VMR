@@ -52,9 +52,30 @@ extern SC_VMC_Data sc_vmc_data;
 
 Vmc_Sensors_Gl_t sensor_glvr = {
 	.logging_level = VMC_LOG_LEVEL_NONE,
+	.clk_throttling_enabled = 0,
 };
 
 clk_throttling_params_t g_clk_trottling_params;
+
+int cl_vmc_clk_throttling_enable()
+{
+	VMC_LOG("set enabled to 1");
+	sensor_glvr.clk_throttling_enabled = 1;
+	return 0;
+}
+
+
+int cl_vmc_clk_throttling_disable()
+{
+	u32 ep_gapping = IO_SYNC_READ32(VMR_EP_GAPPING_DEMAND);
+
+	/* write 0 on gapping demand */
+	IO_SYNC_WRITE32(ep_gapping & ~MASK_GAPPING_DEMAND_CONTROL, VMR_EP_GAPPING_DEMAND);
+
+	VMC_LOG("set enabled to 0");
+	sensor_glvr.clk_throttling_enabled = 0;
+	return 0;
+}
 
 void ucs_clock_shutdown()
 {
@@ -342,7 +363,7 @@ static int validate_sensor_payload(struct xgq_vmr_sensor_payload *payload)
 	return 0;
 }
 
-int cl_vmc_sensor(cl_msg_t *msg)
+int cl_vmc_sensor_request(cl_msg_t *msg)
 {
 	u32 address = RPU_SHARED_MEMORY_ADDR(msg->sensor_payload.address);
 	u32 size = msg->sensor_payload.size;
@@ -574,7 +595,6 @@ void cl_vmc_monitor_sensors()
     	qsfp_monitor ();
 #endif
 }
-
 
 int cl_vmc_sysmon_is_ready()
 {

@@ -39,6 +39,7 @@
  *               +---> cl_queue_create(xgq_programe)
  *               +---> cl_queue_create(xgq_opcode)
  *               +---> cl_queue_create(xgq_scfw)
+ *               +---> cl_queue_create(xgq_sensor)
  *               |
  *               +---> cl_task_create(xgq_receive)
  *               +---> cl_task_create(xgq_program)
@@ -102,6 +103,8 @@ static QueueHandle_t cl_xgq_program_queue = NULL;
 static QueueHandle_t cl_xgq_opcode_queue = NULL;
 static QueueHandle_t cl_vmc_sc_req_queue = NULL;
 static QueueHandle_t cl_vmc_sc_resp_queue = NULL;
+static QueueHandle_t cl_vmc_sensor_req_queue = NULL;
+static QueueHandle_t cl_vmc_sensor_resp_queue = NULL;
 
 extern void vApplicationStackOverflowHook(TaskHandle_t xTask, char *pcTaskName)
 {
@@ -145,6 +148,8 @@ struct cl_queue_handle {
 	{CL_QUEUE_OPCODE, "XGQ Opcode", &cl_xgq_opcode_queue},
 	{CL_QUEUE_SCFW_REQ, "SCFW Request", &cl_vmc_sc_req_queue},
 	{CL_QUEUE_SCFW_RESP, "SCFW Respond", &cl_vmc_sc_resp_queue},
+	{CL_QUEUE_SENSOR_REQ, "Sensor Request", &cl_vmc_sensor_req_queue},
+	{CL_QUEUE_SENSOR_RESP, "Sensor Respond", &cl_vmc_sensor_resp_queue},
 };
 
 /*
