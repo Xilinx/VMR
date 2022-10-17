@@ -25,6 +25,9 @@
 
 #define	VMC_STRING	"VMC"
 
+/* Uncomment this for build VMR with RMI submodule. */
+//#define BUILD_FOR_RMI
+
 #ifdef VMC_DEBUG
 //#warning "When enabled RPU UART RX has conflic with APU UART so need to disable XRT code (RMGMT_Launch and cl_msg_service_launch)."
 

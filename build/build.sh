@@ -7,6 +7,8 @@ TOOL_VERSION="2022.2"
 DEFAULT_VITIS="/proj/xbuilds/${TOOL_VERSION}_daily_latest/installs/lin64/Vitis/HEAD/settings64.sh"
 STDOUT_JTAG=2 # 0: uart0; 1: uart1; 2: default to uartlite
 BUILD_XRT=0
+BUILD_RMI=0
+UPDATE_SUBMODULE=0
 ROOT_DIR=`pwd`
 #REAL_BSP=`realpath ../bsp/2021.2_stable/bsp`
 #REAL_VMR=`realpath ../vmr`
@@ -210,7 +212,7 @@ make_version_h()
 	else
 		echo "=== Full build ==="
 	fi
-
+	
 	echo "" >> $CL_VERSION_H
 
 	# set platform specific config macros
@@ -278,6 +280,10 @@ check_vmr()
 		echo "Full Build"
 	fi
 
+	if [ $BUILD_RMI == 1 ];then
+		echo "Full Build with RMI"
+	fi
+	
 	echo "=== Build vmr.elf ==="
 	cp $VMR_FILE $ROOT_DIR/vmr.elf
 	realpath $ROOT_DIR/vmr.elf
@@ -287,6 +293,12 @@ build_app_all() {
 	cd $ROOT_DIR
 	rsync -a ../vmr/src $BUILD_DIR/vmr_app --exclude cmc
 
+	RMI=$ROOT_DIR/../RMI
+	if [ -n $RMI ];then
+		echo "=== Adding RMI submodule to build ==="	
+		rsync -a ../RMI "$BUILD_DIR/vmr_app/src" --exclude *.md
+	fi
+	
 	cp config_app.tcl $BUILD_DIR
 	cp make_app.tcl $BUILD_DIR
 
@@ -344,6 +356,12 @@ build_app_incremental() {
 	rsync -a ../vmr/src "$BUILD_DIR/vmr_app" --exclude cmc --exclude *.swp
 	make_version_h "$BUILD_DIR/vmr_app"
 
+	RMI=$ROOT_DIR/../RMI
+	if [ -n $RMI ];then
+		echo "=== Adding RMI submodule to build ==="	
+		rsync -a ../RMI "$BUILD_DIR/vmr_app/src" --exclude *.md
+	fi
+	
 	cd $BUILD_DIR
 	xsct ./make_app.tcl
 
@@ -426,6 +444,37 @@ diff_xgq_cmd_headers() {
 	fi
 }
 
+build_RMI() {
+	echo "=== Build RMI ==="
+	
+	cd $ROOT_DIR/$BUILD_DIR/vmr_app/Debug
+	if [ $? -ne 0 ];then
+		echo "Please rebuild entire project"
+		exit 1;
+	fi
+	
+	RMI=$ROOT_DIR/../RMI
+	if [ -z $RMI ];then
+		echo "=== RMI submodule doesn't exist, skip checking ==="
+		exit 1;
+	fi
+	
+	start_seconds=$SECONDS
+
+	# copy new source file
+	cd $ROOT_DIR
+	rsync -a ../vmr/src "$BUILD_DIR/vmr_app" --exclude cmc --exclude *.swp
+	rsync -a ../RMI "$BUILD_DIR/vmr_app/src" --exclude *.md
+	make_version_h "$BUILD_DIR/vmr_app"
+	cd $ROOT_DIR/$BUILD_DIR/vmr_app/Debug
+	make clean;make -j
+
+	cd $ROOT_DIR
+	check_vmr "$BUILD_DIR/vmr_app"
+
+	echo "=== Make VMR-app with RMI took: $((SECONDS - start_seconds)) S"
+}
+
 build_checking() {
 	echo "=== Update submodules ==="
 	if [ -f "$ROOT_DIR/../.gitmodules" ];then
@@ -446,8 +495,24 @@ build_checking() {
 	else
 		diff_xgq_cmd_headers
 	fi
+	
 }
 
+update_submodule() {
+	echo "=== Update submodules ==="
+	if [ -f "$ROOT_DIR/../.gitmodules" ];then
+		cd $ROOT_DIR/../
+		echo "init submodule"
+		git submodule update --init > /dev/null 2>&1
+		echo "update submodule"
+		git submodule update --remote --merge > /dev/null 2>&1
+		cd $ROOT_DIR
+	else
+		echo "=== skip ${FUNCNAME[0]} ==="
+		return
+	fi
+	
+}
 # Obsolated since 2022.1 #
 build_bsp_stable() {
 	echo "=== since 2022.1 release, do not support build -stable anymore, exit";exit 0;
@@ -484,6 +549,8 @@ usage() {
     echo "-config <json file>        build with pre configured options"
     echo "-app                       Re-build Vitis Application only"  
     echo "-vmr                       Re-build vmr source code only, fatest!!!"  
+    echo "-RMI                       Full vmr build with RMI included!" 
+    echo "-sub                       Update submodules!" 
     echo "-help"
     exit $1
 }
@@ -524,6 +591,12 @@ do
 			;;
 		-XRT)
 			BUILD_XRT=1
+			;;
+		-RMI)
+			BUILD_RMI=1
+			;;
+		-sub)
+			UPDATE_SUBMODULE=1
 			;;
 		-version)
 			shift
@@ -592,6 +665,18 @@ echo "Tools version: ${XSCT_VERSION}"
 if [[ $BUILD_VMR == 1 ]];then
 	build_vmr_source
 	build_checking
+	exit 0;
+fi
+
+# only build vmr source code with RMI
+if [[ $BUILD_RMI == 1 ]];then
+	build_RMI
+	exit 0;
+fi
+
+# Update submodules
+if [[ $UPDATE_SUBMODULE == 1 ]];then
+	update_submodule
 	exit 0;
 fi
 
