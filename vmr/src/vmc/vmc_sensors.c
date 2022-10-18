@@ -31,6 +31,7 @@
 #define BITMASK_TO_CLEAR	0xFF00000F
 #define ENABLE_FORCE_SHUTDOWN	0x001B6320
 
+#define WATTS_TO_MICROWATTS	(1000000)
 static int vmc_sysmon_is_ready = 0;
 /* TODO: init those to a certain value */
 static XSysMonPsv InstancePtr;
@@ -568,7 +569,7 @@ void Clock_throttling()
 		clock_throttling_std_algorithm.XRTSuppliedUserThrottlingTempLimit = 
 					g_clk_trottling_params.limits.throttle_limit_temp;
 		clock_throttling_std_algorithm.XRTSuppliedBoardThrottlingThresholdPower = 
-					g_clk_trottling_params.limits.throttle_limit_pwr;
+					(g_clk_trottling_params.limits.throttle_limit_pwr * WATTS_TO_MICROWATTS);
 
 		/* Update done, clear the flag */
 		g_clk_trottling_params.limits_update_req = false;
@@ -586,7 +587,9 @@ void cl_vmc_monitor_sensors()
     	Monitor_Thresholds();
 
     	Asdm_Update_Sensors();
-    	Clock_throttling();
+    	
+	if (sensor_glvr.clk_throttling_enabled)
+		Clock_throttling();
 
 #ifdef VMC_TEST
     	se98a_monitor();

@@ -187,8 +187,6 @@ void clock_throttling_algorithm(Clock_Throttling_Algorithm* pContext, bool Readi
 	float RateCurrent = 0.0;
 	float RateLinear = 0.0;
 
-	if (!sensor_glvr.clk_throttling_enabled)
-		return;
 
 	if (IO_SYNC_READ32(VMR_EP_UCS_CONTROL_STATUS_BASEADDR) & 0x01)
 	{
@@ -356,14 +354,4 @@ void clock_throttling_algorithm_power(Clock_Throttling_Algorithm  *pContext )
 		 clock_throttling_algorithm(pContext, ReadingsHaveChanged);
 
 	 }
-	 else
-	 {
-		 // Response to CLock Shutdown CR-1064421
-		 // Read the location & write activity to it
-		 pContext->Activity = ACTIVITY_MAX;
-		 /* This seems incorrect, it will do nothing, because it OR with a 0x0 */
-		 IO_SYNC_WRITE32(pContext->Activity | MASK_CLOCKTHROTTLING_DISABLE_THROTTLING, VMR_EP_GAPPING_DEMAND);
-
-	 }
-
 }
