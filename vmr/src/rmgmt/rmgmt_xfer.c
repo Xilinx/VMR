@@ -282,13 +282,13 @@ int fpga_pdi_download(UINTPTR data, UINTPTR size, int has_pl)
 	}
 
 	if (has_pl) {
-		axigate_freeze();
-		ucs_stop();
 		ret = disable_kernel_clock();
 		if (ret) {
 			VMR_ERR("disable kernel clock failed %d\r\n", ret);
 			return ret;
 		}
+		axigate_freeze();
+		ucs_stop();
 	}
 
 	ret = XFpga_BitStream_Load(&XFpgaInstance, data, KeyAddr, size, PDI_LOAD);
