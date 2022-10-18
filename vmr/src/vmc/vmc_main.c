@@ -138,7 +138,7 @@ int cl_vmc_init()
 		VMC_ERR(" ASDM Init Failed \n\r"); 
 		return -EINVAL;
 	}
-	
+
 	vmc_is_ready = true;
 	VMR_LOG("Done. set vmc is ready.");
 	return 0;
