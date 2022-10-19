@@ -36,7 +36,7 @@ static int opcode_vmr_control(cl_msg_t *msg)
 
 static int opcode_vmc_sensor(cl_msg_t *msg)
 {
-	return cl_vmc_sensor(msg);
+	return cl_vmc_sensor_request(msg);
 }
 
 static int opcode_vmc_clk_throttling(cl_msg_t *msg)

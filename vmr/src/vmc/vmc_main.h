@@ -20,13 +20,8 @@
 typedef struct Vmc_Sensors_Global_Variables {
 	Versal_sensor_readings 	sensor_readings;
 	u8    			logging_level;
+	u8			clk_throttling_enabled;
 } Vmc_Sensors_Gl_t;
-
-/* Global variables for cl_vmc_sc_update task */
-typedef struct Vmc_Sc_Global_Variables {
-	Versal_sensor_readings 	sensor_readings;
-	u8    			logging_level;
-} Vmc_Sc_Gl_t;
 
 ePlatformType Vmc_Get_PlatformType(void);
 

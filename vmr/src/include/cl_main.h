@@ -28,6 +28,8 @@ enum cl_queue_id {
 	CL_QUEUE_OPCODE,
 	CL_QUEUE_SCFW_REQ,
 	CL_QUEUE_SCFW_RESP,
+	CL_QUEUE_SENSOR_REQ,
+	CL_QUEUE_SENSOR_RESP,
 };
 int cl_send_to_queue(struct cl_msg *msg, enum cl_queue_id qid);
 int cl_recv_from_queue(struct cl_msg *msg, enum cl_queue_id qid);

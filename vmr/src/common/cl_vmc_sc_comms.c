@@ -46,14 +46,14 @@ int cl_vmc_sc_comms_init(void)
  */
 void cl_vmc_sc_comms_func(void *task_args)
 {
-	cl_msg_t msg;
+	cl_msg_t msg = { 0 };
 	int ret = 0;
 
 	while (1) {
 		if (cl_recv_from_queue_nowait(&msg, CL_QUEUE_SCFW_REQ) == 0) {
 			ret = process_scfw_msg(&msg);
 			/* set correct rcode based on scfw program */
-			VMR_ERR("SCFW Update return code: %02x", ret);
+			VMR_WARN("SCFW Update return code: %02x", ret);
 			cl_msg_set_rcode(&msg, ret);
 			/* send msg back via SCFW Response Queue */
 			(void) cl_send_to_queue(&msg, CL_QUEUE_SCFW_RESP);

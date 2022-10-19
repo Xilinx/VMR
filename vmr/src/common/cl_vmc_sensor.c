@@ -105,12 +105,42 @@ int cl_vmc_sensor_init(void)
 	return 0;
 }
 
+static int process_sensor_msg(cl_msg_t *msg)
+{
+	int ret = 0;
+
+	switch (msg->hdr.type) {
+	case CL_MSG_CLK_DISABLE:
+		ret = cl_vmc_clk_throttling_disable();
+		break;
+	case CL_MSG_CLK_ENABLE:
+		ret = cl_vmc_clk_throttling_enable();
+		break;
+	default:
+		ret = -EINVAL;
+		VMR_ERR("cannot handle msg type %d", msg->hdr.type);
+		break;
+	}
+
+	return ret;
+}
+
 /*
  * When task func started, all init works should be done already.
  */
 void cl_vmc_sensor_func(void *task_args)
 {
+	cl_msg_t msg =  { 0 };
+	int ret = 0;
+
 	while (1) {
+		if (cl_recv_from_queue_nowait(&msg, CL_QUEUE_SENSOR_REQ) == 0) {
+			ret = process_sensor_msg(&msg);
+			VMR_WARN("process sensor ret: %02x", ret);
+			cl_msg_set_rcode(&msg, ret);
+			(void) cl_send_to_queue(&msg, CL_QUEUE_SENSOR_RESP);
+		}
+
 		/* vmc_sensors task */
 		cl_vmc_monitor_sensors();
 

@@ -232,6 +232,43 @@ int fpga_pdi_download_workaround(UINTPTR data, UINTPTR size, int has_pl)
 	return ret;
 }
 
+static int sensor_task_request(cl_msg_t *msg)
+{
+	int ret = 0;
+
+	ret = cl_send_to_queue(msg, CL_QUEUE_SENSOR_REQ);
+	if (ret)
+		return ret;
+
+	ret = cl_recv_from_queue(msg, CL_QUEUE_SENSOR_RESP);
+	if (ret)
+		return ret;
+
+	return cl_msg_get_rcode(msg);
+}
+
+static int disable_kernel_clock()
+{
+	cl_msg_t msg = { 0 };
+
+	msg.hdr.type = CL_MSG_CLK_DISABLE;
+	return sensor_task_request(&msg);
+}
+
+/*TODO: reconfig clock after new xclbin is programmed */
+static int reconfig_clock()
+{
+	return 0;
+}
+
+static int enable_kernel_clock()
+{
+	cl_msg_t msg = { 0 };
+
+	msg.hdr.type = CL_MSG_CLK_ENABLE;
+	return sensor_task_request(&msg);
+}
+
 int fpga_pdi_download(UINTPTR data, UINTPTR size, int has_pl)
 {
 	int ret;
@@ -240,11 +277,16 @@ int fpga_pdi_download(UINTPTR data, UINTPTR size, int has_pl)
 
 	ret = XFpga_Initialize(&XFpgaInstance);
 	if (ret != XST_SUCCESS) {
-		VMR_DBG("FPGA init failed %d\r\n", ret);
+		VMR_ERR("FPGA init failed %d\r\n", ret);
 		return ret;
 	}
 
 	if (has_pl) {
+		ret = disable_kernel_clock();
+		if (ret) {
+			VMR_ERR("disable kernel clock failed %d\r\n", ret);
+			return ret;
+		}
 		axigate_freeze();
 		ucs_stop();
 	}
@@ -252,9 +294,11 @@ int fpga_pdi_download(UINTPTR data, UINTPTR size, int has_pl)
 	ret = XFpga_BitStream_Load(&XFpgaInstance, data, KeyAddr, size, PDI_LOAD);
 
 	if (has_pl) {
+		reconfig_clock();
 		ucs_start();
 		MDELAY(10);
 		axigate_free();
+		enable_kernel_clock();
 	}
 
 	VMR_LOG("ret: %d \r\n", ret);
