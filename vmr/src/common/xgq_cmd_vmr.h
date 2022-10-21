@@ -18,6 +18,7 @@
 #define VMR_IDENTIFY_CMD_MAJOR		1
 #define VMR_IDENTIFY_CMD_MINOR		0
 
+
 /**
  * clock scaling request types
  */
@@ -204,17 +205,17 @@ struct xgq_cmd_vmr_control_payload {
 };
 
 /**
- * struct xgq_cmd_clk_scaling_payload: clock scaling request command
+ * struct xgq_cmd_clk_scaling_payload: clock_scaling configuration request command
  *
- * @aid:			Application Id or command code
- * @scaling_en:			Enable Clock Throttling
- * @pwr_scaling_ovrd_limit:	Set Override for Power Throttling
- * @temp_scaling_ovrd_limit:	Set Override for Temperature Throttling
- * @rsvd:			reserved
+ * @aid: Clock scaling API ID which decides API in VMC.
+ *          0x1 - READ_CLOCK_THROTTLING_CONFIGURATION
+ *          0x2 - SET_CLOCK_THROTTLING_CONFIGURATION
+ * @scaling_enable: enable or disable flag
+ * @pwr_ovrd: power override value
+ * @temp_ovrd: temperature override value
  *
- * This payload is used for Enable and/or Override Clock Throttling Limits.
+ * This payload is used for clock scaling configuration report.
  */
-
 struct xgq_cmd_clk_scaling_payload {
 	uint32_t aid:3;
 	uint32_t scaling_en:1;
@@ -299,7 +300,7 @@ struct xgq_cmd_cq_data_payload {
 	uint32_t resvd1;
 };
 
-/*
+/**
  * struct xgq_cmd_cq_clk_scaling_payload: clock scaling status payload
  *
  * clock scaling status
@@ -333,7 +334,8 @@ struct xgq_cmd_cq_vmr_payload {
 	uint16_t has_ext_sysdtb:1;
 	uint16_t ps_is_ready:1;
 	uint16_t pl_is_ready:1;
-	uint16_t resvd1:5;
+	uint16_t sc_is_ready:1;
+	uint16_t resvd1:4;
 	uint16_t current_multi_boot_offset;
 	uint32_t debug_level:3;
 	uint32_t program_progress:7;
@@ -347,9 +349,9 @@ struct xgq_cmd_cq_vmr_payload {
  * VMR Identify Command
 */
 struct xgq_cmd_cq_vmr_identify_payload {
-    uint16_t ver_major;
-    uint16_t ver_minor;
-    uint32_t resvd;
+	uint16_t ver_major;
+	uint16_t ver_minor;
+	uint32_t resvd;
 };
 
 /*
@@ -360,10 +362,11 @@ struct xgq_cmd_cq_vmr_identify_payload {
  * @default_payload: 	payload definitions in a union
  * @clock_payload:
  * @sensor_payload:
- * @vmr_payload:
+ * @multiboot_payload:
  * @log_payload:
- * @xclbin_payload
- * @clk_scaling_payload
+ * @xclbin_payload:
+ * @clk_scaling_payload:
+ * @vmr_identify_payload:
  */
 struct xgq_cmd_cq {
 	struct xgq_cmd_cq_hdr hdr;

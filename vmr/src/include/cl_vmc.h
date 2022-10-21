@@ -52,4 +52,5 @@ int cl_vmc_clk_scaling(struct cl_msg *msg);
 void cl_vmc_get_clk_throttling_params(clk_throttling_params_t *params);
 int cl_vmc_clk_throttling_disable();
 int cl_vmc_clk_throttling_enable();
+int cl_vmc_has_sc_version(void);
 #endif
