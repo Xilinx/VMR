@@ -22,9 +22,9 @@
 
 #define VCK5000_TEMP_GAIN_KP_FPGA		3.000e+06    //0x4a371b00;
 #define VCK5000_TEMP_GAIN_KI			2.500e+03    //0x451c4000;
-#define VCK5000_TEMP_GAIN_KP_VCCINT 	1.500e+07    //0x4b64e1c0;
+#define VCK5000_TEMP_GAIN_KP_VCCINT 		1.500e+07    //0x4b64e1c0;
 #define VCK5000_TEMP_GAIN_KAW			5.500e-04    //0x3a102de2;
-#define VCK5000_INTEGRATION_SUM_INITIAL	1.150e+08
+#define VCK5000_INTEGRATION_SUM_INITIAL		1.150e+08
 
 #define VCK5000_NUM_BOARD_INFO_SENSORS		(12)
 #define VCK5000_NUM_TEMPERATURE_SENSORS		(5)
@@ -44,14 +44,16 @@ AsdmHeader_info_t vck5000_asdmHeader_info[] = {
 
 extern Vmc_Sensors_Gl_t sensor_glvr;
 extern msg_id_ptr msg_id_handler_ptr;
+extern SC_VMC_Data sc_vmc_data;
 
 extern Fetch_BoardInfo_Func fetch_boardinfo_ptr;
 
+extern platform_sensors_monitor_ptr Monitor_Sensors;
 extern supported_sdr_info_ptr get_supported_sdr_info;
 extern asdm_update_record_count_ptr asdm_update_record_count;
 
-Build_Clock_Throttling_Profile clock_throttling_vck5000;
-Clock_Throttling_Algorithm clock_throttling_std_algorithm;
+Clock_Throttling_Profile_t clock_throttling_vck5000;
+extern Clock_Throttling_Handle_t clock_throttling_std_algorithm;
 
 static u8 i2c_num = LPD_I2C_0;
 
@@ -66,13 +68,7 @@ u8 VCK5000_VMC_SC_Comms_Msg[] = {
 #define TEMP_THROTTLING_THRESHOLD       95
 #define PWR_THROTTLING_THRESHOLD        290
 
-typedef enum {
-        eCLK_SCALING_MODE_PWR  = 0x0,
-	eCLK_SCALING_MODE_TEMP = 0x1,
-	eCLK_SCALING_MODE_BOTH = 0x2
-}eClk_scaling_mode;
-
-extern clk_throttling_params_t g_clk_trottling_params;
+extern clk_throttling_params_t g_clk_throttling_params;
 
 u32 vck5000_Supported_Sensors[] = {
 	eProduct_Name,
@@ -127,26 +123,30 @@ void Vck5000_Asdm_Update_Record_Count(Asdm_Header_t *headerInfo)
 	return;
 }
 
-void Build_clock_throttling_profile_VCK5000(Build_Clock_Throttling_Profile * pProfile)
+void Build_clock_throttling_profile_VCK5000(Clock_Throttling_Profile_t * pProfile)
 {
 	pProfile->NumberOfSensors = VCK5000_NUM_POWER_RAILS;
 
-	pProfile->VoltageSensorID[0] = eSC_PEX_12V;
-	pProfile->VoltageSensorID[1] = eSC_AUX_12V;
-	pProfile->VoltageSensorID[2] = eSC_AUX1_12V;
+	pProfile->VoltageSensorID[0] = e12V_PEX ; // eSC_PEX_12V;
+	pProfile->VoltageSensorID[1] = e12V_AUX0;
+	pProfile->VoltageSensorID[2] = e12V_AUX1;
 
-	pProfile->CurrentSensorID[0] = eSC_PEX_12V_I_IN;
-	pProfile->CurrentSensorID[1] = eSC_V12_IN_AUX0_I;
-	pProfile->CurrentSensorID[2] = eSC_V12_IN_AUX1_I;
+	pProfile->CurrentSensorID[0] = e12V_PEX;
+	pProfile->CurrentSensorID[1] = e12V_AUX0;
+	pProfile->CurrentSensorID[2] = e12V_AUX1;
 
 	pProfile->throttlingThresholdCurrent[0] = VCK5000_PEX_12V_I_IN_THROTTLING_LIMIT;
 	pProfile->throttlingThresholdCurrent[1] = VCK5000_AUX_12V_I_IN_THROTTLING_LIMIT_2X4;
 	pProfile->throttlingThresholdCurrent[2] = VCK5000_AUX_12V_I_IN_THROTTLING_LIMIT_2X3;
 
-	pProfile->NominalVoltage[0] = NOMINAL_VOLTAGE;
-	pProfile->NominalVoltage[1] = NOMINAL_VOLTAGE;
-	pProfile->NominalVoltage[2] = NOMINAL_VOLTAGE;
+	pProfile->NominalVoltage[0] = NOMINAL_VOLTAGE_12V_IN_MV;
+	pProfile->NominalVoltage[1] = NOMINAL_VOLTAGE_12V_IN_MV;
+	pProfile->NominalVoltage[2] = NOMINAL_VOLTAGE_12V_IN_MV;
 	pProfile->IdlePower = VCK5000_IDLE_POWER;
+
+	pProfile->FPGATempThrottlingLimit = VCK5000_FPGA_THROTTLING_TEMP_LIMIT;
+	pProfile->VccIntTempThrottlingLimit = VCK5000_FPGA_THROTTLING_TEMP_LIMIT;
+	pProfile->PowerThrottlingLimit = VCK5000_POWER_THROTTLING_THRESOLD_LIMIT;
 
 	pProfile->bVCCIntThermalThrottling = true;
 	pProfile->TempGainKpFPGA    = VCK5000_TEMP_GAIN_KP_FPGA;
@@ -159,17 +159,49 @@ void Build_clock_throttling_profile_VCK5000(Build_Clock_Throttling_Profile * pPr
 }
 
 
-void clk_scaling_params_init() {
-	g_clk_trottling_params.is_clk_scaling_supported = true;
-	g_clk_trottling_params.clk_scaling_mode = eCLK_SCALING_MODE_BOTH;
-	g_clk_trottling_params.clk_scaling_enable = false;
-	g_clk_trottling_params.limits.shutdown_limit_temp = TEMP_FPGA_CRITICAL_THRESHOLD;
-	g_clk_trottling_params.limits.shutdown_limit_pwr = POWER_CRITICAL_THRESHOLD;
-	g_clk_trottling_params.limits.throttle_limit_temp = TEMP_THROTTLING_THRESHOLD;
-	g_clk_trottling_params.limits.throttle_limit_pwr = POWER_THROTTLING_THRESOLD_LIMIT;
+static void vck5000_clk_scaling_params_init() {
+
+	g_clk_throttling_params.is_clk_scaling_supported = true;
+	g_clk_throttling_params.clk_scaling_mode = eCLK_SCALING_MODE_BOTH;
+	g_clk_throttling_params.clk_scaling_enable = false;
+	g_clk_throttling_params.limits.shutdown_limit_temp = TEMP_FPGA_CRITICAL_THRESHOLD;
+	g_clk_throttling_params.limits.shutdown_limit_pwr = POWER_CRITICAL_THRESHOLD;
+	g_clk_throttling_params.limits.throttle_limit_temp = clock_throttling_std_algorithm.FPGATempThrottlingLimit;
+	g_clk_throttling_params.limits.throttle_limit_pwr = clock_throttling_std_algorithm.PowerThrottlingLimit;
 	return;
 }
-
+void VCK5000_Monitor_Sensors ()
+{
+	for (int id = eSC_PEX_12V ; id <= eSC_VCCINT_TEMP ; id++)
+	{
+		switch(id)
+		{
+		case eSC_PEX_12V:
+			sensor_glvr.sensor_readings.voltage[e12V_PEX] = sc_vmc_data.sensor_values[id];
+			break;
+		case eSC_PEX_12V_I_IN:
+			sensor_glvr.sensor_readings.current[e12V_PEX] = sc_vmc_data.sensor_values[id];
+			break;
+		case eSC_AUX_12V:
+			sensor_glvr.sensor_readings.voltage[e12V_AUX0] = sc_vmc_data.sensor_values[id];
+			break;
+		case eSC_V12_IN_AUX0_I:
+			sensor_glvr.sensor_readings.current[e12V_AUX0] = sc_vmc_data.sensor_values[id];
+			break;
+		case eSC_AUX1_12V:
+			sensor_glvr.sensor_readings.voltage[e12V_AUX1] = sc_vmc_data.sensor_values[id];
+			break;
+		case eSC_V12_IN_AUX1_I:
+			sensor_glvr.sensor_readings.current[e12V_AUX1] = sc_vmc_data.sensor_values[id];
+			break;
+		case eSC_VCCINT_TEMP:
+			sensor_glvr.sensor_readings.vccint_temp = (float)sc_vmc_data.sensor_values[id];
+			break;
+		default:
+			break;
+		}
+	}
+}
 
 u8 Vck5000_Init(void)
 {
@@ -182,13 +214,15 @@ u8 Vck5000_Init(void)
 	set_total_req_size(VCK5000_MAX_MSGID_COUNT);
 	fetch_boardinfo_ptr = &Vck5000_VMC_Fetch_BoardInfo;
 
+	Monitor_Sensors = VCK5000_Monitor_Sensors;
+
 	/* platform specific initialization */
 	Build_clock_throttling_profile_VCK5000(&clock_throttling_vck5000);
 
 	/* clock throttling initialization */
 	ClockThrottling_Initialize(&clock_throttling_std_algorithm, &clock_throttling_vck5000);
 
-	clk_scaling_params_init();
+	vck5000_clk_scaling_params_init();
 
 	get_supported_sdr_info = Vck5000_Get_Supported_Sdr_Info;
 	asdm_update_record_count = Vck5000_Asdm_Update_Record_Count;

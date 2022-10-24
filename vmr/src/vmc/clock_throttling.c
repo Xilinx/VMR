@@ -8,11 +8,58 @@
 #include "vmc_sc_comms.h"
 #include "vmr_common.h"
 #include "vmc_main.h"
+#include "cl_mem.h"
+#include "cl_vmc.h"
 
 extern SC_VMC_Data sc_vmc_data;
 extern Vmc_Sensors_Gl_t sensor_glvr;
+extern clk_throttling_params_t g_clk_throttling_params;
 
-void ClockThrottling_Initialize(Clock_Throttling_Algorithm  *pContext, Build_Clock_Throttling_Profile *pThrottling)
+static Moving_Average_t * fpga_temp_av;
+static Moving_Average_t * vccint_temp_av;
+
+float Moving_Average(Moving_Average_t * av_obj, float new_element)
+{
+	/* Subtract the oldest number from the previous sum, add the new number */
+	av_obj->sum = av_obj->sum - av_obj->buffer[av_obj->pos] + new_element;
+
+	/* Assign the nextNum to the position in the array */
+	av_obj->buffer[av_obj->pos] = new_element;
+
+	/* Increment position internally */
+	av_obj->pos++;
+	if (av_obj->pos >= av_obj->length){
+		av_obj->pos = 0;
+		av_obj->is_filled = true;
+	}
+	/* return the average */
+	return av_obj->sum / (av_obj->is_filled ? av_obj->length:av_obj->pos);
+}
+
+Moving_Average_t *Allocate_Moving_Average(u8 len)
+{
+	Moving_Average_t * av_obj = (Moving_Average_t *)pvPortMalloc(sizeof(Moving_Average_t));
+	av_obj->sum       = 0;
+	av_obj->pos       = 0;
+	av_obj->length    = len;
+	av_obj->is_filled = false;
+	av_obj->buffer = (float *)pvPortMalloc(len * sizeof(float));
+	if (av_obj->buffer != NULL)
+	{
+		Cl_SecureMemset(av_obj->buffer,0x00,len * sizeof(float));
+	}
+	else
+	{
+		VMC_ERR(" pvPortMalloc Failed\n\r");
+		return NULL;
+	}
+	return av_obj;
+}
+
+
+Clock_Throttling_Handle_t clock_throttling_std_algorithm;
+
+void ClockThrottling_Initialize(Clock_Throttling_Handle_t  *pContext, Clock_Throttling_Profile_t *pThrottling)
 {
 	u8 i = 0;
 	pContext->NumberOfRailsMonitored = pThrottling->NumberOfSensors;
@@ -52,11 +99,12 @@ void ClockThrottling_Initialize(Clock_Throttling_Algorithm  *pContext, Build_Clo
 	pContext->TempGainKpVCCInt = pThrottling->TempGainKpVCCInt;
 	pContext->TempGainKaw = pThrottling->TempGainKaw;
 
-	pContext->FPGAThrottlingTempLimit      = FPGA_THROTTLING_TEMP_LIMIT;
-	pContext->VccIntThrottlingTempLimit    = VCCINT_THROTTLING_TEMP_LIMIT;
+	pContext->PowerThrottlingLimit = pThrottling->PowerThrottlingLimit;
+	pContext->FPGATempThrottlingLimit = pThrottling->FPGATempThrottlingLimit;
+	pContext->VccIntTempThrottlingLimit = pThrottling->VccIntTempThrottlingLimit;
 	pContext->ThermalThrottlingLoopJustEnabled = false;
 
-	pContext->FeatureEnabled = false;
+	pContext->FeatureEnabled = g_clk_throttling_params.clk_scaling_enable;
 	pContext->PowerOverRideEnabled = false;
 	pContext->bUserThrottlingTempLimitEnabled = false;
 }
@@ -82,7 +130,7 @@ void ClockThrottling_Initialize(Clock_Throttling_Algorithm  *pContext, Build_Clo
  *
  *
  */
-float clock_throttling_PI_Loop_FPGA(Clock_Throttling_Algorithm* pContext, bool bUserThrottlingTempLimitEnabled, bool bUseIntegrationSum, float PassedInThrottlingTempLimit, float MeasuredTemp)
+float clock_throttling_PI_Loop_FPGA(Clock_Throttling_Handle_t* pContext, bool bUserThrottlingTempLimitEnabled, bool bUseIntegrationSum, float PassedInThrottlingTempLimit, float MeasuredTemp)
 {
 	/* FPGA Temperature*/
 	if (bUserThrottlingTempLimitEnabled) // This comes from XRT
@@ -123,21 +171,30 @@ float clock_throttling_PI_Loop_FPGA(Clock_Throttling_Algorithm* pContext, bool b
 	return pContext->ThermalThrottlingThresholdPower_FPGA;
 }
 
-void clock_throttling_algorithm_temperature(Clock_Throttling_Algorithm  *pContext )
+void clock_throttling_algorithm_temperature(Clock_Throttling_Handle_t  *pContext )
 {
 	bool bUseIntegrationSum = true;
 	float localThermalThrottlingThresholdPower = 0.0;
 
-	pContext->FPGAMeasuredTemp = sensor_glvr.sensor_readings.sysmon_max_temp;
-	pContext->VccIntMeasuredTemp = (float)sc_vmc_data.sensor_values[eSC_VCCINT_TEMP];
+	static bool is_moving_average_init = false;
 
-	pContext->FPGAThrottlingTempLimit = FPGA_THROTTLING_TEMP_LIMIT;
-	pContext->VccIntThrottlingTempLimit = VCCINT_THROTTLING_TEMP_LIMIT;
+	float new_fpga_temp_reading = sensor_glvr.sensor_readings.sysmon_max_temp;
+	float new_vccint_temp_reading = sensor_glvr.sensor_readings.vccint_temp;
+
+	if (!is_moving_average_init)
+	{
+		fpga_temp_av = Allocate_Moving_Average(CLOCK_THROTTLING_AVERAGE_SIZE);
+		vccint_temp_av = Allocate_Moving_Average(CLOCK_THROTTLING_AVERAGE_SIZE);
+		is_moving_average_init = true;
+	}
+
+	pContext->FPGAMeasuredTemp = Moving_Average(fpga_temp_av, new_fpga_temp_reading);
+	pContext->VccIntMeasuredTemp = Moving_Average(vccint_temp_av, new_vccint_temp_reading);
 
 	// FPGA Temperature
 	pContext->localThermalThrottlingThresholdPower_FPGA = clock_throttling_PI_Loop_FPGA(pContext,
 			pContext->bUserThrottlingTempLimitEnabled, bUseIntegrationSum,
-			(float)pContext->FPGAThrottlingTempLimit, pContext->FPGAMeasuredTemp);
+			(float)pContext->FPGATempThrottlingLimit, pContext->FPGAMeasuredTemp);
 
 	localThermalThrottlingThresholdPower = pContext->localThermalThrottlingThresholdPower_FPGA;
 
@@ -145,7 +202,7 @@ void clock_throttling_algorithm_temperature(Clock_Throttling_Algorithm  *pContex
 	{
 		/* VCCInt Temperature*/
 		pContext->localVccIntThermalThrottlingThresholdPower =
-				((float)pContext->VccIntThrottlingTempLimit - pContext->VccIntMeasuredTemp) * pContext->TempGainKpVCCInt;
+				((float)pContext->VccIntTempThrottlingLimit - pContext->VccIntMeasuredTemp) * pContext->TempGainKpVCCInt;
 		// Use the smaller of the 2 values
 		if (pContext->localVccIntThermalThrottlingThresholdPower < pContext->localThermalThrottlingThresholdPower_FPGA)
 		{
@@ -182,17 +239,10 @@ void clock_throttling_algorithm_temperature(Clock_Throttling_Algorithm  *pContex
  * can be read it from VMC only, that will be helpful to run the algorithm in better way
  */
 
-void clock_throttling_algorithm(Clock_Throttling_Algorithm* pContext, bool ReadingsHaveChanged)
+void clock_throttling_algorithm(Clock_Throttling_Handle_t* pContext, bool ReadingsHaveChanged)
 {
 	float RateCurrent = 0.0;
 	float RateLinear = 0.0;
-
-
-	if (IO_SYNC_READ32(VMR_EP_UCS_CONTROL_STATUS_BASEADDR) & 0x01)
-	{
-		pContext->Activity = MIN(pContext->Activity, 0x20);
-		IO_SYNC_WRITE32(pContext->Activity | MASK_CLOCKTHROTTLING_ENABLE_THROTTLING | MASK_CLEAR_LATCHEDSHUTDOWNCLOCKS, VMR_EP_GAPPING_DEMAND);
-	}
 
 	if ((pContext->PowerOverRideEnabled) &&
 			(pContext->XRTSuppliedBoardThrottlingThresholdPower < pContext->BoardThrottlingThresholdPower))
@@ -242,7 +292,7 @@ void clock_throttling_algorithm(Clock_Throttling_Algorithm* pContext, bool Readi
 		pContext->Activity = ACTIVITY_MAX;
 	}
 
-	VMC_DBG(" %d 	%d	%f	%f",pContext->Activity,(pContext->BoardMeasuredPower)/1000000,pContext->FPGAMeasuredTemp,pContext->VccIntMeasuredTemp);
+	VMC_DBG(" %d 	%d	%f	%f \n\r",pContext->Activity,(pContext->BoardMeasuredPower)/1000000,pContext->FPGAMeasuredTemp,pContext->VccIntMeasuredTemp);
 	IO_SYNC_WRITE32(pContext->Activity | MASK_CLOCKTHROTTLING_ENABLE_THROTTLING, VMR_EP_GAPPING_DEMAND);
 }
 /*
@@ -271,7 +321,7 @@ void clock_throttling_algorithm(Clock_Throttling_Algorithm* pContext, bool Readi
  * Then call clock_throttling_algorithm
  */
 
-void clock_throttling_algorithm_power(Clock_Throttling_Algorithm  *pContext )
+void clock_throttling_algorithm_power(Clock_Throttling_Handle_t  *pContext )
 {
 	 u8 i;
 	 u8 voltage_snsr_id = 0;
@@ -280,14 +330,15 @@ void clock_throttling_algorithm_power(Clock_Throttling_Algorithm  *pContext )
 	 pContext->BoardThrottlingThresholdPower = 0;
 	 pContext->BoardMeasuredPower = 0;
 
-	 if (pContext->FeatureEnabled)
+	 if(g_clk_throttling_params.clk_scaling_enable)
 	 {
 		 for (i = 0; i < pContext->NumberOfRailsMonitored; i++)
 		 {
 			 voltage_snsr_id = pContext->RailParameters[i].VoltageSensorID;
 			 current_snsr_id = pContext->RailParameters[i].CurrentSensorID;
-			 pContext->RailParameters[i].LatestReading.Voltage = sc_vmc_data.sensor_values[voltage_snsr_id];
-			 pContext->RailParameters[i].LatestReading.Current = sc_vmc_data.sensor_values[current_snsr_id];
+
+			 pContext->RailParameters[i].LatestReading.Voltage = sensor_glvr.sensor_readings.voltage[voltage_snsr_id];
+			 pContext->RailParameters[i].LatestReading.Current = sensor_glvr.sensor_readings.current[current_snsr_id];
 		 }
 
 		 // Check for duplicates
