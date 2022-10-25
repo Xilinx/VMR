@@ -94,6 +94,7 @@
 #define VMR_EP_APU_SHARED_MEMORY_END 	(0x37FF0000)
 
 /*PLM Log Data Macros Start Address and Total Size Designated on Device*/
+/* TODO: switch to plm API instead of accessing hardcoded address */
 #define VMR_PLM_DATA_START_ADDRESS     (0xF2019000)
 #define VMR_PLM_DATA_TOTAL_SIZE        (4096 * 4)
 

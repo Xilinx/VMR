@@ -43,7 +43,7 @@ typedef enum cl_log_type {
 	CL_LOG_TASK_STATS	= 0x6,
 	CL_LOG_MEM_STATS	= 0x7,
 	CL_LOG_SYSTEM_DTB	= 0x8,
-	CL_LOG_PLM_SYNC	= 0x9,
+	CL_LOG_PLM_SYNC		= 0x9,
 } cl_log_type_t;
 
 typedef enum cl_clock_type {
