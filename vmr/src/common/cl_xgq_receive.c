@@ -131,6 +131,9 @@ void cl_msg_handle_complete(cl_msg_t *msg)
 		/* pass back apu status */
 		cmd_cq->cq_vmr_payload.ps_is_ready = cl_rmgmt_apu_is_ready();
 		cmd_cq->cq_vmr_payload.pl_is_ready = cl_rmgmt_pl_is_ready();
+		
+		/* pass back status, SC is ready and VMC has SC version */
+		cmd_cq->cq_vmr_payload.sc_is_ready = cl_vmc_has_sc_version();
 
 		/* pass back log level and flash progress */
 		cmd_cq->cq_vmr_payload.debug_level = cl_loglevel_get();

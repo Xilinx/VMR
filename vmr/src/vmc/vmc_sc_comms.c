@@ -267,8 +267,9 @@ bool Parse_SC_Data(u8 *Payload, u8 expected_msgid)
 		VMC_Update_Sensors(Payload[PayloadLength], &Payload[COMMS_PAYLOAD_START_INDEX]);
 		break;
 	case MSP432_COMMS_VMC_VERSION_POWERMODE_RESP:
-		vmc_set_power_mode_status(true);
 		VMC_Update_Version_PowerMode(Payload[PayloadLength], &Payload[COMMS_PAYLOAD_START_INDEX]);
+		vmc_set_power_mode_status(true);
+		VMC_LOG("SC version Received");
 		break;
 	case MSP432_COMMS_VMC_GET_RESP_SIZE_RESP:
 		VMC_Update_Sensor_Length(Payload[PayloadLength], &Payload[COMMS_PAYLOAD_START_INDEX]);
@@ -635,6 +636,11 @@ int cl_vmc_sc_is_ready()
 	cl_vmc_sc_active();
 
 	return (vmc_get_sc_status() == true);
+}
+
+int cl_vmc_has_sc_version()
+{
+	return (vmc_get_power_mode_status() == true);
 }
 
 u8 VMC_Poll_SC_Sensors()
