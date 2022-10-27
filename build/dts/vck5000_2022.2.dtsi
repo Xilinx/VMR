@@ -37,7 +37,10 @@
 &ttc3 {
     status = "disabled";
 };
-&blp_blp_logic_axi_uart_mgmt_apu {
+&blp_blp_logic_axi_uart_mgmt_apu0 {
+    status = "disabled";
+};
+&blp_blp_logic_axi_uart_mgmt_apu1 {
     status = "disabled";
 };
 &blp_blp_logic_axi_uart_mgmt_rpu {
@@ -96,7 +99,10 @@
 &ulp_plram_ctrl {
     status = "disabled";
 };
-&blp_blp_logic_axi_uart_mgmt_apu {
+&blp_blp_logic_axi_uart_mgmt_apu0 {
+    status = "disabled";
+};
+&blp_blp_logic_axi_uart_mgmt_apu1 {
     status = "disabled";
 };
 &blp_blp_logic_axi_uart_mgmt_rpu {
@@ -119,7 +125,10 @@
 	/delete-property/ serial3;
 	/delete-property/ serial4;
 	/delete-property/ serial5;
-	serial0 = &blp_blp_logic_axi_uart_apu;
+	/delete-property/ serial6;
+	/delete-property/ serial7;        
+	serial0 = &blp_blp_logic_axi_uart_apu0;
+	serial1 = &blp_blp_logic_axi_uart_apu1;    
     };
 
     reserved-memory {
