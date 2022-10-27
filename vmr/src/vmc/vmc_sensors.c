@@ -32,6 +32,7 @@
 #define ENABLE_FORCE_SHUTDOWN	0x000DB190
 
 #define WATTS_TO_MICROWATTS	(1000000)
+#define REDUCE_GAPPING_DEMAND_RATE_TO_FIVE_PERCENTAGE 0x07
 static int vmc_sysmon_is_ready = 0;
 /* TODO: init those to a certain value */
 static XSysMonPsv InstancePtr;
@@ -77,30 +78,55 @@ int cl_vmc_clk_throttling_disable()
 	sensor_glvr.clk_throttling_enabled = 0;
 	return 0;
 }
-
+/*
+ * To avoid PCIE link error, Clock shutdown implimentation is changed.
+ * Instead of complete clock shutdown , now we are reducing clock speed to 5%
+ * by updating lower clocking speed to gapping registers.
+ *
+ * Step1: Write bit[20] to 0x1 in the Gapping Demand Control register at offset 0x0000
+ *	  This will enable the feature to throttle the clock on a clock shutdown event to a max of 25%, rather than 
+ *	  stopping the clock(25% is bit higher, so decide to run at 5%) 
+ * Step2: Write magic number(0xDB190) to 0x80031008 .
+ * Step3: After writing magic number , shutdown request latched status 
+ *	  (Gapping Demand Status register bit[0], offset 0x0008) will be set.
+ * Step4: when shutdown request latched status set ,clock shutdown message will be pushed to dmessage.
+ * Step5: Hot reset by XRT.
+ *
+ */
 void ucs_clock_shutdown()
 {
 	u32 shutdown_status = 0 ;
 
+	u32 trigger_value = 0;
+
+	u32 gapping_rate = REDUCE_GAPPING_DEMAND_RATE_TO_FIVE_PERCENTAGE; // Changing to 5% of 128(Max gapping rate)
+
+	u32 originalValue = IO_SYNC_READ32(VMR_EP_GAPPING_DEMAND);
+	IO_SYNC_WRITE32(originalValue| MASK_CLOCKTHROTTLING_ENABLE_THROTTLING, VMR_EP_GAPPING_DEMAND);
+
 	// offset for clock shutdown
-	u32 originalValue = IO_SYNC_READ32(VMR_EP_UCS_SHUTDOWN);
+	originalValue = IO_SYNC_READ32(VMR_EP_UCS_SHUTDOWN);
 
 	// clear 19:4 bits
-	u32 triggerValue = originalValue & BITMASK_TO_CLEAR;
+	trigger_value = originalValue & BITMASK_TO_CLEAR;
 
 	//to trigger clock shutdown write 0xDB190 at [19:4] bits
-	triggerValue = triggerValue | ENABLE_FORCE_SHUTDOWN;
+	trigger_value = trigger_value | ENABLE_FORCE_SHUTDOWN;
 
 	//the bits can be immediately cleared back to 0, as the shutdown state is latched by the hardware
-	IO_SYNC_WRITE32(triggerValue, VMR_EP_UCS_SHUTDOWN) ;
+	IO_SYNC_WRITE32(trigger_value, VMR_EP_UCS_SHUTDOWN) ;
 	IO_SYNC_WRITE32(originalValue, VMR_EP_UCS_SHUTDOWN) ;
 
 	//offset to read shutdown status
-	shutdown_status = IO_SYNC_READ32(VMR_EP_UCS_CONTROL_STATUS_BASEADDR);
-
-	if(shutdown_status & 0x01)
+	shutdown_status = IO_SYNC_READ32(VMR_EP_GAPPING_DEMAND + VMR_EP_UCS_CHANNEL_2);
+	if(shutdown_status & SHUTDOWN_LATCHED_STATUS)
+	{
+		originalValue = IO_SYNC_READ32(VMR_EP_GAPPING_DEMAND);
+		originalValue = originalValue & (~0xFF);
+		originalValue = originalValue | gapping_rate;
+		IO_SYNC_WRITE32(originalValue, VMR_EP_GAPPING_DEMAND);
 		VMC_ERR("Clock shutdown due to power or temperature value reaching Critical threshold \n\r");
-
+	}
 	return;
 }
 

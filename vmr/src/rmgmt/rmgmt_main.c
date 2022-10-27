@@ -659,7 +659,7 @@ static u32 check_clock_shutdown_status(void)
 	u32 shutdown_status = 0 ;
 
 	//offset to read shutdown status
-	shutdown_status = IO_SYNC_READ32(VMR_EP_UCS_CONTROL_STATUS_BASEADDR);
+	shutdown_status = IO_SYNC_READ32(VMR_EP_GAPPING_DEMAND + VMR_EP_UCS_CHANNEL_2);
 
 	return (shutdown_status & SHUTDOWN_LATCHED_STATUS);
 }
