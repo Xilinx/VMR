@@ -353,7 +353,7 @@ static struct xgq_cmd_handler xgq_cmd_handlers[] = {
 	{XGQ_CMD_OP_PROGRAM_SCFW, CL_MSG_PROGRAM_SCFW, "PROGRAM SCFW", NULL, CL_QUEUE_PROGRAM},
 	{XGQ_CMD_OP_CLK_THROTTLING, CL_MSG_CLK_THROTTLING, "CLOCK THROTTLING", clk_scaling_handle, CL_QUEUE_OPCODE},
 	{XGQ_CMD_OP_IDENTIFY, CL_MSG_VMR_IDENTIFY, "VMR IDENTIFY", NULL, CL_QUEUE_OPCODE},
-
+	{XGQ_CMD_OP_PROGRAM_VMR, CL_MSG_PROGRAM_VMR, "PROGRAM VMR", xclbin_handle, CL_QUEUE_PROGRAM},
 };
 
 /*
@@ -429,6 +429,18 @@ static inline bool read_vmr_shared_mem(struct vmr_shared_mem *mem)
 	}
 
 	return true;
+}
+
+static int vmr_status_service_stop()
+{
+	struct vmr_shared_mem mem = { 0 };
+
+	if (!read_vmr_shared_mem(&mem))
+		return -EINVAL;
+
+	IO_SYNC_WRITE32(0, RPU_SHARED_MEMORY_ADDR(mem.vmr_status_off));
+
+	return 0;
 }
 
 static int vmr_status_service_start()
@@ -537,6 +549,16 @@ int cl_xgq_receive_init(void)
 	msg_complete_lock = xSemaphoreCreateMutex();
 
 	return 0;
+}
+
+/*
+ * We don't live unloading the VMR, just restart the RPU and reloading the vmr.elf.
+ * But we do need to reset the ready bits so that the host xgq driver will be set
+ * to correct status.
+ */
+int cl_xgq_receive_fini(void)
+{
+	return vmr_status_service_stop();
 }
 
 void cl_xgq_receive_func(void *task_args)

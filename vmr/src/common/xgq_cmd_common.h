@@ -1,8 +1,7 @@
 /******************************************************************************
-  * Copyright (C) 2022 Xilinx, Inc.  All rights reserved.
-  * SPDX-License-Identifier: MIT
-  *******************************************************************************/
-
+* Copyright (C) 2020-2022 Xilinx, Inc.  All rights reserved.
+* SPDX-License-Identifier: MIT
+*******************************************************************************/
 #ifndef XGQ_CMD_COMMON_H
 #define XGQ_CMD_COMMON_H
 
@@ -60,6 +59,7 @@ enum xgq_cmd_opcode {
 	XGQ_CMD_OP_VMR_CONTROL		= 0xe,
 	XGQ_CMD_OP_PROGRAM_SCFW		= 0xf,
 	XGQ_CMD_OP_CLK_THROTTLING	= 0x10,
+	XGQ_CMD_OP_PROGRAM_VMR		= 0x11,
 
 	/* User command type */
 	XGQ_CMD_OP_START_CUIDX	        = 0x100,

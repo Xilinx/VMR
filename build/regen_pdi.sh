@@ -135,8 +135,8 @@ puts "Generating vck5000 plm.elf for $1"
 # Unique to VCK5000
 setws .
 app create -name plm -template {versal PLM} -proc blp_cips_pspmc_0_psv_pmc_0 -hw $1 -os standalone
-bsp config stdout blp_cips_pspmc_0_psv_sbsauart_1
-bsp config stdin blp_cips_pspmc_0_psv_sbsauart_1
+bsp config stdout blp_cips_pspmc_0_psv_sbsauart_0
+bsp config stdin blp_cips_pspmc_0_psv_sbsauart_0
 app build -name plm
 file rename -force ./plm/Debug/plm.elf ./plm.elf
 app remove plm
