@@ -73,6 +73,8 @@ s8 Vck5000_Temperature_Read_Board(snsrRead_t *snsrData);
 s8 Vck5000_Temperature_Read_QSFP(snsrRead_t *snsrData);
 s8 Vck5000_Fan_RPM_Read(snsrRead_t *snsrData);
 s8 Vck5000_Asdm_Read_Power(snsrRead_t *snsrData);
+s8 Vck5000_Temperature_Read_Vccint(snsrRead_t *snsrData);
+
 
 void se98a_monitor(void);
 void max6639_monitor(void);
@@ -80,5 +82,11 @@ void qsfp_monitor(void);
 
 u8 Vck5000_Vmc_Sc_Comms(void);
 s32 Vck5000_VMC_Fetch_BoardInfo(u8 *board_snsr_data);
+
+s8 Vck5000_Get_QSFP_Name(u8 index, char8* snsrName, u8 *SC_sensorId,sensorMonitorFunc *sensor_handler);
+s8 Vck5000_Get_Voltage_Names(u8 index, char8* snsrName, u8 *SC_sensorId,sensorMonitorFunc *sensor_handler);
+s8 Vck5000_Get_Current_Names(u8 index, char8* snsrName, u8 *SC_sensorId,sensorMonitorFunc *sensor_handler);
+
+
 
 #endif

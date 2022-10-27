@@ -247,6 +247,10 @@ typedef enum{
 	eTemperature_Sensor_Outlet,
 	eTemperature_Sensor_Board,
 	eTemperature_Sensor_QSFP,
+	eVccint_Temp,
+	eVoltage_Sensors,
+	eCurrent_Sensors,
+	eQSFP_Sensors,
 	ePower_Sensor,
 	eMax_Sensor_Functions,
 } eSensor_Functions;
@@ -265,6 +269,7 @@ typedef struct __attribute__((packed)) {
 	eSensor_Functions	sensor_type;
 	//s8		(*sensor_handler)(snsrRead_t *snsrData);
 	sensorMonitorFunc	sensor_handler;
+	snsrNameFunc	sensor_name_handler;
 }Platform_Sensor_Handler_t;
 
 typedef u8 (*Platform_Func_Ptr)(void);
@@ -394,7 +399,13 @@ extern sensorMonitorFunc Temperature_Read_Inlet_Ptr;
 extern sensorMonitorFunc Temperature_Read_Outlet_Ptr;
 extern sensorMonitorFunc Temperature_Read_Board_Ptr;
 extern sensorMonitorFunc Temperature_Read_QSFP_Ptr;
+extern sensorMonitorFunc Temperature_Read_VCCINT_Ptr;
 extern sensorMonitorFunc Power_Read_Ptr;
+
+extern snsrNameFunc Voltage_Read_Ptr;
+extern snsrNameFunc Current_Read_Ptr;
+extern snsrNameFunc QSFP_Read_Ptr;
+
 
 void VMC_Get_BoardInfo(Versal_BoardInfo *ptr);
 s32 VMC_Send_BoardInfo_SC(u8 *board_snsr_data);
