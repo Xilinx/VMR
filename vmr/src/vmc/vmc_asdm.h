@@ -7,6 +7,10 @@
 
 #include "xil_types.h"
 
+#define SENSOR_NAME_MAX (30)
+#define TEMP_CAGE0_NAME    "cage_temp_0\0"
+#define TEMP_CAGE1_NAME    "cage_temp_1\0"
+
 typedef enum VMC_Sensor_State_e
 {
     Vmc_Snsr_State_Unavailable,
@@ -57,21 +61,15 @@ typedef enum
 	eTemp_Sysmon_Fpga,
 	eTemp_Vccint,
 	eTemp_Qsfp,
-	eTemp_Vccint_Temp,
 
 	/* Voltage SDR */
-	eVolatge_SC_Sensors,
+	eVoltage_Group_Sensors,
 	eVoltage_Sysmon_Vccint,
-	eVoltage_12v_Pex,
-	eVoltage_3v3_Pex,
 
 	/* Current SDR */
-	eCurrent_SC_Sensors,
+	eCurrent_Group_Sensors,
 	eCurrent_SC_Vccint,
-	eCurrent_12v_Pex,
-	eCurrent_3v3_Pex,
-	eCurrent_Vccint,
-
+	
 	/* Power SDR */
 	ePower_Total,
 
@@ -150,7 +148,9 @@ typedef struct __attribute__((packed)) snsrRead_s
 }snsrRead_t;
 
 typedef s8 (*sensorMonitorFunc)(snsrRead_t *snsrData);
-typedef void (*snsrNameFunc)(u8 index, char8* snsrName, u8* snsrId);
+
+typedef s8 (*snsrNameFunc)(u8 index, char8* snsrName, u8* snsrId, sensorMonitorFunc *sensor_handler );
+
 
 typedef struct __attribute__((packed)) Asdm_SDRCount_s
 {
@@ -186,7 +186,7 @@ typedef struct __attribute__((packed)) Asdm_Header_s
     u8 no_of_bytes;
 }Asdm_Header_t;
 
-typedef struct __attribute__((packed)) Asdm_SensorRecord_s
+typedef struct  Asdm_SensorRecord_s
 {
     u8 sensor_id;
     u8 sensor_name_type_length;
@@ -246,6 +246,10 @@ typedef struct __attribute__((packed)) {
 s8 Init_Asdm();
 void Asdm_Update_Sensors(void);
 s8 Asdm_Process_Sensor_Request(u8 *req, u8 *resp, u16 *respSize);
+s8 PMBUS_SC_Sensor_Read(snsrRead_t *snsrData);
+s8 Temperature_Read_QSFP(snsrRead_t *snsrData);
+s8 Temperature_Read_VCCINT(snsrRead_t *snsrData);
+
 
 typedef void (*asdm_update_record_count_ptr) (Asdm_Header_t *headerInfo );
 

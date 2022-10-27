@@ -43,7 +43,24 @@ sensorMonitorFunc Temperature_Read_Inlet_Ptr;
 sensorMonitorFunc Temperature_Read_Outlet_Ptr;
 sensorMonitorFunc Temperature_Read_Board_Ptr;
 sensorMonitorFunc Temperature_Read_QSFP_Ptr;
+sensorMonitorFunc Temperature_Read_VCCINT_Ptr;
 sensorMonitorFunc Power_Read_Ptr;
+
+snsrNameFunc Voltage_Read_Ptr;
+snsrNameFunc Current_Read_Ptr;
+snsrNameFunc QSFP_Read_Ptr;
+
+/* VCK5000 Specific sensors */
+#define VCK5000_CURRENT_SENSORS_INSTANCES	(3)
+#define VCK5000_VOLTAGE_SENSORS_INSTANCES	(5)
+
+/* V70 Specific sensors */
+#define V70_CURRENT_SENSORS_INSTANCES	(3)
+#define V70_VOLTAGE_SENSORS_INSTANCES	(2)
+
+
+#define MIN_CURRENT_SENSORS_INSTANCES	(3)
+#define MIN_VOLTAGE_SENSORS_INSTANCES	(2)
 
 platform_sensors_monitor_ptr Monitor_Sensors;
 
@@ -244,105 +261,6 @@ s8 PMBUS_SC_Vccint_Read(snsrRead_t *snsrData)
 
 
 	return status;
-}
-
-s8 Vck5000_Asdm_Read_Power(snsrRead_t *snsrData)
-{
-    s8 status = XST_SUCCESS;
-    u8 powerMode = 0;
-    float totalPower = 0;
-    float pexPower = 0;
-    float aux0Power = 0;
-    float aux1Power = 0;
-
-    static u8 count_12vpex = 1;
-    static u8 count_12vaux_2x4_2x3 = 1;
-    static u8 count_12vaux_2x4 = 1;
-
-    if (xSemaphoreTake(vmc_sc_lock, portMAX_DELAY))
-    {
-    	powerMode =  sc_vmc_data.powerMode;
-    	pexPower = ((sc_vmc_data.sensor_values[eSC_PEX_12V]/1000.0) * (sc_vmc_data.sensor_values[eSC_PEX_12V_I_IN])/1000.0);
-    	aux0Power = ((sc_vmc_data.sensor_values[eSC_AUX_12V]/1000.0) * (sc_vmc_data.sensor_values[eSC_V12_IN_AUX0_I])/1000.0); //2x4 AUX
-    	aux1Power = ((sc_vmc_data.sensor_values[eSC_AUX1_12V]/1000.0) * (sc_vmc_data.sensor_values[eSC_V12_IN_AUX1_I])/1000.0); //2x3 AUX
-    	totalPower = (pexPower + aux0Power +aux1Power);
-    	xSemaphoreGive(vmc_sc_lock);
-    }
-    else
-    {
-    	VMC_ERR("vmc_sc_lock lock failed \r\n");
-    }
-
-    if(totalPower != 0)
-    {
-    	/* Adding 0.5 to round off the totalPower to nearest integer.*/
-        u16 roundedOffVal = (totalPower + 0.5);
-        Cl_SecureMemcpy(&snsrData->snsrValue[0],sizeof(roundedOffVal),&roundedOffVal,sizeof(roundedOffVal));
-        snsrData->sensorValueSize = sizeof(roundedOffVal);
-        snsrData->snsrSatus = Vmc_Snsr_State_Normal;
-    }
-    else
-    {
-        snsrData->snsrSatus = Vmc_Snsr_State_Comms_failure;
-    }
-
-    // shutdown clock only if power reached critical threshold continuously for 1sec (100ms*10)
-    if (pexPower >= POWER_12VPEX_CRITICAL_THRESHOLD)
-    {
-    	if (count_12vpex == MAX_COUNT_TO_WAIT_1SEC)
-    	{
-    		ucs_clock_shutdown();
-    		count_12vpex = 0;
-    	}
-    	count_12vpex = count_12vpex + 1;
-    }
-    else /* Reset count value to zero when power values below critical limit and count is less than 10 */
-    {
-    	if ((count_12vpex != 0) && (pexPower < POWER_12VPEX_CRITICAL_THRESHOLD))
-    	{
-    		count_12vpex = 0;
-    	}
-    }
-
-    if (powerMode == POWER_MODE_300W) // Both 2x3 and 2x4 AUX connected
-    {
-    	if ((aux0Power >= POWER_12VAUX_2X4_CRITICAL_THRESHOLD) || (aux1Power >= POWER_12VAUX_2X3_CRITICAL_THRESHOLD))
-    	{
-    		if (count_12vaux_2x4_2x3 == MAX_COUNT_TO_WAIT_1SEC)
-    		{
-    			ucs_clock_shutdown();
-    			count_12vaux_2x4_2x3 = 0;
-    		}
-    		count_12vaux_2x4_2x3 = count_12vaux_2x4_2x3 + 1;
-    	}
-    	else /* Reset count value to zero when power values below critical limit and count is less than 10 */
-    	{
-    		if ((count_12vaux_2x4_2x3 != 0) && (aux0Power < POWER_12VAUX_2X4_CRITICAL_THRESHOLD) && (aux1Power < POWER_12VAUX_2X3_CRITICAL_THRESHOLD))
-    		{
-    			count_12vaux_2x4_2x3 = 0;
-    		}
-    	}
-    }
-    else // only 2x4 connected
-    {
-    	if (aux0Power >= POWER_12VAUX_2X4_CRITICAL_THRESHOLD)
-    	{
-    		if (count_12vaux_2x4 == MAX_COUNT_TO_WAIT_1SEC)
-    		{
-    			ucs_clock_shutdown();
-    			count_12vaux_2x4 = 0;
-    		}
-    		count_12vaux_2x4 = count_12vaux_2x4 + 1;
-    	}
-    	else /* Reset count value to zero when power values below critical limit and count is less than 10 */
-    	{
-    		if ((count_12vaux_2x4 != 0) && (aux0Power < POWER_12VAUX_2X4_CRITICAL_THRESHOLD))
-    		{
-    			count_12vaux_2x4 = 0;
-    		}
-    	}
-    }
-    return status;
 }
 
 void sysmon_monitor(void)
@@ -570,12 +488,74 @@ s8 Temperature_Read_QSFP(snsrRead_t *snsrData)
 	return (*Temperature_Read_QSFP_Ptr)(snsrData);
 }
 
+s8 Temperature_Read_VCCINT(snsrRead_t *snsrData)
+{
+	if (Temperature_Read_VCCINT_Ptr == NULL)
+		return XST_SUCCESS;
+
+	return (*Temperature_Read_VCCINT_Ptr)(snsrData);
+}
+
 s8 Asdm_Read_Power(snsrRead_t *snsrData)
 {
 	if (NULL == Power_Read_Ptr)
 		return XST_SUCCESS;
 
 	return (*Power_Read_Ptr)(snsrData);
+}
+
+s8 getVoltagesName(u8 index, char8* snsrName, u8 *sensorId,sensorMonitorFunc *sensor_handler)
+{
+	if (NULL == Voltage_Read_Ptr)
+		return XST_SUCCESS;
+
+	return (*Voltage_Read_Ptr)(index,snsrName,sensorId,sensor_handler);
+}
+
+s8 getCurrentNames(u8 index, char8* snsrName, u8 *sensorId,sensorMonitorFunc *sensor_handler)
+{
+	if (NULL == Current_Read_Ptr)
+		return XST_SUCCESS;
+
+	return (*Current_Read_Ptr)(index,snsrName,sensorId,sensor_handler);
+}
+
+s8 getQSFPName(u8 index, char8* snsrName, u8 *sensorId,sensorMonitorFunc *sensor_handler)
+{
+	if (NULL == QSFP_Read_Ptr)
+		return XST_SUCCESS;
+
+	return (*QSFP_Read_Ptr)(index,snsrName,sensorId,sensor_handler);
+}
+
+u8 getVoltageSensorNum()
+{
+
+	if (Vmc_Get_PlatformType() == eVCK5000)
+	{
+		return VCK5000_VOLTAGE_SENSORS_INSTANCES;
+	}
+	else if(Vmc_Get_PlatformType() == eV70)
+	{
+		return V70_VOLTAGE_SENSORS_INSTANCES;
+	}
+
+	return MIN_VOLTAGE_SENSORS_INSTANCES;
+}
+
+u8 getCurrentSensorNum()
+{
+
+	if (Vmc_Get_PlatformType() == eVCK5000)
+	{
+		return VCK5000_CURRENT_SENSORS_INSTANCES;
+	}
+	else if(Vmc_Get_PlatformType() == eV70)
+	{
+		return V70_CURRENT_SENSORS_INSTANCES;
+	}
+
+	return MIN_CURRENT_SENSORS_INSTANCES;
 }
 
 void Clock_throttling()

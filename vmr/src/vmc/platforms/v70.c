@@ -83,18 +83,14 @@ u32 V70_Supported_Sensors[] = {
 	/* Temperature SDR */
 	eTemp_Board,
 	eTemp_Sysmon_Fpga,
-	eTemp_Vccint_Temp,
+	eTemp_Vccint,
 
 	/* Voltage SDR */
+	eVoltage_Group_Sensors,
 	eVoltage_Sysmon_Vccint,
-	eVoltage_12v_Pex,
-	eVoltage_3v3_Pex,
 
 	/* Current SDR */
-	eCurrent_12v_Pex,
-	eCurrent_3v3_Pex,
-	eCurrent_Vccint,
-
+	eCurrent_Group_Sensors,
 
 	/* Power SDR */
 	ePower_Total
@@ -432,6 +428,62 @@ s8 V70_Asdm_Read_Temp_Vccint(snsrRead_t *snsrData)
 	    ucs_clock_shutdown();
 	}
 	return status;
+}
+s8 V70_Get_Current_Names(u8 index, char8* snsrName, u8 *sensorId, sensorMonitorFunc *sensor_handler)
+{
+	struct sensorData
+	{
+		char8 sensorName[SENSOR_NAME_MAX];
+		sensorMonitorFunc	sensor_handler;
+	};
+
+	struct sensorData snsrData[] =    {
+		{  "12v_pex\0"  ,V70_Asdm_Read_Current_12v},
+		{  "3v3_pex\0" ,V70_Asdm_Read_Current_3v3},
+		{  "vccint\0" ,V70_Asdm_Read_Current_Vccint}
+	};
+
+	if(NULL != snsrName)
+	{
+		Cl_SecureMemcpy(snsrName,SENSOR_NAME_MAX,&snsrData[index].sensorName[0],SENSOR_NAME_MAX);
+
+	}
+	else
+	{
+		return XST_FAILURE;
+	}
+
+	*sensor_handler = snsrData[index].sensor_handler;
+
+	return XST_SUCCESS;
+}
+s8 V70_Get_Voltage_Names(u8 index, char8* snsrName, u8 *sensorId,sensorMonitorFunc *sensor_handler)
+{
+    struct sensorData
+    {
+        char8 sensorName[SENSOR_NAME_MAX];
+        sensorMonitorFunc	sensor_handler;
+    };
+
+    struct sensorData voltageData[] =
+    {
+        { "12v_pex\0",V70_Asdm_Read_Voltage_12v },
+        { "3v3_pex\0" ,V70_Asdm_Read_Voltage_3v3}
+
+    };
+
+    if(NULL != snsrName)
+    {
+        Cl_SecureMemcpy(snsrName,SENSOR_NAME_MAX,&voltageData[index].sensorName[0],SENSOR_NAME_MAX);
+    }
+    else
+    {
+	return XST_FAILURE;
+    }
+
+    *sensor_handler = voltageData[index].sensor_handler;
+
+    return XST_SUCCESS;
 }
 
 void V70_Monitor_Sensors()

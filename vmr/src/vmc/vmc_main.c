@@ -33,6 +33,7 @@ SemaphoreHandle_t sdr_lock = NULL;
 
 uart_rtos_handle_t uart_vmcsc_log;
 uart_rtos_handle_t uart_log;
+extern s8 V70_Asdm_Read_Temp_Vccint(snsrRead_t *snsrData);
 
 static bool vmc_is_ready = false;
 static ePlatformType current_platform = eV70;
@@ -46,16 +47,23 @@ Platform_t platform_names[eMax_Platforms]=
 
 Platform_Sensor_Handler_t platform_sensor_handlers[]=
 {
-	{eVCK5000,eTemperature_Sensor_Inlet,Vck5000_Temperature_Read_Inlet},
-	{eVCK5000,eTemperature_Sensor_Outlet,Vck5000_Temperature_Read_Outlet},
-	{eVCK5000,eTemperature_Sensor_Board,Vck5000_Temperature_Read_Board},
-	{eVCK5000,eTemperature_Sensor_QSFP,Vck5000_Temperature_Read_QSFP},
-	{eVCK5000,ePower_Sensor,Vck5000_Asdm_Read_Power},
-	{eV70,eTemperature_Sensor_Inlet,V70_Temperature_Read_Inlet},
-	{eV70,eTemperature_Sensor_Outlet,V70_Temperature_Read_Outlet},
-	{eV70,eTemperature_Sensor_Board,V70_Temperature_Read_Board},
-	{eV70, eTemperature_Sensor_QSFP, NULL},
-	{eV70,ePower_Sensor,V70_Asdm_Read_Power},
+	{eVCK5000,eTemperature_Sensor_Inlet,Vck5000_Temperature_Read_Inlet,NULL},
+	{eVCK5000,eTemperature_Sensor_Outlet,Vck5000_Temperature_Read_Outlet,NULL},
+	{eVCK5000,eTemperature_Sensor_Board,Vck5000_Temperature_Read_Board,NULL},
+	{eVCK5000,eTemperature_Sensor_QSFP,Vck5000_Temperature_Read_QSFP,NULL},
+	{eVCK5000,eVccint_Temp,Vck5000_Temperature_Read_Vccint,NULL},
+	{eVCK5000,eVoltage_Sensors,NULL,Vck5000_Get_Voltage_Names},
+	{eVCK5000,eCurrent_Sensors,NULL,Vck5000_Get_Current_Names},
+	{eVCK5000,eQSFP_Sensors,NULL,Vck5000_Get_QSFP_Name},
+	{eVCK5000,ePower_Sensor,Vck5000_Asdm_Read_Power,NULL},
+	{eV70,eTemperature_Sensor_Inlet,V70_Temperature_Read_Inlet,NULL},
+	{eV70,eTemperature_Sensor_Outlet,V70_Temperature_Read_Outlet,NULL},
+	{eV70,eTemperature_Sensor_Board,V70_Temperature_Read_Board,NULL},
+	{eV70, eTemperature_Sensor_QSFP, NULL,NULL},
+	{eV70,eVccint_Temp,V70_Asdm_Read_Temp_Vccint,NULL},
+	{eV70,eVoltage_Sensors,NULL,V70_Get_Voltage_Names},
+	{eV70,eCurrent_Sensors,NULL,V70_Get_Current_Names},
+	{eV70,ePower_Sensor,V70_Asdm_Read_Power,NULL},
 };
 
 Platform_Function_Handler_t platform_function_handlers[]=
@@ -170,6 +178,22 @@ static sensorMonitorFunc Vmc_Find_Sensor_Handler(eSensor_Functions sensor_type)
 	return NULL;
 }
 
+static snsrNameFunc Vmc_Find_Sensor_Name_Handler(eSensor_Functions sensor_type)
+{
+	u16 j = 0;
+	u16 platform_sensors_len = ARRAY_SIZE(platform_sensor_handlers);
+
+	for(j = 0; j < platform_sensors_len; j++){
+		if((current_platform == platform_sensor_handlers[j].product_type_id)
+				&& sensor_type == platform_sensor_handlers[j].sensor_type){
+
+			return platform_sensor_handlers[j].sensor_name_handler;
+		}
+	}
+
+	return NULL;
+}
+
 static Platform_Func_Ptr Vmc_Find_Function_Handler(ePlatform_Functions function_type)
 {
 	u16 j = 0;
@@ -237,7 +261,18 @@ static u8 Vmc_ConfigurePlatform(const char * product_name)
 			case eTemperature_Sensor_QSFP:
 				Temperature_Read_QSFP_Ptr = Vmc_Find_Sensor_Handler(i);
 				break;
-
+			case eVoltage_Sensors:
+				Voltage_Read_Ptr = Vmc_Find_Sensor_Name_Handler(i);
+				break;
+			case eCurrent_Sensors:
+				Current_Read_Ptr = Vmc_Find_Sensor_Name_Handler(i);
+				break;
+			case eQSFP_Sensors:
+				QSFP_Read_Ptr = Vmc_Find_Sensor_Name_Handler(i);
+				break;
+			case eVccint_Temp:
+				Temperature_Read_VCCINT_Ptr = Vmc_Find_Sensor_Handler(i);
+				break;
 			case ePower_Sensor:
 				Power_Read_Ptr = Vmc_Find_Sensor_Handler(i);
 				break;

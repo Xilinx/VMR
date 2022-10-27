@@ -52,6 +52,9 @@ extern platform_sensors_monitor_ptr Monitor_Sensors;
 extern supported_sdr_info_ptr get_supported_sdr_info;
 extern asdm_update_record_count_ptr asdm_update_record_count;
 
+extern SemaphoreHandle_t vmc_sc_lock;
+extern SC_VMC_Data sc_vmc_data;
+extern platform_sensors_monitor_ptr Monitor_Sensors;
 Clock_Throttling_Profile_t clock_throttling_vck5000;
 extern Clock_Throttling_Handle_t clock_throttling_std_algorithm;
 
@@ -91,16 +94,130 @@ u32 vck5000_Supported_Sensors[] = {
 	eTemp_Qsfp,
 
 	/* Voltage SDR */
-	eVolatge_SC_Sensors,
+	eVoltage_Group_Sensors,
 	eVoltage_Sysmon_Vccint,
 
 	/* Current SDR */
-	eCurrent_SC_Sensors,
+	eCurrent_Group_Sensors,
 	eCurrent_SC_Vccint,
 
 	/* Power SDR */
 	ePower_Total
 };
+s8 Vck5000_Get_Current_Names(u8 index, char8* snsrName, u8 *SC_sensorId, sensorMonitorFunc *sensor_handler)
+{
+    struct sensorData
+    {
+        u8 sensorId;
+        char8 sensorName[SENSOR_NAME_MAX];
+        sensorMonitorFunc	sensor_handler;
+    };
+
+    struct sensorData snsrData[] =    {
+        { eSC_PEX_12V_I_IN,   "12v_pex\0"  ,PMBUS_SC_Sensor_Read},
+        { eSC_V12_IN_AUX0_I,  "12v_aux_0\0" ,PMBUS_SC_Sensor_Read},
+        { eSC_V12_IN_AUX1_I,  "12v_aux_1\0" ,PMBUS_SC_Sensor_Read},
+    };
+
+    if(NULL != snsrName)
+    {
+        Cl_SecureMemcpy(snsrName,SENSOR_NAME_MAX,&snsrData[index].sensorName[0],SENSOR_NAME_MAX);
+
+    }
+    else
+    {
+        return XST_FAILURE;
+    }
+
+    if(NULL != SC_sensorId)
+    {
+        *SC_sensorId = snsrData[index].sensorId;
+    }
+    else
+    {
+	return XST_FAILURE;
+    }
+    *sensor_handler = snsrData[index].sensor_handler;
+
+    return XST_SUCCESS;
+}
+
+s8 Vck5000_Get_Voltage_Names(u8 index, char8* snsrName, u8 *SC_sensorId,sensorMonitorFunc *sensor_handler)
+{
+    struct sensorData
+    {
+        u8 sensorId;
+        char8 sensorName[SENSOR_NAME_MAX];
+        sensorMonitorFunc	sensor_handler;
+    };
+
+    struct sensorData voltageData[] =
+    {
+        { eSC_PEX_12V,    "12v_pex\0",PMBUS_SC_Sensor_Read },
+        { eSC_PEX_3V3,    "3v3_pex\0" ,PMBUS_SC_Sensor_Read},
+        { eSC_AUX_3V3,    "3v3_aux\0" ,PMBUS_SC_Sensor_Read},
+        { eSC_AUX_12V,    "12v_aux_0\0" ,PMBUS_SC_Sensor_Read},
+        { eSC_AUX1_12V,   "12v_aux_1\0" ,PMBUS_SC_Sensor_Read}
+    };
+
+    if(NULL != snsrName)
+    {
+        Cl_SecureMemcpy(snsrName,SENSOR_NAME_MAX,&voltageData[index].sensorName[0],SENSOR_NAME_MAX);
+    }
+    else
+    {
+	return XST_FAILURE;
+    }
+
+    if(NULL != SC_sensorId)
+    {
+        *SC_sensorId = voltageData[index].sensorId;
+    }
+    else
+    {
+	return XST_FAILURE;
+    }
+    *sensor_handler = voltageData[index].sensor_handler;
+
+    return XST_SUCCESS;
+}
+
+s8 Vck5000_Get_QSFP_Name(u8 index, char8* snsrName, u8 *SC_sensorId,sensorMonitorFunc *sensor_handler)
+{
+    struct sensorData
+    {
+        u8 sensorId;
+        char8 sensorName[SENSOR_NAME_MAX];
+        sensorMonitorFunc	sensor_handler;
+    };
+
+    struct sensorData qsfpData[] =
+    {
+        { eSC_CAGE_TEMP0,  TEMP_CAGE0_NAME,Temperature_Read_QSFP },
+        { eSC_CAGE_TEMP1,  TEMP_CAGE1_NAME,Temperature_Read_QSFP }
+    };
+
+    if(NULL != snsrName)
+    {
+        Cl_SecureMemcpy(snsrName,SENSOR_NAME_MAX,&qsfpData[index].sensorName[0],SENSOR_NAME_MAX);
+    }
+    else
+    {
+	return XST_FAILURE;
+    }
+
+    if(NULL != SC_sensorId)
+    {
+        *SC_sensorId = qsfpData[index].sensorId;
+    }
+    else
+    {
+	return XST_FAILURE;
+    }
+    *sensor_handler = qsfpData[index].sensor_handler;
+
+    return XST_SUCCESS;
+}
 
 void Vck5000_Get_Supported_Sdr_Info(u32 *platform_Supported_Sensors, u32 *sdr_count)
 {
@@ -170,65 +287,6 @@ static void vck5000_clk_scaling_params_init() {
 	g_clk_throttling_params.limits.throttle_limit_pwr = clock_throttling_std_algorithm.PowerThrottlingLimit;
 	return;
 }
-void VCK5000_Monitor_Sensors ()
-{
-	for (int id = eSC_PEX_12V ; id <= eSC_VCCINT_TEMP ; id++)
-	{
-		switch(id)
-		{
-		case eSC_PEX_12V:
-			sensor_glvr.sensor_readings.voltage[e12V_PEX] = sc_vmc_data.sensor_values[id];
-			break;
-		case eSC_PEX_12V_I_IN:
-			sensor_glvr.sensor_readings.current[e12V_PEX] = sc_vmc_data.sensor_values[id];
-			break;
-		case eSC_AUX_12V:
-			sensor_glvr.sensor_readings.voltage[e12V_AUX0] = sc_vmc_data.sensor_values[id];
-			break;
-		case eSC_V12_IN_AUX0_I:
-			sensor_glvr.sensor_readings.current[e12V_AUX0] = sc_vmc_data.sensor_values[id];
-			break;
-		case eSC_AUX1_12V:
-			sensor_glvr.sensor_readings.voltage[e12V_AUX1] = sc_vmc_data.sensor_values[id];
-			break;
-		case eSC_V12_IN_AUX1_I:
-			sensor_glvr.sensor_readings.current[e12V_AUX1] = sc_vmc_data.sensor_values[id];
-			break;
-		case eSC_VCCINT_TEMP:
-			sensor_glvr.sensor_readings.vccint_temp = (float)sc_vmc_data.sensor_values[id];
-			break;
-		default:
-			break;
-		}
-	}
-}
-
-u8 Vck5000_Init(void)
-{
-	//s8 status = XST_FAILURE;
-
-	/* Retry till fan controller is programmed */
-	while (max6639_init(1, 0x2E));  // only for vck5000
-
-	msg_id_handler_ptr = VCK5000_VMC_SC_Comms_Msg;
-	set_total_req_size(VCK5000_MAX_MSGID_COUNT);
-	fetch_boardinfo_ptr = &Vck5000_VMC_Fetch_BoardInfo;
-
-	Monitor_Sensors = VCK5000_Monitor_Sensors;
-
-	/* platform specific initialization */
-	Build_clock_throttling_profile_VCK5000(&clock_throttling_vck5000);
-
-	/* clock throttling initialization */
-	ClockThrottling_Initialize(&clock_throttling_std_algorithm, &clock_throttling_vck5000);
-
-	vck5000_clk_scaling_params_init();
-
-	get_supported_sdr_info = Vck5000_Get_Supported_Sdr_Info;
-	asdm_update_record_count = Vck5000_Asdm_Update_Record_Count;
-
-	return XST_SUCCESS;
-}
 
 s8 Vck5000_Temperature_Read_Inlet(snsrRead_t *snsrData)
 {
@@ -275,12 +333,10 @@ s8 Vck5000_Temperature_Read_Outlet(snsrRead_t *snsrData)
 s8 Vck5000_Temperature_Read_Board(snsrRead_t *snsrData)
 {
 	s8 status = XST_FAILURE;
-	float TempReading = 0;
 
-	status = max6639_ReadDDRTemperature(i2c_num, SLAVE_ADDRESS_MAX6639, &TempReading);
-	if (status == XST_SUCCESS)
+	if (sensor_glvr.sensor_readings.board_temp[0] != 0)
 	{
-		u16 roundedOffVal = (TempReading > 0) ? TempReading : 0;
+		u16 roundedOffVal = sensor_glvr.sensor_readings.board_temp[0];
 		Cl_SecureMemcpy(&snsrData->snsrValue[0],sizeof(roundedOffVal),&roundedOffVal,sizeof(roundedOffVal));
 		snsrData->sensorValueSize = sizeof(roundedOffVal);
 		snsrData->snsrSatus = Vmc_Snsr_State_Normal;
@@ -324,6 +380,12 @@ s8 Vck5000_Temperature_Read_QSFP(snsrRead_t *snsrData)
 		ucs_clock_shutdown();
 	}
 	return status;
+}
+
+s8  Vck5000_Temperature_Read_Vccint(snsrRead_t *snsrData)
+{
+	PMBUS_SC_Sensor_Read(snsrData);
+	return XST_SUCCESS;
 }
 
 s8 Vck5000_Fan_RPM_Read(snsrRead_t *snsrData)
@@ -499,3 +561,191 @@ s32 Vck5000_VMC_Fetch_BoardInfo(u8 *board_snsr_data)
 	return ((byte_count <= MAX_VMC_SC_UART_BUF_SIZE) ? (byte_count) : (-1));
 }
 
+void Vck5000_Temperature_Monitor()
+{
+	s8 status = XST_FAILURE;
+	float TempReading = 0;
+
+	status = max6639_ReadDDRTemperature(i2c_num, SLAVE_ADDRESS_MAX6639, &TempReading);
+	if (status == XST_SUCCESS)
+	{
+		u16 roundedOffVal = (TempReading > 0) ? TempReading : 0;
+		sensor_glvr.sensor_readings.board_temp[0] = roundedOffVal;
+	}
+	else
+	{
+		VMC_DBG("Failed to read slave : %d \n\r",SLAVE_ADDRESS_MAX6639);
+	}
+
+
+}
+s8 Vck5000_Asdm_Read_Power(snsrRead_t *snsrData)
+{
+    s8 status = XST_SUCCESS;
+
+	if(sensor_glvr.sensor_readings.total_power  != 0)
+	{
+		/* Adding 0.5 to round off the totalPower to nearest integer.*/
+		u16 roundedOffVal = (sensor_glvr.sensor_readings.total_power  + 0.5);
+		Cl_SecureMemcpy(&snsrData->snsrValue[0],sizeof(roundedOffVal),&roundedOffVal,sizeof(roundedOffVal));
+		snsrData->sensorValueSize = sizeof(roundedOffVal);
+		snsrData->snsrSatus = Vmc_Snsr_State_Normal;
+	}
+    else
+    {
+        snsrData->snsrSatus = Vmc_Snsr_State_Comms_failure;
+    }
+    return status;
+}
+
+void Vck5000_Power_Monitor()
+{
+
+	u8 powerMode = 0;
+	float totalPower = 0;
+	float pexPower = 0;
+	float aux0Power = 0;
+	float aux1Power = 0;
+
+	static u8 count_12vpex = 1;
+	static u8 count_12vaux_2x4_2x3 = 1;
+	static u8 count_12vaux_2x4 = 1;
+
+	if (xSemaphoreTake(vmc_sc_lock, portMAX_DELAY))
+	{
+		powerMode =  sc_vmc_data.powerMode;
+		pexPower = ((sc_vmc_data.sensor_values[eSC_PEX_12V]/1000.0) * (sc_vmc_data.sensor_values[eSC_PEX_12V_I_IN])/1000.0);
+		aux0Power = ((sc_vmc_data.sensor_values[eSC_AUX_12V]/1000.0) * (sc_vmc_data.sensor_values[eSC_V12_IN_AUX0_I])/1000.0); //2x4 AUX
+		aux1Power = ((sc_vmc_data.sensor_values[eSC_AUX1_12V]/1000.0) * (sc_vmc_data.sensor_values[eSC_V12_IN_AUX1_I])/1000.0); //2x3 AUX
+		totalPower = (pexPower + aux0Power +aux1Power);
+		sensor_glvr.sensor_readings.total_power = totalPower;
+		xSemaphoreGive(vmc_sc_lock);
+	}
+	else
+	{
+		VMC_ERR("vmc_sc_lock lock failed \r\n");
+	}
+
+	// shutdown clock only if power reached critical threshold continuously for 1sec (100ms*10)
+	if (pexPower >= POWER_12VPEX_CRITICAL_THRESHOLD)
+	{
+		if (count_12vpex == MAX_COUNT_TO_WAIT_1SEC)
+		{
+			ucs_clock_shutdown();
+			count_12vpex = 0;
+		}
+		count_12vpex = count_12vpex + 1;
+	}
+	else /* Reset the count value to zero when power values below critical limit and count is non-zero (< 10) */
+	{
+		if ((count_12vpex != 0) && (pexPower < POWER_12VPEX_CRITICAL_THRESHOLD))
+		{
+			count_12vpex = 0;
+		}
+	}
+
+	if (powerMode == POWER_MODE_300W) // Both 2x3 and 2x4 AUX connected
+	{
+		if ((aux0Power >= POWER_12VAUX_2X4_CRITICAL_THRESHOLD) || (aux1Power >= POWER_12VAUX_2X3_CRITICAL_THRESHOLD))
+		{
+			if (count_12vaux_2x4_2x3 == MAX_COUNT_TO_WAIT_1SEC)
+			{
+				ucs_clock_shutdown();
+				count_12vaux_2x4_2x3 = 0;
+			}
+			count_12vaux_2x4_2x3 = count_12vaux_2x4_2x3 + 1;
+		}
+		else /* Reset the count value to zero when power values below critical limit and count is non-zero (< 10) */
+		{
+			if ((count_12vaux_2x4_2x3 != 0) && (aux0Power < POWER_12VAUX_2X4_CRITICAL_THRESHOLD) && (aux1Power < POWER_12VAUX_2X3_CRITICAL_THRESHOLD))
+			{
+				count_12vaux_2x4_2x3 = 0;
+			}
+		}
+	}
+	else // only 2x4 connected
+	{
+		if (aux0Power >= POWER_12VAUX_2X4_CRITICAL_THRESHOLD)
+		{
+			if (count_12vaux_2x4 == MAX_COUNT_TO_WAIT_1SEC)
+			{
+				ucs_clock_shutdown();
+				count_12vaux_2x4 = 0;
+			}
+			count_12vaux_2x4 = count_12vaux_2x4 + 1;
+		}
+		else /* Reset the count value to zero when power values below critical limit and count is non-zero (< 10) */
+		{
+			if ((count_12vaux_2x4 != 0) && (aux0Power < POWER_12VAUX_2X4_CRITICAL_THRESHOLD))
+			{
+				count_12vaux_2x4 = 0;
+			}
+		}
+	}
+}
+
+void VCK5000_Monitor_Sensors ()
+{
+	for (int id = eSC_PEX_12V ; id <= eSC_VCCINT_TEMP ; id++)
+	{
+		switch(id)
+		{
+		case eSC_PEX_12V:
+			sensor_glvr.sensor_readings.voltage[e12V_PEX] = sc_vmc_data.sensor_values[id];
+			break;
+		case eSC_PEX_12V_I_IN:
+			sensor_glvr.sensor_readings.current[e12V_PEX] = sc_vmc_data.sensor_values[id];
+			break;
+		case eSC_AUX_12V:
+			sensor_glvr.sensor_readings.voltage[e12V_AUX0] = sc_vmc_data.sensor_values[id];
+			break;
+		case eSC_V12_IN_AUX0_I:
+			sensor_glvr.sensor_readings.current[e12V_AUX0] = sc_vmc_data.sensor_values[id];
+			break;
+		case eSC_AUX1_12V:
+			sensor_glvr.sensor_readings.voltage[e12V_AUX1] = sc_vmc_data.sensor_values[id];
+			break;
+		case eSC_V12_IN_AUX1_I:
+			sensor_glvr.sensor_readings.current[e12V_AUX1] = sc_vmc_data.sensor_values[id];
+			break;
+		case eSC_VCCINT_TEMP:
+			sensor_glvr.sensor_readings.vccint_temp = (float)sc_vmc_data.sensor_values[id];
+			break;
+		default:
+			break;
+		}
+	}
+
+	/* Read Temp Sensors */
+	Vck5000_Temperature_Monitor();
+	/* Read Power Sensors */
+	Vck5000_Power_Monitor();
+
+}
+
+u8 Vck5000_Init(void)
+{
+	//s8 status = XST_FAILURE;
+
+	/* Retry till fan controller is programmed */
+	while (max6639_init(1, 0x2E));  // only for vck5000
+
+	msg_id_handler_ptr = VCK5000_VMC_SC_Comms_Msg;
+	set_total_req_size(VCK5000_MAX_MSGID_COUNT);
+	fetch_boardinfo_ptr = &Vck5000_VMC_Fetch_BoardInfo;
+
+	Monitor_Sensors = VCK5000_Monitor_Sensors;
+
+	/* platform specific initialization */
+	Build_clock_throttling_profile_VCK5000(&clock_throttling_vck5000);
+
+	/* clock throttling initialization */
+	ClockThrottling_Initialize(&clock_throttling_std_algorithm, &clock_throttling_vck5000);
+
+	vck5000_clk_scaling_params_init();
+
+	get_supported_sdr_info = Vck5000_Get_Supported_Sdr_Info;
+	asdm_update_record_count = Vck5000_Asdm_Update_Record_Count;
+
+	return XST_SUCCESS;
+}
