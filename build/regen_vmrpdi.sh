@@ -90,7 +90,7 @@ mkdir scripts
 # create BIF file to vmr partial PDI
 printf "%s\n" 'vmr_bif:
 {
- id_code = 0x04ca8093
+ id_code = 0x14ca8093
  extended_id_code = 0x01
  id = 0x2
  image
@@ -119,6 +119,7 @@ if [ $AIE2 == "1" ];then
 fi
 
 # replace _VMR_FILE_ with -v script argument
+echo " using $vmr_bif"
 sed -i 's,_VMR_FILE_,'$vmr',' $vmr_bif
 
 # rebuild the pdi

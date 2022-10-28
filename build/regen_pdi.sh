@@ -135,8 +135,8 @@ puts "Generating vck5000 plm.elf for $1"
 # Unique to VCK5000
 setws .
 app create -name plm -template {versal PLM} -proc blp_cips_pspmc_0_psv_pmc_0 -hw $1 -os standalone
-bsp config stdout blp_cips_pspmc_0_psv_sbsauart_0
-bsp config stdin blp_cips_pspmc_0_psv_sbsauart_0
+bsp config stdout blp_cips_pspmc_0_psv_sbsauart_1
+bsp config stdin blp_cips_pspmc_0_psv_sbsauart_1
 app build -name plm
 file rename -force ./plm/Debug/plm.elf ./plm.elf
 app remove plm
@@ -184,7 +184,6 @@ fi
 rm -rf bins
 mkdir bins
 pdi=bins/base.pdi
-vmr_bif=scripts/vmr.bif
 rebuild_bif=scripts/rebuild.bif
 aie2_rebuild_bif=scripts/aie2_rebuild.bif
 
@@ -232,19 +231,6 @@ if [ "$bin_list" != "$golden_list" ]; then
     diff  <(echo "$bin_list" ) <(echo "$golden_list")
     exit 1
 fi
-
-# create BIF file to vmr partial PDI
-printf "%s\n" 'vmr_bif:
-{
- id_code = 0x04cd7093
- extended_id_code = 0x01
- id = 0x2
- image
- {
-  name = rpu_test, id = 0x1c000000
-  { core = r5-0, file = _VMR_FILE_ }
- }
-}' > $vmr_bif
 
 # create BIF file to rebuild PDI - based on combination of BIF files used in original build process
 printf "%s\n" 'new_bif:
@@ -366,9 +352,6 @@ sed -i 's,_PSM_FILE_,'$psm_path',' $rebuild_bif
 # replace _VMR_FILE_ with -v script argument
 sed -i 's,_VMR_FILE_,'$vmr',' $rebuild_bif
 
-# replace _VMR_FILE_ with -v script argument
-sed -i 's,_VMR_FILE_,'$vmr',' $vmr_bif
-
 # rebuild the pdi from the binary sources and repackage as xsabin as well
 printf "\nRebuilding PDI and new XSABIN...\n"
 sleep 1
@@ -376,9 +359,6 @@ rm -f rebuilt.*
 rm -f vmr.pdi
 bootgen -arch versal -image $rebuild_bif -w -o rebuilt.pdi
 xclbinutil --input $xsabin --replace-section PDI:RAW:rebuilt.pdi --output rebuilt.xsabin
-
-printf "\nRebuilding vmr.pdi partial PDI...\n"
-bootgen -arch versal -image $vmr_bif -w -o vmr.pdi
 
 printf "\nScript complete....\n"
 printf "  Generated the following files:\n"
