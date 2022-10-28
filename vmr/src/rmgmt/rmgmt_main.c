@@ -203,7 +203,7 @@ static int validate_log_payload(struct xgq_vmr_log_payload *payload, u32 size)
 		return ret;
 	}
 
-	if (payload->pid > CL_LOG_SYSTEM_DTB) {
+	if (payload->pid > CL_LOG_PLM_SYNC) {
 		VMR_ERR("invalid log type 0x%x", payload->pid);
 		return ret;
 	}
@@ -215,6 +215,37 @@ static int validate_log_payload(struct xgq_vmr_log_payload *payload, u32 size)
 	}
 	/* TODO: add more checking based on addr_type in the future */
 
+	return 0;
+}
+
+static int validate_log_payload_plm(struct xgq_vmr_log_payload *payload){
+	int ret = -EINVAL;
+	u32 address = RPU_SHARED_MEMORY_ADDR(payload->address);
+
+	if (address >= VMR_EP_RPU_SHARED_MEMORY_END) {
+		VMR_ERR("address overflow 0x%x", address);
+		return ret;
+	}
+
+	if (payload->pid > CL_LOG_PLM_SYNC) {
+		VMR_ERR("invalid log type 0x%x", payload->pid);
+		return ret;
+	}
+
+	if(payload->offset >= VMR_PLM_DATA_TOTAL_SIZE){
+		VMR_ERR("Bad PLM Request Invalid Offset");
+		return ret;
+	}
+
+	if(payload->size == 0){
+		VMR_ERR("Bad PLM Request 0 bytes");
+		return ret;
+	}
+
+	if(payload->size >= VMR_PLM_DATA_TOTAL_SIZE)
+		payload->size = VMR_PLM_DATA_TOTAL_SIZE - payload->offset;
+	else
+		payload->size = abs(payload->size - payload->offset);
 	return 0;
 }
 
@@ -761,6 +792,24 @@ static int rmgmt_load_system_dtb(cl_msg_t *msg)
 	return 0;
 }
 
+static int rmgmt_sync_plm_data(cl_msg_t *msg)
+{
+	u32 dst_addr = 0;
+	u32 src_addr = 0;
+	int ret = 0;
+
+	ret = validate_log_payload_plm(&msg->log_payload);
+	if(ret)
+		return ret;
+
+	dst_addr = RPU_SHARED_MEMORY_ADDR(msg->log_payload.address);
+	src_addr = VMR_PLM_DATA_START_ADDRESS + msg->log_payload.offset;
+
+	cl_memcpy(dst_addr, src_addr, msg->log_payload.size);
+
+	return 0;
+}
+
 static char* eTaskStateName(eTaskState st)
 {
 	switch (st) {
@@ -915,6 +964,10 @@ int cl_rmgmt_log_page(cl_msg_t *msg)
 	case CL_LOG_SYSTEM_DTB:
 		ret = rmgmt_load_system_dtb(msg);
 		break;
+	case CL_LOG_PLM_SYNC:
+		ret = rmgmt_sync_plm_data(msg);
+		break;
+
 	default:
 		VMR_WARN("unsupported type %d", msg->log_payload.pid);
 		ret = -EINVAL;
