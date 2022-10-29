@@ -162,6 +162,11 @@
             no-map;
             reg = <0x501 0x80000000 0x0 0x7fffffff>;
         };
+        
+        zocl_versal_region2: buffer@60000000000 {
+            no-map;
+            reg = <0x600 0x0 0x02 0x0>;
+        };
 
     };
 
