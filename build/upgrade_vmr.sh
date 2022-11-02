@@ -161,12 +161,20 @@ upgrade_vmr_pdi()
 
 	echo "VMR live upgrading ..."
 	xbmgmt program -b shell --image $PDI -d $BDF:0 --force
+	if [[ $? -ne 0 ]];then
+		echo "xbmgmt program vmr.pdi failed"
+		exit 1;
+	fi
 
 	echo "Upgrade done, reload XRT drivers ..."
 	modprobe xocl
 
 	echo "check vmr is in good status"
 	xbmgmt examine -d $BDF:0 -r vmr --verbose
+	if [[ $? -ne 0 ]];then
+		echo "xbmgmt examine -vmr failed"
+		exit 1;
+	fi
 
 	printf "\n $0 complete.\n"
 }
