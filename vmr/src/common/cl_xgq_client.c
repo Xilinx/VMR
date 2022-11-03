@@ -220,8 +220,8 @@ int rmgmt_apu_identify(struct xgq_vmr_cmd_identify *id_cmd)
 {
 	int rval = 0;
 	uint64_t slot_addr = 0;
-	struct xgq_cmd_sq sq_cmd;
-	struct xgq_cmd_cq cq_cmd;
+	struct xgq_cmd_sq sq_cmd = { 0 };
+	struct xgq_cmd_cq cq_cmd = { 0 };
 
 	if (!cl_rmgmt_apu_is_ready())
 		return -ENODEV;
