@@ -17,7 +17,7 @@ static GicIrqEntry GicIrqTable[XSCUGIC_MAX_NUM_INTR_INPUTS];
 
 s32 GicSetupInterruptSystem(XScuGic *GicInst)
 {
-	s32 Status;
+	s32 Status = XST_SUCCESS;
 
 	XScuGic_Config *GicCfgPtr = XScuGic_LookupConfig(INTC_DEVICE_ID);
 	if (NULL == GicCfgPtr) {
