@@ -52,6 +52,7 @@ services:
       # We mount the current project to /app
       - ../:/opt/vmr:rshared    
       - /proj/xbuilds:/proj/xbuilds:rshared
+      - /proj/sdxbf:/proj/sdxbf:rshared
       - /tools:/tools:rshared 
     user: ${XDOCK_USER:-xbuild} 
     working_dir: /opt/vmr/build   
