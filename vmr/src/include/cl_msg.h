@@ -52,6 +52,7 @@ typedef enum cl_clock_type {
 	CL_CLOCK_WIZARD	 	= 0x1,
 	CL_CLOCK_COUNTER	= 0x2,
 	CL_CLOCK_SCALE		= 0x3,
+	CL_CLOCK_SCALE_INTERNAL	= 0x4, /* Internal clock scaling, not a public type */
 } cl_clock_type_t;
 
 typedef enum cl_vmr_control_type {

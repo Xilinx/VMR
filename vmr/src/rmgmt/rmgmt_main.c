@@ -146,7 +146,7 @@ static int validate_clock_payload(struct xgq_vmr_clock_payload *payload)
 		return ret;
 	}
 
-	if (payload->ocl_req_type > CL_CLOCK_SCALE) {
+	if (payload->ocl_req_type > CL_CLOCK_SCALE_INTERNAL) {
 		VMR_ERR("invalid req_type %d", payload->ocl_req_type);
 		return ret;
 	}
@@ -260,6 +260,7 @@ int cl_rmgmt_clock(cl_msg_t *msg)
 
 	switch (msg->clock_payload.ocl_req_type) {
 	case CL_CLOCK_SCALE:
+	case CL_CLOCK_SCALE_INTERNAL:
 		ret = rmgmt_clock_freq_scaling(msg);
 		break;
 	case CL_CLOCK_WIZARD:

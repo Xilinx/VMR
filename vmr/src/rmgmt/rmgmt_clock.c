@@ -56,7 +56,7 @@ static inline unsigned int floor_acap_m(int freq)
         return (floor_acap_o(freq) * freq * 1000 / CLK_ACAP_INPUT_FREQ_X_1000);
 }
 
-static int rmgmt_clock_freq_scaling_impl(struct cl_msg *msg)
+static int rmgmt_clock_freq_scaling_impl(struct cl_msg *msg, bool force)
 {
         struct acap_divclk              *divclk;
         struct acap_divclk_ts           *divclk_ts;
@@ -76,7 +76,16 @@ static int rmgmt_clock_freq_scaling_impl(struct cl_msg *msg)
 		if (freq == 0)
 			continue;
 
-		VMR_LOG("Clock: %d, New: %d Mhz", i, freq);
+		VMR_LOG("Clock: %d, force:%d, New: %d Mhz", i, force, freq);
+		
+		if (!force) {
+			u32 cur_freq = rmgmt_clock_get_freq(i, RMGMT_CLOCK_COUNTER);
+			VMR_LOG("current freq: %d Mhz", cur_freq);
+			if (cur_freq == freq) {
+				VMR_LOG("request is the same as current, skip.");
+				continue;
+			}
+		}
 
                 err = clock_wiz_busy(i, 20, 50);
                 if (err)
@@ -161,10 +170,18 @@ static int rmgmt_clock_freq_scaling_impl(struct cl_msg *msg)
 int rmgmt_clock_freq_scaling(struct cl_msg *msg)
 {
 	int ret = 0;
+	bool force = false;
 
-	axigate_freeze();
-	ret = rmgmt_clock_freq_scaling_impl(msg);
-	axigate_free();
+	/* Internal scaling has gate freezed already, and force to config. */
+	if (msg->clock_payload.ocl_req_type != CL_CLOCK_SCALE_INTERNAL)
+		axigate_freeze();
+	else
+		force = true;
+
+	ret = rmgmt_clock_freq_scaling_impl(msg, force);
+
+	if (msg->clock_payload.ocl_req_type != CL_CLOCK_SCALE_INTERNAL)
+		axigate_free();
 
 	return ret;
 }
@@ -188,6 +205,7 @@ uint32_t rmgmt_clock_get_freq(int idx, enum clock_ip ip)
 		IO_SYNC_WRITE32(OCL_CLKWIZ_STATUS_MEASURE_START, base);
 
 		while (times != 0) {
+			VMR_DBG("times %d", times);
 			status = IO_SYNC_READ32(base);
 			if ((status & OCL_CLKWIZ_STATUS_MASK) ==
 				OCL_CLKWIZ_STATUS_MEASURE_DONE)
