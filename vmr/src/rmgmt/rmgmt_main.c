@@ -203,7 +203,7 @@ static int validate_log_payload(struct xgq_vmr_log_payload *payload, u32 size)
 		return ret;
 	}
 
-	if (payload->pid > CL_LOG_PLM_SYNC) {
+	if (payload->pid > CL_LOG_PLM_LOG) {
 		VMR_ERR("invalid log type 0x%x", payload->pid);
 		return ret;
 	}
@@ -227,7 +227,7 @@ static int validate_log_payload_plm(struct xgq_vmr_log_payload *payload){
 		return ret;
 	}
 
-	if (payload->pid > CL_LOG_PLM_SYNC) {
+	if (payload->pid > CL_LOG_PLM_LOG) {
 		VMR_ERR("invalid log type 0x%x", payload->pid);
 		return ret;
 	}
@@ -853,30 +853,18 @@ static int vmr_rtos_task_stats(cl_msg_t *msg)
 	totalruntime /= 100UL;
 	
 	for (i = 0; i < uxArraySize; i++) {
-		if(totalruntime > 0){
-			/*total runtime is checked to avoid divide by zero error*/
-			percentage_time = pxTaskStatusArray[i].ulRunTimeCounter / totalruntime;
-			
-			/*If Percentage Run Time = 0 then task has consumed less than 1% of the Total Run Time. */
-			if(percentage_time > 0UL){
-				count += snprintf(rh.rh_log + count, safe_size - count,
-				"%-16s%-12s%-4ld\t%ld\t0x%lx\t%lu%%\n",
-				pxTaskStatusArray[i].pcTaskName,
-				eTaskStateName(pxTaskStatusArray[i].eCurrentState),
-				pxTaskStatusArray[i].uxBasePriority,
-				pxTaskStatusArray[i].usStackHighWaterMark,
-				(u32)pxTaskStatusArray[i].pxStackBase,
-				percentage_time);
-			}
-			else{
-				count += snprintf(rh.rh_log + count, safe_size - count,
-				"%-16s%-12s%-4ld\t%ld\t0x%lx\t<1%%\n",
-				pxTaskStatusArray[i].pcTaskName,
-				eTaskStateName(pxTaskStatusArray[i].eCurrentState),
-				pxTaskStatusArray[i].uxBasePriority,
-				pxTaskStatusArray[i].usStackHighWaterMark,
-				(u32)pxTaskStatusArray[i].pxStackBase);
-			}
+		percentage_time = totalruntime > 0 ?
+			pxTaskStatusArray[i].ulRunTimeCounter / totalruntime : 0;
+
+		if(percentage_time > 0UL){
+			count += snprintf(rh.rh_log + count, safe_size - count,
+			"%-16s%-12s%-4ld\t%ld\t0x%lx\t%lu%%\n",
+			pxTaskStatusArray[i].pcTaskName,
+			eTaskStateName(pxTaskStatusArray[i].eCurrentState),
+			pxTaskStatusArray[i].uxBasePriority,
+			pxTaskStatusArray[i].usStackHighWaterMark,
+			(u32)pxTaskStatusArray[i].pxStackBase,
+			percentage_time);
 		}
 		else{
 			count += snprintf(rh.rh_log + count, safe_size - count,
@@ -887,6 +875,7 @@ static int vmr_rtos_task_stats(cl_msg_t *msg)
 			pxTaskStatusArray[i].usStackHighWaterMark,
 			(u32)pxTaskStatusArray[i].pxStackBase);
 		}
+
 		if (count >= safe_size) {
 			VMR_WARN("log msg is trunked or Array Buffer Size Overflow");
 			break;
@@ -965,7 +954,7 @@ int cl_rmgmt_log_page(cl_msg_t *msg)
 	case CL_LOG_SYSTEM_DTB:
 		ret = rmgmt_load_system_dtb(msg);
 		break;
-	case CL_LOG_PLM_SYNC:
+	case CL_LOG_PLM_LOG:
 		ret = rmgmt_sync_plm_data(msg);
 		break;
 

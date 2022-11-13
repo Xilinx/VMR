@@ -2,6 +2,7 @@
 * Copyright (C) 2020-2022 Xilinx, Inc.  All rights reserved.
 * SPDX-License-Identifier: MIT
 *******************************************************************************/
+
 #ifndef XGQ_CMD_COMMON_H
 #define XGQ_CMD_COMMON_H
 

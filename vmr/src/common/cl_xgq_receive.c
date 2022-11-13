@@ -66,7 +66,7 @@ static struct xgq_cmd_cl_map xgq_cmd_log_page_map[] = {
 	{XGQ_CMD_LOG_TASK_STATS, CL_LOG_TASK_STATS},
 	{XGQ_CMD_LOG_MEM_STATS, CL_LOG_MEM_STATS},
 	{XGQ_CMD_LOG_SYSTEM_DTB, CL_LOG_SYSTEM_DTB},
-	{XGQ_CMD_LOG_PLM_SYNC, CL_LOG_PLM_SYNC},
+	{XGQ_CMD_LOG_PLM_LOG, CL_LOG_PLM_LOG},
 };
 
 static struct xgq_cmd_cl_map xgq_cmd_sensor_map[] = {
@@ -85,98 +85,6 @@ static struct xgq_cmd_cl_map xgq_cmd_clk_scaling_map[] = {
 	{XGQ_CMD_CLK_SCALING_SET_OVERRIDE, CL_CLK_SCALING_SET},
 };
 
-void cl_msg_handle_complete(cl_msg_t *msg)
-{
-	clk_throttling_params_t scaling_params = {0};
-	struct xgq_com_queue_entry cq_cmd = {
-		.hdr.cid = msg->hdr.cid,
-		.hdr.state = XGQ_CMD_STATE_COMPLETED,
-		.rcode = msg->hdr.rcode,
-	};
-	struct xgq_cmd_cq *cmd_cq = (struct xgq_cmd_cq *)&cq_cmd;
-	u64 cq_slot_addr;
-
-	/*TODO:
-	 * cleanup this code, should not mix request and result within same payload.
-	 * separate request and results
-	 */
-	if (msg->hdr.type == CL_MSG_CLOCK) {
-		/* only 1 place to hold ocl_freq, alway get from index 0 */
-		cmd_cq->cq_clock_payload.ocl_freq = msg->clock_payload.ocl_req_freq[0];
-	} else if (msg->hdr.type == CL_MSG_VMR_CONTROL) {
-		/* explicitly copy back fpt status from cl_msg to xgq completion cmd */
-		cmd_cq->cq_vmr_payload.has_fpt =
-			msg->multiboot_payload.has_fpt;
-		cmd_cq->cq_vmr_payload.has_fpt_recovery =
-			msg->multiboot_payload.has_fpt_recovery;
-		cmd_cq->cq_vmr_payload.boot_on_default =
-			msg->multiboot_payload.boot_on_default;
-		cmd_cq->cq_vmr_payload.boot_on_backup =
-			msg->multiboot_payload.boot_on_backup;
-		cmd_cq->cq_vmr_payload.boot_on_recovery =
-			msg->multiboot_payload.boot_on_recovery;
-		cmd_cq->cq_vmr_payload.current_multi_boot_offset =
-			msg->multiboot_payload.current_multi_boot_offset;
-		cmd_cq->cq_vmr_payload.boot_on_offset =
-			msg->multiboot_payload.boot_on_offset;
-
-		cmd_cq->cq_vmr_payload.has_extfpt =
-			msg->multiboot_payload.has_extfpt;
-		cmd_cq->cq_vmr_payload.has_ext_scfw =
-			msg->multiboot_payload.has_ext_scfw;
-		cmd_cq->cq_vmr_payload.has_ext_xsabin =
-			msg->multiboot_payload.has_ext_xsabin;
-		cmd_cq->cq_vmr_payload.has_ext_sysdtb =
-			msg->multiboot_payload.has_ext_sysdtb;
-
-		/* pass back apu status */
-		cmd_cq->cq_vmr_payload.ps_is_ready = cl_rmgmt_apu_is_ready();
-		cmd_cq->cq_vmr_payload.pl_is_ready = cl_rmgmt_pl_is_ready();
-		
-		/* pass back status, SC is ready and VMC has SC version */
-		cmd_cq->cq_vmr_payload.sc_is_ready = cl_vmc_has_sc_version();
-
-		/* pass back log level and flash progress */
-		cmd_cq->cq_vmr_payload.debug_level = cl_loglevel_get();
-		cmd_cq->cq_vmr_payload.program_progress = FLASH_PROGRESS;
-	} else if (msg->hdr.type == CL_MSG_LOG_PAGE) {
-		cmd_cq->cq_log_payload.count = msg->log_payload.size;
-	} else if (msg->hdr.type == CL_MSG_CLK_THROTTLING) {
-		cl_vmc_get_clk_throttling_params(&scaling_params);
-		cmd_cq->cq_clk_scaling_payload.has_clk_scaling = 
-					scaling_params.is_clk_scaling_supported;
-		cmd_cq->cq_clk_scaling_payload.clk_scaling_mode =
-					scaling_params.clk_scaling_mode;
-		cmd_cq->cq_clk_scaling_payload.clk_scaling_en = 
-					scaling_params.clk_scaling_enable;
-		cmd_cq->cq_clk_scaling_payload.temp_shutdown_limit = 
-					scaling_params.limits.shutdown_limit_temp;
-		cmd_cq->cq_clk_scaling_payload.temp_scaling_limit = 
-					scaling_params.limits.throttle_limit_temp;
-		cmd_cq->cq_clk_scaling_payload.pwr_shutdown_limit = 
-					scaling_params.limits.shutdown_limit_pwr;
-		cmd_cq->cq_clk_scaling_payload.pwr_scaling_limit = 
-					scaling_params.limits.throttle_limit_pwr;
-
-
-	} else if (msg->hdr.type == CL_MSG_VMR_IDENTIFY){
-		cmd_cq->cq_vmr_identify_payload.ver_major = msg->hdr.version_major;
-		cmd_cq->cq_vmr_identify_payload.ver_minor = msg->hdr.version_minor;
-	}
-
-	if (xSemaphoreTake(msg_complete_lock, portMAX_DELAY)) {
-		xgq_produce(&rpu_xgq, &cq_slot_addr);
-		cl_memcpy_toio(cq_slot_addr, &cq_cmd, sizeof(struct xgq_com_queue_entry));
-		xgq_notify_peer_produced(&rpu_xgq);
-		xSemaphoreGive(msg_complete_lock);
-	} else {
-		/* Should never been here if use portMAX_DELAY */
-		VMR_ERR("msg_complete_lock lock failed");
-	}
-	
-	return;
-}
-
 static inline int convert_cl_type(u32 xgq_type, u32 *cl_type,
 	struct xgq_cmd_cl_map *map, int map_size)
 {
@@ -191,8 +99,7 @@ static inline int convert_cl_type(u32 xgq_type, u32 *cl_type,
 	return -EINVAL;
 }
 
-
-int xclbin_handle(cl_msg_t *msg, struct xgq_cmd_sq *sq)
+static int xclbin_handle(cl_msg_t *msg, struct xgq_cmd_sq *sq)
 {
 	msg->data_payload.address = (u32)sq->xclbin_payload.address;
 	msg->data_payload.size = (u32)sq->xclbin_payload.size;
@@ -201,7 +108,7 @@ int xclbin_handle(cl_msg_t *msg, struct xgq_cmd_sq *sq)
 	return 0;
 }
 
-int pdi_handle(cl_msg_t *msg, struct xgq_cmd_sq *sq)
+static int pdi_handle(cl_msg_t *msg, struct xgq_cmd_sq *sq)
 {
 	msg->data_payload.address = (u32)sq->pdi_payload.address;
 	msg->data_payload.size = (u32)sq->pdi_payload.size;
@@ -222,7 +129,7 @@ int pdi_handle(cl_msg_t *msg, struct xgq_cmd_sq *sq)
 	return 0;
 }
 
-int vmr_control_handle(cl_msg_t *msg, struct xgq_cmd_sq *sq)
+static int vmr_control_handle(cl_msg_t *msg, struct xgq_cmd_sq *sq)
 {
 	int ret = 0;
 	u32 vmr_debug_type = CL_DBG_CLEAR;
@@ -245,7 +152,7 @@ int vmr_control_handle(cl_msg_t *msg, struct xgq_cmd_sq *sq)
 	return 0;
 }
 
-int clock_handle(cl_msg_t *msg, struct xgq_cmd_sq *sq)
+static int clock_handle(cl_msg_t *msg, struct xgq_cmd_sq *sq)
 {
 	int num_clock = 0;
 	int ret = 0;
@@ -278,7 +185,7 @@ int clock_handle(cl_msg_t *msg, struct xgq_cmd_sq *sq)
 	return 0;
 }
 
-int log_page_handle(cl_msg_t *msg, struct xgq_cmd_sq *sq)
+static int log_page_handle(cl_msg_t *msg, struct xgq_cmd_sq *sq)
 {
 	int ret = 0;
 	u32 pid = CL_LOG_UNKNOWN;
@@ -295,7 +202,7 @@ int log_page_handle(cl_msg_t *msg, struct xgq_cmd_sq *sq)
 	return 0;
 }
 
-int sensor_handle(cl_msg_t *msg, struct xgq_cmd_sq *sq)
+static int sensor_handle(cl_msg_t *msg, struct xgq_cmd_sq *sq)
 {
 	int ret = 0;
 	u32 sid = CL_SENSOR_ALL;
@@ -314,7 +221,7 @@ int sensor_handle(cl_msg_t *msg, struct xgq_cmd_sq *sq)
 	return 0;
 }
 
-int clk_scaling_handle(cl_msg_t *msg, struct xgq_cmd_sq *sq)
+static int clk_throttling_handle(cl_msg_t *msg, struct xgq_cmd_sq *sq)
 {
 	int ret = 0;
 	u32 aid = 0x1;
@@ -335,27 +242,155 @@ int clk_scaling_handle(cl_msg_t *msg, struct xgq_cmd_sq *sq)
 	return 0;
 }
 
+static void clock_complete(cl_msg_t *msg, struct xgq_cmd_cq *cmd_cq)
+{	
+	/*TODO:
+	 * cleanup this code, should not mix request and result within same payload.
+	 * separate request and results
+	 */
+
+	/* only 1 place to hold ocl_freq, always get from index 0 */
+	cmd_cq->cq_clock_payload.ocl_freq = msg->clock_payload.ocl_req_freq[0];
+}
+
+static void vmr_control_complete(cl_msg_t *msg, struct xgq_cmd_cq *cmd_cq)
+{
+	/* explicitly copy back fpt status from cl_msg to xgq completion cmd */
+	cmd_cq->cq_vmr_payload.has_fpt =
+		msg->multiboot_payload.has_fpt;
+	cmd_cq->cq_vmr_payload.has_fpt_recovery =
+		msg->multiboot_payload.has_fpt_recovery;
+	cmd_cq->cq_vmr_payload.boot_on_default =
+		msg->multiboot_payload.boot_on_default;
+	cmd_cq->cq_vmr_payload.boot_on_backup =
+		msg->multiboot_payload.boot_on_backup;
+	cmd_cq->cq_vmr_payload.boot_on_recovery =
+		msg->multiboot_payload.boot_on_recovery;
+	cmd_cq->cq_vmr_payload.current_multi_boot_offset =
+		msg->multiboot_payload.current_multi_boot_offset;
+	cmd_cq->cq_vmr_payload.boot_on_offset =
+		msg->multiboot_payload.boot_on_offset;
+
+	cmd_cq->cq_vmr_payload.has_extfpt =
+		msg->multiboot_payload.has_extfpt;
+	cmd_cq->cq_vmr_payload.has_ext_scfw =
+		msg->multiboot_payload.has_ext_scfw;
+	cmd_cq->cq_vmr_payload.has_ext_xsabin =
+		msg->multiboot_payload.has_ext_xsabin;
+	cmd_cq->cq_vmr_payload.has_ext_sysdtb =
+		msg->multiboot_payload.has_ext_sysdtb;
+
+	/* pass back apu status */
+	cmd_cq->cq_vmr_payload.ps_is_ready = cl_rmgmt_apu_is_ready();
+	cmd_cq->cq_vmr_payload.pl_is_ready = cl_rmgmt_pl_is_ready();
+	
+	/* pass back status, SC is ready and VMC has SC version */
+	cmd_cq->cq_vmr_payload.sc_is_ready = cl_vmc_has_sc_version();
+
+	/* pass back log level and flash progress */
+	cmd_cq->cq_vmr_payload.debug_level = cl_loglevel_get();
+	cmd_cq->cq_vmr_payload.program_progress = FLASH_PROGRESS;
+}
+
+static void log_page_complete(cl_msg_t *msg, struct xgq_cmd_cq *cmd_cq)
+{
+	cmd_cq->cq_log_payload.count = msg->log_payload.size;
+}
+
+static void clk_throttling_complete(cl_msg_t *msg, struct xgq_cmd_cq *cmd_cq)
+{
+	clk_throttling_params_t scaling_params = { 0 };
+
+	cl_vmc_get_clk_throttling_params(&scaling_params);
+
+	cmd_cq->cq_clk_scaling_payload.has_clk_scaling = 
+				scaling_params.is_clk_scaling_supported;
+	cmd_cq->cq_clk_scaling_payload.clk_scaling_mode =
+				scaling_params.clk_scaling_mode;
+	cmd_cq->cq_clk_scaling_payload.clk_scaling_en = 
+				scaling_params.clk_scaling_enable;
+	cmd_cq->cq_clk_scaling_payload.temp_shutdown_limit = 
+				scaling_params.limits.shutdown_limit_temp;
+	cmd_cq->cq_clk_scaling_payload.temp_scaling_limit = 
+				scaling_params.limits.throttle_limit_temp;
+	cmd_cq->cq_clk_scaling_payload.pwr_shutdown_limit = 
+				scaling_params.limits.shutdown_limit_pwr;
+	cmd_cq->cq_clk_scaling_payload.pwr_scaling_limit = 
+				scaling_params.limits.throttle_limit_pwr;
+}
+
+static void vmr_identify_complete(cl_msg_t *msg, struct xgq_cmd_cq *cmd_cq)
+{
+	cmd_cq->cq_vmr_identify_payload.ver_major = msg->hdr.version_major;
+	cmd_cq->cq_vmr_identify_payload.ver_minor = msg->hdr.version_minor;
+}
+
 struct xgq_cmd_handler {
 	uint16_t	opcode;			/* xgq cmd opcode */
 	uint16_t	msg_type;		/* common layer internal msg type */
 	char		*name;			/* handler name */
-	int (*msg_handle)(cl_msg_t *msg, struct xgq_cmd_sq *sq); /* handler callback */
 	enum cl_queue_id qid;	/* which task to handle the request */
+	int (*msg_handle)(cl_msg_t *msg, struct xgq_cmd_sq *sq); /* submit callback */
+	void(*msg_complete)(cl_msg_t *msg, struct xgq_cmd_cq *cq); /* complete callback */
 };
 
 static struct xgq_cmd_handler xgq_cmd_handlers[] = {
-	{XGQ_CMD_OP_LOAD_XCLBIN, CL_MSG_XCLBIN, "LOAD XCLBIN", xclbin_handle, CL_QUEUE_PROGRAM},
-	{XGQ_CMD_OP_DOWNLOAD_PDI, CL_MSG_PDI, "LOAD BASE PDI", pdi_handle, CL_QUEUE_PROGRAM},
-	{XGQ_CMD_OP_LOAD_APUBIN, CL_MSG_APUBIN, "LOAD APU PDI", pdi_handle, CL_QUEUE_PROGRAM},
-	{XGQ_CMD_OP_GET_LOG_PAGE, CL_MSG_LOG_PAGE, "LOG PAGE", log_page_handle, CL_QUEUE_OPCODE},
-	{XGQ_CMD_OP_CLOCK, CL_MSG_CLOCK, "CLOCK", clock_handle, CL_QUEUE_OPCODE},
-	{XGQ_CMD_OP_VMR_CONTROL, CL_MSG_VMR_CONTROL, "VMR_CONTROL", vmr_control_handle, CL_QUEUE_OPCODE},
-	{XGQ_CMD_OP_SENSOR, CL_MSG_SENSOR, "SENSOR", sensor_handle, CL_QUEUE_OPCODE},
-	{XGQ_CMD_OP_PROGRAM_SCFW, CL_MSG_PROGRAM_SCFW, "PROGRAM SCFW", NULL, CL_QUEUE_PROGRAM},
-	{XGQ_CMD_OP_CLK_THROTTLING, CL_MSG_CLK_THROTTLING, "CLOCK THROTTLING", clk_scaling_handle, CL_QUEUE_OPCODE},
-	{XGQ_CMD_OP_IDENTIFY, CL_MSG_VMR_IDENTIFY, "VMR IDENTIFY", NULL, CL_QUEUE_OPCODE},
-	{XGQ_CMD_OP_PROGRAM_VMR, CL_MSG_PROGRAM_VMR, "PROGRAM VMR", xclbin_handle, CL_QUEUE_PROGRAM},
+	{XGQ_CMD_OP_LOAD_XCLBIN, CL_MSG_XCLBIN, "LOAD XCLBIN", CL_QUEUE_PROGRAM,
+		xclbin_handle, NULL},
+	{XGQ_CMD_OP_DOWNLOAD_PDI, CL_MSG_PDI, "LOAD BASE PDI", CL_QUEUE_PROGRAM,
+		pdi_handle, NULL},
+	{XGQ_CMD_OP_LOAD_APUBIN, CL_MSG_APUBIN, "LOAD APU PDI", CL_QUEUE_PROGRAM,
+		pdi_handle, NULL},
+	{XGQ_CMD_OP_PROGRAM_VMR, CL_MSG_PROGRAM_VMR, "PROGRAM VMR", CL_QUEUE_PROGRAM,
+		xclbin_handle, NULL},
+	{XGQ_CMD_OP_GET_LOG_PAGE, CL_MSG_LOG_PAGE, "LOG PAGE", CL_QUEUE_OPCODE,
+		log_page_handle, log_page_complete},
+	{XGQ_CMD_OP_CLOCK, CL_MSG_CLOCK, "CLOCK", CL_QUEUE_OPCODE,
+		clock_handle, clock_complete},
+	{XGQ_CMD_OP_VMR_CONTROL, CL_MSG_VMR_CONTROL, "VMR_CONTROL", CL_QUEUE_OPCODE,
+		vmr_control_handle, vmr_control_complete},
+	{XGQ_CMD_OP_SENSOR, CL_MSG_SENSOR, "SENSOR", CL_QUEUE_OPCODE,
+		sensor_handle, NULL},
+	{XGQ_CMD_OP_PROGRAM_SCFW, CL_MSG_PROGRAM_SCFW, "PROGRAM SCFW", CL_QUEUE_PROGRAM,
+		NULL, NULL},
+	{XGQ_CMD_OP_CLK_THROTTLING, CL_MSG_CLK_THROTTLING, "CLOCK THROTTLING", CL_QUEUE_OPCODE,
+		clk_throttling_handle, clk_throttling_complete},
+	{XGQ_CMD_OP_IDENTIFY, CL_MSG_VMR_IDENTIFY, "VMR IDENTIFY", CL_QUEUE_OPCODE,
+		NULL, vmr_identify_complete},
 };
+
+void cl_msg_handle_complete(cl_msg_t *msg)
+{
+	struct xgq_com_queue_entry cmd_cq_entry = {
+		.hdr.cid = msg->hdr.cid,
+		.hdr.state = XGQ_CMD_STATE_COMPLETED,
+		.rcode = msg->hdr.rcode,
+	};
+	struct xgq_cmd_cq *cmd_cq = (struct xgq_cmd_cq *)&cmd_cq_entry;
+	u64 cq_slot_addr;
+
+	if (cmd_cq->rcode)
+		VMR_WARN("WARN: cid:%d rcode:%d", cmd_cq->hdr.cid, cmd_cq->rcode);
+
+	for (int i = 0; i < ARRAY_SIZE(xgq_cmd_handlers); i++) {
+		if (xgq_cmd_handlers[i].msg_type == msg->hdr.type &&
+			xgq_cmd_handlers[i].msg_complete != NULL)
+			xgq_cmd_handlers[i].msg_complete(msg, cmd_cq);
+	}
+
+	if (xSemaphoreTake(msg_complete_lock, portMAX_DELAY)) {
+		xgq_produce(&rpu_xgq, &cq_slot_addr);
+		cl_memcpy_toio(cq_slot_addr, &cmd_cq_entry, sizeof(struct xgq_com_queue_entry));
+		xgq_notify_peer_produced(&rpu_xgq);
+		xSemaphoreGive(msg_complete_lock);
+	} else {
+		/* Should never been here if use portMAX_DELAY */
+		VMR_ERR("msg_complete_lock lock failed");
+	}
+	
+	return;
+}
+
 
 /*
  * 1. parse the xgq com to internal cl_msg_t.
