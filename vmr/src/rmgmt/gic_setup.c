@@ -50,7 +50,7 @@ done:
 
 s32 GicResume(XScuGic *GicInst)
 {
-	s32 Status;
+	s32 Status = XST_SUCCESS;
 	u32 i;
 
 	GicInst->IsReady = 0U;
