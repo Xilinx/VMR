@@ -8,7 +8,6 @@ DEFAULT_VITIS="/proj/xbuilds/${TOOL_VERSION}_daily_latest/installs/lin64/Vitis/H
 STDOUT_JTAG=2 # 0: uart0; 1: uart1; 2: default to uartlite
 BUILD_XRT=0
 BUILD_RMI=0
-UPDATE_SUBMODULE=0
 ROOT_DIR=`pwd`
 #REAL_BSP=`realpath ../bsp/2021.2_stable/bsp`
 #REAL_VMR=`realpath ../vmr`
@@ -294,7 +293,7 @@ build_app_all() {
 	rsync -a ../vmr/src $BUILD_DIR/vmr_app --exclude cmc
 
 	RMI=$ROOT_DIR/../RMI
-	if [ -n $RMI ];then
+	if [ -d $RMI ];then
 		echo "=== Adding RMI submodule to build ==="	
 		rsync -a ../RMI "$BUILD_DIR/vmr_app/src" --exclude *.md
 	fi
@@ -357,7 +356,7 @@ build_app_incremental() {
 	make_version_h "$BUILD_DIR/vmr_app"
 
 	RMI=$ROOT_DIR/../RMI
-	if [ -n $RMI ];then
+	if [ -d $RMI ];then
 		echo "=== Adding RMI submodule to build ==="	
 		rsync -a ../RMI "$BUILD_DIR/vmr_app/src" --exclude *.md
 	fi
@@ -453,6 +452,19 @@ build_RMI() {
 		exit 1;
 	fi
 	
+	echo "=== Update RMI submodule ==="
+	if [ -f "$ROOT_DIR/../.gitmodules" ];then
+		cd $ROOT_DIR/../
+		echo "init RMI submodule"
+		git submodule update --init RMI > /dev/null 2>&1
+		echo "update submodule RMI"
+		git submodule update --remote --merge RMI > /dev/null 2>&1
+		cd $ROOT_DIR
+	else
+		echo "=== skip ${FUNCNAME[0]} ==="
+		return
+	fi
+	
 	RMI=$ROOT_DIR/../RMI
 	if [ -z $RMI ];then
 		echo "=== RMI submodule doesn't exist, skip checking ==="
@@ -498,21 +510,7 @@ build_checking() {
 	
 }
 
-update_submodule() {
-	echo "=== Update submodules ==="
-	if [ -f "$ROOT_DIR/../.gitmodules" ];then
-		cd $ROOT_DIR/../
-		echo "init submodule"
-		git submodule update --init > /dev/null 2>&1
-		echo "update submodule"
-		git submodule update --remote --merge > /dev/null 2>&1
-		cd $ROOT_DIR
-	else
-		echo "=== skip ${FUNCNAME[0]} ==="
-		return
-	fi
-	
-}
+
 # Obsolated since 2022.1 #
 build_bsp_stable() {
 	echo "=== since 2022.1 release, do not support build -stable anymore, exit";exit 0;
@@ -550,7 +548,6 @@ usage() {
     echo "-app                       Re-build Vitis Application only"  
     echo "-vmr                       Re-build vmr source code only, fatest!!!"  
     echo "-RMI                       Full vmr build with RMI included!" 
-    echo "-sub                       Update submodules!" 
     echo "-help"
     exit $1
 }
@@ -594,9 +591,6 @@ do
 			;;
 		-RMI)
 			BUILD_RMI=1
-			;;
-		-sub)
-			UPDATE_SUBMODULE=1
 			;;
 		-version)
 			shift
@@ -671,12 +665,6 @@ fi
 # only build vmr source code with RMI
 if [[ $BUILD_RMI == 1 ]];then
 	build_RMI
-	exit 0;
-fi
-
-# Update submodules
-if [[ $UPDATE_SUBMODULE == 1 ]];then
-	update_submodule
 	exit 0;
 fi
 
