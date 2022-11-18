@@ -3,4 +3,4 @@
 	url = https://github.com/xilinx/XRT.git
 [submodule "RMI"]
 	path = RMI
-	url = https://github.com:Xilinx/RMI.git
+	url = git@github.com:Xilinx/RMI.git 
