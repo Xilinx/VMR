@@ -34,14 +34,22 @@ check_result()
 
 default_env() {
 	echo -ne "no xsct, using version: "
+	echo "=== TA: ${TA}"
+
+	if [ ! -z ${TA} ];then
+		echo "TA: ${TA} is set by env, enforce building from the TA"
+		BUILD_TA=${TA}
+	fi
+
 	if [ -z $BUILD_TA ];then
-		echo "$DEFAULT_VITIS"
+		echo "DEFAULT_VITIS: $DEFAULT_VITIS"
 		BUILD_TA="${TOOL_VERSION}_daily_latest"
 	else
-		echo "$BUILD_TA"
+		echo "BUILD_TA: $BUILD_TA"
 		DEFAULT_VITIS="/proj/xbuilds/${BUILD_TA}/installs/lin64/Vitis/HEAD/settings64.sh"
 	fi
 
+	echo "=== Using VITIS from: ${DEFAULT_VITIS}"
 	ls ${DEFAULT_VITIS}
 	if [ $? -ne 0 ];then
 		echo "cannot find ${DEFAULT_VITIS}"
@@ -488,13 +496,18 @@ build_RMI() {
 }
 
 build_checking() {
-	echo "=== Update submodules ==="
+	echo "=== Func:${FUNCNAME[0]} Update XRT submodules ==="
 	if [ -f "$ROOT_DIR/../.gitmodules" ];then
 		cd $ROOT_DIR/../
 		echo "init submodule"
-		git submodule update --init > /dev/null 2>&1
+		git submodule update --init XRT >> $BUILD_LOG 2>&1
 		echo "update submodule"
-		git submodule update --remote --merge > /dev/null 2>&1
+		git submodule update --remote --merge XRT >> $BUILD_LOG 2>&1
+		if [ $? -ne 0 ];then
+			echo "submodule failed"
+			cat $BUILD_LOG
+			exit 1;
+		fi
 		cd $ROOT_DIR
 	else
 		echo "=== skip ${FUNCNAME[0]} ==="
@@ -509,7 +522,6 @@ build_checking() {
 	fi
 	
 }
-
 
 # Obsolated since 2022.1 #
 build_bsp_stable() {
