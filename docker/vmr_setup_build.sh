@@ -13,6 +13,7 @@ sudo dpkg -i /proj/xbuilds/${TA}/xbb/xrt/packages/apu_packages/xrt-apu-vck5000*a
 
 #Run VMR build
 ./build.sh
+md5sum *.elf
 
 #Source settings.sh
 source /proj/xbuilds/${TA}/installs/lin64/Vitis/HEAD/settings64.sh
