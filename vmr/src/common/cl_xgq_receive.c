@@ -103,6 +103,7 @@ static int xclbin_handle(cl_msg_t *msg, struct xgq_cmd_sq *sq)
 {
 	msg->data_payload.address = (u32)sq->xclbin_payload.address;
 	msg->data_payload.size = (u32)sq->xclbin_payload.size;
+	msg->data_payload.remain_size = (u32)sq->xclbin_payload.remain_size;
 	msg->data_payload.priv = sq->xclbin_payload.priv;
 
 	return 0;

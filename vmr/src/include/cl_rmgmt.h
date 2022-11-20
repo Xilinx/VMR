@@ -9,14 +9,14 @@
 struct cl_msg;
 
 struct rmgmt_handler {
-	u32 rh_base;   /* obsolated */
 	u32 rh_boot_on_offset;
 	u32 rh_data_max_size;
 	u32 rh_data_size;
+	u32 rh_data_base;   	/* data base address, or 0(NULL) */
 	void *rh_data_priv;
 	u32 rh_log_max_size; 
-	char *rh_log;	/* static malloc and never free */
-	u8   *rh_data; 	/* static malloc and never free */
+	char *rh_log;		/* static malloc and never free */
+	u8   *rh_data_buffer; 	/* static malloc and never free */
 	int  rh_already_flashed; /* enforce reset/reboot after successfully flashed */
 };
 
