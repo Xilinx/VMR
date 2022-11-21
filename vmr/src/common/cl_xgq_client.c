@@ -161,7 +161,7 @@ int rmgmt_apu_download_xclbin(struct rmgmt_handler *rh)
 	if (!cl_rmgmt_apu_is_ready())
 		return -ENODEV;
 
-	data = (char *)rh->rh_data;
+	data = (char *)rh->rh_data_base;
 	size = rh->rh_data_size;
 	priv = rh->rh_data_priv;
 	remain_size = size;
