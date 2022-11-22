@@ -993,8 +993,8 @@ s8 Asdm_Get_SDR_Size(u8 *req, u8 *resp, u16 *respSize)
     *respSize += sizeof(u8);
 
     /* Fill the Size of the SDR */
-    sdrSize = sizeof(Asdm_Header_t) + (sdrInfo[sdrIndex].header.no_of_bytes * 8)
-    		 + sizeof(Asdm_EOR_t);
+    sdrSize = sizeof(Asdm_Header_t) + (sdrInfo[sdrIndex].header.no_of_bytes * 8);
+
     Cl_SecureMemcpy(&resp[2],sizeof(sdrSize),&sdrSize, sizeof(sdrSize));
 
     *respSize +=  sizeof(sdrSize);
