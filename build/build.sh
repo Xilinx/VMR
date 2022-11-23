@@ -298,7 +298,7 @@ check_vmr()
 
 build_app_all() {
 	cd $ROOT_DIR
-	rsync -a ../vmr/src $BUILD_DIR/vmr_app --exclude cmc
+	rsync -a ../vmr/src $BUILD_DIR/vmr_app --exclude cmc --exclude vmc/ut
 
 	RMI=$ROOT_DIR/../RMI
 	if [ -d $RMI ];then
@@ -333,7 +333,7 @@ build_vmr_source() {
 
 	# copy new source file
 	cd $ROOT_DIR
-	rsync -a ../vmr/src "$BUILD_DIR/vmr_app" --exclude cmc --exclude *.swp
+	rsync -a ../vmr/src "$BUILD_DIR/vmr_app" --exclude cmc --exclude *.swp --exclude vmc/ut
 	make_version_h "$BUILD_DIR/vmr_app"
 
 	cd $ROOT_DIR/$BUILD_DIR/vmr_app/Debug
@@ -360,7 +360,7 @@ build_app_incremental() {
 
 	# copy new source file
 	cd $ROOT_DIR
-	rsync -a ../vmr/src "$BUILD_DIR/vmr_app" --exclude cmc --exclude *.swp
+	rsync -a ../vmr/src "$BUILD_DIR/vmr_app" --exclude cmc --exclude *.swp --exclude vmc/ut
 	make_version_h "$BUILD_DIR/vmr_app"
 
 	RMI=$ROOT_DIR/../RMI
@@ -483,7 +483,7 @@ build_RMI() {
 
 	# copy new source file
 	cd $ROOT_DIR
-	rsync -a ../vmr/src "$BUILD_DIR/vmr_app" --exclude cmc --exclude *.swp
+	rsync -a ../vmr/src "$BUILD_DIR/vmr_app" --exclude cmc --exclude *.swp --exclude vmc/ut
 	rsync -a ../RMI "$BUILD_DIR/vmr_app/src" --exclude *.md
 	make_version_h "$BUILD_DIR/vmr_app"
 	cd $ROOT_DIR/$BUILD_DIR/vmr_app/Debug
