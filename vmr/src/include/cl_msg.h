@@ -158,7 +158,10 @@ struct xgq_vmr_clk_scaling_payload {
 	uint32_t scaling_en:1;
 	uint32_t pwr_scaling_ovrd_limit:16;
 	uint32_t temp_scaling_ovrd_limit:8;
-	uint32_t rsvd1:4;
+    	uint32_t reset:1;
+   	uint32_t pwr_ovrd_en:1;
+    	uint32_t temp_ovrd_en:1;
+    	uint32_t rsvd1:1;
 };
 
 struct xgq_vmr_head {
