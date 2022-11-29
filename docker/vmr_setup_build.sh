@@ -7,7 +7,7 @@ cd ../build
 
 #Install XRT and APU packages
 sudo dpkg  -i /proj/xbuilds/${TA}/xbb/xrt/packages/xrt_*_20.04-amd64-xrt.deb
-sudo dpkg -i /proj/xbuilds/${TA}/xbb/packages/internal_platforms/vck5000/gen4x8_qdma/*-dev/xilinx-vck5000-*_all.deb
+sudo dpkg -i /proj/xbuilds/${TA}/xbb/packages/internal_platforms/vck5000/gen4x8_qdma/2-*-dev/xilinx-vck5000-*_all.deb
 sudo dpkg -i /proj/xbuilds/${TA}/xbb/packages/internal_platforms/vck5000/gen4x8_qdma/base/xilinx-vck5000*-base_2-*_all.deb
 sudo dpkg -i /proj/xbuilds/${TA}/xbb/xrt/packages/apu_packages/xrt-apu-vck5000*all.deb
 
