@@ -49,4 +49,7 @@ s8 V70_Temperature_Read_Board(snsrRead_t *snsrData);
 s32 V70_VMC_Fetch_BoardInfo(u8 *board_snsr_data);
 s8 V70_Asdm_Read_Power(snsrRead_t *snsrData);
 
+s8 V70_Get_Voltage_Names(u8 index, char8* snsrName, u8 *sensorId,sensorMonitorFunc *sensor_handler);
+s8 V70_Get_Current_Names(u8 index, char8* snsrName, u8 *sensorId,sensorMonitorFunc *sensor_handler);
+
 #endif

@@ -287,29 +287,31 @@ done:
 
 static int rmgmt_download_vmr(struct rmgmt_handler *rh, cl_msg_t *msg)
 {
-	rmgmt_ipi_image_store((u32)rh->rh_data, rh->rh_data_size);
+	rmgmt_ipi_image_store((u32)rh->rh_data_base, rh->rh_data_size);
 	return rmgmt_pm_reset_rpu(msg);
 }
 
 static int rmgmt_download_pdi(cl_msg_t *msg, enum pdi_type ptype)
 {
-	u32 address = 0;
-	u32 size = 0;
 	int ret = 0;
 
 	ret = validate_data_payload(&msg->data_payload);
 	if (ret)
 		return ret;
 
-	address = RPU_SHARED_MEMORY_ADDR(msg->data_payload.address);
-	size = msg->data_payload.size;
+	if (msg->data_payload.remain_size) {
+		/* future improvment to copy over data into rh_data_buffer
+		cl_memcpy_fromio(address, rh.rh_data, size);
+		*/
+		VMR_WARN("received unsupported request");
+		return -EINVAL;
+	}
 
 	/* prepare rmgmt handler */
-	rh.rh_data_size = size;
-	/* pass in private address */
+	rh.rh_data_size = msg->data_payload.size;
 	rh.rh_data_priv = &msg->data_payload.priv;
-
-	cl_memcpy_fromio(address, rh.rh_data, size);
+	/* host driver holds this memory till download is completed */ 
+	rh.rh_data_base = RPU_SHARED_MEMORY_ADDR(msg->data_payload.address);
 
 	switch (ptype) {
 	case BASE_PDI:

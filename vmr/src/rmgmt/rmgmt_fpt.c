@@ -408,7 +408,7 @@ int rmgmt_flash_rpu_pdi(struct rmgmt_handler *rh, struct cl_msg *msg)
 	u32 offset = 0;
 	u32 len = 0;
 	u32 plm_boot_tag = 0;
-	struct axlf *axlf = (struct axlf *)rh->rh_data;
+	struct axlf *axlf = (struct axlf *)rh->rh_data_base;
 	uint64_t pdi_offset = 0;
 	uint64_t pdi_size = 0;
 	u8 *pdi_data = NULL;
