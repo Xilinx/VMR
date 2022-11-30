@@ -194,7 +194,7 @@
         	compatible = "al,al5d";
         	interrupt-names = "vdu_host_interrupt0";
         	interrupt-parent = <&gic>;
-        	interrupts = <0x00 0x63 0x04>;
+		interrupts = <0x00 0x60 0x04>;
         	reg = <0x204 0xa4020000 0x00 0x100000>;
         	memory-region = <&vdu_zocl_versal_region0>;
         	al,devicename = "allegroDecodeIP0";
@@ -205,7 +205,7 @@
 		compatible = "al,al5d";
 		interrupt-names = "vdu_host_interrupt1";
 		interrupt-parent = <&gic>;
-		interrupts = <0x00 0x63 0x04>;
+		interrupts = <0x00 0x60 0x04>;
 		reg = <0x204 0xa4120000 0x00 0x100000>;
 		al,devicename = "allegroDecodeIP1";
 		memory-region = <&vdu_zocl_versal_region0>;
