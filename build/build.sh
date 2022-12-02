@@ -36,10 +36,11 @@ default_env() {
 	echo -ne "no xsct, using version: "
 	echo "=== TA: ${TA}"
 
-	if [ ! -z ${TA} ];then
-		echo "TA: ${TA} is set by env, enforce building from the TA"
-		BUILD_TA=${TA}
-	fi
+	echo "skip TA setting for now, enable it when boardfarm can resolve the issue"
+#	if [ ! -z ${TA} ];then
+#		echo "TA: ${TA} is set by env, enforce building from the TA"
+#		BUILD_TA=${TA}
+#	fi
 
 	if [ -z $BUILD_TA ];then
 		echo "DEFAULT_VITIS: $DEFAULT_VITIS"
