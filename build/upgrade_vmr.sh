@@ -15,8 +15,7 @@ Help()
     echo "Usage: $0 [-h] -v <vmr.elf>"
     echo "options:"
     echo "-h                print this help"
-    echo "-d    <bdf>       only provides bdf instead of whole string"
-    echo "                  example: 0000:d8:00.0  only provides bdf like: -d d8"
+    echo "-d    <bdf>       only provides pf1 whole bdf, example: 0000:d8:00.0"
     echo "-v    <vmr.elf>   vmr.elf location"
     echo "                  note: exclude with -p"
     echo "-p    <vmr.pdi>   vmr.pdi location"
@@ -40,6 +39,7 @@ Help()
 VMR=""
 PDI=""
 BDF=""
+CARDID=""
 TOOL_VERSION="2022.2"
 DEFAULT_VITIS="/proj/xbuilds/${TOOL_VERSION}_daily_latest/installs/lin64/Vitis/HEAD/settings64.sh"
 JTAG=0
@@ -147,11 +147,17 @@ upgrade_vmr_pdi()
 {
 	source /opt/xilinx/xrt/setup.sh
 
-	echo "stop XRT xocl drivers"
-	rmmod xocl;
+
+	CARDID=`echo $BDF |cut -f2 -d:`
+	echo "BDF: $BDF CARDID: $CARDID"
+
+	if [[ -z "$BDF" || -z "$CARDID" ]];then
+		echo "Please set correct -d BDF"
+		exit 1;
+	fi
 
 	echo "enable program_vmr flag"
-	VMR_PROGRAM=`ls /sys/bus/pci/devices/0000:\$BDF\:00.0/xgq_vmr.m.*/program_vmr`
+	VMR_PROGRAM=`ls /sys/bus/pci/devices/0000:\$CARDID\:00.0/xgq_vmr.m.*/program_vmr`
 	if [[ $? -ne 0 ]];then
 		echo "program_vmr doesn't exist"
 		exit 1;
@@ -159,8 +165,11 @@ upgrade_vmr_pdi()
 	# enable program vmr pdi
 	echo 1 > $VMR_PROGRAM
 
+	echo "stop XRT xocl drivers"
+	rmmod xocl;
+
 	echo "VMR live upgrading ..."
-	xbmgmt program -b shell --image $PDI -d $BDF:0 --force
+	xbmgmt program -b shell --image $PDI -d $BDF --force > /dev/null
 	if [[ $? -ne 0 ]];then
 		echo "xbmgmt program vmr.pdi failed"
 		exit 1;
@@ -170,13 +179,17 @@ upgrade_vmr_pdi()
 	modprobe xocl
 
 	echo "check vmr is in good status"
-	xbmgmt examine -d $BDF:0 -r vmr --verbose
+	xbmgmt examine -d $BDF -r vmr --verbose
 	if [[ $? -ne 0 ]];then
 		echo "xbmgmt examine -vmr failed"
 		exit 1;
 	fi
 
-	printf "\n $0 complete.\n"
+	echo "************************************************************"
+	printf "\n$0 complete.\n"
+	echo "Live Upgrade succeeded! Please continue using VMR. Note:"
+	echo "hot reset or cold reboot will load VMR from flash and wipe out current running VMR"
+	echo "************************************************************"
 }
 
 ############################################################
