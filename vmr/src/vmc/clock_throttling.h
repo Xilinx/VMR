@@ -37,6 +37,7 @@ typedef struct __attribute__((packed)) Clock_Throttling_Profile_s
 	u32	FPGATempThrottlingLimit;
 	u32	VccIntTempThrottlingLimit;
 	u16	PowerThrottlingLimit;
+	u16 TempThrottlingLimit;
 
 	float	TempGainKpFPGA;
 	float	TempGainKi;
@@ -121,7 +122,10 @@ typedef struct __attribute__((packed)) Clock_Throttling_Handle_s
 	bool					bUserThrottlingTempLimitEnabled;
 	u32					XRTSuppliedBoardThrottlingThresholdPower;
 	u32					XRTSuppliedUserThrottlingTempLimit;
+
+	// Power and Temp throttling limits to send it to XRT
 	u16					PowerThrottlingLimit;
+	u16					TempThrottlingLimit;
 
 }Clock_Throttling_Handle_t;
 

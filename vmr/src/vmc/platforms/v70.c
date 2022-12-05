@@ -537,8 +537,9 @@ void Build_clock_throttling_profile_V70(Clock_Throttling_Profile_t * pProfile)
 	pProfile->IdlePower = V70_IDLE_POWER;
 
 	pProfile->FPGATempThrottlingLimit = V70_FPGA_THROTTLING_TEMP_LIMIT;
-	pProfile->VccIntTempThrottlingLimit = V70_FPGA_THROTTLING_TEMP_LIMIT;
+	pProfile->VccIntTempThrottlingLimit = V70_VCCINT_THROTTLING_TEMP_LIMIT;
 	pProfile->PowerThrottlingLimit = V70_POWER_THROTTLING_THRESHOLD_LIMIT;
+	pProfile->TempThrottlingLimit = V70_TEMP_THROTTLING_THRESHOLD_LIMIT;
 
 	pProfile->bVCCIntThermalThrottling = true;
 	pProfile->TempGainKpFPGA    = V70_TEMP_GAIN_KP_FPGA;
