@@ -100,6 +100,7 @@ void ClockThrottling_Initialize(Clock_Throttling_Handle_t  *pContext, Clock_Thro
 	pContext->TempGainKaw = pThrottling->TempGainKaw;
 
 	pContext->PowerThrottlingLimit = pThrottling->PowerThrottlingLimit;
+	pContext->TempThrottlingLimit = pThrottling->TempThrottlingLimit;
 	pContext->FPGATempThrottlingLimit = pThrottling->FPGATempThrottlingLimit;
 	pContext->VccIntTempThrottlingLimit = pThrottling->VccIntTempThrottlingLimit;
 	pContext->ThermalThrottlingLoopJustEnabled = false;

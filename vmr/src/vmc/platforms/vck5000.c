@@ -262,8 +262,9 @@ void Build_clock_throttling_profile_VCK5000(Clock_Throttling_Profile_t * pProfil
 	pProfile->IdlePower = VCK5000_IDLE_POWER;
 
 	pProfile->FPGATempThrottlingLimit = VCK5000_FPGA_THROTTLING_TEMP_LIMIT;
-	pProfile->VccIntTempThrottlingLimit = VCK5000_FPGA_THROTTLING_TEMP_LIMIT;
-	pProfile->PowerThrottlingLimit = VCK5000_POWER_THROTTLING_THRESOLD_LIMIT;
+	pProfile->VccIntTempThrottlingLimit = VCK5000_VCCINT_THROTTLING_TEMP_LIMIT;
+	pProfile->PowerThrottlingLimit = VCK5000_POWER_THROTTLING_THRESHOLD_LIMIT;
+	pProfile->TempThrottlingLimit = VCK50000_TEMP_THROTTLING_THRESHOLD_LIMIT;
 
 	pProfile->bVCCIntThermalThrottling = true;
 	pProfile->TempGainKpFPGA    = VCK5000_TEMP_GAIN_KP_FPGA;
