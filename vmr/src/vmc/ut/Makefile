@@ -21,6 +21,11 @@ INCLUDE_DIR = $(VMR_MAIN)/vmr/src/vmc/sensors/inc \
     
 TARGET = run_test
 
+#Code Coverage reports
+COV_OUT_DIR  = Cov_Report
+COV_INFO     = Cov.info
+COV_INFO_ALL = Cov_all.info
+
 #Add '-I' as prefix for include directories
 INCLUDE = $(foreach dir, $(INCLUDE_DIR), $(addprefix -I, $(dir)))
 
@@ -33,6 +38,13 @@ LDFLAGS	= -L$(CMOCKA_DIR)/build/src/ -Wl,-rpath=$(CMOCKA_DIR)/build/src/
 LDFLAGS += $(foreach MOCK,$(MOCKS),-Wl,--wrap=$(MOCK))
 LDFLAGS += -lcmocka
 
+#Code coverage flags for the compiler
+COVFLAGS = -fprofile-arcs -ftest-coverage 
+
+#Code Coverage Flags
+COV_DATA = $(patsubst %.c, %.gcda, $(COV_SRC)) \
+          $(patsubst %.c, %.gcno, $(COV_SRC))
+
 OBJS = $(patsubst %.c, %.o, $(SRC))
 
 CC = gcc
@@ -41,17 +53,27 @@ all : $(TARGET)
 
 ifdef TEST_DIR
 $(TARGET) : $(OBJS)
-	$(CC) -o $(TARGET) $(OBJS) $(LDFLAGS)
+	$(CC) -o $(TARGET) $(OBJS) $(LDFLAGS) $(COVFLAGS)
 
 %.o : %.c
-	$(CC) -o $@ -c $^ $(INCLUDE)
+	$(CC) -o $@ -c $^ $(INCLUDE) $(COVFLAGS)
 else
         $(info ERROR : TEST_DIR not Defined)
         $(info usage on cl: "make TEST_DIR=test/vmc/<test_directory>")
         $(error Make file exit at compilation)
 endif
 
+#Below target generates code coverage report
+.PHONY : lcov 
+lcov : $(COV_INFO)
+	genhtml $(COV_INFO) --output-directory $(COV_OUT_DIR)
+	
+$(COV_INFO) : $(COV_DATA)
+	lcov --capture --directory $(VMR_MAIN) --output-file $(COV_INFO_ALL)
+	lcov --remove $(COV_INFO_ALL) -output-file $(COV_INFO) '$(ROOT_DIR)/*'
+
 .PHONY : clean
 clean : 
-	rm $(OBJS) $(TARGET)
+	rm $(OBJS) $(TARGET) $(COV_DATA) $(COV_INFO_ALL) $(COV_INFO) $(COV_OUT_DIR) -r
+	find ./ -type f -name '*.gc*' -delete
 
