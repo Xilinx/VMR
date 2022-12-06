@@ -15,6 +15,10 @@ SRC += $(VMR_MAIN)/vmr/src/vmc/vmc_asdm.c \
        $(ROOT_DIR)/mocks/vmc/utm_vmc_main.c \
        $(ROOT_DIR)/mocks/vmc/utm_vmc_update_sc.c \
        $(ROOT_DIR)/mocks/vmc/utm_clock_throttling.c
+       
+#Source code for which code coverage report will be generated
+COV_SRC = $(VMR_MAIN)/vmr/src/vmc/vmc_asdm.c \
+          $(VMR_MAIN)/vmr/src/vmc/platforms/v70.c
 
 MOCKS += Cl_SecureMemcpy \
 	 Cl_SecureMemset \
