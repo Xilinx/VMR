@@ -391,7 +391,7 @@ int vmc_get_clk_throttling_status(cl_msg_t *msg)
 
 int vmc_set_clk_throttling_override(cl_msg_t *msg)
 {
-	VMR_ERR("Scaling En:%d Pwr override limit:%d Temp override limit:%d reset:%d Pwr Override En:%d temp Override En:%",
+	VMR_ERR("Scaling En:%d Pwr Ord lim:%d Temp Ord lim:%d reset:%d Pwr Ord En:%d temp Ord En:%d",
 			msg->clk_scaling_payload.scaling_en,
 			msg->clk_scaling_payload.pwr_scaling_ovrd_limit,
 			msg->clk_scaling_payload.temp_scaling_ovrd_limit,
@@ -429,7 +429,7 @@ int vmc_set_clk_throttling_override(cl_msg_t *msg)
 				g_clk_throttling_params.temp_throttling_enabled = false;
 				g_clk_throttling_params.power_throttling_enabled = false;
 				/* Set the default value*/
-				g_clk_throttling_params.limits.throttle_limit_temp  = clock_throttling_std_algorithm.FPGATempThrottlingLimit;
+				g_clk_throttling_params.limits.throttle_limit_temp  = clock_throttling_std_algorithm.TempThrottlingLimit;
 				g_clk_throttling_params.limits.throttle_limit_pwr = clock_throttling_std_algorithm.PowerThrottlingLimit;
 			}
 	} else  {
@@ -439,7 +439,7 @@ int vmc_set_clk_throttling_override(cl_msg_t *msg)
 		g_clk_throttling_params.temp_throttling_enabled = false;
 		g_clk_throttling_params.power_throttling_enabled = false;
 		/* Set the default value*/
-		g_clk_throttling_params.limits.throttle_limit_temp  = clock_throttling_std_algorithm.FPGATempThrottlingLimit;
+		g_clk_throttling_params.limits.throttle_limit_temp  = clock_throttling_std_algorithm.TempThrottlingLimit;
 		g_clk_throttling_params.limits.throttle_limit_pwr = clock_throttling_std_algorithm.PowerThrottlingLimit;
 	}
 	
