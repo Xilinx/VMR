@@ -736,6 +736,43 @@ static u32 rmgmt_log_clock_shutdown(cl_msg_t *msg)
 	return val;
 }
 
+static u8 rmgmt_log_clock_throttling_percentage(cl_msg_t *msg)
+{
+	u8 val = cl_clk_throttling_enabled_or_disabled();
+
+	/*
+	 * copy message back from rh_log to shared memory
+	 */
+	if (val) {
+		u32 safe_size = rh.rh_log_max_size;
+		u32 dst_addr = RPU_SHARED_MEMORY_ADDR(msg->log_payload.address);
+		u32 count = 0;
+
+		u8 max_gapping_demand_rate = MAX_GAPPING_DEMAND_RATE;
+		u32 ep_gapping = IO_SYNC_READ32(VMR_EP_GAPPING_DEMAND);
+		/* & with 0xFF to extract on 0-7 bits , these are for gapping demand rate */
+		ep_gapping = ep_gapping & 0xFF;
+
+		if (ep_gapping > MAX_GAPPING_DEMAND_RATE)
+			ep_gapping = MAX_GAPPING_DEMAND_RATE;
+
+
+		if (msg->log_payload.size < rh.rh_log_max_size) {
+			VMR_ERR("log buffer %d is too small, log message will be trunked %d bytes ",
+				msg->log_payload.size, rh.rh_log_max_size);
+			safe_size = msg->log_payload.size;
+		}
+
+		count = snprintf(rh.rh_log, safe_size,"kernel clocks throttled at %lu%%.\n",(ep_gapping * 100)/max_gapping_demand_rate);
+		cl_memcpy_toio(dst_addr, rh.rh_log, safe_size);
+
+		/* set correct size in result payload */
+		msg->log_payload.size = MIN(count, safe_size);
+	}
+
+	return 0; //Need to change this back to 'return val' after XRT changes merged
+}
+
 static int rmgmt_load_firmware(cl_msg_t *msg)
 {
 	u32 dst_addr = 0;
@@ -934,6 +971,9 @@ int cl_rmgmt_log_page(cl_msg_t *msg)
 		if(ret)
 			break;
 		ret = rmgmt_check_firewall(msg);
+		if(ret)
+			break;
+		ret = rmgmt_log_clock_throttling_percentage(msg);
 		break;
 	case CL_LOG_AF_CLEAR:
 		ret = rmgmt_clear_firewall();

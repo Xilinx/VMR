@@ -127,6 +127,7 @@
 #define APU_SHARED_MEMORY_ADDR(offset) (VMR_EP_APU_SHARED_MEMORY_START + (u32)offset)
 
 #define SHUTDOWN_LATCHED_STATUS	0x01
+#define MAX_GAPPING_DEMAND_RATE 128
 
 #define BIT(n) 			(1UL << (n))
 #define MIN(x, y) 		(((x) < (y)) ? (x) : (y))

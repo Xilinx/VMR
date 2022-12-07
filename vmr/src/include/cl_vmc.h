@@ -53,4 +53,5 @@ void cl_vmc_get_clk_throttling_params(clk_throttling_params_t *params);
 int cl_vmc_clk_throttling_disable();
 int cl_vmc_clk_throttling_enable();
 int cl_vmc_has_sc_version(void);
+u8 cl_clk_throttling_enabled_or_disabled ();
 #endif
