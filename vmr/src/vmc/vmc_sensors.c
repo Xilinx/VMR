@@ -636,4 +636,7 @@ int cl_vmc_sysmon_init()
 	return cl_vmc_sysmon_is_ready();
 }
 
+u8 cl_clk_throttling_enabled_or_disabled (){
 
+	return g_clk_throttling_params.clk_scaling_enable;
+}
