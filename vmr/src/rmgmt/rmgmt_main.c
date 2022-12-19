@@ -683,6 +683,9 @@ static u32 rmgmt_check_firewall(cl_msg_t *msg)
 
 		/* set correct size in result payload */
 		msg->log_payload.size = MIN(count, safe_size);
+	} else {
+		/* explicitly set log_payload.size back to 0 */
+		msg->log_payload.size = 0;
 	}
 
 	return val;
@@ -731,6 +734,8 @@ static u32 rmgmt_log_clock_shutdown(cl_msg_t *msg)
 		{
 			msg->log_payload.size = safe_size;
 		}
+	} else {
+		msg->log_payload.size = 0;
 	}
 
 	return val;
