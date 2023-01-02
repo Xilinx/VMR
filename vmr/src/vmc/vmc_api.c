@@ -470,9 +470,6 @@ u8 Versal_EEPROM_ReadBoardInfo(void)
 		status = Update_BoardInfo_Data(i2c_num, &board_info.Num_MAC_IDS,
 				eeprom_offset[eEeprom_Board_Tot_Mac_Id].offset,
 				eeprom_offset[eEeprom_Board_Tot_Mac_Id].size);
-		if (board_info.Num_MAC_IDS == 0) {
-			board_info.Num_MAC_IDS = 1;
-		}
 	} else {
 		board_info.Num_MAC_IDS = eeprom_offset[eEeprom_Board_Tot_Mac_Id].size;
 	}
