@@ -1228,6 +1228,9 @@ int cl_vmc_scfw_init()
 
 	/* Log pdi SCFW version */ 
 	cl_vmc_pdi_scfw_version(&version);
+	/* Update the Target SC Version read from FPT */
+	Cl_SecureMemcpy(&fpt_sc_version[0],MAX_SC_VERSION_SIZE,
+			&version,MAX_SC_VERSION_SIZE);
 
 	return 0;
 }
