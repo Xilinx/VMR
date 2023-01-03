@@ -9,6 +9,7 @@
 #include "vmc_api.h"
 #include "vmc_sc_comms.h"
 #include "cl_mem.h"
+#include "cl_vmc.h"
 #include <semphr.h>
 
 #define ASDM_GET_SDR_SIZE_REQ (0x00)
@@ -35,6 +36,7 @@
 #define ASDM_HEADER_VER     (0x1)
 
 #define SNSRNAME_ACTIVE_SC_VER "Active SC Ver\0"
+#define SNSRNAME_TARGET_SC_VER "Target SC Ver\0"
 /* Temp Sensor Names */
 #define TEMP_BOARD_NAME    "PCB\0"
 #define TEMP_ACAP_NAME     "device\0"
@@ -64,6 +66,7 @@ extern SC_VMC_Data sc_vmc_data;
 extern u8 fpt_sc_version[3];
 
 void Asdm_Update_Active_MSP_sensor();
+void Asdm_Update_Target_MSP_sensor();
 s8 Temperature_Read_Inlet(snsrRead_t *snsrData);
 s8 Temperature_Read_Outlet(snsrRead_t *snsrData);
 s8 Temperature_Read_Board(snsrRead_t *snsrData);
@@ -200,7 +203,7 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
     },
     {
         .repoType = BoardInfoSDR,
-        .sensorName = "Target SC Ver\0",
+        .sensorName = SNSRNAME_TARGET_SC_VER,
         .snsrValTypeLength = SENSOR_TYPE_NUM | sizeof(fpt_sc_version),
         .defaultValue = &fpt_sc_version[0],
     },
@@ -1198,6 +1201,7 @@ void Asdm_Update_Sensors(void)
     {
         /* Update the MSP FW version */
         Asdm_Update_Active_MSP_sensor();
+        Asdm_Update_Target_MSP_sensor();
 
         if (xSemaphoreTake(sdr_lock, portMAX_DELAY))
         {
@@ -1377,6 +1381,7 @@ void Asdm_Update_Active_MSP_sensor()
         {
             if (xSemaphoreTake(sdr_lock, portMAX_DELAY))
             {
+	        /* Copy the Active SC Version received from the SC over uart */
                 Cl_SecureMemcpy(sensorRecord[idx].sensor_value,sizeof(sc_vmc_data.scVersion),
                         &sc_vmc_data.scVersion[0],sizeof(sc_vmc_data.scVersion));
                 xSemaphoreGive(sdr_lock);
@@ -1385,3 +1390,26 @@ void Asdm_Update_Active_MSP_sensor()
         }
     }
 }
+
+void Asdm_Update_Target_MSP_sensor() 
+{ 
+    s8 boardInfoSensorIdx = getSDRIndex(BoardInfoSDR); 
+    s8 idx = 0; 
+
+    Asdm_SensorRecord_t *sensorRecord = sdrInfo[boardInfoSensorIdx].sensorRecord; 
+    for(idx = sdrInfo[boardInfoSensorIdx].header.no_of_records -1 ; idx >= 0 ; idx--) 
+    {
+        if(!Cl_SecureMemcmp(sensorRecord[idx].sensor_name,SENSOR_NAME_MAX,SNSRNAME_TARGET_SC_VER,strlen(SNSRNAME_TARGET_SC_VER))) 
+        {
+	    if (xSemaphoreTake(sdr_lock, portMAX_DELAY))
+	    {
+	        /* Copy the Target SC Version read from FPT */
+                Cl_SecureMemcpy(sensorRecord[idx].sensor_value,sizeof(fpt_sc_version), 
+                    &fpt_sc_version[0],sizeof(fpt_sc_version)); 
+                xSemaphoreGive(sdr_lock); 
+                break; 
+            }
+        }
+    }
+} 
+
