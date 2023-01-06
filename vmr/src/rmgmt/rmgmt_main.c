@@ -683,9 +683,6 @@ static u32 rmgmt_check_firewall(cl_msg_t *msg)
 
 		/* set correct size in result payload */
 		msg->log_payload.size = MIN(count, safe_size);
-	} else {
-		/* explicitly set log_payload.size back to 0 */
-		msg->log_payload.size = 0;
 	}
 
 	return val;
@@ -734,8 +731,6 @@ static u32 rmgmt_log_clock_shutdown(cl_msg_t *msg)
 		{
 			msg->log_payload.size = safe_size;
 		}
-	} else {
-		msg->log_payload.size = 0;
 	}
 
 	return val;
@@ -773,9 +768,12 @@ static u8 rmgmt_log_clock_throttling_percentage(cl_msg_t *msg)
 
 		/* set correct size in result payload */
 		msg->log_payload.size = MIN(count, safe_size);
+	} else {
+		/* explicitly set log_payload.size back to 0 to avoid invalide dmesg  */
+		msg->log_payload.size = 0;
 	}
 
-	return 0; //Need to change this back to 'return val' after XRT changes merged
+	return 0; /* we always return 0 because this is a warning only, no additional action is needed */
 }
 
 static int rmgmt_load_firmware(cl_msg_t *msg)
@@ -966,19 +964,28 @@ static int vmr_rtos_mem_stats(cl_msg_t *msg)
 	return 0;
 }
 
+static int rmgmt_healthy_check(cl_msg_t *msg)
+{
+	int ret = 0;
+
+	ret = rmgmt_log_clock_shutdown(msg);
+	if(ret)
+		return ret;
+
+	ret = rmgmt_check_firewall(msg);
+	if(ret)
+		return ret;
+
+	return rmgmt_log_clock_throttling_percentage(msg);
+}
+
 int cl_rmgmt_log_page(cl_msg_t *msg)
 {
 	int ret = 0;
 
 	switch (msg->log_payload.pid) {
 	case CL_LOG_AF_CHECK:
-		ret = rmgmt_log_clock_shutdown(msg);
-		if(ret)
-			break;
-		ret = rmgmt_check_firewall(msg);
-		if(ret)
-			break;
-		ret = rmgmt_log_clock_throttling_percentage(msg);
+		ret = rmgmt_healthy_check(msg);
 		break;
 	case CL_LOG_AF_CLEAR:
 		ret = rmgmt_clear_firewall();
