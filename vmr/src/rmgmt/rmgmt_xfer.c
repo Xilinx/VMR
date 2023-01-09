@@ -278,6 +278,9 @@ static int rmgmt_fpga_download(struct rmgmt_handler *rh, u32 len)
 		
 		if (ret)
 			goto done;
+
+		/* trim this section after successfuly downloaded it */
+		rmgmt_xclbin_section_remove(axlf, BITSTREAM_PARTIAL_PDI);
 	}
 
 	ret = rmgmt_xclbin_section_info(axlf, PDI, &offset, &size);
@@ -293,7 +296,15 @@ static int rmgmt_fpga_download(struct rmgmt_handler *rh, u32 len)
 
 		if (ret)
 			goto done;
+
+		rmgmt_xclbin_section_remove(axlf, PDI);
 	}
+
+
+	VMR_WARN("sends xclbin to apu: original size %d, real size %d",
+		rh->rh_data_size, axlf->m_header.m_length);
+	/* reset real data size to transfer */
+	rh->rh_data_size = axlf->m_header.m_length;
 
 	ret = rmgmt_apu_download_xclbin(rh);
 	if (ret == -ENODEV) {

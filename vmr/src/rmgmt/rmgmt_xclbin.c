@@ -92,3 +92,64 @@ int rmgmt_xclbin_get_section(const struct axlf *xclbin, enum axlf_section_kind k
 
         return 0;
 }
+
+void rmgmt_xclbin_section_remove(struct axlf *xclbin, enum axlf_section_kind kind)
+{
+	struct axlf_section_header *sectionHeaderArray = NULL;
+	uint64_t bufferSize = 0;
+	uint64_t startToOffset = 0;
+	uint64_t startFromOffset = 0;
+	uint64_t bytesToCopy = 0;
+	uint64_t bytesRemoved = 0;
+	void *ptrStartTo = NULL;
+	void *ptrStartFrom = NULL;
+	uint64_t bytesToShift = 0;
+
+	for (uint64_t index = 0; index < xclbin->m_header.m_numSections; ++index) {
+
+		sectionHeaderArray = &xclbin->m_sections[0];
+
+		if (sectionHeaderArray[index].m_sectionKind != kind)
+			continue;
+
+		bufferSize = xclbin->m_header.m_length;
+		startToOffset = sectionHeaderArray[index].m_sectionOffset;
+		startFromOffset = ((index + 1) == xclbin->m_header.m_numSections) ?
+			sectionHeaderArray[index].m_sectionOffset + sectionHeaderArray[index].m_sectionSize :
+			sectionHeaderArray[index + 1].m_sectionOffset;
+		bytesToCopy = bufferSize - startFromOffset;
+		bytesRemoved = startFromOffset - startToOffset;
+
+		VMR_WARN("bytesRemoved %d", (u32)bytesRemoved);
+
+		if (bytesToCopy != 0) {
+			memcpy((char *)xclbin + startToOffset, (char *)xclbin + startFromOffset, bytesToCopy);
+		}
+		
+		/* clean up data structures */
+		xclbin->m_header.m_length -= bytesRemoved;
+		for (uint64_t idx = index + 1; idx < xclbin->m_header.m_numSections; ++idx) {
+			sectionHeaderArray[idx].m_sectionOffset -= bytesRemoved;
+		}
+		/* handle last section */
+		if (xclbin->m_header.m_numSections == 1) {
+			xclbin->m_header.m_numSections = 0;
+			sectionHeaderArray[0].m_sectionKind = 0;
+			sectionHeaderArray[0].m_sectionOffset = 0;
+			sectionHeaderArray[0].m_sectionSize = 0;
+			continue;
+		}
+		/* remove the array entry */
+		ptrStartTo = &sectionHeaderArray[index];
+		ptrStartFrom = &sectionHeaderArray[index + 1];
+		bytesToShift = xclbin->m_header.m_length - ((char *)ptrStartFrom - (char *)xclbin);
+		memcpy((char *)ptrStartTo, (char *)ptrStartFrom, bytesToShift);
+
+		/* update data elements */
+		xclbin->m_header.m_numSections -= 1;
+		xclbin->m_header.m_length -= sizeof(struct axlf_section_header);
+		for (uint64_t idx = 0; idx < xclbin->m_header.m_numSections; ++idx) {
+			sectionHeaderArray[idx].m_sectionOffset -= sizeof(struct axlf_section_header);
+		}
+	}
+}
