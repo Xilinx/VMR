@@ -240,9 +240,9 @@ static int clk_throttling_handle(cl_msg_t *msg, struct xgq_cmd_sq *sq)
 	msg->clk_scaling_payload.temp_scaling_ovrd_limit =
 			(u8) sq->clk_scaling_payload.temp_scaling_ovrd_limit;
 	msg->clk_scaling_payload.temp_ovrd_en =
-			(u8) sq->clk_scaling_payload.temp_ovrd_en;
+			(u8) sq->clk_scaling_payload.temp_scaling_ovrd_en;
 	msg->clk_scaling_payload.pwr_ovrd_en =
-			(u8) sq->clk_scaling_payload.pwr_ovrd_en;
+			(u8) sq->clk_scaling_payload.pwr_scaling_ovrd_en;
 	msg->clk_scaling_payload.reset =
 			(u8) sq->clk_scaling_payload.reset;
 
@@ -324,9 +324,9 @@ static void clk_throttling_complete(cl_msg_t *msg, struct xgq_cmd_cq *cmd_cq)
 				scaling_params.limits.shutdown_limit_pwr;
 	cmd_cq->cq_clk_scaling_payload.pwr_scaling_limit = 
 				scaling_params.limits.throttle_limit_pwr;
-	cmd_cq->cq_clk_scaling_payload.temp_ovrd_en =
+	cmd_cq->cq_clk_scaling_payload.temp_scaling_ovrd_en =
 				scaling_params.temp_throttling_enabled;
-	cmd_cq->cq_clk_scaling_payload.pwr_ovrd_en =
+	cmd_cq->cq_clk_scaling_payload.pwr_scaling_ovrd_en =
 				scaling_params.power_throttling_enabled;
 }
 
