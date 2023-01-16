@@ -128,6 +128,8 @@
 
 #define SHUTDOWN_LATCHED_STATUS	0x01
 #define MAX_GAPPING_DEMAND_RATE 128
+#define CONVERT_TO_PERCENTAGE  100
+#define MAX_CLOCK_SPEED_PERCENTAGE 100
 
 #define BIT(n) 			(1UL << (n))
 #define MIN(x, y) 		(((x) < (y)) ? (x) : (y))

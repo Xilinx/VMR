@@ -762,8 +762,10 @@ static u8 rmgmt_log_clock_throttling_percentage(cl_msg_t *msg)
 				msg->log_payload.size, rh.rh_log_max_size);
 			safe_size = msg->log_payload.size;
 		}
-
-		count = snprintf(rh.rh_log, safe_size,"kernel clocks throttled at %lu%%.\n",(ep_gapping * 100)/max_gapping_demand_rate);
+		/* To get % clock throttled = 100 - total clock running %
+ 		 * total clock running % = (current clock speed / maximum clock speed) * 100 	  
+ 		 */  
+		count = snprintf(rh.rh_log, safe_size,"kernel clocks throttled at %lu%%.\n",MAX_CLOCK_SPEED_PERCENTAGE - ((ep_gapping * CONVERT_TO_PERCENTAGE)/max_gapping_demand_rate));
 		cl_memcpy_toio(dst_addr, rh.rh_log, safe_size);
 
 		/* set correct size in result payload */
