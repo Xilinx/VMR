@@ -439,6 +439,8 @@ diff_xgq_cmd_headers() {
 	diff /tmp/xgq_cmd_common.h.vmr /tmp/xgq_cmd_common.h.xrt >> $ROOT_DIR/diff.log
 	if [ $? -ne 0 ];then
 		echo "WARN!!! please make xgq_cmd_common.h the same between XRT and VMR"
+	else
+		echo "PASS xgq_cmd_common.h"
 	fi
 
 	tail -n +5 $ROOT_DIR/../vmr/src/common/xgq_cmd_vmr.h > /tmp/xgq_cmd_vmr.h.vmr
@@ -448,6 +450,8 @@ diff_xgq_cmd_headers() {
 	diff /tmp/xgq_cmd_vmr.h.vmr /tmp/xgq_cmd_vmr.h.xrt >> $ROOT_DIR/diff.log
 	if [ $? -ne 0 ];then
 		echo "WARN!!! please make xgq_cmd_vmr.h the same between XRT and VMR"
+	else
+		echo "PASS xgq_vmd_vmr.h"
 	fi
 }
 

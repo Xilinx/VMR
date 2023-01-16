@@ -610,11 +610,19 @@ int cl_xgq_receive_fini(void)
 
 void cl_xgq_receive_func(void *task_args)
 {
-	const TickType_t xBlockTime = pdMS_TO_TICKS(100);
+	const TickType_t xBlockTime = pdMS_TO_TICKS(1000);
+	u32 ulNotifiedValue = 0;
 
 	for( ;; ) {
 		uint64_t sq_slot_addr;
-		vTaskDelay(xBlockTime);
+		//vTaskDelay(xBlockTime);
+		/* xClearCountOnExit = pdFALSE means handle one interrupt at a time */
+		ulNotifiedValue = ulTaskNotifyTake( pdFALSE, xBlockTime);
+
+		if (ulNotifiedValue)
+			VMR_WARN("received one xgq event");
+		else	
+			VMR_WARN("timeout and polling xgq");
 
 		if (xgq_consume(&rpu_xgq, &sq_slot_addr))
 			continue;

@@ -10,6 +10,8 @@
 
 #include <stdbool.h>
 
+#include "xscugic.h"
+
 #include "cl_main.h"
 #include "cl_log.h"
 #include "cl_uart_rtos.h"
@@ -20,11 +22,6 @@
 #include "cl_rmgmt.h"
 #include "cl_vmc.h"
 #include "vmr_common.h"
-
-#define XGQ_XQUEUE_LENGTH	8
-#define XGQ_XQUEUE_WAIT_MS	10
-/* Depth "number of words" of the stack. depth (64k) * sizeof(word) = total size (256k) */
-#define TASK_STACK_DEPTH 	0x10000
 
 /*
  * VMR (Versal Management Runtime) design diagram.
@@ -88,6 +85,17 @@
  *         sensor data request.
  */
 
+#define XGQ_XQUEUE_LENGTH	8
+#define XGQ_XQUEUE_WAIT_MS	10
+/* Depth "number of words" of the stack. depth (64k) * sizeof(word) = total size (256k) */
+#define TASK_STACK_DEPTH 	0x10000
+
+#define RPU_INTC_DEVICE_ID	XPAR_SCUGIC_SINGLE_DEVICE_ID
+#define XGQ_INTR_ID		XPAR_FABRIC_BLP_BLP_LOGIC_GCQ_M2R_IRQ_SQ_INTR
+
+static XScuGic IntcInstance;
+static struct vmr_device VmrInstance;
+
 static TaskHandle_t cl_main_task_handle = NULL;
 
 static TaskHandle_t cl_xgq_receive_handle = NULL;
@@ -113,6 +121,20 @@ extern void vApplicationStackOverflowHook(TaskHandle_t xTask, char *pcTaskName)
 	 * identify which task has overflowed its stack.
 	 */
 	for (;;) { }
+}
+
+/* notify interrupt handling function when receive an interrupt */
+void cl_xgq_interrupt_handler( void )
+{
+	BaseType_t xHigherPriorityTaskWoken;
+
+	xHigherPriorityTaskWoken = pdFALSE;
+
+	VMR_WARN("received an interrupt!!!");
+
+	vTaskNotifyGiveFromISR( cl_xgq_receive_handle, &xHigherPriorityTaskWoken );
+
+	portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
 }
 
 struct cl_task_handle {
@@ -321,6 +343,46 @@ static void cl_main_task_func(void *task_args)
 	vTaskDelete(NULL);
 }
 
+static int cl_interrupt_init(XScuGic *IntcInstancePtr,
+		struct vmr_device *VmrInstancePtr)
+{
+	int Status = XST_SUCCESS;
+
+	XScuGic_Config *IntcConfig; /* Instance of the interrupt controller */
+
+	IntcConfig = XScuGic_LookupConfig(RPU_INTC_DEVICE_ID);
+	if (IntcConfig == NULL) {
+		VMR_ERR("FAIL: IntcConfig is NULL");
+		return -EINVAL;
+	}
+
+	Status = XScuGic_CfgInitialize(IntcInstancePtr, IntcConfig,
+			IntcConfig->CpuBaseAddress);
+	if (Status != XST_SUCCESS) {
+		VMR_ERR("FAIL: Intc Init failed: %d", Status);
+		return -EINVAL;
+	}
+
+	Xil_ExceptionRegisterHandler(XIL_EXCEPTION_ID_INT,
+			(Xil_ExceptionHandler)XScuGic_InterruptHandler,
+			IntcInstancePtr);
+
+	Status = XScuGic_Connect(IntcInstancePtr, XGQ_INTR_ID,
+			(Xil_ExceptionHandler)cl_xgq_interrupt_handler,
+			(void *)VmrInstancePtr);
+	if (Status != XST_SUCCESS) {
+		VMR_ERR("FAIL: Intc connect failed: %d", Status);
+		return -EINVAL;
+	}
+
+	XScuGic_Enable(IntcInstancePtr, XGQ_INTR_ID);
+
+	Xil_ExceptionEnable();
+
+	VMR_LOG("SUCCESS");
+	return 0;
+}
+
 int main( void )
 {
 	struct cl_task_handle mainTask = {
@@ -332,6 +394,12 @@ int main( void )
 	};
 
 	if (cl_task_create(&mainTask))
+		return -1;
+
+	/*
+	 * Note: we don't provide fini because we never stop till RPU reset.
+	 */
+	if (cl_interrupt_init(&IntcInstance, &VmrInstance))
 		return -1;
 
 	vTaskStartScheduler();
