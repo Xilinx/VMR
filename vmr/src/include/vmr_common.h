@@ -139,6 +139,11 @@ struct vmr_endpoints {
 	u32  vmr_ep_address;
 };
 
+struct vmr_device {
+	uint16_t vmr_ver_major;
+	uint16_t vmr_ver_minor;
+};
+
 /*
  * Start platform dependent MACROs
  */

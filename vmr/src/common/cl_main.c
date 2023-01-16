@@ -10,6 +10,8 @@
 
 #include <stdbool.h>
 
+#include "xscugic.h"
+
 #include "cl_main.h"
 #include "cl_log.h"
 #include "cl_uart_rtos.h"
@@ -99,6 +101,13 @@
  *         sensor data request.
  */
 
+#define RPU_INTC_DEVICE_ID	XPAR_SCUGIC_SINGLE_DEVICE_ID
+#define RPU_INTC_HANDLER	XScuGic_InterruptHandler
+#define XGQ_INTR_ID		XPAR_FABRIC_BLP_BLP_LOGIC_GCQ_M2R_IRQ_SQ_INTR
+
+static XScuGic IntcInstance;
+static struct vmr_device VmrInstance;
+
 static TaskHandle_t cl_main_task_handle = NULL;
 
 static TaskHandle_t cl_xgq_receive_handle = NULL;
@@ -128,6 +137,20 @@ extern void vApplicationStackOverflowHook(TaskHandle_t xTask, char *pcTaskName)
 	 * identify which task has overflowed its stack.
 	 */
 	for (;;) { }
+}
+
+/* notify interrupt handling function when receive an interrupt */
+void cl_xgq_interrupt_handler( void )
+{
+	BaseType_t xHigherPriorityTaskWoken;
+
+	xHigherPriorityTaskWoken = pdFALSE;
+
+	VMR_WARN("received an interrupt!!!");
+
+	vTaskNotifyGiveFromISR( cl_xgq_receive_handle, &xHigherPriorityTaskWoken );
+
+	portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
 }
 
 struct cl_task_handle {
@@ -285,8 +308,28 @@ static int cl_main_task_init(void)
 	return 0;
 }
 
-static int cl_platform_init()
+static int cl_interrupt_init(XScuGic *IntcInstancePtr,
+		struct vmr_device *VmrInstancePtr)
 {
+	u16 IntrId = XGQ_INTR_ID;
+
+	xPortInstallInterruptHandler(IntrId,
+			(Xil_ExceptionHandler)cl_xgq_interrupt_handler,
+			(void *)VmrInstancePtr);
+	vPortEnableInterrupt(IntrId);
+
+	VMR_LOG("req interrupt SUCCESS");
+	return 0;
+}
+
+static int cl_platform_init()
+{	
+	/*
+	 * Note: we don't provide fini because we never stop till RPU reset.
+	 */
+	if (cl_interrupt_init(&IntcInstance, &VmrInstance))
+		return -1;
+
 	return 0;
 }
 
@@ -326,7 +369,6 @@ static void cl_main_task_func(void *task_args)
 		}
 		configASSERT(cl_task_create(&task_handles[i]) == 0);
 	}
-
 
 	while (1) {
 		/* check APU status every second */
