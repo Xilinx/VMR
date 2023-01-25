@@ -33,7 +33,7 @@ float Moving_Average(Moving_Average_t * av_obj, float new_element)
 		av_obj->is_filled = true;
 	}
 	/* return the average */
-	return av_obj->sum / (av_obj->is_filled ? av_obj->length:av_obj->pos);
+	return av_obj->sum / (float)(av_obj->is_filled ? av_obj->length:av_obj->pos);
 }
 
 Moving_Average_t *Allocate_Moving_Average(u8 len)

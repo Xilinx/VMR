@@ -138,7 +138,7 @@ typedef enum {
 typedef struct __attribute__((packed)) Moving_Average_s
 {
 	float * buffer;
-	long sum;
+	float sum;
 	u8 pos;
 	u8 length;
 	bool is_filled;
