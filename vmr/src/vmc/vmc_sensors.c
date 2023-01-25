@@ -152,7 +152,7 @@ s8 Temperature_Read_ACAP_Device_Sysmon(snsrRead_t *snsrData)
 	s8 status = XST_FAILURE;
 	float TempReading = 0.0;
 
-	status = XSysMonPsv_ReadTempProcessed(&InstancePtr, XSYSMONPSV_TEMP_MAX, &TempReading);
+	status = XSysMonPsv_ReadTempProcessed(&InstancePtr, XSYSMONPSV_TEMP, &TempReading);
 	if (status == XST_SUCCESS)
 	{
 		u16 roundedOffVal = (TempReading > 0) ? TempReading : 0;
@@ -164,7 +164,7 @@ s8 Temperature_Read_ACAP_Device_Sysmon(snsrRead_t *snsrData)
 	else
 	{
 		snsrData->snsrSatus = Vmc_Snsr_State_Comms_failure;
-		VMC_DBG("Failed to read Sysmon : %d \n\r",XSYSMONPSV_TEMP_MAX);
+		VMC_DBG("Failed to read Sysmon : %d \n\r",XSYSMONPSV_TEMP);
 	}
 
 	if (TempReading >= TEMP_FPGA_CRITICAL_THRESHOLD)
@@ -267,7 +267,7 @@ void sysmon_monitor(void)
 {
 
 	float TempReading = 0.0;
-	if (XSysMonPsv_ReadTempProcessed(&InstancePtr, XSYSMONPSV_TEMP_MAX, &TempReading))
+	if (XSysMonPsv_ReadTempProcessed(&InstancePtr, XSYSMONPSV_TEMP, &TempReading))
 	{
 		CL_LOG(APP_VMC, "Failed to read sysmon temperature \n\r");
 		sensor_glvr.sensor_readings.sysmon_max_temp = -1.0;
