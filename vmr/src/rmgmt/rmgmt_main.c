@@ -203,7 +203,7 @@ static int validate_log_payload(struct xgq_vmr_log_payload *payload, u32 size)
 		return ret;
 	}
 
-	if (payload->pid > CL_LOG_PLM_LOG) {
+	if (payload->pid >= CL_LOG_MAX_TYPE) {
 		VMR_ERR("invalid log type 0x%x", payload->pid);
 		return ret;
 	}
@@ -215,37 +215,6 @@ static int validate_log_payload(struct xgq_vmr_log_payload *payload, u32 size)
 	}
 	/* TODO: add more checking based on addr_type in the future */
 
-	return 0;
-}
-
-static int validate_log_payload_plm(struct xgq_vmr_log_payload *payload){
-	int ret = -EINVAL;
-	u32 address = RPU_SHARED_MEMORY_ADDR(payload->address);
-
-	if (address >= VMR_EP_RPU_SHARED_MEMORY_END) {
-		VMR_ERR("address overflow 0x%x", address);
-		return ret;
-	}
-
-	if (payload->pid > CL_LOG_PLM_LOG) {
-		VMR_ERR("invalid log type 0x%x", payload->pid);
-		return ret;
-	}
-
-	if(payload->offset >= VMR_PLM_DATA_TOTAL_SIZE){
-		VMR_ERR("Bad PLM Request Invalid Offset");
-		return ret;
-	}
-
-	if(payload->size == 0){
-		VMR_ERR("Bad PLM Request 0 bytes");
-		return ret;
-	}
-
-	if(payload->size >= VMR_PLM_DATA_TOTAL_SIZE)
-		payload->size = VMR_PLM_DATA_TOTAL_SIZE - payload->offset;
-	else
-		payload->size = abs(payload->size - payload->offset);
 	return 0;
 }
 
@@ -458,14 +427,15 @@ static u32 rmgmt_rpu_status_query(struct cl_msg *msg, char *buf, u32 size)
 static u32 rmgmt_apu_status_query(char *buf, u32 size)
 {
 	u32 count = 0;
-	struct xgq_vmr_cmd_identify id_cmd = {0};
+	struct xgq_vmr_cmd_identify id_cmd = { 0 };
 	int apu_is_ready = cl_rmgmt_apu_is_ready();
 
 	if (!apu_is_ready)
 		goto done;
 
 	if (rmgmt_apu_identify(&id_cmd) == 0){
-		count = snprintf(buf,size,"APU XGQ Version: %d.%d\n",id_cmd.major,id_cmd.minor);
+		count = snprintf(buf, size, "APU XGQ Version: %d.%d\n",
+				id_cmd.major,id_cmd.minor);
 	}
 	if (count > size) {
 		VMR_ERR("msg is truncated");
@@ -841,16 +811,51 @@ static int rmgmt_sync_plm_data(cl_msg_t *msg)
 {
 	u32 dst_addr = 0;
 	u32 src_addr = 0;
+	u32 len = 0;
 	int ret = 0;
 
-	ret = validate_log_payload_plm(&msg->log_payload);
-	if(ret)
+	ret = validate_log_payload(&msg->log_payload, VMR_PLM_DATA_TOTAL_SIZE);
+	if (ret)
+		return ret;
+
+	/*
+	 * Note: to simplify the handling of offset and request size.
+	 *    each time, we return entire plm_log (16k) back.
+	 *    host code will handle coping out and avoid duplicate calls
+	 *    on the same data.
+	 */
+	dst_addr = RPU_SHARED_MEMORY_ADDR(msg->log_payload.address);
+	src_addr = VMR_PLM_DATA_START_ADDRESS;
+	len = MIN(msg->log_payload.size, VMR_PLM_DATA_TOTAL_SIZE);
+
+	VMR_WARN("dst %x src %x len %d", dst_addr, src_addr, len);
+
+	cl_memcpy(dst_addr, src_addr, len);
+
+	/* adjust payload size to MIN size */
+	msg->log_payload.size = len;
+
+	return 0;
+}
+
+static int rmgmt_load_apu_log(cl_msg_t *msg)
+{
+	u32 dst_addr = 0;
+	u32 size = 0;
+	u32 off = 0;
+	int ret = 0;
+	
+	ret = validate_log_payload(&msg->log_payload, msg->log_payload.size);
+	if (ret)
 		return ret;
 
 	dst_addr = RPU_SHARED_MEMORY_ADDR(msg->log_payload.address);
-	src_addr = VMR_PLM_DATA_START_ADDRESS + msg->log_payload.offset;
+	size = msg->log_payload.size;
+	off = msg->log_payload.offset;
 
-	cl_memcpy(dst_addr, src_addr, msg->log_payload.size);
+	VMR_WARN("dst %x size %d off %d", dst_addr, size, off);
+
+	msg->log_payload.size = rmgmt_apu_log((char *)dst_addr, off, size);
 
 	return 0;
 }
@@ -1013,7 +1018,9 @@ int cl_rmgmt_log_page(cl_msg_t *msg)
 	case CL_LOG_PLM_LOG:
 		ret = rmgmt_sync_plm_data(msg);
 		break;
-
+	case CL_LOG_APU_LOG:
+		ret = rmgmt_load_apu_log(msg);
+		break;
 	default:
 		VMR_WARN("unsupported type %d", msg->log_payload.pid);
 		ret = -EINVAL;

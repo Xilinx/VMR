@@ -24,7 +24,7 @@
 int rmgmt_init_handler(struct rmgmt_handler *rh)
 {
 	rh->rh_data_base = 0;
-	rh->rh_data_max_size = BITSTREAM_SIZE; /* 32M */
+	rh->rh_data_max_size = BITSTREAM_SIZE; /* 128M */
 	rh->rh_log_max_size = LOG_MSG_SIZE; /* 4K */
 
 	rh->rh_data_buffer = (u8 *)pvPortMalloc(rh->rh_data_max_size);
