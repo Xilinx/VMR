@@ -19,4 +19,4 @@ md5sum *.elf
 source /proj/xbuilds/${TA}/installs/lin64/Vitis/HEAD/settings64.sh
 
 #Copy VMR.elf file to NFS location
-mkdir -p /proj/xbuilds/VMR-ELF/${RELEASE}/${BUILD_NUMBER} && cp *.elf /proj/xbuilds/VMR-ELF/${RELEASE}/${BUILD_NUMBER}
+mkdir -p /proj/xbuilds/VMR-ELF/${RELEASE}/${BUILD_NUMBER} && cp *.elf *.pdi /proj/xbuilds/VMR-ELF/${RELEASE}/${BUILD_NUMBER}
