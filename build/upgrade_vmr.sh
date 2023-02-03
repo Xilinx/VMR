@@ -137,6 +137,7 @@ upgrade_vmr_elf()
 
 	echo "upgrade vmr done, reload XRT drivers..."
 	modprobe xocl;modprobe xclmgmt
+	sleep 1
 
 	#clean up
 	rm -rf /tmp/scripts
@@ -166,17 +167,20 @@ upgrade_vmr_pdi()
 	echo 1 > $VMR_PROGRAM
 
 	echo "stop XRT xocl drivers"
-	rmmod xocl;
+	rmmod xocl
 
 	echo "VMR live upgrading ..."
 	xbmgmt program -b shell --image $PDI -d $BDF --force > /dev/null
 	if [[ $? -ne 0 ]];then
 		echo "xbmgmt program vmr.pdi failed"
+		echo "bring xocl back and exits"
+		modprobe xocl
 		exit 1;
 	fi
 
 	echo "Upgrade done, reload XRT drivers ..."
 	modprobe xocl
+	sleep 1
 
 	echo "check vmr is in good status"
 	xbmgmt examine -d $BDF -r vmr --verbose
