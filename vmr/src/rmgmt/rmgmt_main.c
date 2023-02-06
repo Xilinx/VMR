@@ -821,7 +821,7 @@ static int rmgmt_sync_plm_data(cl_msg_t *msg)
 	/*
 	 * Note: to simplify the handling of offset and request size.
 	 *    each time, we return entire plm_log (16k) back.
-	 *    host code will handle coping out and avoid duplicate calls
+	 *    host code will handle copying out and avoid duplicate calls
 	 *    on the same data.
 	 */
 	dst_addr = RPU_SHARED_MEMORY_ADDR(msg->log_payload.address);
