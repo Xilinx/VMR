@@ -61,6 +61,7 @@ u32 rmgmt_boot_on_offset();
 
 int rmgmt_apu_identify(struct xgq_vmr_cmd_identify *id_cmd);
 int rmgmt_apu_info(char *buf, u32 size);
+int rmgmt_apu_log(char *buf, u32 off, u32 size);
 int rmgmt_apu_download_xclbin(struct rmgmt_handler *rh);
 
 int rmgmt_fpt_get_debug_type(struct cl_msg *msg, u8 *debug_type);

@@ -259,34 +259,28 @@ int rmgmt_apu_identify(struct xgq_vmr_cmd_identify *id_cmd)
 	return -EBUSY;
 }
 
-static int log_page_cmd_complete(struct xgq_cmd_cq *cq_cmd, u32 address, u32 log_size,
-	char *buf, u32 buf_size)
+static int log_page_cmd_complete(struct xgq_cmd_cq *cq_cmd, u32 address,
+	char *buf, u32 req_size)
 {
 	struct xgq_cmd_cq_log_page_payload *payload =
 		(struct xgq_cmd_cq_log_page_payload *)&cq_cmd->cq_log_payload;
-	u32 size = 0;
+	u32 return_size = 0;
 
 	if (cq_cmd_complete_check(cq_cmd))
 		return 0;
 
-	size = payload->count;
-	if (size > log_size) {
-		VMR_WARN("return size %d is larger than log page size %d",
-			size, log_size);
-		/* only accept data  within log_size */
-		size = log_size;
-	}
-	if (size > buf_size) {
-		VMR_WARN("return size %d is larger than buffer size %d",
-			size, buf_size);
-		/* only accept data within buf_size */
-		size = buf_size;
-	}
+	if (payload->count > req_size)
+		VMR_WARN("return size %d is larger than request size %d",
+			payload->count, req_size);
 
-	return (cl_memcpy_fromio(APU_SHARED_MEMORY_ADDR(address), buf, size) != size) ? 0 : size;
+	/* adjust return size to min payload->count and request size */
+	return_size = MIN(payload->count, req_size);
+
+	return (cl_memcpy_fromio(APU_SHARED_MEMORY_ADDR(address), buf, return_size) !=
+		return_size) ?  0 : return_size;
 }
 
-int rmgmt_apu_info(char *buf, u32 size)
+static int rmgmt_apu_log_page(char *buf, u32 off, u32 req_size, enum xgq_cmd_log_page_type pid)
 {
 	int rval = 0;
 	uint64_t slot_addr = 0;
@@ -306,11 +300,13 @@ int rmgmt_apu_info(char *buf, u32 size)
 		return 0;
 	}
 
+	req_size = MIN(req_size, log_size);
+
 	payload = &sq_cmd.log_payload;
 	payload->address = log_address;
-	payload->size = log_size;
-	payload->offset = 0;
-	payload->pid = XGQ_CMD_LOG_INFO;
+	payload->size = req_size;
+	payload->offset = off;
+	payload->pid = pid;
 
 	sq_cmd.hdr.opcode = XGQ_CMD_OP_GET_LOG_PAGE;
 	sq_cmd.hdr.state = XGQ_SQ_CMD_NEW;
@@ -336,7 +332,7 @@ int rmgmt_apu_info(char *buf, u32 size)
 			continue;
 
 		read_completion(&cq_cmd, slot_addr);
-		rval = log_page_cmd_complete(&cq_cmd, log_address, log_size, buf, size);
+		rval = log_page_cmd_complete(&cq_cmd, log_address, buf, req_size);
 		xgq_notify_peer_consumed(&apu_xgq);
 
 		VMR_LOG("done rval %d", rval);
@@ -348,6 +344,16 @@ out:
 	shm_release_data();
 
 	return rval;
+}
+
+int rmgmt_apu_info(char *buf, u32 size)
+{
+	return rmgmt_apu_log_page(buf, 0, size, XGQ_CMD_LOG_INFO);
+}
+
+int rmgmt_apu_log(char *buf, u32 off, u32 size)
+{
+	return rmgmt_apu_log_page(buf, off, size, XGQ_CMD_LOG_APU_LOG);
 }
 
 int cl_xgq_client_fini()

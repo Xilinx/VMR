@@ -67,6 +67,7 @@ static struct xgq_cmd_cl_map xgq_cmd_log_page_map[] = {
 	{XGQ_CMD_LOG_MEM_STATS, CL_LOG_MEM_STATS},
 	{XGQ_CMD_LOG_SYSTEM_DTB, CL_LOG_SYSTEM_DTB},
 	{XGQ_CMD_LOG_PLM_LOG, CL_LOG_PLM_LOG},
+	{XGQ_CMD_LOG_APU_LOG, CL_LOG_APU_LOG},
 };
 
 static struct xgq_cmd_cl_map xgq_cmd_sensor_map[] = {
@@ -199,6 +200,7 @@ static int log_page_handle(cl_msg_t *msg, struct xgq_cmd_sq *sq)
 	msg->log_payload.pid = pid;
 	msg->log_payload.address = (u32)sq->log_payload.address;
 	msg->log_payload.size = (u32)sq->log_payload.size;
+	msg->log_payload.offset = (u32)sq->log_payload.offset;
 
 	return 0;
 }
