@@ -400,7 +400,7 @@ u8 Update_Sensor_Value(Asdm_RepositoryTypeEnum_t repoType, u8 sensorIdx, snsrRea
 
     if(NULL != sensorRecord)
     {
-        if( (0 != snsrInfo->sensorValueSize) && (NULL != &sensorRecord->sensor_value) ){
+        if( (0 != snsrInfo->sensorValueSize) && (NULL != sensorRecord->sensor_value) ){
             Cl_SecureMemcpy(sensorRecord->sensor_value,snsrInfo->sensorValueSize,&snsrInfo->snsrValue[0],snsrInfo->sensorValueSize);
         }
         /* Update only if the sensor is not Static */
