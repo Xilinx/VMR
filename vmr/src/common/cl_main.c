@@ -23,8 +23,15 @@
 
 #define XGQ_XQUEUE_LENGTH	8
 #define XGQ_XQUEUE_WAIT_MS	10
-/* Depth "number of words" of the stack. depth (64k) * sizeof(word) = total size (256k) */
-#define TASK_STACK_DEPTH 	0x10000
+/* 
+ * use check_usage.sh to check peak usage in theory.
+ * use vmr_mem_status to check peak usage in certain load.
+ * the current peak usage is < 2k, seting thread to 16k heap size.
+ *  The thread Depth "number of words" of the stack.
+ *  depth (12k) * sizeof(word) = total size (48k)
+ * If we have 5 tasks, it takes up to 240k.
+ */
+#define TASK_STACK_DEPTH 	0x3000
 
 /*
  * VMR (Versal Management Runtime) design diagram.
