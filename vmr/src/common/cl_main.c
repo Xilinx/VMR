@@ -28,9 +28,10 @@
  * use vmr_mem_status to check peak usage in certain load.
  * the current peak usage is < 2k, seting thread to 16k heap size.
  *  The thread Depth "number of words" of the stack.
- *  depth (4k) * sizeof(word) = total size (16k)
+ *  depth (12k) * sizeof(word) = total size (48k)
+ * If we have 5 tasks, it takes up to 240k.
  */
-#define TASK_STACK_DEPTH 	0x1000
+#define TASK_STACK_DEPTH 	0x3000
 
 /*
  * VMR (Versal Management Runtime) design diagram.
