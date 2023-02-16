@@ -1,4 +1,4 @@
-#include <ut/test/vmc/asdm/utt_assert_SDRs.h>
+#include "utt_assert_SDRs.h"
 
 /*This Structure is created only for the purpose of asserting SDRs in UT*/
 Assert_Sdr_t assertSdrData[] = {
@@ -213,7 +213,7 @@ Assert_Sdr_t assertSdrData[] = {
 				.sensor_id = 1,
 				.sensor_name_type_length = 8,
 				.sensor_name = "12v_pex",
-				.sensor_value_type_length = 2,
+				.sensor_value_type_length = 4,
 				.sensor_value = {0x88, 0x13},     /* 5000mA*/
 				.sensor_base_unit_type_length = 5,
 				.sensor_base_unit = "Amps",
@@ -227,7 +227,7 @@ Assert_Sdr_t assertSdrData[] = {
 				.sensor_id = 2,
 				.sensor_name_type_length = 8,
 				.sensor_name = "3v3_pex",
-				.sensor_value_type_length = 2,
+				.sensor_value_type_length = 4,
 				.sensor_value = {0xA0, 0x0F},     /* 4000mA*/
 				.sensor_base_unit_type_length = 5,
 				.sensor_base_unit = "Amps",
@@ -241,7 +241,7 @@ Assert_Sdr_t assertSdrData[] = {
 				.sensor_id = 3,
 				.sensor_name_type_length = 7,
 				.sensor_name = "vccint",
-				.sensor_value_type_length = 2,
+				.sensor_value_type_length = 4,
 				.sensor_value = {0xA0, 0x0F},     /* 4000mA*/
 				.sensor_base_unit_type_length = 5,
 				.sensor_base_unit = "Amps",

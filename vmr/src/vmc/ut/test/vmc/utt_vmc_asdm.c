@@ -1,4 +1,4 @@
-#include <ut/test/vmc/asdm/utt_assert_SDRs.h>
+#include "utt_assert_SDRs.h"
 
 /*Macro defined in vmc_sensor.c*/
 #define SENSOR_RESP_BUFFER_SIZE 512
