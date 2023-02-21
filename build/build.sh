@@ -689,10 +689,11 @@ fi
 
 # default build based on cached stable bsp
 if [ -z $BUILD_XSA ] || [ $BUILD_XSA == "No" ];then
-	echo "=== No XSA specified, build from stable BSP.";
-	build_clean
-	build_bsp_stable
-	exit 0;
+#echo "=== No XSA specified, build from stable BSP.";
+#build_clean
+#build_bsp_stable
+	echo "=== No XSA specified, build failed.";
+	exit 1;
 fi
 
 #####################
