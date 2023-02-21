@@ -25,7 +25,7 @@
 #include "platforms/v70.h"
 
 #ifdef BUILD_FOR_RMI
-#include "../RMI/rmi_api.h"
+#include "RMI/rmi_api.h"
 #endif
 
 SemaphoreHandle_t vmc_sc_lock = NULL;
