@@ -21,6 +21,9 @@ BUILD_CLEAN=0
 CURRENT_DIR=$(dirname "$0")
 BASE_NAME=$(basename "$0")
 
+BUILD_DATE=`date +%F-%T`
+BUILD_DATE_FILE="$ROOT_DIR/$BUILD_DIR/build_date.txt"
+
 check_result()
 {
 	typeset log="$1"
@@ -203,7 +206,7 @@ make_version_h()
 		VMR_VERSION_PATCH=`grep_file "VMR_VERSION_PATCH" ${BUILD_VERSION_FILE}`
 
 	fi
-	VMR_BUILD_VERSION_DATE=`date`
+	VMR_BUILD_VERSION_DATE="$BUILD_DATE"
 	VMR_BUILD_VERSION="$VMR_VERSION_RELEASE.$VMR_VERSION_MAJOR.$VMR_VERSION_MINOR.$VMR_VERSION_PATCH"
 
 	# NOTE: we only take git version, version date and branch for now
@@ -690,6 +693,8 @@ done
 echo "=== build log =="
 echo "" > $ROOT_DIR/$BUILD_DIR/$BUILD_LOG
 echo "tail -f $ROOT_DIR/$BUILD_DIR/$BUILD_LOG"
+echo "build date: $BUILD_DATE"
+echo $BUILD_DATE > $BUILD_DATE_FILE
 
 if [[ $BUILD_CLEAN == 1 ]];then
 	build_clean
@@ -750,10 +755,11 @@ fi
 
 # default build based on cached stable bsp
 if [ -z $BUILD_XSA ] || [ $BUILD_XSA == "No" ];then
-	echo "=== No XSA specified, build from stable BSP.";
-	build_clean
-	build_bsp_stable
-	exit 0;
+#echo "=== No XSA specified, build from stable BSP.";
+#build_clean
+#build_bsp_stable
+	echo "=== No XSA specified, build failed.";
+	exit 1;
 fi
 
 #####################
