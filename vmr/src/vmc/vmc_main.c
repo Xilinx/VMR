@@ -24,9 +24,9 @@
 #include "platforms/vck5000.h"
 #include "platforms/v70.h"
 
-#ifdef BUILD_FOR_RMI
-#include "RMI/rmi_api.h"
-#endif
+//#ifdef BUILD_FOR_RMI
+//#include "RMI/rmi_api.h"
+//#endif
 
 SemaphoreHandle_t vmc_sc_lock = NULL;
 SemaphoreHandle_t sdr_lock = NULL;
@@ -129,11 +129,6 @@ int cl_vmc_init()
 		VMR_ERR("Platform Initialization Failed.");
 		return -EINVAL;
 	}
-
-#ifdef BUILD_FOR_RMI
-	/* Initialize RMI */
-	Rmi_Init();
-#endif
 	
 	status = UART_VMC_SC_Enable(&uart_vmcsc_log, current_platform);
 	if (status != XST_SUCCESS) {

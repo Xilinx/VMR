@@ -14,4 +14,7 @@
 #define VMR_BUILD_VMC_ONLY
 #endif
 
+/* Uncomment this for build VMR with RMI submodule. */
+//#define BUILD_FOR_RMI
+
 #endif

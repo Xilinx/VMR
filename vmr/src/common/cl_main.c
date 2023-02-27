@@ -21,6 +21,10 @@
 #include "cl_vmc.h"
 #include "vmr_common.h"
 
+#ifdef BUILD_FOR_RMI
+#include "cl_rmi.h"
+#endif
+
 #define XGQ_XQUEUE_LENGTH	8
 #define XGQ_XQUEUE_WAIT_MS	10
 /* 
@@ -102,6 +106,10 @@ static TaskHandle_t cl_xgq_program_handle = NULL;
 static TaskHandle_t cl_xgq_opcode_handle = NULL;
 static TaskHandle_t cl_vmc_sensor_handle = NULL;
 static TaskHandle_t cl_vmc_sc_comms_handle = NULL;
+#ifdef BUILD_FOR_RMI
+static TaskHandle_t cl_rmi_handle = NULL;
+#endif
+
 #ifdef VMC_DEBUG
 static TaskHandle_t cl_uart_demo_handle = NULL;
 #endif
@@ -140,6 +148,11 @@ struct cl_task_handle {
 		"Sensor Monitor", NULL, &cl_vmc_sensor_handle},
 	{APP_VMC, cl_vmc_sc_comms_init, cl_vmc_sc_comms_func,
 		"SC Common Handler", NULL, &cl_vmc_sc_comms_handle},
+#ifdef BUILD_FOR_RMI
+	{APP_VMC, cl_rmi_init, cl_rmi_func,
+		"RMI Task Handler", NULL, &cl_rmi_handle},
+#endif
+		
 #ifdef VMC_DEBUG
 	{APP_VMC, cl_uart_demo_init, cl_uart_demo_func,
 		"Uart Demo", NULL, &cl_uart_demo_handle},

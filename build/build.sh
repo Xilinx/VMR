@@ -533,7 +533,7 @@ build_make_RMI_lib(){
 
 	# copy new source file
 	cd $RMI/build
-	bash ./build.sh -config build_smbus_RMI.json
+	bash ./build.sh -config build_smbus.json
 
 	RMI_LIB_FILE=$RMI/build/librmi.a
 	if [[ ! -f "${RMI_LIB_FILE}" ]];then
