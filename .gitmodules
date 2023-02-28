@@ -4,3 +4,6 @@
 [submodule "RMI"]
 	path = RMI
 	url = git@github.com:Xilinx/RMI.git 
+[submodule "cmocka"]
+	path = cmocka
+	url = https://gitlab.com/cmocka/cmocka.git
