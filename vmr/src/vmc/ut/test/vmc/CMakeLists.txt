@@ -66,19 +66,15 @@ add_test( NAME test_asdm
           COMMAND test_asdm )
 
 #Code coverage for the src files
-if( COVERAGE_ENABLE )
-    include(CodeCoverage.cmake)
-    append_coverage_compiler_flags()
+include(CodeCoverage.cmake)
+append_coverage_compiler_flags()
 
-    set(COVERAGE_EXCLUDES 
-		${SE98A_TEST_FILES}
-		${ASDM_TEST_FILES} )
+set(COVERAGE_EXCLUDES ${SE98A_TEST_FILES}
+                      ${ASDM_TEST_FILES} )
 
-    SETUP_TARGET_FOR_COVERAGE_LCOV(
+SETUP_TARGET_FOR_COVERAGE_LCOV(
         NAME test_coverage
         EXECUTABLE ctest
-        DEPENDENCIES 
-            test_se98a 
-            test_asdm
-    )
-endif()
+        DEPENDENCIES test_se98a 
+                     test_asdm )
+
