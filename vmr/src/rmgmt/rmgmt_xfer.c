@@ -253,9 +253,20 @@ static int rmgmt_fpga_download(struct rmgmt_handler *rh, u32 len)
 	u32 partial_pdi_size = 0;
 	u32 pdi_size = 0;
 	u32 xclbin_topo_size = 0;
+	u32 fdtdata_size = 0;
+	u32 fdtdata = 0;
+	cl_msg_t msg = { 0 };
 
 	/* Sync data from cache to memory */
 	Xil_DCacheFlush();
+
+	/*
+	 * Validate incoming UUID from xclbin matches Interface UUID in xsabin
+	 */
+	if (rmgmt_fpt_get_xsabin(&msg, &fdtdata, &fdtdata_size)) {
+		VMR_ERR("get xsabin medata failed");
+		return -EINVAL;
+	}
 
 	ret = rmgmt_xclbin_section_info(axlf, CLOCK_FREQ_TOPOLOGY, &offset, &size);
 	if (ret || size == 0) {

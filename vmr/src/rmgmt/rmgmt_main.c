@@ -15,6 +15,7 @@
 #include "rmgmt_fpt.h"
 #include "rmgmt_pm.h"
 #include "rmgmt_ipi.h"
+#include "rmgmt_xclbin.h"
 
 #include "cl_msg.h"
 #include "cl_flash.h"
@@ -1149,12 +1150,114 @@ int rmgmt_is_ready()
 	return rmgmt_is_ready_flag == true;
 }
 
+struct fdt_header {
+	uint32_t magic;
+	uint32_t totalsize;
+	uint32_t off_dt_struct;
+	uint32_t off_dt_strings;
+	uint32_t off_mem_rsvmap;
+	uint32_t version;
+	uint32_t last_comp_version;
+	uint32_t boot_cpuid_phys;
+	uint32_t size_dt_strings;
+	uint32_t size_dt_struct;
+};
+
+static inline u32 vmr_bswap32(u32 x)
+{
+	return (x >> 24) | (x >> 8 & 0xff00) | (x << 8 & 0xff0000) | (x << 24);
+}
+
+#define FDT_BEGIN_NODE  0x00000001
+#define FDT_PROP        0x00000003
+#define	FDT_END		0x00000009
+#define ALIGN(x, a)     (((x) + ((a) - 1)) & ~((a) - 1))
+#define PALIGN(p, a)    ((char *)(ALIGN((int)(p), (int)(a))))
+#define GET_CELL(p)     (p += 4, *((u32 *)(p-4)))
+
+static void rmgmt_get_uuids(u32 fdtdata)
+{
+	struct axlf *axlf = NULL;
+	uint64_t offset = 0;
+	uint64_t size = 0;
+	struct fdt_header *bph = NULL;
+	u32 version = 0;
+	u32 off_dt = 0; 
+	int ret = 0;
+	char *p_struct = NULL;
+	u32 off_str = 0;
+	char *p_strings = NULL;
+	char *p, *s;
+	u32 tag = 0;
+	int sz = 0;
+
+	axlf = (struct axlf *)fdtdata;
+	ret = rmgmt_xclbin_section_info(axlf, PARTITION_METADATA, &offset, &size);
+	if (ret || size == 0) {
+		VMR_LOG("no PARTITION_METADATA in xclbin: %d", ret);
+	} else {
+		VMR_LOG("offset %llx", offset);
+		bph = (struct fdt_header *)((char *)axlf + offset);
+	}
+
+	//bph = (struct fdt_header *)fdtdata;
+	version = vmr_bswap32(bph->version);
+	off_dt = vmr_bswap32(bph->off_dt_struct);
+	VMR_WARN("version %d, off_dt %d", version, off_dt);
+
+	for (int i = 0; i < 16; i+=4) {
+		VMR_WARN("0x%x", IO_SYNC_READ32((u32)bph + i));
+	}
+
+	p_struct = (char *)bph + off_dt;
+	off_str = vmr_bswap32(bph->off_dt_strings);
+	p_strings = (char *)bph + off_str;
+
+	p = p_struct;
+	
+	ret = 0;
+	while ((tag = vmr_bswap32(GET_CELL(p))) != FDT_END) {
+		VMR_WARN("tag: 0x%x count:%d", tag, ret);
+		if (ret++ > 1000)
+			break;
+
+		if (tag == FDT_BEGIN_NODE) {
+			s = p;
+			p = PALIGN(p + strlen(s) + 1, 4);
+			continue;
+		}
+		if (tag != FDT_PROP) {
+			continue;
+		}
+
+		VMR_WARN("h3");
+
+		sz = vmr_bswap32(GET_CELL(p));
+		s = p_strings + vmr_bswap32(GET_CELL(p));
+
+		VMR_WARN("s:%s p:%s", s, p);
+		if (version < 16 && sz >= 8)
+			p = PALIGN(p, 8);
+
+		if (!strcmp(s, "logic_uuid")) {
+			VMR_WARN("found lg s:%s p:%s", s, p);
+		}
+		if (!strcmp(s, "interface_uuid")) {
+			VMR_WARN("found it s:%s p:%s", s, p);
+		}
+
+		p = PALIGN(p + sz, 4);
+	}
+}
+
 int cl_rmgmt_init( void )
 {	
 	int ret = 0;
 	cl_msg_t msg = { 0 };
 	u32 dtb_offset = 0;
 	u32 dtb_size = 0;
+	u32 fw_offset = 0;
+	u32 fw_size = 0;
 
 	ret = ospi_flash_init();
 	if (ret != XST_SUCCESS) {
@@ -1190,5 +1293,14 @@ int cl_rmgmt_init( void )
 
 	rmgmt_is_ready_flag = true;
 	VMR_LOG("Done. rmgmt is ready.");
+
+	if (rmgmt_fpt_get_xsabin(&msg, &fw_offset, &fw_size)) {
+		VMR_ERR("get xsabin firmware failed");
+		return -1;
+	}
+
+	/* test code */
+	rmgmt_get_uuids(fw_offset);
+
 	return 0;
 }

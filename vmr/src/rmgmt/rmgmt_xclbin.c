@@ -62,7 +62,7 @@ rmgmt_xclbin_section_info(const struct axlf *xclbin, enum axlf_section_kind kind
         *offset = memHeader->m_sectionOffset;
         *size = memHeader->m_sectionSize;
 
-        VMR_DBG("Found section offset: %lld, size: %lld\r\n", *offset, *size);
+        VMR_WARN("Found section offset: %lld, size: %lld\r\n", *offset, *size);
         return 0;
 }
 
