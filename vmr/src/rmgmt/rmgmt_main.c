@@ -565,7 +565,7 @@ static int rmgmt_clear_firewall()
 	int i = 0;
 
 	if (!check_firewall()) {
-		VMR_LOG("done");
+		VMR_LOG("DONE");
 		return 0;
 	}
 	
@@ -1088,7 +1088,7 @@ int rmgmt_enable_boot_backup(cl_msg_t *msg)
 		return -1;
 	}
 
-	VMR_LOG("done");
+	VMR_LOG("DONE");
 	return 0;
 }
 

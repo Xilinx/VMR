@@ -43,7 +43,7 @@ int rmgmt_init_handler(struct rmgmt_handler *rh)
 	rh->rh_already_flashed = false;
 
 	/* ospi flash should alreay be initialized */
-	VMR_LOG("done");
+	VMR_LOG("DONE");
 	return 0;
 }
 

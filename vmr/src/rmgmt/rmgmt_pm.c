@@ -71,7 +71,7 @@ int rmgmt_pm_init(void)
 	/* Set Next boot state as clen */
 	SetNextBootState(RPU_CLEAN_BOOT_KEY);
 
-	VMR_WARN("done");
+	VMR_WARN("DONE");
 	return Status;
 }
 
