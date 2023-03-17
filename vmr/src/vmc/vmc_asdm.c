@@ -12,6 +12,10 @@
 #include "cl_vmc.h"
 #include <semphr.h>
 
+#ifdef BUILD_FOR_RMI
+#include "cl_rmi.h"
+#endif
+
 #define ASDM_GET_SDR_SIZE_REQ (0x00)
 
 #define SENSOR_TYPE_NUM (0x0)
@@ -61,6 +65,7 @@
 SDR_t *sdrInfo;
 extern SemaphoreHandle_t sdr_lock;
 static u8 asdmInitSuccess = false;
+static u8 total_sensor_count = 0;
 extern Versal_BoardInfo board_info;
 extern SC_VMC_Data sc_vmc_data;
 extern u8 fpt_sc_version[3];
@@ -81,6 +86,13 @@ s8 getQSFPName(u8 index, char8* snsrName, u8 *sensorId,sensorMonitorFunc *sensor
 
 u8 getVoltageSensorNum();
 u8 getCurrentSensorNum();
+
+#ifdef BUILD_FOR_RMI
+extern sensors_ds_t* p_vmc_rmi_sensors;
+extern u32 rmi_sensor_count;
+
+static void Update_VMC_RMI_Sensor_Value(sensors_ds_t* p_sensors, Asdm_RepositoryTypeEnum_t repoType, u8 sensorIdx, u8 sdr_idx);
+#endif
 
 /*Todo : Add Abstraction */
 extern s8 V70_Asdm_Read_Voltage_12v(snsrRead_t *snsrData);
@@ -313,6 +325,8 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
         *sdrMetaDataCount = sdr_count;
     }
 
+    VMR_ERR("RC %d", sdr_count);
+
     *pMetaData = (Asdm_Sensor_MetaData_t *) pvPortMalloc( sizeof(Asdm_Sensor_MetaData_t) * (*sdrMetaDataCount));
     if(*pMetaData != NULL)
     {
@@ -508,6 +522,8 @@ s8 Init_Asdm()
         //VMC_ERR("Records Count Mismatch  !!!\n\r");
         //return -1;
     }
+
+    total_sensor_count = totalRecords;
 
     /* for future use */
     totalRecords = 0;
@@ -1227,6 +1243,9 @@ void Asdm_Update_Sensors(void)
                             Update_Sensor_Value(sdrInfo[sdrIndex].header.repository_type,sensorRecord[idx].sensor_id, &snsrData);
 
                         }
+#ifdef BUILD_FOR_RMI
+                        Update_VMC_RMI_Sensor_Value(p_vmc_rmi_sensors, sdrInfo[sdrIndex].header.repository_type,sensorRecord[idx].sensor_id, sdrIndex);
+#endif
                     }
                 }
                 else
@@ -1381,7 +1400,7 @@ void Asdm_Update_Active_MSP_sensor()
         {
             if (xSemaphoreTake(sdr_lock, portMAX_DELAY))
             {
-	        /* Copy the Active SC Version received from the SC over uart */
+                /* Copy the Active SC Version received from the SC over uart */
                 Cl_SecureMemcpy(sensorRecord[idx].sensor_value,sizeof(sc_vmc_data.scVersion),
                         &sc_vmc_data.scVersion[0],sizeof(sc_vmc_data.scVersion));
                 xSemaphoreGive(sdr_lock);
@@ -1401,9 +1420,9 @@ void Asdm_Update_Target_MSP_sensor()
     {
         if(!Cl_SecureMemcmp(sensorRecord[idx].sensor_name,SENSOR_NAME_MAX,SNSRNAME_TARGET_SC_VER,strlen(SNSRNAME_TARGET_SC_VER))) 
         {
-	    if (xSemaphoreTake(sdr_lock, portMAX_DELAY))
-	    {
-	        /* Copy the Target SC Version read from FPT */
+            if (xSemaphoreTake(sdr_lock, portMAX_DELAY))
+            {
+                /* Copy the Target SC Version read from FPT */
                 Cl_SecureMemcpy(sensorRecord[idx].sensor_value,sizeof(fpt_sc_version), 
                     &fpt_sc_version[0],sizeof(fpt_sc_version)); 
                 xSemaphoreGive(sdr_lock); 
@@ -1412,4 +1431,55 @@ void Asdm_Update_Target_MSP_sensor()
         }
     }
 } 
+
+u8 Get_Asdm_SDR_Repo_Size(void){
+    return MAX_SDR_REPO;
+}
+
+u8 Get_Asdm_Total_Sensor_Count(void){
+    return total_sensor_count;
+}
+
+#ifdef BUILD_FOR_RMI
+
+static void Update_VMC_RMI_Sensor_Value(sensors_ds_t* p_sensors, Asdm_RepositoryTypeEnum_t repoType, u8 sensorIdx, u8 sdr_idx){
+
+    u8 record_count = 0;
+    u8 snsr_val_len = 0;
+    /* Get the Repo index from Repotype */
+    u8 repoIndex = getSDRIndex(repoType);
+    /* SensorIdx is 0 indexed in memory vs 1 index in ASDM SDR, so substracting by 1 */
+    Asdm_SensorRecord_t *sensorRecord = &sdrInfo[repoIndex].sensorRecord[sensorIdx - 1];
+
+    for(int idx = 0; idx < sdr_idx; idx++ )
+    {
+        record_count += sdrInfo[idx].header.no_of_records;
+    }
+
+    /* SensorIdx is 0 indexed in memory vs 1 index in ASDM SDR, so substracting by 1 */
+    record_count += sensorIdx - 1;
+
+    snsr_val_len = sensorRecord->sensor_value_type_length & LENGTH_BITMASK;
+
+    if(NULL != sensorRecord)
+    {
+        if(NULL != sensorRecord->sensor_value)
+        {
+            Cl_SecureMemcpy(&p_sensors[record_count].value[0],snsr_val_len,sensorRecord->sensor_value,snsr_val_len);    
+            p_sensors[record_count].size[0] = snsr_val_len;
+        }
+        else
+        {
+            VMC_ERR("Sensor Value Null !!!\n\r");
+            return;
+        }
+    }
+    else
+    {
+        VMC_ERR("InValid SDR Data\n\r");
+        return;
+    }
+}
+
+#endif
 
