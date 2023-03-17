@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include "xiicps.h"
 #include "cl_i2c.h"
+#include "cl_log.h"
 
 XIicPs_Config engines[3] =  {
 		{0, 0xf1000000, 33333333 },			// PMC_I2C
@@ -45,27 +46,23 @@ XIicPs IicInstance[3] = {
 
 u8 cl_I2CInit(void)
 {
-    xil_printf("Initialize I2C0...");
     XIicPs_CfgInitialize(&IicInstance[0], &engines[0],engines[0].BaseAddress);
 	if (XIicPs_SetSClk(&IicInstance[0], IIC_SCLK_RATE) == XST_SUCCESS)
-		xil_printf("success.\n\r");
+		VMR_LOG("I2C0:DONE");
 	else
-		xil_printf("fail.\n\r");
+		VMR_LOG("I2C0:FAIL");
 
-    xil_printf("Initialize I2C1...");
     XIicPs_CfgInitialize(&IicInstance[1], &engines[1],engines[1].BaseAddress);
 	if (XIicPs_SetSClk(&IicInstance[1], IIC_SCLK_RATE) == XST_SUCCESS)
-		xil_printf("success.\n\r");
+		VMR_LOG("I2C1:DONE");
 	else
-		xil_printf("fail.\n\r");
+		VMR_LOG("I2C1:FAIL");
 
-    xil_printf("Initialize I2C2...");
     XIicPs_CfgInitialize(&IicInstance[2], &engines[2],engines[2].BaseAddress);
 	if (XIicPs_SetSClk(&IicInstance[2], IIC_SCLK_RATE) == XST_SUCCESS)
-		xil_printf("success.\n\r");
+		VMR_LOG("I2C2:DONE");
 	else
-		xil_printf("fail.\n\r");
-
+		VMR_LOG("I2C2:FAIL");
 
 	return TRUE;
 }

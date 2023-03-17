@@ -37,7 +37,7 @@ void cl_log_init()
 {
 	cl_logbuf_lock = xSemaphoreCreateMutex();
 	configASSERT(cl_logbuf_lock != NULL);
-	VMR_WARN("done");
+	VMR_WARN("DONE");
 }
 
 void cl_loglevel_set(uint8_t log_level)
