@@ -34,5 +34,8 @@ bsp config total_heap_size 0x16000000
 puts "=== Configure Macro configGENERATE_RUN_TIME_STATS to 1 FreeRTOS Config"
 bsp config generate_runtime_stats 1
 
+puts "=== Configure Macro configSTREAM_BUFFER to true in FreeRTOS Config"
+bsp config stream_buffer true
+
 platform write
 platform active

@@ -6,8 +6,13 @@
 #ifndef INC_VMC_SENSORS_H_
 #define INC_VMC_SENSORS_H_
 
+#include "cl_config.h"
 #include "xil_types.h"
 #include "sensors/inc/qsfp.h"
+
+#ifdef BUILD_FOR_RMI
+#include "RMI/rmi_sensors.h"
+#endif
 
 #define BOARD_TEMPERATURE_SENSOR_NUM 2
 #define MAX_COUNT_TO_WAIT_1SEC 10
@@ -41,5 +46,9 @@ typedef struct
 } Versal_sensor_readings;
 
 void ucs_clock_shutdown();
+
+#ifdef BUILD_FOR_RMI
+sensors_ds_t* Vmc_Init_RMI_Sensor_Buffer(u32 counts);
+#endif
 
 #endif
