@@ -479,8 +479,7 @@ static int get_fpt_sc_version(cl_msg_t *msg, struct fpt_sc_version *version)
 	fpt_sc_loc.start_address = msg->multiboot_payload.scfw_offset;
 	fpt_sc_loc.size = msg->multiboot_payload.scfw_size;
 
-	VMC_LOG("Fpt SC base addr: 0x%x ", fpt_sc_loc.start_address);
-	VMC_LOG("Fpt SC size: 0x%x ", fpt_sc_loc.size);
+	VMC_LOG("Fpt SC base addr: 0x%x ,Fpt SC size: 0x%x ", fpt_sc_loc.start_address, fpt_sc_loc.size);
 
 	/* Data is read in 4-byte format. */
 	vmc_read_data32((u32 *) fpt_sc_loc.start_address, (u32 *)read_buffer, ((SC_TOT_HEADER_SIZE)/4));
@@ -489,13 +488,12 @@ static int get_fpt_sc_version(cl_msg_t *msg, struct fpt_sc_version *version)
 	if(fpt_sc_status == SC_VALID)
 	{
 		fpt_sc_valid = true;
-		VMC_LOG("SC Identification: Successful !! ");
 		fpt_scfw_end_addr = fpt_sc_loc.start_address + SC_TOT_HEADER_SIZE + fpt_sc_loc.size;
 		portENTER_CRITICAL();
 		parse_fpt_sc_version((fpt_scfw_end_addr - SC_VER_ADDR_W_CHKSUM), (u8 *)version);
 		portEXIT_CRITICAL();
 
-		VMC_LOG("Fpt SC version: v%d.%d.%d ",
+		VMC_LOG("SC Identification: Successful !! Fpt SC version: v%d.%d.%d ",
 			version->fsv_major, version->fsv_minor, version->fsv_revision);
 	}
 	else
