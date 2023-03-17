@@ -501,12 +501,12 @@ static int vmr_status_service_start()
 
 	IO_SYNC_WRITE32(1, RPU_SHARED_MEMORY_ADDR(mem.vmr_status_off));
 
-	VMR_LOG("magic_no %x, ring_buffer_off %x, vmr_status_off %x, status_value %x",
+	VMR_LOG("magic_no %x, ring %x, status off %x, value %x",
 		mem.vmr_magic_no,
 		mem.ring_buffer_off,
 		mem.vmr_status_off,
 		IO_SYNC_READ32(RPU_SHARED_MEMORY_ADDR(mem.vmr_status_off)));
-	VMR_LOG("log_msg_index %d, log_msg_buf_off %x, vmr_data_start %x, vmr_data_end %x",
+	VMR_LOG("log_idx %d, log off %x, data start %x, data end %x",
 		mem.log_msg_index,
 		mem.log_msg_buf_off,
 		mem.vmr_data_start,

@@ -266,7 +266,7 @@ int FlashReadID(XOspiPsv *OspiPsvPtr)
 	int Status;
 	int ReadIdBytes = 8;
 	u32 ReadId = 0;
-	char flashIDBuf[65];
+	char flashIDBuf[75];
 	char *bufPtr = flashIDBuf;
 
 	/*
@@ -292,7 +292,7 @@ int FlashReadID(XOspiPsv *OspiPsvPtr)
 	}
 
 	while(ReadIdBytes >= 0 ) {
-		bufPtr += sprintf(bufPtr, "0x%x ",ReadBfrPtr[FlashMsg.ByteCount - ReadIdBytes]);
+		bufPtr += snprintf(bufPtr,6, "0x%02X ",ReadBfrPtr[FlashMsg.ByteCount - ReadIdBytes]);
 		ReadIdBytes--;
 	}
 	VMR_LOG("FlashID = %s",flashIDBuf);

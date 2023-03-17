@@ -24,7 +24,6 @@
 
 XStatus PmInit(XScuGic *const GicInst, XIpiPsu *const IpiInst, u32 FullBoot)
 {
-	//VMR_WARN("%s Started", __func__);
         int Status;
 
 	/* GIC Initialize */
@@ -85,6 +84,6 @@ XStatus PmInit(XScuGic *const GicInst, XIpiPsu *const IpiInst, u32 FullBoot)
 
 done:
 
-	//VMR_WARN("Status: %d", Status);
+	VMR_WARN("Status: %d", Status);
         return Status;
 }
