@@ -582,7 +582,7 @@ static int vmr_xgq_init()
 
 	init_vmr_status(ring_len);
 	
-	VMR_LOG("done.");
+	VMR_LOG("DONE.");
 	return 0;
 }
 
