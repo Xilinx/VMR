@@ -52,7 +52,7 @@
 
 #define FDT_BEGIN_NODE  0x00000001
 #define FDT_PROP        0x00000003
-#define        FDT_END         0x00000009
+#define FDT_END         0x00000009
 #define ALIGN(x, a)     (((x) + ((a) - 1)) & ~((a) - 1))
 #define PALIGN(p, a)    ((char *)(ALIGN((int)(p), (int)(a))))
 #define GET_CELL(p)     (p += 4, *((u32 *)(p-4)))

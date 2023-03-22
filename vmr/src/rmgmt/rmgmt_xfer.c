@@ -241,85 +241,76 @@ static inline int pdi_download(UINTPTR data, UINTPTR size, const char *clock,
 	return fpga_pdi_download(data, size, clock, clock_size, has_pl);
 }
 
-static inline u32 vmr_bswap32(u32 x)
-{
-       return (x >> 24) | (x >> 8 & 0xff00) | (x << 8 & 0xff0000) | (x << 24);
-}
-
 static int rmgmt_get_uuids(u32 fdtdata,char *int_uuid)
 {
 	struct axlf *axlf = NULL;
-    uint64_t offset = 0;
-    uint64_t size = 0;
-    struct fdt_header *bph = NULL;
-    u32 version = 0;
-    u32 off_dt = 0;
-    int ret = 0;
-    char *p_struct = NULL;
-    u32 off_str = 0;
-    char *p_strings = NULL;
-    char *p, *s;
-    u32 tag = 0;
-    int sz = 0;
+    	uint64_t offset = 0;
+    	uint64_t size = 0;
+    	struct fdt_header *bph = NULL;
+    	u32 version = 0;
+    	u32 off_dt = 0;
+    	int ret = 0;
+    	char *p_struct = NULL;
+    	u32 off_str = 0;
+    	char *p_strings = NULL;
+    	char *p, *s;
+    	u32 tag = 0;
+    	int sz = 0;
 
-    axlf = (struct axlf *)fdtdata;
-    ret = rmgmt_xclbin_section_info(axlf, PARTITION_METADATA, &offset, &size);
-    if (ret || size == 0) {
-        VMR_WARN("no PARTITION_METADATA in xclbin: %d", ret);
-		/*
-			TO DO:- If no Partition Meta Data the do we still continue?
-		*/
+    	axlf = (struct axlf *)fdtdata;
+    	ret = rmgmt_xclbin_section_info(axlf, PARTITION_METADATA, &offset, &size);
+    	if (ret || size == 0) {
+        	VMR_WARN("no PARTITION_METADATA in xclbin: %d", ret);
 		return ret;
-    }
-	else {
-        VMR_DBG("offset %llx", offset);
-        bph = (struct fdt_header *)((char *)axlf + offset);
-    }
+    	}
+    	else {
+        	VMR_DBG("offset %llx", offset);
+        	bph = (struct fdt_header *)((char *)axlf + offset);
+    	}
 
-    //bph = (struct fdt_header *)fdtdata;
-    version = vmr_bswap32(bph->version);
-    off_dt = vmr_bswap32(bph->off_dt_struct);
-    VMR_DBG("version %d, off_dt %d", version, off_dt);
+    	version = cl_bswap32(bph->version);
+    	off_dt = cl_bswap32(bph->off_dt_struct);
+    	VMR_DBG("version %d, off_dt %d", version, off_dt);
 
-    for (int i = 0; i < 16; i+=4) {
-        VMR_DBG("0x%x", IO_SYNC_READ32((u32)bph + i));
-    }
+    	for (int i = 0; i < 16; i+=4) {
+        	VMR_DBG("0x%x", IO_SYNC_READ32((u32)bph + i));
+    	}
 
-    p_struct = (char *)bph + off_dt;
-    off_str = vmr_bswap32(bph->off_dt_strings);
-    p_strings = (char *)bph + off_str;
+    	p_struct = (char *)bph + off_dt;
+    	off_str = cl_bswap32(bph->off_dt_strings);
+    	p_strings = (char *)bph + off_str;
 
-    p = p_struct;
+    	p = p_struct;
 
-    ret = 0;
-    while ((tag = vmr_bswap32(GET_CELL(p))) != FDT_END) {
-        VMR_DBG("tag: 0x%x count:%d", tag, ret);
-        if (ret++ > 1000)
-            break;
+    	ret = 0;
+    	while ((tag = cl_bswap32(GET_CELL(p))) != FDT_END) {
+        	VMR_DBG("tag: 0x%x count:%d", tag, ret);
+        	if (ret++ > 1000)
+            		break;
 		if (tag == FDT_BEGIN_NODE) {
-            s = p;
-            p = PALIGN(p + strlen(s) + 1, 4);
-            continue;
-        }
+            	s = p;
+            	p = PALIGN(p + strlen(s) + 1, 4);
+            	continue;
+        	}
 		if (tag != FDT_PROP) {
-            continue;
-        }
+            	continue;
+        	}
 
-        sz = vmr_bswap32(GET_CELL(p));
-        s = p_strings + vmr_bswap32(GET_CELL(p));
+        	sz = cl_bswap32(GET_CELL(p));
+        	s = p_strings + cl_bswap32(GET_CELL(p));
 
-        VMR_DBG("s:%s p:%s", s, p);
-        if (version < 16 && sz >= 8)
-            p = PALIGN(p, 8);
+        	VMR_DBG("s:%s p:%s", s, p);
+        	if (version < 16 && sz >= 8)
+            	p = PALIGN(p, 8);
 
-        if (!strcmp(s, "logic_uuid")) {
+        	if (!strcmp(s, "logic_uuid")) {
 			VMR_DBG("found lg s:%s p:%s", s, p);
-        }
-        if (!strcmp(s, "interface_uuid")) {
+        	}
+        	if (!strcmp(s, "interface_uuid")) {
 			VMR_DBG("found it s:%s p:%s", s, p);
 			strcpy(int_uuid,s);
-        }
-        p = PALIGN(p + sz, 4);
+        	}
+        	p = PALIGN(p + sz, 4);
 	}
 	return 0;
 }
@@ -340,26 +331,26 @@ static int rmgmt_fpga_download(struct rmgmt_handler *rh, u32 len)
 	char xsabin_int_uuid[32] = { 0 };
 	u32 fdtdata_size = 0;
 	u32 fdtdata = 0;
-    cl_msg_t msg = { 0 };
+    	cl_msg_t msg = { 0 };
 
 	/* Sync data from cache to memory */
 	Xil_DCacheFlush();
 
 	/*
-    * Validate incoming UUID from xclbin matches Interface UUID in xsabin
-    */
+   	* Validate incoming UUID from xclbin matches Interface UUID in xsabin
+    	*/
 	ret = rmgmt_get_uuids((u32)axlf, (char *)xclbin_int_uuid);
-    if(ret){
+    	if(ret){
 		VMR_ERR("Failed to find UUID from xclbin");
 		return -EINVAL;
 	}
 
-    if (rmgmt_fpt_get_xsabin(&msg, &fdtdata, &fdtdata_size)) {
-        VMR_ERR("get xsabin medata failed");
-        return -EINVAL;
-    }
+    	if (rmgmt_fpt_get_xsabin(&msg, &fdtdata, &fdtdata_size)) {
+        	VMR_ERR("get xsabin medata failed");
+        	return -EINVAL;
+    	}
 	ret = rmgmt_get_uuids((u32)fdtdata, (char *)xsabin_int_uuid);
-    if(ret){
+    	if(ret){
 		VMR_ERR("Failed to find UUID from xsabin");
 		return -EINVAL;
 	}
@@ -367,12 +358,17 @@ static int rmgmt_fpga_download(struct rmgmt_handler *rh, u32 len)
 		TO DO:- If initial case is "0000000000000000 or sending xclbin first time? need to handle"
 	*/
 	if(strcmp(xclbin_int_uuid,xsabin_int_uuid)){
-		VMR_ERR("Interface UUID Mismatch!");
-		VMR_ERR("xclbin uuid:0x%s, xsabin uuid:0x%s",xclbin_int_uuid,xsabin_int_uuid);
-		return -EINVAL;
+		VMR_WARN("Interface UUID Mismatch!");
+		VMR_WARN("xclbin uuid:0x%s",xclbin_int_uuid);
+		VMR_WARN("xsabin_uuid:0x%s",xsabin_int_uuid);
+		/*
+		* Implement UUID Mismatch Handling for V80/Foraker VMR Releases as default case.
+		* If the Platform supports legacy Shell, then bypass this check and continue irrespective of failure
+		*/
 	}
-	VMR_WARN("Interface UUID Match Found. Downloading xclbin!");
-
+	else{
+		VMR_WARN("Interface UUID Match Found. Downloading xclbin!");
+	}
 	ret = rmgmt_xclbin_section_info(axlf, CLOCK_FREQ_TOPOLOGY, &offset, &size);
 	if (ret || size == 0) {
 		VMR_LOG("no CLOCK TOPOLOGY from xclbin: %d", ret);
@@ -391,7 +387,7 @@ static int rmgmt_fpga_download(struct rmgmt_handler *rh, u32 len)
 
 		ret = pdi_download((UINTPTR)partial_pdi, (UINTPTR)partial_pdi_size,
 			xclbin_topo, xclbin_topo_size, 1);
-		
+
 		if (ret)
 			goto done;
 
