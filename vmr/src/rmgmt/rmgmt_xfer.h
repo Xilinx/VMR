@@ -56,6 +56,7 @@
 #define ALIGN(x, a)     (((x) + ((a) - 1)) & ~((a) - 1))
 #define PALIGN(p, a)    ((char *)(ALIGN((int)(p), (int)(a))))
 #define GET_CELL(p)     (p += 4, *((u32 *)(p-4)))
+#define UUID_BYTES_LEN	(32)
 
 struct pdi_packet {
 	union {

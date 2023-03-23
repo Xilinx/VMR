@@ -286,14 +286,14 @@ static int rmgmt_get_uuids(u32 fdtdata,char *int_uuid)
     	while ((tag = cl_bswap32(GET_CELL(p))) != FDT_END) {
         	VMR_DBG("tag: 0x%x count:%d", tag, ret);
         	if (ret++ > 1000)
-            		break;
+            		return -EINVAL;
 		if (tag == FDT_BEGIN_NODE) {
-            	s = p;
-            	p = PALIGN(p + strlen(s) + 1, 4);
-            	continue;
+            		s = p;
+            		p = PALIGN(p + strlen(s) + 1, 4);
+            		continue;
         	}
 		if (tag != FDT_PROP) {
-            	continue;
+            		continue;
         	}
 
         	sz = cl_bswap32(GET_CELL(p));
@@ -301,14 +301,15 @@ static int rmgmt_get_uuids(u32 fdtdata,char *int_uuid)
 
         	VMR_DBG("s:%s p:%s", s, p);
         	if (version < 16 && sz >= 8)
-            	p = PALIGN(p, 8);
+            		p = PALIGN(p, 8);
 
-        	if (!strcmp(s, "logic_uuid")) {
+        	if (!strncmp(s, "logic_uuid",strlen("logic_uuid"))) {
 			VMR_DBG("found lg s:%s p:%s", s, p);
         	}
-        	if (!strcmp(s, "interface_uuid")) {
+        	if (!strncmp(s, "interface_uuid",strlen("interface_uuid"))) {
 			VMR_DBG("found it s:%s p:%s", s, p);
-			strcpy(int_uuid,s);
+			strncpy(int_uuid,p,UUID_BYTES_LEN);
+			break;
         	}
         	p = PALIGN(p + sz, 4);
 	}
@@ -327,8 +328,8 @@ static int rmgmt_fpga_download(struct rmgmt_handler *rh, u32 len)
 	u32 partial_pdi_size = 0;
 	u32 pdi_size = 0;
 	u32 xclbin_topo_size = 0;
-	char xclbin_int_uuid[32] = { 0 };
-	char xsabin_int_uuid[32] = { 0 };
+	char xclbin_int_uuid[UUID_BYTES_LEN] = { 0 };
+	char xsabin_int_uuid[UUID_BYTES_LEN] = { 0 };
 	u32 fdtdata_size = 0;
 	u32 fdtdata = 0;
     	cl_msg_t msg = { 0 };
@@ -354,20 +355,20 @@ static int rmgmt_fpga_download(struct rmgmt_handler *rh, u32 len)
 		VMR_ERR("Failed to find UUID from xsabin");
 		return -EINVAL;
 	}
-	/*
-		TO DO:- If initial case is "0000000000000000 or sending xclbin first time? need to handle"
-	*/
-	if(strcmp(xclbin_int_uuid,xsabin_int_uuid)){
+
+	if(strncmp(xclbin_int_uuid,xsabin_int_uuid,UUID_BYTES_LEN)){
 		VMR_WARN("Interface UUID Mismatch!");
-		VMR_WARN("xclbin uuid:0x%s",xclbin_int_uuid);
-		VMR_WARN("xsabin_uuid:0x%s",xsabin_int_uuid);
+		VMR_WARN("xcl:0x%s",xclbin_int_uuid);
+		VMR_WARN("xsa:0x%s",xsabin_int_uuid);
 		/*
 		* Implement UUID Mismatch Handling for V80/Foraker VMR Releases as default case.
 		* If the Platform supports legacy Shell, then bypass this check and continue irrespective of failure
 		*/
 	}
 	else{
-		VMR_WARN("Interface UUID Match Found. Downloading xclbin!");
+		VMR_DBG("xcl:0x%s",xclbin_int_uuid);
+		VMR_DBG("xsa:0x%s",xsabin_int_uuid);
+		VMR_WARN("Interface UUID Match Found!");
 	}
 	ret = rmgmt_xclbin_section_info(axlf, CLOCK_FREQ_TOPOLOGY, &offset, &size);
 	if (ret || size == 0) {
