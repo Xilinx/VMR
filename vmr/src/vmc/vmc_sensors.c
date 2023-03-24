@@ -128,6 +128,10 @@ int cl_vmc_clk_throttling_disable()
  */
 void ucs_clock_shutdown()
 {
+#ifdef DISABLE_LIMITS_FOR_TEST
+    VMR_ERR("Clock shutdown is disabled for testing.\n\r");
+    return;
+#else
     u32 shutdown_status = 0 ;
 
     u32 trigger_value = 0;
@@ -161,6 +165,7 @@ void ucs_clock_shutdown()
         VMC_ERR("Clock shutdown due to power or temperature value reaching Critical threshold \n\r");
     }
     return;
+#endif
 }
 
 s8 Temperature_Read_ACAP_Device_Sysmon(snsrRead_t *snsrData)
@@ -201,12 +206,14 @@ s8 VCCINT_Read_ACAP_Device_Sysmon(snsrRead_t *snsrData)
 
     if(VCCINT_mv != 0)
     {
+        sensor_glvr.sensor_readings.voltage[eVCCINT] = VCCINT_mv;
         Cl_SecureMemcpy(&snsrData->snsrValue[0], (sizeof(u8)*4), &VCCINT_mv,sizeof(VCCINT_mv));
         snsrData->sensorValueSize = sizeof(VCCINT_mv);
         snsrData->snsrSatus = Vmc_Snsr_State_Normal;
     }
     else
     {
+        sensor_glvr.sensor_readings.voltage[eVCCINT] = 0;
         Cl_SecureMemcpy(&snsrData->snsrValue[0], (sizeof(u8)*4), &VCCINT_mv,sizeof(VCCINT_mv));
         snsrData->snsrSatus = Vmc_Snsr_State_Comms_failure;
         VMC_DBG("MSP Sensor Id : %d Data read failed \n\r",snsrData->mspSensorIndex);
@@ -458,7 +465,7 @@ int vmc_set_clk_throttling_override(cl_msg_t *msg)
         g_clk_throttling_params.limits.throttle_limit_temp  = clock_throttling_std_algorithm.TempThrottlingLimit;
         g_clk_throttling_params.limits.throttle_limit_pwr = clock_throttling_std_algorithm.PowerThrottlingLimit;
     }
-    
+
     return 0;
 }
 
@@ -592,6 +599,10 @@ u8 getCurrentSensorNum()
 
 void Clock_throttling()
 {
+#ifdef DISABLE_LIMITS_FOR_TEST
+    VMR_ERR("Clock throttling is disabled for testing.\n\r");
+    return;
+#else
     /* Check if we have received update request from XRT */
     if(g_clk_throttling_params.limits_update_req) {
         clock_throttling_std_algorithm.FeatureEnabled = 
@@ -615,6 +626,7 @@ void Clock_throttling()
 
     clock_throttling_algorithm_power(&clock_throttling_std_algorithm);
     clock_throttling_algorithm_temperature(&clock_throttling_std_algorithm);
+#endif
 }
 
 void cl_vmc_monitor_sensors()
@@ -634,10 +646,13 @@ void cl_vmc_monitor_sensors()
         Clock_throttling();
 
 #ifdef VMC_TEST
-        se98a_monitor();
-        max6639_monitor();
-        sysmon_monitor();
-        qsfp_monitor ();
+    se98a_monitor();
+    max6639_monitor();
+    sysmon_monitor();
+    qsfp_monitor ();
+#endif
+#ifdef VMC_TEST_V70
+    sysmon_monitor();
 #endif
 }
 
@@ -679,7 +694,7 @@ static void Vmc_Push_Sensors_To_RMI_Q(StreamBufferHandle_t *q_handle){
 }
 
 sensors_ds_t* Vmc_Init_RMI_Sensor_Buffer(u32 counts){
-    
+
     if(NULL != p_vmc_rmi_sensors)
         return p_vmc_rmi_sensors;
 
