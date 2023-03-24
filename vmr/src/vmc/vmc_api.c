@@ -253,11 +253,7 @@ void BoardInfoTest(void)
 void SensorData_Display(void)
 {
 	VMC_PRNT("\n\r");
-
-
-	//VMC_PRNT("====================================================================\n\r");
-	//VMC_PRNT("TBD: Sensor Data to be printed!\n\r");
-	//VMC_PRNT("====================================================================\n\r");
+#ifdef VMC_TEST_VCK5000
 	VMC_PRNT("SE98A_0 temperature 			: %d \n\r",sensor_glvr.sensor_readings.board_temp[0]);
 	VMC_PRNT("SE98A_1 temperature 			: %d \n\r",sensor_glvr.sensor_readings.board_temp[1]);
 	VMC_PRNT("local temperature(max6639) 		: %f \n\r",sensor_glvr.sensor_readings.local_temp);
@@ -266,8 +262,23 @@ void SensorData_Display(void)
 	VMC_PRNT("Maximum SYSMON temp 			: %f \n\r ",sensor_glvr.sensor_readings.sysmon_max_temp);
 	VMC_PRNT("QSFP_0 temperature			: %f \n\r ",sensor_glvr.sensor_readings.qsfp_temp[0]);
 	VMC_PRNT("QSFP_1 temperature			: %f \n\r ",sensor_glvr.sensor_readings.qsfp_temp[1]);
-	VMC_PRNT("\n\r");
+#endif
 
+#ifdef VMC_TEST_V70
+	VMC_PRNT("Maximum SYSMON Temperature	: %f C \n\r",sensor_glvr.sensor_readings.sysmon_max_temp);
+	VMC_PRNT("LM75_0 Temperature 		: %d C \n\r",sensor_glvr.sensor_readings.board_temp[0]);
+	VMC_PRNT("LM75_1 Temperature 		: %d C \n\r",sensor_glvr.sensor_readings.board_temp[1]);
+	VMC_PRNT("ISL_68221 VCCINT Temperature 	: %f C \n\r",sensor_glvr.sensor_readings.vccint_temp);
+	VMC_PRNT("Voltage VCCINT			: %f mV \n\r",sensor_glvr.sensor_readings.voltage[eVCCINT]);
+	VMC_PRNT("Voltage 12V_PEX			: %f mV \n\r",sensor_glvr.sensor_readings.voltage[e12V_PEX]);
+	VMC_PRNT("Voltage 3V3_PEX			: %f mV \n\r",sensor_glvr.sensor_readings.voltage[e3V3_PEX]);
+	VMC_PRNT("Voltage 3V3_AUX			: %f mV \n\r",sensor_glvr.sensor_readings.voltage[e3V3_AUX]);
+	VMC_PRNT("Current 12V_PEX			: %f mA \n\r",sensor_glvr.sensor_readings.current[e12V_PEX]);
+	VMC_PRNT("Current 3V3_PEX			: %f mA \n\r",sensor_glvr.sensor_readings.current[e3V3_PEX]);
+	VMC_PRNT("Current VCCINT			: %f mA \n\r",(sensor_glvr.sensor_readings.current[eVCCINT] * 1000));
+	VMC_PRNT("Total Power			: %f W \n\r",sensor_glvr.sensor_readings.total_power);
+#endif
+	VMC_PRNT("\n\r");
 
 }
 
@@ -427,7 +438,6 @@ u8 Versal_EEPROM_ReadBoardInfo(void)
 	EEPROM_Content_Details_t *eeprom_offset = NULL;
 
 	u8 *data_ptr = NULL;
-
 	Verify_Checksum();
 
 	status = Update_BoardInfo_Data(i2c_num, board_info.eeprom_version,

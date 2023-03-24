@@ -25,10 +25,14 @@
 
 #define	VMC_STRING	"VMC"
 
+//#define DISABLE_LIMITS_FOR_TEST
+//#define INCREASE_LIMITS_FOR_TEST
+
 #ifdef VMC_DEBUG
 //#warning "When enabled RPU UART RX has conflic with APU UART so need to disable XRT code (RMGMT_Launch and cl_msg_service_launch)."
 
-#define VMC_TEST
+//#define VMC_TEST_VCK5000
+//#define VMC_TEST_V70
 
 #define VMC_DMO(fmt, arg...) 		\
 	VMC_Printf(__FILENAME__, __LINE__, VMC_LOG_LEVEL_DEMO_MENU, fmt,##arg)
