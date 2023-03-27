@@ -50,6 +50,14 @@
         XRT_XFR_PKT_TYPE_SHIFT)
 #define XRT_XFR_PKT_FLAGS_VER           (XRT_XFR_VER << XRT_XFR_PKT_VER_SHIFT)
 
+#define FDT_BEGIN_NODE  0x00000001
+#define FDT_PROP        0x00000003
+#define FDT_END         0x00000009
+#define ALIGN(x, a)     (((x) + ((a) - 1)) & ~((a) - 1))
+#define PALIGN(p, a)    ((char *)(ALIGN((int)(p), (int)(a))))
+#define GET_CELL(p)     (p += 4, *((u32 *)(p-4)))
+#define UUID_BYTES_LEN	(32)
+
 struct pdi_packet {
 	union {
 		struct {
@@ -59,6 +67,19 @@ struct pdi_packet {
 		};
 		u32 header;
 	};
+};
+
+struct fdt_header {
+       uint32_t magic;
+       uint32_t totalsize;
+       uint32_t off_dt_struct;
+       uint32_t off_dt_strings;
+       uint32_t off_mem_rsvmap;
+       uint32_t version;
+       uint32_t last_comp_version;
+       uint32_t boot_cpuid_phys;
+       uint32_t size_dt_strings;
+       uint32_t size_dt_struct;
 };
 
 int rmgmt_init_handler(struct rmgmt_handler *rh);

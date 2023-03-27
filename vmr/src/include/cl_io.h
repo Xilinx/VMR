@@ -192,4 +192,9 @@ static inline int cl_memset_io8(u32 dst, u8 val, size_t len)
 	return len;
 }
 
+static inline u32 cl_bswap32(u32 x)
+{
+       return (x >> 24) | (x >> 8 & 0xff00) | (x << 8 & 0xff0000) | (x << 24);
+}
+
 #endif
