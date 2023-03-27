@@ -158,11 +158,9 @@ int cl_vmc_init()
     }
 #endif
 
-<<<<<<< HEAD
     vmc_is_ready = true;
-    VMR_LOG("Done. set vmc is ready.");
+    VMR_LOG("DONE. set vmc is ready.");
     return 0;
-=======
 	status = Init_Platform();
 	if (status != XST_SUCCESS) {
 		VMR_ERR("Platform Initialization Failed.");
@@ -193,7 +191,6 @@ int cl_vmc_init()
 	vmc_is_ready = true;
 	VMR_LOG("DONE. set vmc is ready.");
 	return 0;
->>>>>>> VMR Boot Log Impl for VMC
 }
 
 
