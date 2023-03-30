@@ -161,38 +161,7 @@ int cl_vmc_init()
     vmc_is_ready = true;
     VMR_LOG("DONE. set vmc is ready.");
     return 0;
-	status = Init_Platform();
-	if (status != XST_SUCCESS) {
-		VMR_ERR("Platform Initialization Failed.");
-		return -EINVAL;
-	}
-	
-	status = UART_VMC_SC_Enable(&uart_vmcsc_log, current_platform);
-	if (status != XST_SUCCESS) {
-		VMR_ERR("UART VMC to SC init Failed.");
-		return -EINVAL;
-	}
-
-	Versal_Print_BoardInfo();
-
-	/* sdr_lock */
-	sdr_lock = xSemaphoreCreateMutex();
-	configASSERT(sdr_lock != NULL);
-
-	/* vmc_sc_lock */
-	vmc_sc_lock = xSemaphoreCreateMutex();
-	configASSERT(vmc_sc_lock != NULL);
-
-	if (Init_Asdm()) {
-		VMC_ERR(" ASDM Init Failed \n\r"); 
-		return -EINVAL;
-	}
-
-	vmc_is_ready = true;
-	VMR_LOG("DONE. set vmc is ready.");
-	return 0;
 }
-
 
 static sensorMonitorFunc Vmc_Find_Sensor_Handler(eSensor_Functions sensor_type)
 {
