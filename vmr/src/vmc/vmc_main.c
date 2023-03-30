@@ -159,10 +159,9 @@ int cl_vmc_init()
 #endif
 
     vmc_is_ready = true;
-    VMR_LOG("Done. set vmc is ready.");
+    VMR_LOG("DONE. set vmc is ready.");
     return 0;
 }
-
 
 static sensorMonitorFunc Vmc_Find_Sensor_Handler(eSensor_Functions sensor_type)
 {
