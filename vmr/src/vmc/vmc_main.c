@@ -152,8 +152,8 @@ int cl_vmc_init()
     }
 
 #ifdef BUILD_FOR_RMI
-    if( rmi_sensor_init()){
-        VMC_ERR(" RMI Sensor Init Failed \n\r"); 
+    if( rmi_init_all()){
+        VMC_ERR(" RMI Init Failed \n\r"); 
         return -EINVAL;
     }
 #endif

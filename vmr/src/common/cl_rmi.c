@@ -29,6 +29,7 @@ static const u8 STREAM_BUF_MAX_ITEMS = 10;
 
 static u8 is_rmi_ready = false;
 static u32 cl_rmi_sensors_count = 0;
+static u32 cl_rmi_dynamic_sensors_count = 0;
 static u32 stream_buffer_item_size = 0;
 
 StreamBufferHandle_t xStreamBuffer_rmi_sensor = NULL;
@@ -37,29 +38,129 @@ sensors_ds_t* cl_rmi_p_sensors = NULL;
 
 static void cl_rmi_init_sensors(void);
 static void cl_rmi_update_rmi_sensor_values(sensors_ds_t* sensor_val);
+static s8 rmi_board_info_init(void);
+static s8 rmi_sensor_init(void);
 
+s8 rmi_init_all(void)
+{
+
+    if( rmi_board_info_init())
+    {
+        VMR_ERR(" RMI Board Info Init Failed \n\r");
+        return -1;
+    }
+
+    if( rmi_sensor_init())
+    {
+        VMR_ERR(" RMI Sensor Init Failed \n\r");
+        return -1;
+    }
+
+    return 0;
+}
+
+static s8 rmi_board_info_init(void)
+{
+
+    Versal_BoardInfo versal_board_info = {0};
+    rmi_board_info_t rmi_board_info = {0};
+    u32 temp_size = 0;
+    s8 ret_val = 0;
+
+    Cl_SecureMemset(&versal_board_info, 0, sizeof(versal_board_info));
+
+    VMC_Get_BoardInfo(&versal_board_info);
+
+    Cl_SecureMemset(&rmi_board_info, 0, sizeof(rmi_board_info));
+
+    temp_size = sizeof(rmi_board_info.eeprom_version);
+    Cl_SecureMemcpy(&rmi_board_info.eeprom_version, temp_size, &versal_board_info.eeprom_version, temp_size);
+
+    temp_size = sizeof(rmi_board_info.board_act_pas);
+    Cl_SecureMemcpy(&rmi_board_info.board_act_pas, temp_size, &versal_board_info.board_act_pas, temp_size);
+
+    temp_size = sizeof(rmi_board_info.board_config_mode);
+    Cl_SecureMemcpy(&rmi_board_info.board_config_mode, temp_size, &versal_board_info.board_config_mode, temp_size);
+
+    temp_size = sizeof(rmi_board_info.board_mac);
+    Cl_SecureMemcpy(&rmi_board_info.board_mac, temp_size, &versal_board_info.board_mac[0], temp_size);
+
+    temp_size = sizeof(rmi_board_info.board_max_power_mode);
+    Cl_SecureMemcpy(&rmi_board_info.board_max_power_mode, temp_size, &versal_board_info.board_max_power_mode, temp_size);
+
+    temp_size = sizeof(rmi_board_info.board_mfg_date);
+    Cl_SecureMemcpy(&rmi_board_info.board_mfg_date, temp_size, &versal_board_info.board_mfg_date, temp_size);
+    
+    temp_size = sizeof(rmi_board_info.board_part_num);
+    Cl_SecureMemcpy(&rmi_board_info.board_part_num, temp_size, &versal_board_info.board_part_num, temp_size);
+
+    temp_size = sizeof(rmi_board_info.board_pcie_info);
+    Cl_SecureMemcpy(&rmi_board_info.board_pcie_info, temp_size, &versal_board_info.board_pcie_info, temp_size);
+
+    temp_size = sizeof(rmi_board_info.board_rev);
+    Cl_SecureMemcpy(&rmi_board_info.board_rev, temp_size, &versal_board_info.board_rev, temp_size);
+
+    temp_size = sizeof(rmi_board_info.board_serial);
+    Cl_SecureMemcpy(&rmi_board_info.board_serial, temp_size, &versal_board_info.board_serial, temp_size);
+
+    temp_size = sizeof(rmi_board_info.board_uuid);
+    Cl_SecureMemcpy(&rmi_board_info.board_uuid, temp_size, &versal_board_info.board_uuid, temp_size);
+
+    temp_size = sizeof(rmi_board_info.capability_word);
+    Cl_SecureMemcpy(&rmi_board_info.capability_word, temp_size, &versal_board_info.capability, temp_size);
+
+    temp_size = sizeof(rmi_board_info.num_mac_ids);
+    Cl_SecureMemcpy(&rmi_board_info.num_mac_ids, temp_size, &versal_board_info.Num_MAC_IDS, temp_size);
+
+    temp_size = sizeof(rmi_board_info.oem_id);
+    Cl_SecureMemcpy(&rmi_board_info.oem_id, temp_size, &versal_board_info.OEM_ID, temp_size);
+
+    temp_size = sizeof(rmi_board_info.memory_size);
+    Cl_SecureMemcpy(&rmi_board_info.memory_size, temp_size, &versal_board_info.Memory_size, temp_size);
+
+    temp_size = sizeof(rmi_board_info.dimm_size);
+    Cl_SecureMemcpy(&rmi_board_info.dimm_size, temp_size, &versal_board_info.DIMM_size, temp_size);
+
+    temp_size = sizeof(rmi_board_info.product_name);
+    Cl_SecureMemcpy(&rmi_board_info.product_name, temp_size, &versal_board_info.product_name, temp_size);
+
+    if(eRMI_SUCCESS != rmi_write_board_info(&rmi_board_info, sizeof(rmi_board_info_t))){
+        VMR_ERR(" RMI Write Board Info Failed! \n\r");
+        ret_val = -1;
+    }
+
+    return ret_val;
+}
 /*
 *  @brief Initializes and configures RMI sensors. It is called from vmc_main
 *  @return 0 as success
 */
-s8 rmi_sensor_init(void){
+static s8 rmi_sensor_init(void)
+{
+
+    s8 ret_val = 0;
 
     cl_rmi_init_sensors();
 
-    rmi_configure_sensors(cl_rmi_p_sensors, cl_rmi_sensors_count);
+    if(eRMI_SUCCESS != rmi_configure_sensors(cl_rmi_p_sensors, cl_rmi_dynamic_sensors_count))
+    {
+        VMR_ERR(" RMI Sensor Configuration Failed! \n\r");
+        ret_val = -1;
+    }
 
-    stream_buffer_item_size = sizeof(sensors_ds_t) * cl_rmi_sensors_count;
+    stream_buffer_item_size = sizeof(sensors_ds_t) * cl_rmi_dynamic_sensors_count;
     xStreamBuffer_rmi_sensor = xStreamBufferCreate( stream_buffer_item_size * STREAM_BUF_MAX_ITEMS, stream_buffer_item_size );
     configASSERT(NULL != xStreamBuffer_rmi_sensor);
 
-    return 0;
+    return ret_val;
 }
 
 /*
 *  @brief Calls initializes rmi library. It is called from cl_main
 *  @return
 */
-int cl_rmi_init(void){
+int cl_rmi_init(void)
+{
 
     rmi_init();
 
@@ -76,7 +177,8 @@ int cl_rmi_init(void){
 *  @param task_args
 *  @return
 */
-void cl_rmi_func(void *task_args){
+void cl_rmi_func(void *task_args)
+{
     
     sensors_ds_t* updated_sensors = NULL;
     updated_sensors = (sensors_ds_t*)pvPortMalloc(stream_buffer_item_size);
@@ -126,7 +228,8 @@ void cl_rmi_func(void *task_args){
 *  @param p_vmc_sensors: pointer to updated sensors values received from stream buffer
 *  @return void
 */
-static void cl_rmi_update_rmi_sensor_values(sensors_ds_t* p_vmc_sensors){
+static void cl_rmi_update_rmi_sensor_values(sensors_ds_t* p_vmc_sensors)
+{
 
     configASSERT( (NULL != p_vmc_sensors) && (NULL != cl_rmi_p_sensors));
 
@@ -138,18 +241,20 @@ static void cl_rmi_update_rmi_sensor_values(sensors_ds_t* p_vmc_sensors){
 *  @brief Initializes and configures RMI Sensor Struct
 *  @return void
 */
-static void cl_rmi_init_sensors(void){
+static void cl_rmi_init_sensors(void)
+{
 
     sensors_ds_t* p_vmc_sensors = NULL;
 
     cl_rmi_sensors_count = Get_Asdm_Total_Sensor_Count();
+    cl_rmi_dynamic_sensors_count = Get_Asdm_Dynamic_Sensor_Count();
     
-    VMR_LOG("RMI Sensor count: %d", cl_rmi_sensors_count);
+    VMR_LOG("RMI dynamic sensor count: %d", cl_rmi_dynamic_sensors_count);
 
-    p_vmc_sensors = Vmc_Init_RMI_Sensor_Buffer(cl_rmi_sensors_count);
-    cl_rmi_p_sensors = (sensors_ds_t*)pvPortMalloc(cl_rmi_sensors_count * sizeof(sensors_ds_t));
+    p_vmc_sensors = Vmc_Init_RMI_Sensor_Buffer(cl_rmi_dynamic_sensors_count);
+    cl_rmi_p_sensors = (sensors_ds_t*)pvPortMalloc(cl_rmi_dynamic_sensors_count * sizeof(sensors_ds_t));
 
-    for(int idx = 0; idx < cl_rmi_sensors_count; idx++){
+    for(int idx = 0; idx < cl_rmi_dynamic_sensors_count; idx++){
             cl_rmi_p_sensors[idx].id[0] = idx + 1; 
             p_vmc_sensors[idx].id[0] = idx + 1; 
     }
@@ -160,7 +265,8 @@ static void cl_rmi_init_sensors(void){
 *  @brief De-initializes RMI
 *  @return void
 */
-void cl_rmi_exit(void){
+void cl_rmi_exit(void)
+{
     // TODO: release allocated memory and clean up
 
     if(NULL != cl_rmi_p_sensors)
@@ -168,10 +274,12 @@ void cl_rmi_exit(void){
 
     cl_rmi_p_sensors = NULL;
     cl_rmi_sensors_count = 0;
+    cl_rmi_dynamic_sensors_count = 0;
     stream_buffer_item_size = 0;
 }
 
-u8 cl_rmi_is_ready(void){
+u8 cl_rmi_is_ready(void)
+{
     return is_rmi_ready;
 }
 

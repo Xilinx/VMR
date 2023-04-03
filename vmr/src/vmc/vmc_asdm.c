@@ -66,6 +66,7 @@ SDR_t *sdrInfo;
 extern SemaphoreHandle_t sdr_lock;
 static u8 asdmInitSuccess = false;
 static u8 total_sensor_count = 0;
+static u8 dynamic_sensor_count = 0;
 extern Versal_BoardInfo board_info;
 extern SC_VMC_Data sc_vmc_data;
 extern u8 fpt_sc_version[3];
@@ -128,6 +129,10 @@ Asdm_Sensor_Unit_t sensor_unit_tbl[] = {
 
 /*
  * Record Count is updated based on Platform Type runtime
+ *
+ * NOTE:
+ * Changing the order of repos or order of sensors, or repos' enumuration
+ * might affect RMI sensor structure.
  */
 Asdm_Header_t asdmHeaderInfo[] = {
     /* Record Type  | Hdr Version | Record Count | NumBytes */
@@ -513,6 +518,12 @@ s8 Init_Asdm()
     while(idx < MAX_SDR_REPO)
     {
         totalRecords += asdmHeaderInfo[idx].no_of_records;
+
+        if(BoardInfoSDR != asdmHeaderInfo[idx].repository_type)
+        {
+            ++dynamic_sensor_count;
+        }
+
         idx++;
     }
 
@@ -1430,14 +1441,21 @@ void Asdm_Update_Target_MSP_sensor()
             }
         }
     }
-} 
+}
 
-u8 Get_Asdm_SDR_Repo_Size(void){
+u8 Get_Asdm_SDR_Repo_Size(void)
+{
     return MAX_SDR_REPO;
 }
 
-u8 Get_Asdm_Total_Sensor_Count(void){
+u8 Get_Asdm_Total_Sensor_Count(void)
+{
     return total_sensor_count;
+}
+
+u8 Get_Asdm_Dynamic_Sensor_Count(void)
+{
+    return dynamic_sensor_count;
 }
 
 #ifdef BUILD_FOR_RMI
@@ -1446,6 +1464,13 @@ static void Update_VMC_RMI_Sensor_Value(sensors_ds_t* p_sensors, Asdm_Repository
 
     u8 record_count = 0;
     u8 snsr_val_len = 0;
+
+    /* Only update dynamic sensors. */
+    if(BoardInfoSDR == repoType)
+    {
+        return;
+    }
+
     /* Get the Repo index from Repotype */
     u8 repoIndex = getSDRIndex(repoType);
     /* SensorIdx is 0 indexed in memory vs 1 index in ASDM SDR, so substracting by 1 */
@@ -1453,7 +1478,11 @@ static void Update_VMC_RMI_Sensor_Value(sensors_ds_t* p_sensors, Asdm_Repository
 
     for(int idx = 0; idx < sdr_idx; idx++ )
     {
-        record_count += sdrInfo[idx].header.no_of_records;
+        /* Removing static sensor count from record_count to match RMI sensor*/
+        if(BoardInfoSDR != sdrInfo[idx].header.repository_type)
+        {
+            record_count += sdrInfo[idx].header.no_of_records;
+        }
     }
 
     /* SensorIdx is 0 indexed in memory vs 1 index in ASDM SDR, so substracting by 1 */
