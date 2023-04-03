@@ -13,7 +13,7 @@
 #include "RMI/rmi_sensors.h"
 
 int cl_rmi_init(void);
-s8 rmi_sensor_init(void);
+s8 rmi_init_all(void);
 
 /*
  * When task func started, all init works should be done already.

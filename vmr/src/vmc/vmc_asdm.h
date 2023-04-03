@@ -251,6 +251,7 @@ s8 Temperature_Read_QSFP(snsrRead_t *snsrData);
 s8 Temperature_Read_VCCINT(snsrRead_t *snsrData);
 u8 Get_Asdm_SDR_Repo_Size(void);
 u8 Get_Asdm_Total_Sensor_Count(void);
+u8 Get_Asdm_Dynamic_Sensor_Count(void);
 
 typedef void (*asdm_update_record_count_ptr) (Asdm_Header_t *headerInfo );
 
