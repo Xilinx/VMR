@@ -366,9 +366,9 @@ static void Print_Eeprom_3_0(void)
 								  board_info.OEM_ID[0]);
 
 
-	VMR_PRNT( "Max Power Mode        : %x ", board_info.board_max_power_mode);
-	VMR_PRNT( "Memory size           : %s ", board_info.Memory_size);
-	VMR_PRNT( "Capabilities          : %02x%02x ", board_info.capability[0], board_info.capability[1]);
+	VMR_PRNT( "Max Power Mode        : %d \n\r", board_info.board_max_power_mode[0]);
+	VMR_PRNT( "Memory size           : %s \n\r", board_info.Memory_size);
+	VMR_PRNT( "Capabilities          : %02x%02x \n\r", board_info.capability[0], board_info.capability[1]);
 }
 
 static bool Verify_Checksum(void)
