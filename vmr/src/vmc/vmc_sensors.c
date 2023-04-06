@@ -40,7 +40,6 @@
 #define ENABLE_FORCE_SHUTDOWN   0x000DB190
 
 #define WATTS_TO_MICROWATTS (1000000)
-#define REDUCE_GAPPING_DEMAND_RATE_TO_FIVE_PERCENTAGE 0x07
 static int vmc_sysmon_is_ready = 0;
 /* TODO: init those to a certain value */
 static XSysMonPsv InstancePtr;

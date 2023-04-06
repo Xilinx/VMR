@@ -19,6 +19,7 @@
 
 #define POWER_MODE_300W 3
 #define LPD_I2C_0	0x1
+#define REDUCE_GAPPING_DEMAND_RATE_TO_FIVE_PERCENTAGE 0x07
 
 typedef enum {
 	e12V_PEX = 0,
