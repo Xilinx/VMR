@@ -141,7 +141,7 @@ u8 ucQSFPReadTemperature( float *pfTemperatureValue, u8 ucSensorInstance )
 u8 ucQSFPI2CMuxReadTemperature( float *pfTemperatureValue, u8 ucSensorInstance )
 {
 	u8 ucStatus 						= XST_SUCCESS;
-#define V80_ON_V70
+
 #ifdef V80_ON_V70
 	*pfTemperatureValue = 32+ucSensorInstance;
 	if( 2 == ucSensorInstance )

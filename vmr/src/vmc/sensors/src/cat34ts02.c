@@ -11,7 +11,7 @@
 u8 ucCAT34TS02ReadTemperature( u8 ucI2cNum, u8 ucSlaveAddr, s16 *pssTemperatureValue )
 {
     u8 ucStatus 			= 0;
-#define V80_ON_V70
+
 #ifdef V80_ON_V70
 	*pssTemperatureValue = 38;
 	return ucStatus;

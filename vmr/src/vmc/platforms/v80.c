@@ -18,7 +18,7 @@
 #include "../vmc_sc_comms.h"
 #include "../vmc_sensors.h"
 #include "../clock_throttling.h"
-#define V80_ON_V70
+
 #define SLAVE_ADDRESS_LM75_0_V80  ( 0x48 )
 
 #define SLAVE_ADDRESS_INA3221_0   ( 0x40 )
