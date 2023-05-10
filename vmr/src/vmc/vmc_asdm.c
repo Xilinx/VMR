@@ -16,28 +16,28 @@
 #include "cl_rmi.h"
 #endif
 
-#define ASDM_GET_SDR_SIZE_REQ (0x00)
-
-#define SENSOR_TYPE_NUM (0x0)
-#define SENSOR_TYPE_ASCII   (0xC << 4)
-
-#define SENSOR_SIZE_1B  (0x1)
-#define SENSOR_SIZE_2B  (0x2)
-#define SENSOR_SIZE_4B  (0x4)
-
-#define NO_THRESHOLDS   (0x0)
-#define SNSR_MAX_VAL    (0x1 << 7)
-#define SNSR_AVG_VAL    (0x1 << 6)
-#define HAS_LOWER_THRESHOLDS    (0x7 << 3)
-#define HAS_UPPER_THRESHOLDS    (0x7)
-
-#define LENGTH_BITMASK   (0x3F)
+#define ASDM_GET_SDR_SIZE_REQ       (0x00)
+    
+#define SENSOR_TYPE_NUM             (0x0)
+#define SENSOR_TYPE_ASCII           (0xC << 4)
+    
+#define SENSOR_SIZE_1B              (0x1)
+#define SENSOR_SIZE_2B              (0x2)
+#define SENSOR_SIZE_4B              (0x4)
+            
+#define NO_THRESHOLDS               (0x0)
+#define SNSR_MAX_VAL                (0x1 << 7)
+#define SNSR_AVG_VAL                (0x1 << 6)
+#define HAS_LOWER_THRESHOLDS        (0x7 << 3)
+#define HAS_UPPER_THRESHOLDS        (0x7)
+    
+#define LENGTH_BITMASK              (0x3F)
 #define SENSOR_REPOSITORY_REQUEST   (0xF1)
-#define THRESHOLDS_UNSUPPORTED  (0x00)
+#define THRESHOLDS_UNSUPPORTED      (0x00)
 
-#define QSFP_MAX_NUM    (2)
+#define QSFP_MAX_NUM                (4)
 
-#define ASDM_HEADER_VER     (0x1)
+#define ASDM_HEADER_VER             (0x1)
 
 #define SNSRNAME_ACTIVE_SC_VER "Active SC Ver\0"
 #define SNSRNAME_TARGET_SC_VER "Target SC Ver\0"
@@ -46,21 +46,17 @@
 #define TEMP_ACAP_NAME     "device\0"
 #define TEMP_VCCINT_NAME   "vccint\0"
 
-
-/* Voltage and Current Sensor Name */
-#define VCCINT_NAME    "vccint\0"
-
 /* ASDM API Req/Resp Offsets */
 #define ASDM_REQ_BYTE_CMD_CODE      (0)
 #define ASDM_REQ_BYTE_REPO_TYPE     (1)
 #define ASDM_REQ_BYTE_SNSR_ID       (2)
 
 /* CC - Completion Code */
-#define ASDM_RESP_BYTE_CC       (0)
+#define ASDM_RESP_BYTE_CC           (0)
 #define ASDM_RESP_BYTE_REPO_TYPE    (1)
 #define ASDM_RESP_BYTE_SNSR_SIZE    (2)
 
-#define MAX_SDR_INFO_COUNT      (100)
+#define MAX_SDR_INFO_COUNT          (100)
 
 SDR_t *sdrInfo;
 extern SemaphoreHandle_t sdr_lock;
@@ -84,7 +80,9 @@ s8 VCCINT_Read_ACAP_Device_Sysmon(snsrRead_t *snsrData);
 s8 getVoltagesName(u8 index, char8* snsrName, u8 *sensorId,sensorMonitorFunc *sensor_handler);
 s8 getCurrentNames(u8 index, char8* snsrName, u8 *sensorId,sensorMonitorFunc *sensor_handler);
 s8 getQSFPName(u8 index, char8* snsrName, u8 *sensorId,sensorMonitorFunc *sensor_handler);
+s8 scGetTemperatureName(u8 index, char8* snsrName, u8 *sensorId,sensorMonitorFunc *sensor_handler);
 
+u8 ucGetTemperatureSensorNum();
 u8 getVoltageSensorNum();
 u8 getCurrentSensorNum();
 
@@ -113,7 +111,8 @@ Asdm_Sensor_Thresholds_t thresholds_limit_tbl[]= {
     { TEMP_VCCINT_NAME, 0,   0,  0,     100, 110, 125 },
     { TEMP_CAGE0_NAME,  0,   0,  0,     80,  85, 90 },
     { TEMP_CAGE1_NAME,  0,   0,  0,     80,  85, 90 },
-
+    { TEMP_CAGE2_NAME,  0,   0,  0,     80,  85, 90 },
+    { TEMP_CAGE3_NAME,  0,   0,  0,     80,  85, 90 }
 };
 
 Asdm_Sensor_Unit_t sensor_unit_tbl[] = {
@@ -138,9 +137,9 @@ Asdm_Header_t asdmHeaderInfo[] = {
     /* Record Type  | Hdr Version | Record Count | NumBytes */
     {BoardInfoSDR ,     ASDM_HEADER_VER,  0,    0x7f},
     {TemperatureSDR,    ASDM_HEADER_VER,  0,    0x7f},
-    {VoltageSDR,    ASDM_HEADER_VER,  0,    0x7f},
-    {CurrentSDR,    ASDM_HEADER_VER,  0,    0x7f},
-    {PowerSDR,      ASDM_HEADER_VER,  0,    0x7f},
+    {VoltageSDR,        ASDM_HEADER_VER,  0,    0x7f},
+    {CurrentSDR,        ASDM_HEADER_VER,  0,    0x7f},
+    {PowerSDR,          ASDM_HEADER_VER,  0,    0x7f},
 };
 
 #define MAX_SDR_REPO    (sizeof(asdmHeaderInfo)/sizeof(asdmHeaderInfo[0]))
@@ -262,6 +261,16 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
     },
     {
         .repoType = TemperatureSDR,
+        .getSensorName = &scGetTemperatureName,
+        .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_4B,
+        .snsrUnitModifier = 0x0,
+        .supportedThreshold = SNSR_MAX_VAL | SNSR_AVG_VAL ,
+        .sampleCount = 0x1,
+        .sensorInstance = ucGetTemperatureSensorNum(),
+        .monitorFunc = NULL,
+    },
+    {
+        .repoType = TemperatureSDR,
         .getSensorName = &getQSFPName,
         .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_2B,
         .snsrUnitModifier = 0x0,
@@ -281,16 +290,6 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
         .monitorFunc = NULL,
     },
     {
-        .repoType = VoltageSDR,
-        .sensorName = VCCINT_NAME,
-        .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_4B,
-        .snsrUnitModifier = -3,
-        .supportedThreshold = SNSR_MAX_VAL | SNSR_AVG_VAL ,
-        .sampleCount = 0x1,
-        .sensorListTbl = VCCINT,
-        .monitorFunc = &VCCINT_Read_ACAP_Device_Sysmon,
-    },
-    {
         .repoType = CurrentSDR,
         .getSensorName = &getCurrentNames,
         .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_4B,
@@ -301,16 +300,6 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
         .monitorFunc = NULL,
     },
     {
-        .repoType = CurrentSDR,
-        .sensorName = VCCINT_NAME,
-        .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_4B,
-        .snsrUnitModifier = -3,
-        .supportedThreshold = SNSR_MAX_VAL | SNSR_AVG_VAL ,
-        .sampleCount = 0x1,
-        .sensorListTbl = eSC_VCCINT_I,
-        .monitorFunc = &PMBUS_SC_Vccint_Read,
-    },
-    {
         .repoType = PowerSDR,
         .sensorName = "Total Power\0",
         .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_2B,
@@ -318,7 +307,7 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
         .supportedThreshold = SNSR_MAX_VAL | SNSR_AVG_VAL ,
         .sampleCount = 0x1,
         .monitorFunc = &Asdm_Read_Power,
-    },
+    }
     };
 
 
@@ -526,11 +515,12 @@ s8 Init_Asdm()
 
         idx++;
     }
+    VMC_ERR( "totalRecords %d\n\r", totalRecords );
 
     if(sdrMetaDataCount != totalRecords)
     {
         /* LoG Error, don't proceed for Init */
-        //VMC_ERR("Records Count Mismatch  !!!\n\r");
+        VMC_ERR("Records Count Mismatch  !!!\n\r");
         //return -1;
     }
 

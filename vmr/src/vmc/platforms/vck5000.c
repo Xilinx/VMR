@@ -95,11 +95,9 @@ u32 vck5000_Supported_Sensors[] = {
 
 	/* Voltage SDR */
 	eVoltage_Group_Sensors,
-	eVoltage_Sysmon_Vccint,
 
 	/* Current SDR */
 	eCurrent_Group_Sensors,
-	eCurrent_SC_Vccint,
 
 	/* Power SDR */
 	ePower_Total
@@ -356,7 +354,7 @@ s8 Vck5000_Temperature_Read_QSFP(snsrRead_t *snsrData)
 	u8 status = XST_FAILURE;
 	float TempReading = 0.0;
 
-	status = QSFP_ReadTemperature(&TempReading, snsrData->sensorInstance);
+	status = ucQSFPReadTemperature(&TempReading, snsrData->sensorInstance);
 
 	if (status == XST_SUCCESS)
 	{
@@ -486,7 +484,7 @@ void qsfp_monitor(void)
 
 	for (snsrIndex = 0; snsrIndex < QSFP_TEMPERATURE_SENSOR_NUM; snsrIndex++)
 	{
-		status = QSFP_ReadTemperature(&TemperatureValue,snsrIndex);
+		status = ucQSFPReadTemperature(&TemperatureValue,snsrIndex);
 
 		if (status == XST_SUCCESS)
 		{

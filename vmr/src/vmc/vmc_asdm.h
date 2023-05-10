@@ -10,6 +10,8 @@
 #define SENSOR_NAME_MAX (30)
 #define TEMP_CAGE0_NAME    "cage_temp_0\0"
 #define TEMP_CAGE1_NAME    "cage_temp_1\0"
+#define TEMP_CAGE2_NAME    "cage_temp_2\0"
+#define TEMP_CAGE3_NAME    "cage_temp_3\0"
 
 typedef enum VMC_Sensor_State_e
 {
@@ -60,15 +62,14 @@ typedef enum
 	eTemp_Board,
 	eTemp_Sysmon_Fpga,
 	eTemp_Vccint,
-	eTemp_Qsfp,
+    eTemp_Group_Sensors,
+    eTemp_Qsfp,
 
 	/* Voltage SDR */
 	eVoltage_Group_Sensors,
-	eVoltage_Sysmon_Vccint,
 
 	/* Current SDR */
 	eCurrent_Group_Sensors,
-	eCurrent_SC_Vccint,
 	
 	/* Power SDR */
 	ePower_Total,

@@ -23,6 +23,7 @@
 
 #include "platforms/vck5000.h"
 #include "platforms/v70.h"
+#include "platforms/v80.h"
 
 #ifdef BUILD_FOR_RMI
 #include "cl_rmi.h"
@@ -36,13 +37,14 @@ uart_rtos_handle_t uart_log;
 extern s8 V70_Asdm_Read_Temp_Vccint(snsrRead_t *snsrData);
 
 static bool vmc_is_ready = false;
-static ePlatformType current_platform = eV70;
+static ePlatformType current_platform = eV80;
 
 Platform_t platform_names[eMax_Platforms]=
 {
     {eVCK5000,"V350\0"},
     {eVCK5000,"VCK5000\0"},
     {eV70,"V70\0"},
+    {eV80,"V80\0"},
 };
 
 Platform_Sensor_Handler_t platform_sensor_handlers[]=
@@ -59,11 +61,19 @@ Platform_Sensor_Handler_t platform_sensor_handlers[]=
     {eV70,eTemperature_Sensor_Inlet,V70_Temperature_Read_Inlet,NULL},
     {eV70,eTemperature_Sensor_Outlet,V70_Temperature_Read_Outlet,NULL},
     {eV70,eTemperature_Sensor_Board,V70_Temperature_Read_Board,NULL},
-    {eV70, eTemperature_Sensor_QSFP, NULL,NULL},
     {eV70,eVccint_Temp,V70_Asdm_Read_Temp_Vccint,NULL},
     {eV70,eVoltage_Sensors,NULL,V70_Get_Voltage_Names},
     {eV70,eCurrent_Sensors,NULL,V70_Get_Current_Names},
     {eV70,ePower_Sensor,V70_Asdm_Read_Power,NULL},
+    {eV80,eTemperature_Sensor_Inlet,scV80AsdmTemperatureReadInlet,NULL},
+    {eV80,eTemperature_Sensor_Outlet,scV80AsdmTemperatureReadOutlet,NULL},
+    {eV80,eTemperature_Sensor_Board,scV80AsdmTemperatureReadBoard,NULL},
+    {eV80,eTemperature_Sensors,NULL, scV80AsdmGetTemperatureNames},
+    {eV80,eVccint_Temp,scV80AsdmTemperatureReadVccint,NULL},
+    {eV80,eVoltage_Sensors,NULL,scV80AsdmGetVoltageNames},
+    {eV80,eCurrent_Sensors,NULL,scV80AsdmGetCurrentNames},
+    {eV80,eQSFP_Sensors,NULL,scV80AsdmGetQSFPName},
+    {eV80,ePower_Sensor,scV80AsdmReadPower,NULL},
 };
 
 Platform_Function_Handler_t platform_function_handlers[]=
@@ -72,6 +82,7 @@ Platform_Function_Handler_t platform_function_handlers[]=
     {eVCK5000,eSc_Comms,Vck5000_Vmc_Sc_Comms},
     {eV70,ePlatform_Init,V70_Init},
     {eV70,eSc_Comms,NULL},
+    {eV80,ePlatform_Init,ucV80Init},
 };
 
 Platform_Func_Ptr platform_init_ptr = NULL;
@@ -225,7 +236,8 @@ static u8 Vmc_ConfigurePlatform(const char * product_name)
             if(strstr(product_name,&platform_names[i].product_type_name[0]) != NULL){
                 current_platform = platform_names[i].product_type_id;
                 status = XST_SUCCESS;
-                VMR_LOG("Current Platform is %s",&platform_names[i].product_type_name[0]);
+
+                VMR_LOG("Row %d matched. Current Platform is %s",i, &platform_names[i].product_type_name[0]);
                 break;
             }
         }
@@ -259,21 +271,26 @@ static u8 Vmc_ConfigurePlatform(const char * product_name)
                 Temperature_Read_Board_Ptr = Vmc_Find_Sensor_Handler(i);
                 break;
 
-            case eTemperature_Sensor_QSFP:
-                Temperature_Read_QSFP_Ptr = Vmc_Find_Sensor_Handler(i);
+            case eTemperature_Sensors:
+                Temperature_Read_Ptr = Vmc_Find_Sensor_Name_Handler(i);
                 break;
+
             case eVoltage_Sensors:
                 Voltage_Read_Ptr = Vmc_Find_Sensor_Name_Handler(i);
                 break;
+
             case eCurrent_Sensors:
                 Current_Read_Ptr = Vmc_Find_Sensor_Name_Handler(i);
                 break;
+
             case eQSFP_Sensors:
                 QSFP_Read_Ptr = Vmc_Find_Sensor_Name_Handler(i);
                 break;
+
             case eVccint_Temp:
                 Temperature_Read_VCCINT_Ptr = Vmc_Find_Sensor_Handler(i);
                 break;
+
             case ePower_Sensor:
                 Power_Read_Ptr = Vmc_Find_Sensor_Handler(i);
                 break;

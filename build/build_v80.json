@@ -1,0 +1,10 @@
+{
+  "CONF_BUILD_TA" : "2023.1_daily_latest",
+  "CONF_BUILD_XSA" : "/proj/xbuilds/2023.1_daily_latest/xbb/dsadev/opt/xilinx/platforms/xilinx_v70_gen5x8_qdma_3_202310_1/hw/xilinx_v70_gen5x8_qdma_3_202310_1.xsa",
+  "CONF_BUILD_XSABIN" : "/opt/xilinx/firmware/v70/gen5x8-qdma/base/partition.xsabin",
+  "CONF_BUILD_PLATFORM" : "platform_2023.1_vitis.json",
+  "CONF_BUILD_JTAG" : "0",
+  "CONF_BUILD_AIE2" : "yes",
+  "CONF_BUILD_SHELL" : "yes"
+}
+
