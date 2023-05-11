@@ -10,23 +10,16 @@
 
 u8 ucISL68221WriteRegister( u8 ucI2cNum, u8 ucSlaveAddr, u8 ucRegisterAddress, u8 *pucRegisterContent )
 {
-    u8 ucStatus         = 0;
     u8 ucWriteData[2]   = {0};
     ucWriteData[0]      = ucRegisterAddress;
     ucWriteData[1]      = *pucRegisterContent;
 
-    ucStatus = i2c_send(ucI2cNum, ucSlaveAddr, ucWriteData, 2);
-
-    return ucStatus;
+    return( i2c_send(ucI2cNum, ucSlaveAddr, ucWriteData, 2 ) );
 }
 
 u8 ucISL68221ReadRegister( u8 ucI2cNum, u8 ucSlaveAddr, u8 ucRegisterAddress, u8 *pucRegisterContent )
 {
-    u8 ucStatus = 0;
-
-    ucStatus = i2c_send_rs_recv( ucI2cNum, ucSlaveAddr, &ucRegisterAddress,1, pucRegisterContent, 2 );
-
-    return ucStatus;
+    return( i2c_send_rs_recv( ucI2cNum, ucSlaveAddr, &ucRegisterAddress,1, pucRegisterContent, 2 ) );
 }
 
 u8 ucISL68221ReadVoltage0( u8 ucBusNum, u8 ucSlaveAddr, float *pfVoltageInmV )

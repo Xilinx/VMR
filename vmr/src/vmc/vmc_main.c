@@ -236,8 +236,7 @@ static u8 Vmc_ConfigurePlatform(const char * product_name)
             if(strstr(product_name,&platform_names[i].product_type_name[0]) != NULL){
                 current_platform = platform_names[i].product_type_id;
                 status = XST_SUCCESS;
-
-                VMR_LOG("Row %d matched. Current Platform is %s",i, &platform_names[i].product_type_name[0]);
+                VMR_LOG("Current Platform is %s",&platform_names[i].product_type_name[0]);
                 break;
             }
         }
