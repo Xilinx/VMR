@@ -22,7 +22,7 @@ u8 ucCAT34TS02ReadTemperature( u8 ucI2cNum, u8 ucSlaveAddr, s16 *pssTemperatureV
     u8 ucI2cWriteBuff[1]    = {0};
     
     ucI2cWriteBuff[0]       = CAT34TS02_TEMPERATURE_REGISTER;
-    ucStatus = i2c_send_rs_recv (ucI2cNum, ucSlaveAddr, &ucI2cWriteBuff[0], 1, &ucI2cReadBuff[0], ucI2cReadLen );
+    ucStatus = i2c_send_rs_recv( ucI2cNum, ucSlaveAddr, &ucI2cWriteBuff[0], 1, &ucI2cReadBuff[0], ucI2cReadLen );
     if( ucStatus )
     {
         VMR_LOG("Failed to read CAT34TS02 temperature\n\r");
@@ -30,16 +30,16 @@ u8 ucCAT34TS02ReadTemperature( u8 ucI2cNum, u8 ucSlaveAddr, s16 *pssTemperatureV
     else
     {
         /* Arrange the bytes in  the correct order */
-		usTempHexVal = ucI2cReadBuff[1] | (ucI2cReadBuff[0] << 8);
+        usTempHexVal = ucI2cReadBuff[1] | ( ucI2cReadBuff[0] << 8 );
 
         /* Bit 12 (MSB) determines if the number is positive or negative */
-        const int negative = (usTempHexVal & (1 << CAT34TS02_TEMPERATURE_SIGN_BIT)) != 0;
-        usTempHexVal &= (0xFFF);
+        const int negative = (usTempHexVal & ( 1 << CAT34TS02_TEMPERATURE_SIGN_BIT ) ) != 0;
+        usTempHexVal &= ( 0xFFF );
         s16 nativeInt = 0;
 
         /* If the value was negative we need to correct the MSB to reflect that
         and finally divide by 16 to change the temperature to a whole number */
-        if ( negative )
+        if( negative )
         {
             nativeInt = usTempHexVal | ~((1 << CAT34TS02_TEMPERATURE_SIGN_BIT) - 1);
             *pssTemperatureValue = ( s16 )(nativeInt / ( 1 << CAT34TS02_TEMP_NON_WHOLE_BITS ) );

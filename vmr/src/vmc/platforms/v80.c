@@ -160,7 +160,7 @@ void vV80AsdmUpdateRecordCount( Asdm_Header_t *pxHeaderInfo )
     
     if( NULL != pxHeaderInfo )
     {
-        for( i=0; i < MAX_SDR_REPO; i++ )
+        for( i = 0; i < MAX_SDR_REPO; i++ )
         {
             if( pxHeaderInfo[i].repository_type == xV80ASDMHeaderInfo[i].record_type )
             {
@@ -382,7 +382,7 @@ void vV80TemperatureMonitor( void )
 
 s8 scV80AsdmTemperatureReadQSFP(snsrRead_t *pxSnsrData)
 {
-    u8 scStatus         = XST_SUCCESS; //XST_FAILURE;
+    u8 scStatus         = XST_SUCCESS;
     float fTempReading  = 0.0;
 
     if( NULL != pxSnsrData )
@@ -438,7 +438,7 @@ void vV80QSFPMonitor( void )
         }
         if( XST_DEVICE_NOT_FOUND == scStatus )
         {
-            //VMC_PRNT( "QSFP_%d module not present", ucQSFPIndex );
+            /* VMC_PRNT( "QSFP_%d module not present", ucQSFPIndex ); */
         }
 
     }
@@ -693,7 +693,7 @@ void vV80CurrentMonitorVccHBM( )
         VMC_ERR( "Failed to read Vcc HBM Current " );
     }
 #endif
-    sensor_glvr.sensor_readings.current[eVCC_HBM] = fCurrentInA; //In Amps
+    sensor_glvr.sensor_readings.current[eVCC_HBM] = fCurrentInA; /* In Amps */
 }
 
 void vV80VoltageMonitor1V2VccoDimm( )
@@ -728,7 +728,7 @@ void vV80CurrentMonitor1V2VccoDimm( )
         VMC_ERR( "Failed to read 1V2 Vcco Dimm Current " );
     }
 #endif
-    sensor_glvr.sensor_readings.current[e1V2_VCCO_DIMM] = fCurrentInA; //In Amps
+    sensor_glvr.sensor_readings.current[e1V2_VCCO_DIMM] = fCurrentInA; /* In Amps */
 }
 
 void vV80VoltageMonitor1V2GTXAVTT( )
@@ -747,7 +747,6 @@ void vV80VoltageMonitor1V2GTXAVTT( )
 #endif
     sensor_glvr.sensor_readings.voltage[e1V2_GTXAVTT] = fVoltage;
 
-    //VMC_ERR( "sensor_glvr.sensor_readings.voltage[e1V2_GTXAVTT] is %f \n\r ", sensor_glvr.sensor_readings.voltage[e1V2_GTXAVTT] );
 }
 
 void vV80CurrentMonitor1V2GTXAVTT( )
@@ -765,7 +764,7 @@ void vV80CurrentMonitor1V2GTXAVTT( )
         VMC_ERR( "Failed to read 1V2GTXAVT Current " );
     }
 #endif
-    sensor_glvr.sensor_readings.current[e1V2_GTXAVTT] = fCurrentInA; //In Amps
+    sensor_glvr.sensor_readings.current[e1V2_GTXAVTT] = fCurrentInA; /* In Amps */
 }
 
 
@@ -793,7 +792,7 @@ void vV80PowerMonitor( )
         sensor_glvr.sensor_readings.total_power = ( fPower12vPex + fPower3v3pex );
     }
 
-    // shutdown clock only if power reached critical threshold continuously for 1sec ( 100ms*10 )
+    /* shutdown clock only if power reached critical threshold continuously for 1sec ( 100ms*10 ) */
     if( V80_POWER_12VPEX_CRITICAL_THRESHOLD  <= ( fPower12vPex ) )
     {
         if( MAX_COUNT_TO_WAIT_1SEC == ucCount12vpex )
@@ -854,7 +853,7 @@ void vV80CurrentMonitorVccint( )
         VMC_ERR( "Failed to read Vccint Current " );
     }
 
-    sensor_glvr.sensor_readings.current[eVCCINT] = fCurrentInA; //In Amps
+    sensor_glvr.sensor_readings.current[eVCCINT] = fCurrentInA; /* In Amps */
 }
 
 s8 scV80AsdmReadPower( snsrRead_t *pxSnsrData )
@@ -1416,7 +1415,7 @@ s8 scV80AsdmTemperatureReadVccint( snsrRead_t *pxSnsrData )
         pxSnsrData->sensorValueSize = sizeof( usTemp );
         pxSnsrData->snsrSatus = Vmc_Snsr_State_Normal;
 
-        /* Shutdown user clock when vccint temperature value goes beyond critical value*/
+        /* Shutdown user clock when vccint temperature value goes beyond critical value */
         if ( V80_TEMP_VCCINT_CRITICAL_THRESHOLD <= usTemp )
         {
             ucs_clock_shutdown( );
@@ -1680,7 +1679,7 @@ void vV80BuildClockThrottlingProfile( Clock_Throttling_Profile_t * pProfile )
 u8 ucV80Init( void )
 {
     msg_id_handler_ptr = NULL; /* Send nothing to SC */
-    //set_total_req_size(V80_MAX_MSGID_COUNT);
+
     set_total_req_size(0);
 
     fetch_boardinfo_ptr = &slV80VMCFetchBoardInfo;
