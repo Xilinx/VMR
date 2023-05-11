@@ -1564,6 +1564,7 @@ s8 scV80AsdmGetVoltageNames( u8 ucIndex, char8* pucSnsrName, u8 *pucSensorId, se
     s8 scReturnCode = XST_SUCCESS;
     
     if( ( NULL != pucSnsrName ) &&
+        ( NULL != pucSensorId ) &&
         ( NULL != pxSensorHandler ) )
     {
         struct sensorData
