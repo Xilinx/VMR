@@ -1,5 +1,5 @@
 /******************************************************************************
-* Copyright (C) 2020 Xilinx, Inc.  All rights reserved.
+* Copyright (C) 2023 Xilinx, Inc.  All rights reserved.
 * SPDX-License-Identifier: MIT
 *******************************************************************************/
 #ifndef INC_VMC_ASDM_H_
@@ -10,6 +10,8 @@
 #define SENSOR_NAME_MAX (30)
 #define TEMP_CAGE0_NAME    "cage_temp_0\0"
 #define TEMP_CAGE1_NAME    "cage_temp_1\0"
+#define TEMP_CAGE2_NAME    "cage_temp_2\0"
+#define TEMP_CAGE3_NAME    "cage_temp_3\0"
 
 typedef enum VMC_Sensor_State_e
 {
@@ -32,7 +34,7 @@ typedef enum Asdm_Repository_Type_Enum_e
     BoardInfoSDR   = 0xC0,
     TemperatureSDR = 0xC1,
     VoltageSDR     = 0xC2,
-    CurrentSDR	   = 0xC3,
+    CurrentSDR     = 0xC3,
     PowerSDR       = 0xC4,
     QSFPControlSDR = 0xC5,
     VPDPCIeSDR     = 0xD0,
@@ -43,66 +45,65 @@ typedef enum Asdm_Repository_Type_Enum_e
 
 typedef enum
 {
-	eProduct_Name,
-	eSerial_Number,
-	ePart_Number,
-	eRevision,
-	eMfg_Date,
-	eUUID,
-	eMAC_0,
-	eMAC_1,
-	eFpga_Fan_1,
-	eActive_SC_Ver,
-	eTarget_SC_Ver,
-	eOEM_Id,
+    eProduct_Name,
+    eSerial_Number,
+    ePart_Number,
+    eRevision,
+    eMfg_Date,
+    eUUID,
+    eMAC_0,
+    eMAC_1,
+    eFpga_Fan_1,
+    eActive_SC_Ver,
+    eTarget_SC_Ver,
+    eOEM_Id,
 
-	/* Temperature SDR */
-	eTemp_Board,
-	eTemp_Sysmon_Fpga,
-	eTemp_Vccint,
-	eTemp_Qsfp,
+    /* Temperature SDR */
+    eTemp_Board,
+    eTemp_Sysmon_Fpga,
+    eTemp_Vccint,
+    eTemp_Group_Sensors,
+    eTemp_Qsfp,
 
-	/* Voltage SDR */
-	eVoltage_Group_Sensors,
-	eVoltage_Sysmon_Vccint,
+    /* Voltage SDR */
+    eVoltage_Group_Sensors,
 
-	/* Current SDR */
-	eCurrent_Group_Sensors,
-	eCurrent_SC_Vccint,
-	
-	/* Power SDR */
-	ePower_Total,
+    /* Current SDR */
+    eCurrent_Group_Sensors,
+    
+    /* Power SDR */
+    ePower_Total,
 
-	eSdr_Sensor_Max
+    eSdr_Sensor_Max
 }Asdm_Sensor_PDR_List_t;
 
 typedef enum Threshold_Support_Enum
 {
-    Upper_Warning_Threshold  = 0x01,
-    Upper_Critical_Threshold = (0x01 << 1),
-    Upper_Fatal_Threshold    = (0x01 << 2),
-    Lower_Warning_Threshold  = (0x01 << 3),
-    Lower_Critical_Threshold = (0x01 << 4),
-    Lower_Fatal_Threshold    = (0x01 << 5),
-    Sensor_Avg_Val_Support   = (0x01 << 6),
-    Sensor_Max_Val_Support   = (0x01 << 7),
+    Upper_Warning_Threshold             = 0x01,
+    Upper_Critical_Threshold            = (0x01 << 1),
+    Upper_Fatal_Threshold               = (0x01 << 2),
+    Lower_Warning_Threshold             = (0x01 << 3),
+    Lower_Critical_Threshold            = (0x01 << 4),
+    Lower_Fatal_Threshold               = (0x01 << 5),
+    Sensor_Avg_Val_Support              = (0x01 << 6),
+    Sensor_Max_Val_Support              = (0x01 << 7),
 }SDR_Threshold_Support_Enum;
 
 typedef enum Asdm_Completion_Code_e
 {
-    Asdm_CC_Not_Available		= 0x00,
-    Asdm_CC_Operation_Success 		= 0x01,
-    Asdm_CC_Operation_Failed 		= 0x02,
-    Asdm_CC_Flow_Control_Read_Stale	= 0x03,
+    Asdm_CC_Not_Available               = 0x00,
+    Asdm_CC_Operation_Success           = 0x01,
+    Asdm_CC_Operation_Failed            = 0x02,
+    Asdm_CC_Flow_Control_Read_Stale     = 0x03,
     Asdm_CC_Flow_Control_Write_Error    = 0x04,
-    Asdm_CC_Invalid_Sensor_ID 		= 0x05,
+    Asdm_CC_Invalid_Sensor_ID           = 0x05,
 }Asdm_Completion_Code_t;
 
 typedef enum Asdm_CMD_Id_e {
-	ASDM_CMD_GET_SIZE		= 0x1,
-	ASDM_CMD_GET_SDR		= 0x2,
-	ASDM_CMD_GET_SINGLE_SENSOR_DATA	= 0x3,
-	ASDM_CMD_GET_ALL_SENSOR_DATA	= 0x4,
+    ASDM_CMD_GET_SIZE                   = 0x1,
+    ASDM_CMD_GET_SDR                    = 0x2,
+    ASDM_CMD_GET_SINGLE_SENSOR_DATA     = 0x3,
+    ASDM_CMD_GET_ALL_SENSOR_DATA        = 0x4,
 }Asdm_CMD_Id_t;
 
 /*typedef s8 (*Asdm_GetRepository_func)(u8 *respData, u16 respSize);
@@ -219,7 +220,7 @@ typedef struct __attribute__((packed)) Asdm_EOR_s
     u8 EndOfRepoMarker[4];
 }Asdm_EOR_t;
 
-#define ASDM_EOR_MAX_SIZE		(4u)
+#define ASDM_EOR_MAX_SIZE       (4u)
 
 typedef struct __attribute__((packed)) SDR_s
 {
@@ -239,8 +240,8 @@ typedef enum Sensor_Status_Enum_e
 }SDR_Sensor_Status_Enum_t;
 
 typedef struct __attribute__((packed)) {
-	Asdm_RepositoryTypeEnum_t record_type;
-	u8 record_count;
+    Asdm_RepositoryTypeEnum_t record_type;
+    u8 record_count;
 }AsdmHeader_info_t;
 
 s8 Init_Asdm();
