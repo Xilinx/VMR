@@ -43,7 +43,7 @@ Platform_t platform_names[eMax_Platforms]=
 {
     {eVCK5000,"V350\0"},
     {eVCK5000,"VCK5000\0"},
-    {eV80,"V70\0"},
+    {eV70,"V70\0"},
     {eV80,"V80\0"},
 };
 
