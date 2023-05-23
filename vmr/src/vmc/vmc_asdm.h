@@ -152,6 +152,8 @@ typedef s8 (*sensorMonitorFunc)(snsrRead_t *snsrData);
 
 typedef s8 (*snsrNameFunc)(u8 index, char8* snsrName, u8* snsrId, sensorMonitorFunc *sensor_handler );
 
+typedef s8 (*snsrLengthFunc)(u8 index, char8* snsrName, u8* snsrId, u8* SensorLength );
+
 
 typedef struct __attribute__((packed)) Asdm_SDRCount_s
 {

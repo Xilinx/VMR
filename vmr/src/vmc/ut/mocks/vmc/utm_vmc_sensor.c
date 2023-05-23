@@ -27,21 +27,30 @@
 #include "platforms/v70.h"
 
 /* VCK5000 Specific sensors */
-#define VCK5000_CURRENT_SENSORS_INSTANCES       (3)
-#define VCK5000_VOLTAGE_SENSORS_INSTANCES       (5)
+#define VCK5000_TEMPERATURE_SENSORS_INSTANCES   ( 0 )
+#define VCK5000_CURRENT_SENSORS_INSTANCES       ( 3 )
+#define VCK5000_VOLTAGE_SENSORS_INSTANCES       ( 5 )
 
 /* V70 Specific sensors */
-#define V70_CURRENT_SENSORS_INSTANCES   (3)
-#define V70_VOLTAGE_SENSORS_INSTANCES   (2)
+#define V70_TEMPERATURE_SENSORS_INSTANCES   ( 0 )
+#define V70_CURRENT_SENSORS_INSTANCES       ( 3 )
+#define V70_VOLTAGE_SENSORS_INSTANCES       ( 3 )
 
-#define MIN_CURRENT_SENSORS_INSTANCES   (3)
-#define MIN_VOLTAGE_SENSORS_INSTANCES   (2)
+/* V80 Specific sensors */
+#define V80_TEMPERATURE_SENSORS_INSTANCES   ( 3 )
+#define V80_CURRENT_SENSORS_INSTANCES       ( 10 )
+#define V80_VOLTAGE_SENSORS_INSTANCES       ( 10 )
+
+#define MIN_TEMPERATURE_SENSORS_INSTANCES   ( 0 )
+#define MIN_CURRENT_SENSORS_INSTANCES       ( 3 )
+#define MIN_VOLTAGE_SENSORS_INSTANCES       ( 3 )
 
 sensorMonitorFunc Temperature_Read_Board_Ptr;
 sensorMonitorFunc Temperature_Read_QSFP_Ptr;
 sensorMonitorFunc Temperature_Read_VCCINT_Ptr;
 sensorMonitorFunc Power_Read_Ptr;
 
+snsrNameFunc Temperature_Read_Ptr;
 snsrNameFunc Voltage_Read_Ptr;
 snsrNameFunc Current_Read_Ptr;
 snsrNameFunc QSFP_Read_Ptr;
@@ -102,6 +111,14 @@ s8 getCurrentNames(u8 index, char8* snsrName, u8 *sensorId,sensorMonitorFunc *se
         return (*Current_Read_Ptr)(index,snsrName,sensorId,sensor_handler);
 }
 
+s8 scGetTemperatureName(u8 ucIndex, char8* pucSnsrName, u8 *pucSensorId, sensorMonitorFunc *pxSensorHandler)
+{
+    if ( NULL == Temperature_Read_Ptr )
+        return XST_SUCCESS;
+
+    return ( *Temperature_Read_Ptr )( ucIndex, pucSnsrName, pucSensorId, pxSensorHandler );
+}
+
 s8 getQSFPName(u8 index, char8* snsrName, u8 *sensorId,sensorMonitorFunc *sensor_handler)
 {
         if (NULL == QSFP_Read_Ptr)
@@ -121,6 +138,10 @@ u8 getVoltageSensorNum()
         {
                 return V70_VOLTAGE_SENSORS_INSTANCES;
         }
+        else if( Vmc_Get_PlatformType() == eV80 )
+        {
+            return V80_VOLTAGE_SENSORS_INSTANCES;
+        }
 
         return MIN_VOLTAGE_SENSORS_INSTANCES;
 }
@@ -136,8 +157,30 @@ u8 getCurrentSensorNum()
         {
                 return V70_CURRENT_SENSORS_INSTANCES;
         }
+        else if( Vmc_Get_PlatformType() == eV80 )
+        {
+            return V80_CURRENT_SENSORS_INSTANCES;
+        }
 
         return MIN_CURRENT_SENSORS_INSTANCES;
+}
+
+u8 ucGetTemperatureSensorNum()
+{
+    if( Vmc_Get_PlatformType() == eVCK5000 )
+    {
+        return VCK5000_TEMPERATURE_SENSORS_INSTANCES;
+    }
+    else if( Vmc_Get_PlatformType() == eV70 )
+    {
+        return V70_TEMPERATURE_SENSORS_INSTANCES;
+    }
+    else if( Vmc_Get_PlatformType() == eV80 )
+    {
+        return V80_TEMPERATURE_SENSORS_INSTANCES;
+    }
+
+    return MIN_TEMPERATURE_SENSORS_INSTANCES;
 }
 
 /*****************************Mock functions *******************************/

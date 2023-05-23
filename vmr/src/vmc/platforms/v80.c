@@ -551,7 +551,7 @@ void vV80CurrentMonitor1V5VCCAUX( )
     }
 /* TODO Remove the test code before merging back to VMR main */
 #ifdef V80_ON_V70
-    fCurrent = 0.71;
+    fCurrent = 710;
 #endif
     sensor_glvr.sensor_readings.current[e1V5_VCC_AUX] = fCurrent;
 }
@@ -579,7 +579,7 @@ void vV80CurrentMonitor3V3QSFP( )
     float fCurrent  = 0.0;
 /* TODO Remove the test code before merging back to VMR main */
 #ifdef V80_ON_V70
-    fCurrent = 0.72;
+    fCurrent = 720;
 #else
     u8 scStatus     = XST_FAILURE;
     scStatus = INA3221_ReadCurrent( ucI2cMain, SLAVE_ADDRESS_INA3221_1, 0, &fCurrent );
@@ -614,7 +614,7 @@ void vV80CurrentMonitor12VAUX0( )
     float fCurrent  = 0.0;
 /* TODO Remove the test code before merging back to VMR main */
 #ifdef V80_ON_V70
-    fCurrent = 0.73;
+    fCurrent = 730;
 #else
     u8 scStatus     = XST_FAILURE;
     scStatus = INA3221_ReadCurrent( ucI2cMain, SLAVE_ADDRESS_INA3221_1, 1, &fCurrent );
@@ -649,7 +649,7 @@ void vV80CurrentMonitor12VAUX1( )
     float fCurrent  = 0.0;
 /* TODO Remove the test code before merging back to VMR main */
 #ifdef V80_ON_V70
-    fCurrent = 0.74;
+    fCurrent = 740;
 #else
     u8 scStatus     = XST_FAILURE;
     scStatus = INA3221_ReadCurrent( ucI2cMain, SLAVE_ADDRESS_INA3221_1, 2, &fCurrent );
@@ -701,7 +701,7 @@ void vV80VoltageMonitor1V2VccoDimm( )
 
     float fVoltage  = 0.0;
 #ifdef V80_ON_V70
-    fVoltage = 12660;
+    fVoltage = 1266;
 #else
     u8 scStatus     = XST_SUCCESS;
     scStatus =  ucISL68221ReadVoltage1( ucI2cMain, SLAVE_ADDRESS_ISL68221_1, &fVoltage );
@@ -736,7 +736,7 @@ void vV80VoltageMonitor1V2GTXAVTT( )
 
     float fVoltage  = 0.0;
 #ifdef V80_ON_V70
-    fVoltage = 12670;
+    fVoltage = 1267;
 #else
     u8 scStatus     = XST_SUCCESS;
     scStatus =  ucISL68221ReadVoltage2( ucI2cMain, SLAVE_ADDRESS_ISL68221_1, &fVoltage );
@@ -1198,7 +1198,7 @@ s8 scV80AsdmReadCurrent3v3( snsrRead_t *pxSnsrData )
 s8 scV80AsdmReadCurrentVccint( snsrRead_t *pxSnsrData )
 {
     s8 scStatus = XST_SUCCESS;
-    u16 usCurrent = sensor_glvr.sensor_readings.current[eVCCINT];
+    u16 usCurrent = sensor_glvr.sensor_readings.current[eVCCINT] * 1000;
 
     if( NULL != pxSnsrData )
     {
@@ -1224,7 +1224,7 @@ s8 scV80AsdmReadCurrentVccint( snsrRead_t *pxSnsrData )
 s8 scV80AsdmReadCurrent12VAUX0( snsrRead_t *pxSnsrData )
 {
     s8 scStatus = XST_SUCCESS;
-    u32 usCurrent = ( sensor_glvr.sensor_readings.current[e12V_AUX0] * 1000 );
+    u32 usCurrent = ( sensor_glvr.sensor_readings.current[e12V_AUX0] );
 
     if( NULL != pxSnsrData )
     {
@@ -1250,7 +1250,7 @@ s8 scV80AsdmReadCurrent12VAUX0( snsrRead_t *pxSnsrData )
 s8 scV80AsdmReadCurrent12VAUX1( snsrRead_t *pxSnsrData )
 {
     s8 scStatus = XST_SUCCESS;
-    u32 usCurrent = ( sensor_glvr.sensor_readings.current[e12V_AUX1] * 1000 );
+    u32 usCurrent = ( sensor_glvr.sensor_readings.current[e12V_AUX1] );
 
     if( NULL != pxSnsrData )
     {
@@ -1276,7 +1276,7 @@ s8 scV80AsdmReadCurrent12VAUX1( snsrRead_t *pxSnsrData )
 s8 scV80AsdmReadCurrent1V5VCCAUX( snsrRead_t *pxSnsrData )
 {
     s8 scStatus = XST_SUCCESS;
-    u32 usCurrent = ( sensor_glvr.sensor_readings.current[e1V5_VCC_AUX] * 1000 );
+    u32 usCurrent = ( sensor_glvr.sensor_readings.current[e1V5_VCC_AUX] );
 
     if( NULL != pxSnsrData )
     {
@@ -1302,7 +1302,7 @@ s8 scV80AsdmReadCurrent1V5VCCAUX( snsrRead_t *pxSnsrData )
 s8 scV80AsdmReadCurrent3V3QSFP( snsrRead_t *pxSnsrData )
 {
     s8 scStatus = XST_SUCCESS;
-    u32 usCurrent = ( sensor_glvr.sensor_readings.current[e3V3_QSFP] * 1000 );
+    u32 usCurrent = ( sensor_glvr.sensor_readings.current[e3V3_QSFP] );
 
     if( NULL != pxSnsrData )
     {

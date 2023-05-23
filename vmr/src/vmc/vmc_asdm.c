@@ -81,6 +81,7 @@ s8 getVoltagesName(u8 index, char8* snsrName, u8 *sensorId,sensorMonitorFunc *se
 s8 getCurrentNames(u8 index, char8* snsrName, u8 *sensorId,sensorMonitorFunc *sensor_handler);
 s8 getQSFPName(u8 index, char8* snsrName, u8 *sensorId,sensorMonitorFunc *sensor_handler);
 s8 scGetTemperatureName(u8 index, char8* snsrName, u8 *sensorId,sensorMonitorFunc *sensor_handler);
+s8 getVoltagesLength(u8 index, char8* snsrName, u8 *sensorId, snsrLengthFunc *SensorLength);
 
 u8 ucGetTemperatureSensorNum();
 u8 getVoltageSensorNum();
@@ -262,9 +263,9 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
     {
         .repoType = TemperatureSDR,
         .getSensorName = &scGetTemperatureName,
-        .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_4B,
+        .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_2B,
         .snsrUnitModifier = 0x0,
-        .supportedThreshold = SNSR_MAX_VAL | SNSR_AVG_VAL ,
+        .supportedThreshold = SNSR_MAX_VAL | SNSR_AVG_VAL | HAS_UPPER_THRESHOLDS,
         .sampleCount = 0x1,
         .sensorInstance = ucGetTemperatureSensorNum(),
         .monitorFunc = NULL,
@@ -556,7 +557,6 @@ s8 Init_Asdm()
                 VMC_ERR("Failed to allocate Memory for SDR Record !!!\n\r");
                 return -1;
             }
-
             Cl_SecureMemset(sdrInfo[sdrCount].sensorRecord,0x00,allocateSize);
 
             Asdm_SensorRecord_t *tmp = sdrInfo[sdrCount].sensorRecord;
@@ -617,11 +617,24 @@ s8 Init_Asdm()
 
                     byteCount += snsrNameLen;
 
-                    /* Sensor Value */
-                    tmp[idx].sensor_value_type_length = pSdrMetaData[totalRecords].snsrValTypeLength;
-                    byteCount += sizeof(tmp[idx].sensor_value_type_length);
+                    /* Handle vccint voltage as 4 bytes */
+                    if( ( VoltageSDR == currentRepoType ) &&
+                        ( 0 == strcmp("vccint\0", tmp[idx].sensor_name ) ) )
+                    {
+                        /* Sensor Value */
+                        tmp[idx].sensor_value_type_length = ( SENSOR_TYPE_NUM | SENSOR_SIZE_4B );
+                        byteCount += sizeof(tmp[idx].sensor_value_type_length);
 
-                    snsrValueLen = (pSdrMetaData[totalRecords].snsrValTypeLength & LENGTH_BITMASK);
+                        snsrValueLen = ( ( SENSOR_TYPE_NUM | SENSOR_SIZE_4B ) & LENGTH_BITMASK);
+                    }
+                    else
+                    {
+                        /* Sensor Value */
+                        tmp[idx].sensor_value_type_length = pSdrMetaData[totalRecords].snsrValTypeLength;
+                        byteCount += sizeof(tmp[idx].sensor_value_type_length);
+
+                        snsrValueLen = (pSdrMetaData[totalRecords].snsrValTypeLength & LENGTH_BITMASK);
+                    }
 
 
                     /* Only allocate the Memory, Value will be updated while Monitoring */
