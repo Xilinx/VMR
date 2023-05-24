@@ -52,9 +52,15 @@ target_link_libraries( test_asdm
                        -Wl,--wrap=xQueueSemaphoreTake
                        -Wl,--wrap=xQueueGenericSend
                        -Wl,--wrap=LM75_ReadTemperature
-                       -Wl,--wrap=ISL68221_ReadVCCINT_Voltage
-                       -Wl,--wrap=ISL68221_ReadVCCINT_Current
-                       -Wl,--wrap=ISL68221_ReadVCCINT_Temperature
+                       -Wl,--wrap=ucISL68221ReadVoltage0
+                       -Wl,--wrap=ucISL68221ReadVoltage1
+                       -Wl,--wrap=ucISL68221ReadVoltage2
+                       -Wl,--wrap=ucISL68221ReadCurrent0
+                       -Wl,--wrap=ucISL68221ReadCurrent1
+                       -Wl,--wrap=ucISL68221ReadCurrent2
+                       -Wl,--wrap=ucISL68221ReadTemperature0
+                       -Wl,--wrap=ucISL68221ReadTemperature1
+                       -Wl,--wrap=ucISL68221ReadTemperature2
                        -Wl,--wrap=INA3221_ReadVoltage
                        -Wl,--wrap=INA3221_ReadCurrent
                        -Wl,--wrap=INA3221_ReadPower
@@ -65,12 +71,73 @@ target_link_libraries( test_asdm
 add_test( NAME test_asdm
           COMMAND test_asdm )
 
+set( ASDM_V80_TEST_FILES ./utt_vmc_asdm_v80.c
+                     ./utt_assert_SDRs.c
+                     ../../mocks/common/utm_cl_mem.c
+                     ../../mocks/common/utm_cl_logs.c
+                     ../../mocks/freertos/utm_heap_4.c
+                     ../../mocks/vmc/utm_vmc_sensor.c
+                     ../../mocks/freertos/utm_queue.c
+                     ../../mocks/vmc/sensors/src/utm_cat34ts02.c
+                     ../../mocks/vmc/sensors/src/utm_lm75.c
+                     ../../mocks/vmc/sensors/src/utm_qsfp.c
+                     ../../mocks/vmc/sensors/src/utm_isl68221.c
+                     ../../mocks/vmc/sensors/src/utm_ina3221.c
+                     ../../mocks/vmc/utm_vmc_sc_comms.c
+                     ../../mocks/vmc/utm_vmc_api.c
+                     ../../mocks/vmc/utm_vmc_main_v80.c
+                     ../../mocks/vmc/utm_vmc_update_sc.c
+                     ../../mocks/vmc/utm_clock_throttling.c
+                     ../../../platforms/v80.c )
+
+add_executable( test_asdm_v80 ${ASDM_V80_TEST_FILES} ../../../vmc_asdm.c )
+
+target_link_libraries( test_asdm_v80
+                       cmocka
+                       -Wl,--wrap=Cl_SecureMemcpy
+                       -Wl,--wrap=Cl_SecureMemset
+                       -Wl,--wrap=Cl_SecureStrncmp
+                       -Wl,--wrap=Cl_SecureMemcmp
+                       -Wl,--wrap=pvPortMalloc
+                       -Wl,--wrap=vPortFree
+                       -Wl,--wrap=cl_printf
+                       -Wl,--wrap=Temperature_Read_ACAP_Device_Sysmon
+                       -Wl,--wrap=VCCINT_Read_ACAP_Device_Sysmon
+                       -Wl,--wrap=PMBUS_SC_Sensor_Read
+                       -Wl,--wrap=PMBUS_SC_Vccint_Read
+                       -Wl,--wrap=xQueueSemaphoreTake
+                       -Wl,--wrap=xQueueGenericSend
+                       -Wl,--wrap=LM75_ReadTemperature
+                       -Wl,--wrap=ucQSFPI2CMuxReadTemperature
+                       -Wl,--wrap=M24C128_ReadMultiBytes
+                       -Wl,--wrap=M24C128_ReadByte
+                       -Wl,--wrap=ucCAT34TS02ReadTemperature
+                       -Wl,--wrap=ucISL68221ReadVoltage0
+                       -Wl,--wrap=ucISL68221ReadVoltage1
+                       -Wl,--wrap=ucISL68221ReadVoltage2
+                       -Wl,--wrap=ucISL68221ReadCurrent0
+                       -Wl,--wrap=ucISL68221ReadCurrent1
+                       -Wl,--wrap=ucISL68221ReadCurrent2
+                       -Wl,--wrap=ucISL68221ReadTemperature0
+                       -Wl,--wrap=ucISL68221ReadTemperature1
+                       -Wl,--wrap=ucISL68221ReadTemperature2
+                       -Wl,--wrap=INA3221_ReadVoltage
+                       -Wl,--wrap=INA3221_ReadCurrent
+                       -Wl,--wrap=INA3221_ReadPower
+                       -Wl,--wrap=ucs_clock_shutdown
+                       -Wl,--wrap=VMC_Get_BoardInfo
+                       -Wl,--wrap=ClockThrottling_Initialize)
+
+add_test( NAME test_asdm_v80
+          COMMAND test_asdm_v80 )
+
 #Code coverage for the src files
 include(CodeCoverage.cmake)
 append_coverage_compiler_flags()
 
-set(COVERAGE_EXCLUDES ${SE98A_TEST_FILES}
-                      ${ASDM_TEST_FILES} )
+set( COVERAGE_EXCLUDES ${SE98A_TEST_FILES}
+                       ${ASDM_TEST_FILES}
+                       ${ASDM_V80_TEST_FILES} )
 
 SETUP_TARGET_FOR_COVERAGE_LCOV(
         NAME test_coverage

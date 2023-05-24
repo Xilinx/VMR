@@ -4,12 +4,12 @@
 #define SENSOR_RESP_BUFFER_SIZE 512
 
 /* Number of records for v70 */
-#define V70_NUM_BOARD_INFO_SENSORS      (11)
-#define V70_NUM_TEMPERATURE_SENSORS     (3)
-#define V70_NUM_SC_VOLTAGE_SENSORS      (2)
-#define V70_NUM_SYSMON_VOLTAGE_SENSORS  (1)
-#define V70_NUM_SC_CURRENT_SENSORS      (3)
-#define V70_NUM_POWER_SENSORS           (1)
+#define V70_NUM_BOARD_INFO_SENSORS      ( 11 )
+#define V70_NUM_TEMPERATURE_SENSORS     ( 3 )
+#define V70_NUM_SC_VOLTAGE_SENSORS      ( 3 )
+#define V70_NUM_SYSMON_VOLTAGE_SENSORS  ( 0 )
+#define V70_NUM_SC_CURRENT_SENSORS      ( 3 )
+#define V70_NUM_POWER_SENSORS           ( 1 )
 
 #define REPOSITORY_VERSION (1)
 
