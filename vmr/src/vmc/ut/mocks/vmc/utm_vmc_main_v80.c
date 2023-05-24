@@ -20,14 +20,14 @@ SemaphoreHandle_t sdr_lock = NULL;
 static ePlatformType current_platform = eV80;
 
 /*****************************Internal functions*******************************/
-void vConfigureV80Platform()
+void vConfigureV80Platform( void )
 {
-	Temperature_Read_Board_Ptr  = scV80AsdmTemperatureReadBoard;
-	Temperature_Read_QSFP_Ptr   = scV80AsdmTemperatureReadQSFP;
-	Temperature_Read_VCCINT_Ptr = scV80AsdmTemperatureReadVccint;
-	Power_Read_Ptr 	            = scV80AsdmReadPower;
-	Voltage_Read_Ptr            = scV80AsdmGetVoltageNames;
-	Current_Read_Ptr            = scV80AsdmGetCurrentNames;
+    Temperature_Read_Board_Ptr  = scV80AsdmTemperatureReadBoard;
+    Temperature_Read_QSFP_Ptr   = scV80AsdmTemperatureReadQSFP;
+    Temperature_Read_VCCINT_Ptr = scV80AsdmTemperatureReadVccint;
+    Power_Read_Ptr              = scV80AsdmReadPower;
+    Voltage_Read_Ptr            = scV80AsdmGetVoltageNames;
+    Current_Read_Ptr            = scV80AsdmGetCurrentNames;
     Temperature_Read_Ptr        = scV80AsdmGetTemperatureNames;
     QSFP_Read_Ptr               = scV80AsdmGetQSFPName;
 }
@@ -37,7 +37,7 @@ void vConfigureV80Platform()
 /*****************************Real function definitions*******************************/
 /*This definition is same as real implementation.
  * It does not need mock features, since it is very simple definition*/
-ePlatformType xVmcGetPlatformType(void)
+ePlatformType Vmc_Get_PlatformType( void )
 {
-        return current_platform;
+    return current_platform;
 }

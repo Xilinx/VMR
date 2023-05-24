@@ -27,12 +27,9 @@ extern void V80_Monitor_Sensors( );
  * This is feature in cmocka*/
 static int ulTestcaseSetup( void **state )
 {
-    printf( "setup start\n\r"  );
 	ucV80Init( );
-    printf( "setup ucV80Init done\n\r"  );
 	Init_Asdm( );
 
-    printf( "setup Init_Asdm done:\n\r"  );
 	return 0;
 }
 
@@ -289,15 +286,15 @@ static void test_Asdm_Get_PowerSDR( void **state ) {
 
 int main( void ) 
 {
-	const struct CMUnitTest tests[] = 
+    const struct CMUnitTest tests[] =
     {
-			cmocka_unit_test_setup( vTestAsdmGetBoardInfoSDR, ulTestcaseSetup ),
-			cmocka_unit_test_setup( vTestAsdmGetTemperatureSDR, ulTestcaseSetup ),
-			cmocka_unit_test_setup( test_Asdm_Get_VoltageSDR, ulTestcaseSetup ),
-			cmocka_unit_test_setup( test_Asdm_Get_CurrentSDR, ulTestcaseSetup ),
-			cmocka_unit_test_setup( test_Asdm_Get_PowerSDR, ulTestcaseSetup )
-	};
-	return cmocka_run_group_tests( tests, NULL, NULL );
+        cmocka_unit_test_setup( vTestAsdmGetBoardInfoSDR, ulTestcaseSetup ),
+        cmocka_unit_test_setup( vTestAsdmGetTemperatureSDR, ulTestcaseSetup ),
+        cmocka_unit_test_setup( test_Asdm_Get_VoltageSDR, ulTestcaseSetup ),
+        cmocka_unit_test_setup( test_Asdm_Get_CurrentSDR, ulTestcaseSetup ),
+        cmocka_unit_test_setup( test_Asdm_Get_PowerSDR, ulTestcaseSetup )
+    };
+    return cmocka_run_group_tests( tests, NULL, NULL );
 }
 
 void assert_Sdr( u8 *pucRespBuffer, u8 ucSdrOffset )

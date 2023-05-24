@@ -81,7 +81,6 @@ set( ASDM_V80_TEST_FILES ./utt_vmc_asdm_v80.c
                      ../../mocks/vmc/sensors/src/utm_cat34ts02.c
                      ../../mocks/vmc/sensors/src/utm_lm75.c
                      ../../mocks/vmc/sensors/src/utm_qsfp.c
-                     ../../mocks/vmc/sensors/src/utm_m24c128.c
                      ../../mocks/vmc/sensors/src/utm_isl68221.c
                      ../../mocks/vmc/sensors/src/utm_ina3221.c
                      ../../mocks/vmc/utm_vmc_sc_comms.c
