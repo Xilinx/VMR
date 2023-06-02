@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <stdarg.h>
 #include <stddef.h>
 #include <setjmp.h>
@@ -17,12 +18,27 @@ void set_Buffer(unsigned char *buff, int min, int max, long int length)
 	rd_buffer = buff;
 
 	/*Generate random values between the range and copy it to buffer*/
+
 	value = (rand() % (max - min + 1)) + min;
 	for(i = 0; i < length; i++)
 	{
 		rd_buffer[i] = (unsigned char)(value >> ((length - i -1) * 8));
 	}
 }
+
+void vSetReadBuffer(unsigned char *ucBuff, unsigned char *pucValue, long int ulLength)
+{
+	int i;
+
+	rd_buffer = ucBuff;
+
+	/* copy it to buffer*/
+	for(i = 0; i < ulLength; i++)
+	{
+		rd_buffer[i] = (unsigned char)(*(pucValue++));
+	}
+}
+
 
 /*****************************Mock functions *******************************/
 u8  __wrap_i2c_send_rs_recv(u8 i2c_num, unsigned char i2c_addr, unsigned char * i2c_write_buff, long int write_length, unsigned char * i2c_read_buff, long int read_length)
@@ -41,7 +57,7 @@ u8  __wrap_i2c_send_rs_recv(u8 i2c_num, unsigned char i2c_addr, unsigned char * 
 	{
 		if(rd_buffer != NULL)
 		{
-			i2c_read_buff[i] = rd_buffer[i];
+			i2c_read_buff[i] = *(rd_buffer++);
 		}
 	}
 
@@ -49,4 +65,16 @@ u8  __wrap_i2c_send_rs_recv(u8 i2c_num, unsigned char i2c_addr, unsigned char * 
 	return mock_type(u8);
 }
 
+u8  __wrap_i2c_send(u8 i2c_num, unsigned char i2c_addr, unsigned char * i2c_write_buff, long int write_length)
+{
+	int i;
 
+	/*Check parameter values set by 'expect_*()' written in testcase*/
+	check_expected(i2c_num);
+	check_expected(i2c_addr);
+	check_expected(write_length);
+	check_expected(i2c_write_buff[0]);
+
+	/*Returns the value passed to 'will_return()' written in testcase */
+	return mock_type(u8);
+}

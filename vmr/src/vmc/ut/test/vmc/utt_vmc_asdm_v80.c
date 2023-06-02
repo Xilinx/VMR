@@ -15,6 +15,7 @@
 /*To Print the SDR values while executing test, uncomment below macro*/
 //#define PRINT_SDR
 
+extern SDR_t *sdrInfo;
 extern Assert_Sdr_t pxAssertSdrDataV80[];
 
 extern int get_sem_lock( );
@@ -33,25 +34,359 @@ static int ulTestcaseSetup( void **state )
 	return 0;
 }
 
-static void vTestAsdmGetBoardInfoSDR( void **state ) 
+static int ulTestcaseSetupNoInitAsdm( void **state )
+{
+	ucV80Init( );
+
+	return 0;
+}
+
+static void test_getSDRIndex_failure( void **state )
+{
+	( void ) state; /* unused */
+    s8 scRet    = 0;
+	u8 repoType = 0xFF;
+
+	/*Test function*/
+	scRet = getSDRIndex( repoType );
+
+    assert_true( scRet == -1 );
+}
+
+static void test_Update_Sensor_Value_failure( void **state )
+{
+	( void ) state; /* unused */
+    s8 scRet                            = 0;
+	Asdm_RepositoryTypeEnum_t repoType  = BoardInfoSDR;
+    u8 sensorIdx                        = 0;
+    snsrRead_t xSnsrData                = {0};
+
+	/*Test function NULL pointer */
+	scRet = Update_Sensor_Value( repoType, sensorIdx, NULL );
+
+    assert_true( scRet == -1 );
+
+    /*Test function invalid repoType */
+    repoType = 0xFF;
+    scRet = Update_Sensor_Value( repoType, sensorIdx, &xSnsrData );
+
+    assert_true( scRet == -1 );
+}
+
+static void test_Asdm_Get_SDR_Size_No_Init( void **state )
 {
 	( void ) state; /* unused */
 
-	s8 scRet = -1;
-	u8 ucReqBuffer[2] = {0};
-	u8 pucRespBuffer[SENSOR_RESP_BUFFER_SIZE] = {0};
-	u16 usRespSize = 0;
-	u16 usSdrSize = 0;
+	s8 scRet                                    = -1;
+	u8 pucReqBuffer[2]                          = {0};
+	u8 pucRespBuffer[SENSOR_RESP_BUFFER_SIZE]   = {0};
+	u16 usRespSize                              = 0;
+	u16 usSdrSize                               = 0;
+
+	/* API ID : 0x01 - Asdm_Get_SDR_Size */
+	pucReqBuffer[0] = ASDM_CMD_GET_SIZE;
+	/* Record Type : 0xC2 - Voltage SDR */
+	pucReqBuffer[1] = VoltageSDR;
+
+	/*Test function*/
+	scRet = Asdm_Get_SDR_Size( &pucReqBuffer[0], &pucRespBuffer[0], &usRespSize );
+    assert_true( scRet == -1 );
+
+}
+
+static void test_Asdm_Get_SDR_Size_failure( void **state )
+{
+	( void ) state; /* unused */
+
+	s8 scRet                                    = -1;
+	u8 pucReqBuffer[2]                          = {0};
+	u8 pucRespBuffer[SENSOR_RESP_BUFFER_SIZE]   = {0};
+	u16 usRespSize                              = 0;
+	u16 usSdrSize                               = 0;
+
+	/* API ID : 0x01 - Asdm_Get_SDR_Size */
+	pucReqBuffer[0] = ASDM_CMD_GET_ALL_SENSOR_DATA;
+	/* Record Type : 0xC2 - Voltage SDR */
+	pucReqBuffer[1] = VoltageSDR;
+
+	/*Test function NULL parameter */
+	scRet = Asdm_Get_SDR_Size( NULL, &pucRespBuffer[0], &usRespSize );
+    assert_true( scRet == -1 );
+
+    /*Test function  NULL parameter*/
+	scRet = Asdm_Get_SDR_Size( &pucReqBuffer[0], NULL, &usRespSize );
+    assert_true( scRet == -1 );
+
+    /*Test function  NULL parameter*/
+	scRet = Asdm_Get_SDR_Size( &pucReqBuffer[0], &pucRespBuffer[0], NULL );
+    assert_true( scRet == -1 );
+
+}
+
+static void test_Asdm_Process_Sensor_Request_No_Init( void **state )
+{
+	( void ) state; /* unused */
+
+	s8 scRet                                    = -1;
+	u8 pucReqBuffer[2]                          = {0};
+	u8 pucRespBuffer[SENSOR_RESP_BUFFER_SIZE]   = {0};
+	u16 usRespSize                              = 0;
+	u16 usSdrSize                               = 0;
+
+	/* API ID : 0x01 - Asdm_Get_SDR_Size */
+	pucReqBuffer[0] = ASDM_CMD_GET_SIZE;
+	/* Record Type : 0xC2 - Voltage SDR */
+	pucReqBuffer[1] = VoltageSDR;
+
+	/*Test function*/
+	scRet = Asdm_Process_Sensor_Request( &pucReqBuffer[0], &pucRespBuffer[0], &usRespSize );
+    assert_true( scRet == -1 );
+
+}
+
+static void test_Asdm_Process_Sensor_Request_failure( void **state )
+{
+	( void ) state; /* unused */
+
+	s8 scRet                                    = -1;
+	u8 pucReqBuffer[2]                          = {0};
+	u8 pucRespBuffer[SENSOR_RESP_BUFFER_SIZE]   = {0};
+	u16 usRespSize                              = 0;
+	u16 usSdrSize                               = 0;
+
+	/* API ID : 0x01 - Asdm_Get_SDR_Size */
+	pucReqBuffer[0] = ASDM_CMD_GET_ALL_SENSOR_DATA;
+	/* Record Type : 0xC2 - Voltage SDR */
+	pucReqBuffer[1] = VoltageSDR;
+
+	/*Test function NULL parameter */
+	scRet = Asdm_Process_Sensor_Request( NULL, &pucRespBuffer[0], &usRespSize );
+    assert_true( scRet == -1 );
+
+    /*Test function  NULL parameter*/
+	scRet = Asdm_Process_Sensor_Request( &pucReqBuffer[0], NULL, &usRespSize );
+    assert_true( scRet == -1 );
+
+    /*Test function  NULL parameter*/
+	scRet = Asdm_Process_Sensor_Request( &pucReqBuffer[0], &pucRespBuffer[0], NULL );
+    assert_true( scRet == -1 );
+
+    /* Test function Unsupported Repo type */
+    pucReqBuffer[0] = 0x5;
+    pucReqBuffer[1] = 0xE2; // Unsupported
+
+	scRet = Asdm_Process_Sensor_Request( &pucReqBuffer[0], &pucRespBuffer[0], &usRespSize );
+    assert_true( scRet == 0 );
+
+    assert_true( usRespSize == 2 );
+    assert_true( pucRespBuffer[0] == Asdm_CC_Not_Available );
+    assert_true( pucRespBuffer[1] == pucReqBuffer[0] );
+}
+
+static void test_Asdm_Get_All_Sensor_Data_No_Init( void **state )
+{
+	( void ) state; /* unused */
+
+	s8 scRet                                    = -1;
+	u8 pucReqBuffer[2]                          = {0};
+	u8 pucRespBuffer[SENSOR_RESP_BUFFER_SIZE]   = {0};
+	u16 usRespSize                              = 0;
+	u16 usSdrSize                               = 0;
+
+	/* API ID : 0x01 - Asdm_Get_SDR_Size */
+	pucReqBuffer[0] = ASDM_CMD_GET_ALL_SENSOR_DATA;
+	/* Record Type : 0xC2 - Voltage SDR */
+	pucReqBuffer[1] = VoltageSDR;
+    
+    /*Test function  */
+    scRet = Asdm_Get_All_Sensor_Data( &pucReqBuffer[0], &pucRespBuffer[0], &usRespSize );
+    assert_true( scRet == -1 );
+}
+
+static void test_Asdm_Get_Sensor_Data_No_Init( void **state )
+{
+	( void ) state; /* unused */
+
+	s8 scRet                                    = -1;
+	u8 pucReqBuffer[2]                          = {0};
+	u8 pucRespBuffer[SENSOR_RESP_BUFFER_SIZE]   = {0};
+	u16 usRespSize                              = 0;
+	u16 usSdrSize                               = 0;
+
+	/* API ID : 0x01 - Asdm_Get_SDR_Size */
+	pucReqBuffer[0] = ASDM_CMD_GET_ALL_SENSOR_DATA;
+	/* Record Type : 0xC2 - Voltage SDR */
+	pucReqBuffer[1] = VoltageSDR;
+    
+    /*Test function  */
+    scRet = Asdm_Get_Sensor_Data( &pucReqBuffer[0], &pucRespBuffer[0], &usRespSize );
+    assert_true( scRet == -1 );
+}
+
+static void test_Asdm_Get_All_Sensor_Data_Failure( void **state )
+{
+	( void ) state; /* unused */
+
+	s8 scRet                                    = -1;
+	u8 pucReqBuffer[2]                          = {0};
+	u8 pucRespBuffer[SENSOR_RESP_BUFFER_SIZE]   = {0};
+	u16 usRespSize                              = 0;
+	u16 usSdrSize                               = 0;
+
+	/* API ID : 0x01 - Asdm_Get_SDR_Size */
+	pucReqBuffer[0] = ASDM_CMD_GET_ALL_SENSOR_DATA;
+	/* Record Type : 0xC2 - Voltage SDR */
+	pucReqBuffer[1] = VoltageSDR;
+
+	/*Test function NULL parameter */
+	scRet = Asdm_Get_All_Sensor_Data( NULL, &pucRespBuffer[0], &usRespSize );
+    assert_true( scRet == -1 );
+
+    /*Test function  NULL parameter*/
+	scRet = Asdm_Get_All_Sensor_Data( &pucReqBuffer[0], NULL, &usRespSize );
+    assert_true( scRet == -1 );
+
+    /*Test function  NULL parameter*/
+	scRet = Asdm_Get_All_Sensor_Data( &pucReqBuffer[0], &pucRespBuffer[0], NULL );
+    assert_true( scRet == -1 );
+
+    /* Test function Unsupported Repo type */
+    pucReqBuffer[0] = 0x5;
+    pucReqBuffer[1] = 0xE2; // Unsupported
+    
+	scRet = Asdm_Get_All_Sensor_Data( &pucReqBuffer[0], &pucRespBuffer[0], &usRespSize );
+    assert_true( scRet == -1);
+
+    /*set return value for mock function*/
+    will_return_always( __wrap_xQueueSemaphoreTake, 0 );
+
+    /* Test function No Semaphore available */
+    pucReqBuffer[0] = ASDM_CMD_GET_ALL_SENSOR_DATA;
+    pucReqBuffer[1] = VoltageSDR; 
+
+	scRet = Asdm_Get_All_Sensor_Data( &pucReqBuffer[0], &pucRespBuffer[0], &usRespSize );
+    assert_true( scRet == 0);
+    assert_true( pucRespBuffer[0] == Asdm_CC_Operation_Failed);
+    set_sem_lock(); 
+
+}
+
+static void test_Asdm_Get_Sensor_Data_Failure( void **state )
+{
+	( void ) state; /* unused */
+
+	s8 scRet                                    = -1;
+	u8 pucReqBuffer[2]                          = {0};
+	u8 pucRespBuffer[SENSOR_RESP_BUFFER_SIZE]   = {0};
+	u16 usRespSize                              = 0;
+	u16 usSdrSize                               = 0;
+
+	/* API ID : 0x01 - Asdm_Get_SDR_Size */
+	pucReqBuffer[0] = ASDM_CMD_GET_ALL_SENSOR_DATA;
+	/* Record Type : 0xC2 - Voltage SDR */
+	pucReqBuffer[1] = VoltageSDR;
+
+	/*Test function NULL parameter */
+	scRet = Asdm_Get_Sensor_Data( NULL, &pucRespBuffer[0], &usRespSize );
+    assert_true( scRet == -1 );
+
+    /*Test function  NULL parameter*/
+	scRet = Asdm_Get_Sensor_Data( &pucReqBuffer[0], NULL, &usRespSize );
+    assert_true( scRet == -1 );
+
+    /*Test function  NULL parameter*/
+	scRet = Asdm_Get_Sensor_Data( &pucReqBuffer[0], &pucRespBuffer[0], NULL );
+    assert_true( scRet == -1 );
+
+    /* Test function Unsupported Repo type */
+    pucReqBuffer[0] = 0x5;
+    pucReqBuffer[1] = 0xE2; // Unsupported
+
+	scRet = Asdm_Get_Sensor_Data( &pucReqBuffer[0], &pucRespBuffer[0], &usRespSize );
+    assert_true( scRet == -1);
+
+    /*set return value for mock function*/
+    will_return_always( __wrap_xQueueSemaphoreTake, 0 );
+
+    /* Test function No Semaphore available */
+    pucReqBuffer[0] = ASDM_CMD_GET_ALL_SENSOR_DATA;
+    pucReqBuffer[1] = VoltageSDR; 
+
+	scRet = Asdm_Get_Sensor_Data( &pucReqBuffer[0], &pucRespBuffer[0], &usRespSize );
+    assert_true( scRet == 0);
+    assert_true( pucRespBuffer[0] == Asdm_CC_Operation_Failed);
+    set_sem_lock(); 
+
+}
+
+static void test_Asdm_Get_Sensor_Repository_Failure( void **state )
+{
+	( void ) state; /* unused */
+
+	s8 scRet                                    = -1;
+	u8 pucReqBuffer[2]                          = {0};
+	u8 pucRespBuffer[SENSOR_RESP_BUFFER_SIZE]   = {0};
+	u16 usRespSize                              = 0;
+	u16 usSdrSize                               = 0;
+
+	/* API ID : 0x01 - Asdm_Get_SDR_Size */
+	pucReqBuffer[0] = ASDM_CMD_GET_ALL_SENSOR_DATA;
+	/* Record Type : 0xC2 - Voltage SDR */
+	pucReqBuffer[1] = VoltageSDR;
+
+	/*Test function NULL parameter */
+	scRet = Asdm_Get_Sensor_Repository( NULL, &pucRespBuffer[0], &usRespSize );
+    assert_true( scRet == -1 );
+
+    /*Test function  NULL parameter*/
+	scRet = Asdm_Get_Sensor_Repository( &pucReqBuffer[0], NULL, &usRespSize );
+    assert_true( scRet == -1 );
+
+    /*Test function  NULL parameter*/
+	scRet = Asdm_Get_Sensor_Repository( &pucReqBuffer[0], &pucRespBuffer[0], NULL );
+    assert_true( scRet == -1 );
+
+    /* Test function Unsupported Repo type */
+    pucReqBuffer[0] = 0x5;
+    pucReqBuffer[1] = 0xE2; // Unsupported
+    
+	scRet = Asdm_Get_Sensor_Repository( &pucReqBuffer[0], &pucRespBuffer[0], &usRespSize );
+    assert_true( scRet == -1);
+
+    /*set return value for mock function*/
+    will_return_always( __wrap_xQueueSemaphoreTake, 0 );
+
+    /* Test function No Semaphore available */
+    pucReqBuffer[0] = ASDM_CMD_GET_ALL_SENSOR_DATA;
+    pucReqBuffer[1] = VoltageSDR; 
+
+	scRet = Asdm_Get_Sensor_Repository( &pucReqBuffer[0], &pucRespBuffer[0], &usRespSize );
+    assert_true( scRet == -1);
+    assert_true( pucRespBuffer[0] == Asdm_CC_Operation_Failed);
+    set_sem_lock();
+}
+
+
+
+static void vTestAsdmGetBoardInfoSDR( void **state )
+{
+	( void ) state; /* unused */
+
+	s8 scRet                                    = -1;
+	u8 pucReqBuffer[2]                          = {0};
+	u8 pucRespBuffer[SENSOR_RESP_BUFFER_SIZE]   = {0};
+	u16 usRespSize                              = 0;
+	u16 usSdrSize                               = 0;
     
     vConfigureV80Platform( );
 
 	/* API ID : 0x01 - Asdm_Get_SDR_Size */
-	ucReqBuffer[0] = ASDM_CMD_GET_SIZE;
+	pucReqBuffer[0] = ASDM_CMD_GET_SIZE;
 	/* Record Type : 0xC0 - Board Info SDR */
-	ucReqBuffer[1] = BoardInfoSDR;
+	pucReqBuffer[1] = BoardInfoSDR;
 
 	/*Test function*/
-	scRet = Asdm_Process_Sensor_Request( &ucReqBuffer[0], &pucRespBuffer[0], &usRespSize );
+	scRet = Asdm_Process_Sensor_Request( &pucReqBuffer[0], &pucRespBuffer[0], &usRespSize );
 
 	usSdrSize = ( ( pucRespBuffer[3] << 8 ) | pucRespBuffer[2] );
 
@@ -65,12 +400,12 @@ static void vTestAsdmGetBoardInfoSDR( void **state )
 	will_return_always( __wrap_xQueueGenericSend, 1 );
 
 	/* API ID : 0x02 - Asdm_Get_Sensor_Repository */
-	ucReqBuffer[0] = ASDM_CMD_GET_SDR;
+	pucReqBuffer[0] = ASDM_CMD_GET_SDR;
 	/* Record Type : 0xC0 - Board Info SDR */
-	ucReqBuffer[1] = BoardInfoSDR;
+	pucReqBuffer[1] = BoardInfoSDR;
 
 	/*test function*/
-	scRet = Asdm_Process_Sensor_Request( &ucReqBuffer[0], &pucRespBuffer[0], &usRespSize );
+	scRet = Asdm_Process_Sensor_Request( &pucReqBuffer[0], &pucRespBuffer[0], &usRespSize );
 
 	/*Assert Asdm_Get_Sensor_Repository API response*/
 	assert_true( scRet == 0 );
@@ -84,22 +419,64 @@ static void vTestAsdmGetBoardInfoSDR( void **state )
 }
 
 
-static void vTestAsdmGetTemperatureSDR( void **state ) {
+static void vTestAsdmGetAllSDR( void **state )
+{
 	( void ) state; /* unused */
 
-	s8 scRet = -1;
-	u8 ucReqBuffer[2] = {0};
-	u8 pucRespBuffer[SENSOR_RESP_BUFFER_SIZE] = {0};
-	u16 usRespSize = 0;
-	u16 usSdrSize = 0;
+	s8 scRet                                    = -1;
+	u8 pucReqBuffer[2]                          = {0};
+	u8 pucRespBuffer[SENSOR_RESP_BUFFER_SIZE]   = {0};
+	u16 usRespSize                              = 0;
+	u16 usSdrSize                               = 0;
+    u8 snsrIndex                                = 0;
 
-	/* API ID : 0x01 - Asdm_Get_SDR_Size */
-	ucReqBuffer[0] = ASDM_CMD_GET_SIZE;
+	/*set return value for mock function*/
+	will_return_always( __wrap_xQueueSemaphoreTake, 1 );
+	will_return_always( __wrap_xQueueGenericSend, 1 );
+
+	/* API ID : 0x02 - Asdm_Get_Sensor_Repository */
+	pucReqBuffer[0] = ASDM_CMD_GET_ALL_SENSOR_DATA;
 	/* Record Type : 0xC1 - Temperature SDR */
-	ucReqBuffer[1] = TemperatureSDR;
+	pucReqBuffer[1] = VoltageSDR;
+
+	vV80MonitorSensors( );
+	Asdm_Update_Sensors( );
 
 	/*Test function*/
-	scRet = Asdm_Process_Sensor_Request( &ucReqBuffer[0], &pucRespBuffer[0], &usRespSize );
+	scRet = Asdm_Get_All_Sensor_Data( &pucReqBuffer[0], &pucRespBuffer[0], &usRespSize );
+    printf("usRespSize is 0x%x\n\r", usRespSize);
+	/*Assert Asdm_Get_Sensor_Repository API Response*/
+	assert_true( scRet == 0 );
+	//assert_true( ( (  usRespSize -1 ) >= ( usSdrSize - 8 ) ) && ( ( usRespSize - 1 ) <= usSdrSize ) );
+	assert_true( get_sem_lock( ) == 0 );
+	assert_true( pucRespBuffer[0] == Asdm_CC_Operation_Success );
+	assert_true( pucRespBuffer[1] == VoltageSDR );  
+    
+    for(snsrIndex = 0; snsrIndex <usRespSize; snsrIndex++)
+    {
+        printf("pucRespBuffer[snsrIndex] 0x%x\n\r",pucRespBuffer[snsrIndex]);
+    }
+
+}
+
+static void vTestAsdmGetTemperatureSDR( void **state )
+{
+	( void ) state; /* unused */
+
+	s8 scRet                                    = -1;
+	u8 pucReqBuffer[2]                          = {0};
+	u8 pucRespBuffer[SENSOR_RESP_BUFFER_SIZE]   = {0};
+	u16 usRespSize                              = 0;
+	u16 usSdrSize                               = 0;
+    u8 snsrIndex                                = 0;
+
+	/* API ID : 0x01 - Asdm_Get_SDR_Size */
+	pucReqBuffer[0] = ASDM_CMD_GET_SIZE;
+	/* Record Type : 0xC1 - Temperature SDR */
+	pucReqBuffer[1] = TemperatureSDR;
+
+	/*Test function*/
+	scRet = Asdm_Process_Sensor_Request( &pucReqBuffer[0], &pucRespBuffer[0], &usRespSize );
 
 	usSdrSize = ( ( pucRespBuffer[3] << 8 ) | pucRespBuffer[2] );
 
@@ -113,17 +490,18 @@ static void vTestAsdmGetTemperatureSDR( void **state ) {
 	will_return_always( __wrap_xQueueGenericSend, 1 );
 
 	/* API ID : 0x02 - Asdm_Get_Sensor_Repository */
-	ucReqBuffer[0] = ASDM_CMD_GET_SDR;
+	pucReqBuffer[0] = ASDM_CMD_GET_SDR;
 	/* Record Type : 0xC1 - Temperature SDR */
-	ucReqBuffer[1] = TemperatureSDR;
+	pucReqBuffer[1] = TemperatureSDR;
 
 	vV80MonitorSensors( );
 	Asdm_Update_Sensors( );
 
 	/*Test function*/
-	scRet = Asdm_Process_Sensor_Request( &ucReqBuffer[0], &pucRespBuffer[0], &usRespSize );
+	scRet = Asdm_Process_Sensor_Request( &pucReqBuffer[0], &pucRespBuffer[0], &usRespSize );
 
 	/*Assert Asdm_Get_Sensor_Repository API Response*/
+
 	assert_true( scRet == 0 );
 	assert_true( ( (  usRespSize -1 ) >= ( usSdrSize - 8 ) ) && ( ( usRespSize - 1 ) <= usSdrSize ) );
 	assert_true( get_sem_lock( ) == 0 );
@@ -134,22 +512,23 @@ static void vTestAsdmGetTemperatureSDR( void **state ) {
 	assert_Sdr( &pucRespBuffer[0], eTemperatureSDR_V80_offset );
 }
 
-static void test_Asdm_Get_VoltageSDR( void **state ) {
+static void test_Asdm_Get_VoltageSDR( void **state )
+{
 	( void ) state; /* unused */
 
-	s8 scRet = -1;
-	u8 ucReqBuffer[2] = {0};
-	u8 pucRespBuffer[SENSOR_RESP_BUFFER_SIZE] = {0};
-	u16 usRespSize = 0;
-	u16 usSdrSize = 0;
+	s8 scRet                                    = -1;
+	u8 pucReqBuffer[2]                          = {0};
+	u8 pucRespBuffer[SENSOR_RESP_BUFFER_SIZE]   = {0};
+	u16 usRespSize                              = 0;
+	u16 usSdrSize                               = 0;
 
 	/* API ID : 0x01 - Asdm_Get_SDR_Size */
-	ucReqBuffer[0] = ASDM_CMD_GET_SIZE;
+	pucReqBuffer[0] = ASDM_CMD_GET_SIZE;
 	/* Record Type : 0xC2 - Voltage SDR */
-	ucReqBuffer[1] = VoltageSDR;
+	pucReqBuffer[1] = VoltageSDR;
 
 	/*Test function*/
-	scRet = Asdm_Process_Sensor_Request( &ucReqBuffer[0], &pucRespBuffer[0], &usRespSize );
+	scRet = Asdm_Process_Sensor_Request( &pucReqBuffer[0], &pucRespBuffer[0], &usRespSize );
 
 	usSdrSize = ( ( pucRespBuffer[3] << 8 ) | pucRespBuffer[2] );
 
@@ -163,15 +542,15 @@ static void test_Asdm_Get_VoltageSDR( void **state ) {
 	will_return_always( __wrap_xQueueGenericSend, 1 );
 
 	/* API ID : 0x02 - Asdm_Get_Sensor_Repository */
-	ucReqBuffer[0] = ASDM_CMD_GET_SDR;
+	pucReqBuffer[0] = ASDM_CMD_GET_SDR;
 	/* Record Type : 0xC2 - Voltage SDR */
-	ucReqBuffer[1] = VoltageSDR;
+	pucReqBuffer[1] = VoltageSDR;
 
 	vV80MonitorSensors( );
 	Asdm_Update_Sensors( );
 
 	/*Test function*/
-	scRet = Asdm_Process_Sensor_Request( &ucReqBuffer[0], &pucRespBuffer[0], &usRespSize );
+	scRet = Asdm_Process_Sensor_Request( &pucReqBuffer[0], &pucRespBuffer[0], &usRespSize );
 
 	/*Assert Asdm_Get_Sensor_Repository API response*/
 	assert_true( scRet == 0 );
@@ -184,22 +563,23 @@ static void test_Asdm_Get_VoltageSDR( void **state ) {
 	assert_Sdr( &pucRespBuffer[0], eVoltageSDR_V80_offset );
 }
 
-static void test_Asdm_Get_CurrentSDR ( void **state ) {
+static void test_Asdm_Get_CurrentSDR ( void **state )
+{
 	( void ) state; /* unused */
 
-	s8 scRet = -1;
-	u8 ucReqBuffer[2] = {0};
-	u8 pucRespBuffer[SENSOR_RESP_BUFFER_SIZE] = {0};
-	u16 usRespSize = 0;
-	u16 usSdrSize = 0;
+	s8 scRet                                    = -1;
+	u8 pucReqBuffer[2]                          = {0};
+	u8 pucRespBuffer[SENSOR_RESP_BUFFER_SIZE]   = {0};
+	u16 usRespSize                              = 0;
+	u16 usSdrSize                               = 0;
 
 	/* API ID : 0x01 - Asdm_Get_SDR_Size */
-	ucReqBuffer[0] = ASDM_CMD_GET_SIZE;
+	pucReqBuffer[0] = ASDM_CMD_GET_SIZE;
 	/* Record Type : 0xC3 - current SDR */
-	ucReqBuffer[1] = CurrentSDR;
+	pucReqBuffer[1] = CurrentSDR;
 
 	/*test function*/
-	scRet = Asdm_Process_Sensor_Request( &ucReqBuffer[0], &pucRespBuffer[0], &usRespSize );
+	scRet = Asdm_Process_Sensor_Request( &pucReqBuffer[0], &pucRespBuffer[0], &usRespSize );
 
 	usSdrSize = ( ( pucRespBuffer[3] << 8 ) | pucRespBuffer[2] );
 
@@ -213,15 +593,15 @@ static void test_Asdm_Get_CurrentSDR ( void **state ) {
 	will_return_always( __wrap_xQueueGenericSend, 1 );
 
 	/* API ID : 0x02 - Asdm_Get_Sensor_Repository */
-	ucReqBuffer[0] = ASDM_CMD_GET_SDR;
+	pucReqBuffer[0] = ASDM_CMD_GET_SDR;
 	/* Record Type : 0xC3 - Current SDR */
-	ucReqBuffer[1] = CurrentSDR;
+	pucReqBuffer[1] = CurrentSDR;
 
 	vV80MonitorSensors( );
 	Asdm_Update_Sensors( );
 
 	/*Test function*/
-	scRet = Asdm_Process_Sensor_Request( &ucReqBuffer[0], &pucRespBuffer[0], &usRespSize );
+	scRet = Asdm_Process_Sensor_Request( &pucReqBuffer[0], &pucRespBuffer[0], &usRespSize );
 
 	/*Assert Asdm_Get_Sensor_Repository API response*/
 	assert_true( scRet == 0 );
@@ -234,22 +614,23 @@ static void test_Asdm_Get_CurrentSDR ( void **state ) {
 	assert_Sdr( &pucRespBuffer[0], eCurrentSDR_V80_offset );
 }
 
-static void test_Asdm_Get_PowerSDR( void **state ) {
+static void test_Asdm_Get_PowerSDR( void **state )
+{
 	( void ) state; /* unused */
 
-	s8 scRet = -1;
-	u8 ucReqBuffer[2] = {0};
-	u8 pucRespBuffer[SENSOR_RESP_BUFFER_SIZE] = {0};
-	u16 usRespSize = 0;
-	u16 usSdrSize = 0;
+	s8 scRet                                    = -1;
+	u8 pucReqBuffer[2]                          = {0};
+	u8 pucRespBuffer[SENSOR_RESP_BUFFER_SIZE]   = {0};
+	u16 usRespSize                              = 0;
+	u16 usSdrSize                               = 0;
 
 	/* API ID : 0x01 - Asdm_Get_SDR_Size */
-	ucReqBuffer[0] = ASDM_CMD_GET_SIZE;
+	pucReqBuffer[0] = ASDM_CMD_GET_SIZE;
 	/* Record Type : 0xC4 - Power SDR */
-	ucReqBuffer[1] = PowerSDR;
+	pucReqBuffer[1] = PowerSDR;
 
 	/*test function*/
-	scRet = Asdm_Process_Sensor_Request( &ucReqBuffer[0], &pucRespBuffer[0], &usRespSize );
+	scRet = Asdm_Process_Sensor_Request( &pucReqBuffer[0], &pucRespBuffer[0], &usRespSize );
 
 	usSdrSize = ( ( pucRespBuffer[3] << 8 ) | pucRespBuffer[2] );
 
@@ -263,15 +644,15 @@ static void test_Asdm_Get_PowerSDR( void **state ) {
 	will_return_always( __wrap_xQueueGenericSend, 1 );
 
 	/* API ID : 0x02 - Asdm_Get_Sensor_Repository */
-	ucReqBuffer[0] = ASDM_CMD_GET_SDR;
+	pucReqBuffer[0] = ASDM_CMD_GET_SDR;
 	/* Record Type : 0xC4 - Power SDR */
-	ucReqBuffer[1] = PowerSDR;
+	pucReqBuffer[1] = PowerSDR;
 
 	vV80MonitorSensors( );
 	Asdm_Update_Sensors( );
 
 	/*Test function*/
-	scRet = Asdm_Process_Sensor_Request( &ucReqBuffer[0], &pucRespBuffer[0], &usRespSize );
+	scRet = Asdm_Process_Sensor_Request( &pucReqBuffer[0], &pucRespBuffer[0], &usRespSize );
 
 	/*Assert Asdm_Get_Sensor_Repository API response*/
 	assert_true( scRet == 0 );
@@ -288,24 +669,42 @@ int main( void )
 {
     const struct CMUnitTest tests[] =
     {
+        cmocka_unit_test_setup( test_getSDRIndex_failure, ulTestcaseSetupNoInitAsdm ),
+        cmocka_unit_test_setup( test_Asdm_Get_SDR_Size_No_Init, ulTestcaseSetupNoInitAsdm ),
+        cmocka_unit_test_setup( test_Asdm_Process_Sensor_Request_No_Init, ulTestcaseSetupNoInitAsdm ),
+        cmocka_unit_test_setup( test_Asdm_Get_All_Sensor_Data_No_Init, ulTestcaseSetupNoInitAsdm ),
+        cmocka_unit_test_setup( test_Asdm_Get_Sensor_Data_No_Init, ulTestcaseSetupNoInitAsdm ),
+        
+        cmocka_unit_test_setup( test_Update_Sensor_Value_failure, ulTestcaseSetup ),
+        
+        cmocka_unit_test_setup( test_Asdm_Get_SDR_Size_failure, ulTestcaseSetup ),  
+        cmocka_unit_test_setup( test_Asdm_Process_Sensor_Request_failure, ulTestcaseSetup ),
+        cmocka_unit_test_setup( test_Asdm_Get_All_Sensor_Data_Failure, ulTestcaseSetup ),
+        cmocka_unit_test_setup( test_Asdm_Get_Sensor_Data_Failure, ulTestcaseSetup ),
+        cmocka_unit_test_setup( test_Asdm_Get_Sensor_Repository_Failure, ulTestcaseSetup ),   
+        
+        cmocka_unit_test_setup( vTestAsdmGetAllSDR, ulTestcaseSetup ),
+        
         cmocka_unit_test_setup( vTestAsdmGetBoardInfoSDR, ulTestcaseSetup ),
         cmocka_unit_test_setup( vTestAsdmGetTemperatureSDR, ulTestcaseSetup ),
         cmocka_unit_test_setup( test_Asdm_Get_VoltageSDR, ulTestcaseSetup ),
         cmocka_unit_test_setup( test_Asdm_Get_CurrentSDR, ulTestcaseSetup ),
         cmocka_unit_test_setup( test_Asdm_Get_PowerSDR, ulTestcaseSetup )
+        
+        
     };
     return cmocka_run_group_tests( tests, NULL, NULL );
 }
 
 void assert_Sdr( u8 *pucRespBuffer, u8 ucSdrOffset )
 {
-	u16 usRespIndex = 1;
-	u8 ucLen = 0;
-	u8 ucSnsrlen = 0;
-	u8 ucTmp[50];
+	u16 usRespIndex         = 1;
+	u8 ucLen                = 0;
+	u8 ucSnsrlen            = 0;
+	u8 ucTmp[50]            = {0};
 	u8 *pucSnsrvalue;
-	u8 ucThresholdSupport;
-	u8 ucIdx = 0;
+	u8 ucThresholdSupport   = 0;
+	u8 ucIdx                = 0;
 	Asdm_Header_t xSdrHeader;
 
 	xSdrHeader.repository_type = pucRespBuffer[usRespIndex++];

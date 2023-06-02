@@ -40,7 +40,7 @@ u8 ucISL68221ReadVoltage0( u8 ucBusNum, u8 ucSlaveAddr, float *pfVoltageInmV )
 {
     u8 ucWriteBuf[8]    = {0};
     u8 ucReadBuf[8]     = {0};
-    u8 ucStatus         = 0;
+    u8 ucStatus         = 1;
     u16 usReadData      = 0;
 
     if( NULL != pfVoltageInmV )
@@ -69,7 +69,7 @@ u8 ucISL68221ReadVoltage1(u8 ucBusNum, u8 ucSlaveAddr, float *pfVoltageInmV)
 {
     u8 ucWriteBuf[8]    = {0};
     u8 ucReadBuf[8]     = {0};
-    u8 ucStatus         = 0;
+    u8 ucStatus         = 1;
     u16 usReadData      = 0;
 
     if( NULL != pfVoltageInmV )
@@ -98,7 +98,7 @@ u8 ucISL68221ReadVoltage2( u8 ucBusNum, u8 ucSlaveAddr, float *pfVoltageInmV )
 {
     u8 ucWriteBuf[8]    = {0};
     u8 ucReadBuf[8]     = {0};
-    u8 ucStatus         = 0;
+    u8 ucStatus         = 1;
     u16 usReadData      = 0;
 
     if( NULL != pfVoltageInmV )
@@ -127,7 +127,7 @@ u8 ucISL68221ReadCurrent0( u8 ucBusNum, u8 ucSlaveAddr, float *pfCurrentInA )
 {
     u8 ucWriteBuf[8]    = {0};
     u8 ucReadBuf[8]     = {0};
-    u8 ucStatus         = 0;
+    u8 ucStatus         = 1;
     u16 usReadData      = 0;
 
     if( NULL != pfCurrentInA )
@@ -157,7 +157,7 @@ u8 ucISL68221ReadCurrent1( u8 ucBusNum, u8 ucSlaveAddr, float *pfCurrentInA )
 {
     u8 ucWriteBuf[8]    = {0};
     u8 ucReadBuf[8]     = {0};
-    u8 ucStatus         = 0;
+    u8 ucStatus         = 1;
     u16 usReadData      = 0;
 
     if( NULL != pfCurrentInA )
@@ -186,7 +186,7 @@ u8 ucISL68221ReadCurrent2( u8 ucBusNum, u8 ucSlaveAddr, float *pfCurrentInA )
 {
     u8 ucWriteBuf[8]    = {0};
     u8 ucReadBuf[8]     = {0};
-    u8 ucStatus         = 0;
+    u8 ucStatus         = 1;
     u16 usReadData      = 0;
 
     if( NULL != pfCurrentInA )
@@ -216,7 +216,7 @@ u8 ucISL68221ReadTemperature0( u8 ucBusNum, u8 ucSlaveAddr, float *pfTemperature
 {
     u8 ucWriteBuf[8]    = {0};
     u8 ucReadBuf[8]     = {0};
-    u8 ucStatus         = 0;
+    u8 ucStatus         = 1;
     u16 usReadData      = 0;
 
     if( NULL != pfTemperature )
@@ -245,7 +245,7 @@ u8 ucISL68221ReadTemperature1( u8 ucBusNum, u8 ucSlaveAddr, float *pfTemperature
 {
     u8 ucWriteBuf[8]    = {0};
     u8 ucReadBuf[8]     = {0};
-    u8 ucStatus         = 0;
+    u8 ucStatus         = 1;
     u16 usReadData      = 0;
 
     if( NULL != pfTemperature )
@@ -274,7 +274,7 @@ u8 ucISL68221ReadTemperature2(u8 ucBusNum, u8 ucSlaveAddr, float *pfTemperature)
 {
     u8 ucWriteBuf[8]    = {0};
     u8 ucReadBuf[8]     = {0};
-    u8 ucStatus         = 0;
+    u8 ucStatus         = 1;
     u16 usReadData      = 0;
 
     if( NULL != pfTemperature )
