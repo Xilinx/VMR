@@ -59,7 +59,7 @@ static void test_M24C128_ReadByteFail( void **state )
 {
 	( void ) state; /* unused */
     u8 ucStatus                     = 0;
-	u16 usAddressOffset             = 0x1523;;
+	u16 usAddressOffset             = 0x1523;
     u8 ucRegisterValue              = 0;
     unsigned char pucReadBuff[2]    = {0};
     u8 pucMyValues[2]               = {0x10, 0x1F};
@@ -124,7 +124,7 @@ static void test_M24C128_ReadMultiBytesFail( void **state )
 {
 	( void ) state; /* unused */
     u8 ucStatus                     = 0;
-	u16 usAddressOffset             = 0x1523;;
+	u16 usAddressOffset             = 0x1523;
     u8 ucRegisterValue              = 0;
     size_t xBufSize                 = 20; 
     unsigned char pucReadBuff[2]    = {0};

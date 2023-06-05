@@ -30,10 +30,10 @@ extern void set_Buffer(  unsigned char *buff, int min, int max, long int length 
 
 static void test_ucCAT34TS02ReadTemperature(  void **state ) 
 {
-	(  void ) state; /* unused */
+    (  void ) state; /* unused */
     u8 ucStatus                     = 0;
-	s16 ssTemperatureValue          = 0;
-	unsigned char pucReadBuff[2]    = {0};
+    s16 ssTemperatureValue          = 0;
+    unsigned char pucReadBuff[2]    = {0};
     u8 pucMyValues[2]               = {0x10, 0x1F};
 
     /* 1. Test Positive Value*/
@@ -80,10 +80,10 @@ static void test_ucCAT34TS02ReadTemperature(  void **state )
 }
 
 static void test_ucCAT34TS02ReadTemperatureFail(  void **state ) {
-	(  void ) state; /* unused */
+    (  void ) state; /* unused */
 
     u8 ucStatus                     = 0;
-	unsigned char pucReadBuff[2]    = {0};
+    unsigned char pucReadBuff[2]    = {0};
     s16 ssTemperatureValue          = 0;
     u8 ucChannel                    = 0;
 
@@ -112,11 +112,11 @@ static void test_ucCAT34TS02ReadTemperatureFail(  void **state ) {
 
 static void test_ucCAT34TS02ReadByte(  void **state ) 
 {
-	(  void ) state; /* unused */
+    (  void ) state; /* unused */
     u8 ucStatus                     = 0;
-	u16 usAddressOffset             = 0x1523;
+    u16 usAddressOffset             = 0x1523;
     u8 ucRegisterValue              = 0;
-	unsigned char pucReadBuff[2]    = {0};
+    unsigned char pucReadBuff[2]    = {0};
     u8 pucMyValues[2]               = {0x10, 0x1F};
 
     /* 1. Test */
@@ -141,9 +141,9 @@ static void test_ucCAT34TS02ReadByte(  void **state )
 
 static void test_ucCAT34TS02ReadByteFail(  void **state ) 
 {
-	(  void ) state; /* unused */
+    (  void ) state; /* unused */
     u8 ucStatus                     = 0;
-	u16 usAddressOffset             = 0x1523;;
+    u16 usAddressOffset             = 0x1523;;
     u8 ucRegisterValue              = 0;
     unsigned char pucReadBuff[2]    = {0};
     u8 pucMyValues[2]               = {0x10, 0x1F};
@@ -177,11 +177,11 @@ static void test_ucCAT34TS02ReadByteFail(  void **state )
 
 static void test_ucCAT34TS02ReadMultiBytes(  void **state ) 
 {
-	(  void ) state; /* unused */
+    (  void ) state; /* unused */
     u8 ucStatus                     = 0;
-	u16 usAddressOffset             = 0x1523;
+    u16 usAddressOffset             = 0x1523;
     size_t xBufSize                 = 20;
-	unsigned char pucReadBuff[2]    = {0};
+    unsigned char pucReadBuff[2]    = {0};
     u8 pucMyValues[20]              = {0};
 
     /* 1. Test */
@@ -206,9 +206,9 @@ static void test_ucCAT34TS02ReadMultiBytes(  void **state )
 
 static void test_ucCAT34TS02ReadMultiBytesFail(  void **state ) 
 {
-	(  void ) state; /* unused */
+    (  void ) state; /* unused */
     u8 ucStatus                     = 0;
-	u16 usAddressOffset             = 0x1523;;
+    u16 usAddressOffset             = 0x1523;;
     u8 ucRegisterValue              = 0;
     size_t xBufSize                 = 20; 
     unsigned char pucReadBuff[2]    = {0};
@@ -243,8 +243,8 @@ static void test_ucCAT34TS02ReadMultiBytesFail(  void **state )
 
 int main(  void ) 
 {
-	srand(  time(  0 ) );
-	const struct CMUnitTest tests[] = 
+    srand(  time(  0 ) );
+    const struct CMUnitTest tests[] = 
     {
         cmocka_unit_test(  test_ucCAT34TS02ReadTemperature ),
         cmocka_unit_test(  test_ucCAT34TS02ReadTemperatureFail ),
@@ -253,8 +253,8 @@ int main(  void )
         cmocka_unit_test(  test_ucCAT34TS02ReadMultiBytes ),
         cmocka_unit_test(  test_ucCAT34TS02ReadMultiBytesFail )
 
-	};
+    };
 
-	return cmocka_run_group_tests(  tests, NULL, NULL );
+    return cmocka_run_group_tests(  tests, NULL, NULL );
 
 }

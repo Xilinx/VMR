@@ -36,7 +36,7 @@ extern void set_Buffer( unsigned char *buff, int min, int max, long int length )
 
 static void test_ucISL68221WriteRegister( void **state )
 {
-	( void ) state; /* unused */
+    ( void ) state; /* unused */
 
     u8 ucStatus                 = 0;
     u8 ucRegisterContent        = 0;
@@ -69,11 +69,11 @@ static void test_ucISL68221WriteRegister( void **state )
 
 static void test_ucISL68221ReadRegister( void **state )
 {
-	( void ) state; /* unused */
+    ( void ) state; /* unused */
 
     u8 ucStatus                     = 0;
-	unsigned char pucReadBuff[2]    = {0};
-	int i                           = 0;
+    unsigned char pucReadBuff[2]    = {0};
+    int i                           = 0;
     int j                           = 0;
     u8 ucRegisterContent            = 0;
     u8 ucRegisterAddress            = 0;
@@ -104,10 +104,10 @@ static void test_ucISL68221ReadRegister( void **state )
 
 static void test_ucISL68221ReadVoltage0Fail( void **state )
 {
-	( void ) state; /* unused */
+    ( void ) state; /* unused */
 
     u8 ucStatus                     = 0;
-	unsigned char pucReadBuff[2]    = {0};
+    unsigned char pucReadBuff[2]    = {0};
     float fVoltageInmV              = 0;
     u8 ucChannel                    = 0;
     u8 ucRegisterContent            = 0;
@@ -159,10 +159,10 @@ static void test_ucISL68221ReadVoltage0Fail( void **state )
 
 static void test_ucISL68221ReadVoltage0( void **state )
 {
-	( void ) state; /* unused */
+    ( void ) state; /* unused */
 
     u8 ucStatus                     = 0;
-	unsigned char pucReadBuff[2]    = {0};
+    unsigned char pucReadBuff[2]    = {0};
     float fVoltageInmV              = 0;
     u8 ucChannel                    = 0;
     u8 ucRegisterContent            = 0;
@@ -211,10 +211,10 @@ static void test_ucISL68221ReadVoltage0( void **state )
 
 static void test_ucISL68221ReadVoltage1Fail( void **state )
 {
-	( void ) state; /* unused */
+    ( void ) state; /* unused */
 
     u8 ucStatus                     = 0;
-	unsigned char pucReadBuff[2]    = {0};
+    unsigned char pucReadBuff[2]    = {0};
     float fVoltageInmV              = 0;
     u8 ucChannel                    = 0;
     u8 ucRegisterContent            = 0;
@@ -267,10 +267,10 @@ static void test_ucISL68221ReadVoltage1Fail( void **state )
 
 static void test_ucISL68221ReadVoltage1( void **state )
 {
-	( void ) state; /* unused */
+    ( void ) state; /* unused */
 
     u8 ucStatus                     = 0;
-	unsigned char pucReadBuff[2]    = {0};
+    unsigned char pucReadBuff[2]    = {0};
     float fVoltageInmV              = 0;
     u8 ucChannel                    = 0;
     u8 ucRegisterContent            = 0;
@@ -319,10 +319,10 @@ static void test_ucISL68221ReadVoltage1( void **state )
 
 static void test_ucISL68221ReadVoltage2Fail( void **state )
 {
-	( void ) state; /* unused */
+    ( void ) state; /* unused */
 
     u8 ucStatus                     = 0;
-	unsigned char pucReadBuff[2]    = {0};
+    unsigned char pucReadBuff[2]    = {0};
     float fVoltageInmV              = 0;
     u8 ucChannel                    = 0;
     u8 ucRegisterContent            = 0;
@@ -374,10 +374,10 @@ static void test_ucISL68221ReadVoltage2Fail( void **state )
 
 static void test_ucISL68221ReadVoltage2( void **state )
 {
-	( void ) state; /* unused */
+    ( void ) state; /* unused */
 
     u8 ucStatus                     = 0;
-	unsigned char pucReadBuff[2]    = {0};
+    unsigned char pucReadBuff[2]    = {0};
     float fVoltageInmV              = 0;
     u8 ucChannel                    = 0;
     u8 ucRegisterContent            = 0;
@@ -425,10 +425,10 @@ static void test_ucISL68221ReadVoltage2( void **state )
 
 static void test_ucISL68221ReadCurrent0Fail( void **state )
 {
-	( void ) state; /* unused */
+    ( void ) state; /* unused */
 
     u8 ucStatus                     = 0;
-	unsigned char pucReadBuff[2]    = {0};
+    unsigned char pucReadBuff[2]    = {0};
     float fCurrentInmV              = 0;
     u8 ucChannel                    = 0;
     u8 ucRegisterContent            = 0;
@@ -481,10 +481,10 @@ static void test_ucISL68221ReadCurrent0Fail( void **state )
 
 static void test_ucISL68221ReadCurrent0( void **state )
 {
-	( void ) state; /* unused */
+    ( void ) state; /* unused */
 
     u8 ucStatus                     = 0;
-	unsigned char pucReadBuff[2]    = {0};
+    unsigned char pucReadBuff[2]    = {0};
     float fCurrentInmV              = 0;
     u8 ucChannel                    = 0;
     u8 ucRegisterContent            = 0;
@@ -533,10 +533,10 @@ static void test_ucISL68221ReadCurrent0( void **state )
 
 static void test_ucISL68221ReadCurrent1Fail( void **state )
 {
-	( void ) state; /* unused */
+    ( void ) state; /* unused */
 
     u8 ucStatus                     = 0;
-	unsigned char pucReadBuff[2]    = {0};
+    unsigned char pucReadBuff[2]    = {0};
     float fCurrentInmV              = 0;
     u8 ucChannel                    = 0;
     u8 ucRegisterContent            = 0;
@@ -588,10 +588,10 @@ static void test_ucISL68221ReadCurrent1Fail( void **state )
 
 static void test_ucISL68221ReadCurrent1( void **state )
 {
-	( void ) state; /* unused */
+    ( void ) state; /* unused */
 
     u8 ucStatus                     = 0;
-	unsigned char pucReadBuff[2]    = {0};
+    unsigned char pucReadBuff[2]    = {0};
     float fCurrentInmV              = 0;
     u8 ucChannel                    = 0;
     u8 ucRegisterContent            = 0;
@@ -639,10 +639,10 @@ static void test_ucISL68221ReadCurrent1( void **state )
 
 static void test_ucISL68221ReadCurrent2Fail( void **state )
 {
-	( void ) state; /* unused */
+    ( void ) state; /* unused */
 
     u8 ucStatus                     = 0;
-	unsigned char pucReadBuff[2]    = {0};
+    unsigned char pucReadBuff[2]    = {0};
     float fCurrentInmV              = 0;
     u8 ucChannel                    = 0;
     u8 ucRegisterContent            = 0;
@@ -694,10 +694,10 @@ static void test_ucISL68221ReadCurrent2Fail( void **state )
 
 static void test_ucISL68221ReadCurrent2( void **state )
 {
-	( void ) state; /* unused */
+    ( void ) state; /* unused */
 
     u8 ucStatus                     = 0;
-	unsigned char pucReadBuff[2]    = {0};
+    unsigned char pucReadBuff[2]    = {0};
     float fCurrentInmV              = 0;
     u8 ucChannel                    = 0;
     u8 ucRegisterContent            = 0;
@@ -746,10 +746,10 @@ static void test_ucISL68221ReadCurrent2( void **state )
 /*************************************/
 static void test_ucISL68221ReadTemperature0Fail( void **state )
 {
-	( void ) state; /* unused */
+    ( void ) state; /* unused */
 
     u8 ucStatus                     = 0;
-	unsigned char pucReadBuff[2]    = {0};
+    unsigned char pucReadBuff[2]    = {0};
     float fTemperature              = 0;
     u8 ucChannel                    = 0;
     u8 ucRegisterContent            = 0;
@@ -801,10 +801,10 @@ static void test_ucISL68221ReadTemperature0Fail( void **state )
 
 static void test_ucISL68221ReadTemperature0( void **state )
 {
-	( void ) state; /* unused */
+    ( void ) state; /* unused */
 
     u8 ucStatus                     = 0;
-	unsigned char pucReadBuff[2]    = {0};
+    unsigned char pucReadBuff[2]    = {0};
     float fTemperature              = 0;
     u8 ucChannel                    = 0;
     u8 ucRegisterContent            = 0;
@@ -853,10 +853,10 @@ static void test_ucISL68221ReadTemperature0( void **state )
 
 static void test_ucISL68221ReadTemperature1Fail( void **state )
 {
-	( void ) state; /* unused */
+    ( void ) state; /* unused */
 
     u8 ucStatus                     = 0;
-	unsigned char pucReadBuff[2]    = {0};
+    unsigned char pucReadBuff[2]    = {0};
     float fTemperature              = 0;
     u8 ucChannel                    = 0;
     u8 ucRegisterContent            = 0;
@@ -907,10 +907,10 @@ static void test_ucISL68221ReadTemperature1Fail( void **state )
 
 static void test_ucISL68221ReadTemperature1( void **state )
 {
-	( void ) state; /* unused */
+    ( void ) state; /* unused */
 
     u8 ucStatus                     = 0;
-	unsigned char pucReadBuff[2]    = {0};
+    unsigned char pucReadBuff[2]    = {0};
     float fTemperature              = 0;
     u8 ucChannel                    = 0;
     u8 ucRegisterContent            = 0;
@@ -958,10 +958,10 @@ static void test_ucISL68221ReadTemperature1( void **state )
 
 static void test_ucISL68221ReadTemperature2Fail( void **state )
 {
-	( void ) state; /* unused */
+    ( void ) state; /* unused */
 
     u8 ucStatus                     = 0;
-	unsigned char pucReadBuff[2]    = {0};
+    unsigned char pucReadBuff[2]    = {0};
     float fTemperature              = 0;
     u8 ucChannel                    = 0;
     u8 ucRegisterContent            = 0;
@@ -1013,10 +1013,10 @@ static void test_ucISL68221ReadTemperature2Fail( void **state )
 
 static void test_ucISL68221ReadTemperature2( void **state )
 {
-	( void ) state; /* unused */
+    ( void ) state; /* unused */
 
     u8 ucStatus                     = 0;
-	unsigned char pucReadBuff[2]    = {0};
+    unsigned char pucReadBuff[2]    = {0};
     float fTemperature              = 0;
     u8 ucChannel                    = 0;
     u8 ucRegisterContent            = 0;
@@ -1065,13 +1065,13 @@ static void test_ucISL68221ReadTemperature2( void **state )
 
 int main( void ) 
 {
-	srand( time( 0 ) );
-	const struct CMUnitTest tests[] = 
+    srand( time( 0 ) );
+    const struct CMUnitTest tests[] = 
     {
         
         cmocka_unit_test( test_ucISL68221WriteRegister ),
         cmocka_unit_test( test_ucISL68221ReadRegister ),
-	    cmocka_unit_test( test_ucISL68221ReadVoltage0Fail ),
+        cmocka_unit_test( test_ucISL68221ReadVoltage0Fail ),
         cmocka_unit_test( test_ucISL68221ReadVoltage0 ),
         cmocka_unit_test( test_ucISL68221ReadVoltage1Fail ),
         cmocka_unit_test( test_ucISL68221ReadVoltage1 ),
@@ -1089,7 +1089,7 @@ int main( void )
         cmocka_unit_test( test_ucISL68221ReadTemperature1 ),
         cmocka_unit_test( test_ucISL68221ReadTemperature2Fail ),
         cmocka_unit_test( test_ucISL68221ReadTemperature2 )
-	};
+    };
 
-	return cmocka_run_group_tests( tests, NULL, NULL );
+    return cmocka_run_group_tests( tests, NULL, NULL );
 }

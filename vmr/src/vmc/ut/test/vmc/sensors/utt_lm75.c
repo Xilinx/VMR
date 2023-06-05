@@ -29,10 +29,10 @@ extern void set_Buffer( unsigned char *buff, int min, int max, long int length )
 
 static void test_LM75_ReadTemperature( void **state ) 
 {
-	( void ) state; /* unused */
+    ( void ) state; /* unused */
     u8 ucStatus                     = 0;
-	s16 ssTemperatureValue          = 0;
-	unsigned char pucReadBuff[2]    = {0};
+    s16 ssTemperatureValue          = 0;
+    unsigned char pucReadBuff[2]    = {0};
     u8 pucMyValues[2]               = {0x80, 0x8F};
 
     /* 1. Test Positive Value*/
@@ -79,10 +79,10 @@ static void test_LM75_ReadTemperature( void **state )
 
 static void test_LM75_ReadTemperatureFail( void **state )
 {
-	( void ) state; /* unused */
+    ( void ) state; /* unused */
 
     u8 ucStatus                     = 0;
-	unsigned char pucReadBuff[2]    = {0};
+    unsigned char pucReadBuff[2]    = {0};
     s16 ssTemperatureValue          = 0;
     u8 ucChannel                    = 0;
 
@@ -109,15 +109,15 @@ static void test_LM75_ReadTemperatureFail( void **state )
 
 int main( void ) 
 {
-	srand( time( 0 ) );
-	const struct CMUnitTest tests[] = 
+    srand( time( 0 ) );
+    const struct CMUnitTest tests[] = 
     {
         cmocka_unit_test( test_LM75_ReadTemperature ),
         cmocka_unit_test( test_LM75_ReadTemperatureFail )
 
 
-	};
+    };
 
-	return cmocka_run_group_tests( tests, NULL, NULL );
+    return cmocka_run_group_tests( tests, NULL, NULL );
 
 }

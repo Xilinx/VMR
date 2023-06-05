@@ -28,9 +28,9 @@ extern void set_Buffer( unsigned char *buff, int min, int max, long int length )
 
 static void test_max6639_write_registerFail( void **state ) 
 {
-	( void ) state; /* unused */
+    ( void ) state; /* unused */
     u8 ucStatus                     = 0;
-	u8 ucRegisterAddress            = 0;
+    u8 ucRegisterAddress            = 0;
     u8 ucRegisterContent            = 0;
     unsigned char pucReadBuff[2]    = {0};
     u8 pucMyValues[2]               = {0x10, 0x1F};
@@ -59,11 +59,11 @@ static void test_max6639_write_registerFail( void **state )
 
 static void test_max6639_write_register( void **state ) 
 {
-	( void ) state; /* unused */
+    ( void ) state; /* unused */
     u8 ucStatus                     = 0;
-	u8 ucRegisterAddress            = 0;
+    u8 ucRegisterAddress            = 0;
     u8 ucRegisterContent            = 0;
-	unsigned char pucReadBuff[2]    = {0};
+    unsigned char pucReadBuff[2]    = {0};
     u8 pucMyValues[2]               = {0x10, 0x1F};
 
     /* 1. Test */
@@ -87,11 +87,11 @@ static void test_max6639_write_register( void **state )
 
 static void test_max6639_read_register( void **state ) 
 {
-	( void ) state; /* unused */
+    ( void ) state; /* unused */
     u8 ucStatus                     = 0;
-	u8 ucRegisterAddress            = 0;
+    u8 ucRegisterAddress            = 0;
     u8 ucRegisterContent            = 0;
-	unsigned char pucReadBuff[2]    = {0};
+    unsigned char pucReadBuff[2]    = {0};
     u8 pucMyValues[2]               = {0x10, 0x1F};
 
     /* 1. Test */
@@ -116,9 +116,9 @@ static void test_max6639_read_register( void **state )
 
 static void test_max6639_read_registerFail( void **state ) 
 {
-	( void ) state; /* unused */
+    ( void ) state; /* unused */
     u8 ucStatus                     = 0;
-	u8 ucRegisterAddress            = 0;
+    u8 ucRegisterAddress            = 0;
     u8 ucRegisterContent            = 0;
     unsigned char pucReadBuff[2]    = {0};
     u8 pucMyValues[2]               = {0x10, 0x1F};
@@ -148,9 +148,9 @@ static void test_max6639_read_registerFail( void **state )
 /***************************************************************/
 static void test_max6639_initFail( void **state ) 
 {
-	( void ) state; /* unused */
+    ( void ) state; /* unused */
     u8 ucStatus                     = 0;
-	u8 ucRegisterAddress            = 0;
+    u8 ucRegisterAddress            = 0;
     u8 ucRegisterContent            = 0;
     unsigned char pucReadBuff[2]    = {0};
     u8 pucMyValues[2]               = {0x10, 0x1F};
@@ -1187,11 +1187,11 @@ static void test_max6639_initFail( void **state )
 
 static void test_max6639_init( void **state ) 
 {
-	( void ) state; /* unused */
+    ( void ) state; /* unused */
     u8 ucStatus                     = 0;
-	u8 ucRegisterAddress            = 0;
+    u8 ucRegisterAddress            = 0;
     u8 ucRegisterContent            = 0;
-	unsigned char pucReadBuff[2]    = {0};
+    unsigned char pucReadBuff[2]    = {0};
     u8 pucMyValues[2]               = {0x10, 0x1F};
 
     /* 1. Test */
@@ -1330,10 +1330,10 @@ static void test_max6639_init( void **state )
 /***************************************************************/
 static void test_max6639_ReadFPGATemperature( void **state ) 
 {
-	( void ) state; /* unused */
+    ( void ) state; /* unused */
     u8 ucStatus                     = 0;
-	float fTemperatureValue         = 0;
-	unsigned char pucReadBuff[2]    = {0};
+    float fTemperatureValue         = 0;
+    unsigned char pucReadBuff[2]    = {0};
     u8 pucMyValues[2]               = {0x10, 0x1F};
 
     /* 1. Test Positive Value*/
@@ -1366,10 +1366,10 @@ static void test_max6639_ReadFPGATemperature( void **state )
 }
 
 static void test_max6639_ReadFPGATemperatureFail( void **state ) {
-	( void ) state; /* unused */
+    ( void ) state; /* unused */
 
     u8 ucStatus                     = 0;
-	unsigned char pucReadBuff[2]    = {0};
+    unsigned char pucReadBuff[2]    = {0};
     float fTemperatureValue         = 0;
     u8 ucChannel                    = 0;
 
@@ -1423,11 +1423,11 @@ static void test_max6639_ReadFPGATemperatureFail( void **state ) {
 
 static void test_max6639_ReadFanTach( void **state ) 
 {
-	( void ) state; /* unused */
+    ( void ) state; /* unused */
     u8 ucStatus                     = 0;
-	u8 ucFanIndex                     = 1;
+    u8 ucFanIndex                     = 1;
     u8 ucFanSpeed                     = 0;
-	unsigned char pucReadBuff[2]    = {0};
+    unsigned char pucReadBuff[2]    = {0};
     u8 pucMyValues[2]               = {0x10, 0x1F};
 
     /* 1. Test First Value*/
@@ -1472,10 +1472,10 @@ static void test_max6639_ReadFanTach( void **state )
 
 static void test_max6639_ReadFanTachFail( void **state ) 
 {
-	( void ) state; /* unused */
+    ( void ) state; /* unused */
 
     u8 ucStatus                     = 0;
-	unsigned char pucReadBuff[2]    = {0};
+    unsigned char pucReadBuff[2]    = {0};
     u8 ucFanIndex                   = 4;
     u8 ucFanSpeed                   = 0;
 
@@ -1528,10 +1528,10 @@ static void test_max6639_ReadFanTachFail( void **state )
 
 static void test_max6639_ReadDDRTemperature( void **state ) 
 {
-	( void ) state; /* unused */
+    ( void ) state; /* unused */
     u8 ucStatus                     = 0;
-	float fTemperatureValue         = 0;
-	unsigned char pucReadBuff[2]    = {0};
+    float fTemperatureValue         = 0;
+    unsigned char pucReadBuff[2]    = {0};
     u8 pucMyValues[2]               = {0x10, 0x1F};
 
     /* 1. Test Positive Value*/
@@ -1564,10 +1564,10 @@ static void test_max6639_ReadDDRTemperature( void **state )
 }
 
 static void test_max6639_ReadDDRTemperatureFail( void **state ) {
-	( void ) state; /* unused */
+    ( void ) state; /* unused */
 
     u8 ucStatus                     = 0;
-	unsigned char pucReadBuff[2]    = {0};
+    unsigned char pucReadBuff[2]    = {0};
     float fTemperatureValue         = 0;
     u8 ucChannel                    = 0;
 
@@ -1620,8 +1620,8 @@ static void test_max6639_ReadDDRTemperatureFail( void **state ) {
 
 int main( void ) 
 {
-	srand( time( 0 ) );
-	const struct CMUnitTest tests[] = 
+    srand( time( 0 ) );
+    const struct CMUnitTest tests[] = 
     {
         cmocka_unit_test( test_max6639_ReadDDRTemperature ),
         cmocka_unit_test( test_max6639_ReadDDRTemperatureFail ),
@@ -1637,8 +1637,8 @@ int main( void )
         cmocka_unit_test( test_max6639_initFail )
         
 
-	};
+    };
 
-	return cmocka_run_group_tests( tests, NULL, NULL );
+    return cmocka_run_group_tests( tests, NULL, NULL );
 
 }

@@ -12,8 +12,8 @@ unsigned char *rd_buffer = NULL;
 /*****************************Internal functions*******************************/
 void set_Buffer(unsigned char *buff, int min, int max, long int length)
 {
-	unsigned int value = 0;
-	int i;
+	unsigned int value  = 0;
+	int i               = 0;
 
 	rd_buffer = buff;
 
@@ -28,7 +28,7 @@ void set_Buffer(unsigned char *buff, int min, int max, long int length)
 
 void vSetReadBuffer(unsigned char *ucBuff, unsigned char *pucValue, long int ulLength)
 {
-	int i;
+	int i = 0;
 
 	rd_buffer = ucBuff;
 
@@ -43,7 +43,7 @@ void vSetReadBuffer(unsigned char *ucBuff, unsigned char *pucValue, long int ulL
 /*****************************Mock functions *******************************/
 u8  __wrap_i2c_send_rs_recv(u8 i2c_num, unsigned char i2c_addr, unsigned char * i2c_write_buff, long int write_length, unsigned char * i2c_read_buff, long int read_length)
 {
-	int i;
+	int i = 0;
 
 	/*Check parameter values set by 'expect_*()' written in testcase*/
 	check_expected(i2c_num);
@@ -67,7 +67,7 @@ u8  __wrap_i2c_send_rs_recv(u8 i2c_num, unsigned char i2c_addr, unsigned char * 
 
 u8  __wrap_i2c_send(u8 i2c_num, unsigned char i2c_addr, unsigned char * i2c_write_buff, long int write_length)
 {
-	int i;
+	int i = 0;
 
 	/*Check parameter values set by 'expect_*()' written in testcase*/
 	check_expected(i2c_num);
