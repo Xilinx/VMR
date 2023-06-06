@@ -16,7 +16,111 @@ target_link_libraries( test_se98a
 
 add_test( NAME test_se98a 
           COMMAND test_se98a )
-		  
+
+set( INA3221_TEST_FILES ./sensors/utt_ina3221.c
+                     ../../mocks/common/utm_cl_i2c.c )
+
+add_executable( test_ina3221 ${INA3221_TEST_FILES} ../../../sensors/src/ina3221.c )
+
+target_link_libraries( test_ina3221
+                       cmocka
+                       -Wl,--wrap=i2c_send_rs_recv )
+
+add_test( NAME test_ina3221
+          COMMAND test_ina3221 )
+
+set( ISL68221_TEST_FILES ./sensors/utt_isl68221.c
+          ../../mocks/common/utm_cl_i2c.c )
+
+add_executable( test_isl68221 ${ISL68221_TEST_FILES} ../../../sensors/src/isl68221.c )
+
+target_link_libraries( test_isl68221
+            cmocka
+            -Wl,--wrap=i2c_send_rs_recv
+            -Wl,--wrap=i2c_send)
+
+add_test( NAME test_isl68221
+            COMMAND test_isl68221 )
+
+
+set( CAT34TS02_TEST_FILES ./sensors/utt_cat34ts02.c
+            ../../mocks/common/utm_cl_i2c.c
+            ../../mocks/common/utm_cl_logs.c)
+
+add_executable( test_cat34ts02 ${CAT34TS02_TEST_FILES} ../../../sensors/src/cat34ts02.c )
+
+target_link_libraries( test_cat34ts02
+              cmocka
+              -Wl,--wrap=i2c_send_rs_recv
+              -Wl,--wrap=i2c_send
+              -Wl,--wrap=cl_printf)
+
+add_test( NAME test_cat34ts02
+              COMMAND test_cat34ts02 )
+
+set( LM75_TEST_FILES ./sensors/utt_lm75.c
+        ../../mocks/common/utm_cl_i2c.c
+        ../../mocks/common/utm_cl_logs.c)
+
+add_executable( test_lm75 ${LM75_TEST_FILES} ../../../sensors/src/lm75.c )
+
+target_link_libraries( test_lm75
+                cmocka
+                -Wl,--wrap=i2c_send_rs_recv
+                -Wl,--wrap=i2c_send
+                -Wl,--wrap=cl_printf)
+
+add_test( NAME test_lm75
+                COMMAND test_lm75 )
+
+set( M24C128_TEST_FILES ./sensors/utt_m24c128.c
+                ../../mocks/common/utm_cl_i2c.c
+                ../../mocks/common/utm_cl_logs.c)
+
+add_executable( test_m24c128 ${M24C128_TEST_FILES} ../../../sensors/src/m24c128.c )
+
+target_link_libraries( test_m24c128
+                        cmocka
+                        -Wl,--wrap=i2c_send_rs_recv
+                        -Wl,--wrap=i2c_send
+                        -Wl,--wrap=cl_printf)
+
+add_test( NAME test_m24c128
+                        COMMAND test_m24c128 )
+
+set( MAX6639_TEST_FILES ./sensors/utt_max6639.c
+                        ../../mocks/common/utm_cl_i2c.c
+                        ../../mocks/common/utm_cl_logs.c)
+
+add_executable( test_max6639 ${MAX6639_TEST_FILES} ../../../sensors/src/max6639.c )
+
+target_link_libraries( test_max6639
+                                cmocka
+                                -Wl,--wrap=i2c_send_rs_recv
+                                -Wl,--wrap=i2c_send
+                                -Wl,--wrap=cl_printf)
+
+add_test( NAME test_max6639
+            COMMAND test_max6639 )
+
+set( QSFP_TEST_FILES ./sensors/utt_qsfp.c
+                     ../../mocks/common/utm_cl_i2c.c
+                     ../../mocks/common/utm_cl_logs.c
+                     ../../mocks/freertos/utm_queue.c)
+
+add_executable( test_qsfp ${QSFP_TEST_FILES} ../../../sensors/src/qsfp.c )
+
+target_link_libraries( test_qsfp
+                       cmocka
+                       -Wl,--wrap=i2c_send_rs_recv
+                       -Wl,--wrap=i2c_send
+                       -Wl,--wrap=cl_printf
+                       -Wl,--wrap=vTaskDelay
+                       )
+
+add_test( NAME test_qsfp
+          COMMAND test_qsfp )
+
 set( ASDM_TEST_FILES ./utt_vmc_asdm.c
                      ./utt_assert_SDRs.c
                      ../../mocks/common/utm_cl_mem.c
@@ -136,12 +240,27 @@ include(CodeCoverage.cmake)
 append_coverage_compiler_flags()
 
 set( COVERAGE_EXCLUDES ${SE98A_TEST_FILES}
+                       ${INA3221_TEST_FILES}
+                       ${CAT34TS02_TEST_FILES}
+                       ${LM75_TEST_FILES}
+                       ${M24C128_TEST_FILES}
+                       ${MAX6639_TEST_FILES}
+                       ${ISL68221_TEST_FILES}
+                       ${QSFP_TEST_FILES}
                        ${ASDM_TEST_FILES}
                        ${ASDM_V80_TEST_FILES} )
 
 SETUP_TARGET_FOR_COVERAGE_LCOV(
         NAME test_coverage
         EXECUTABLE ctest
-        DEPENDENCIES test_se98a 
-                     test_asdm )
+        DEPENDENCIES    test_se98a
+                        test_ina3221
+                        test_isl68221
+                        test_cat34ts02
+                        test_m24c128
+                        test_max6639
+                        test_lm75
+                        test_qsfp
+                        test_asdm
+                        test_asdm_v80 )
 
