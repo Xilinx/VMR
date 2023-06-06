@@ -26,12 +26,6 @@
 #define ISL68221_WRITE_BUF          0X05
 #define ISL68221_READ_LEN           2
 
-/*Min & Max temperatures for ISL68221 */
-//#define ISL68221_POSITIVE_MIN_TEMP 0
-//#define ISL68221_POSITIVE_MAX_TEMP 85
-//#define ISL68221_NEGATIVE_MIN_TEMP -128
-//#define ISL68221_NEGATIVE_MAX_TEMP -1
-
 extern void set_Buffer( unsigned char *buff, int min, int max, long int length );
 
 static void test_ucISL68221WriteRegister( void **state )
@@ -60,11 +54,9 @@ static void test_ucISL68221WriteRegister( void **state )
 
     /* Test 1 NULL parameter*/
     
-
     /*Test Function*/
-    ucStatus = ucISL68221WriteRegister( ISL68221_I2CNUM, SLAVE_ADDRESS_ISL68221_0, ucRegisterAddress,NULL );
+    ucStatus = ucISL68221WriteRegister( ISL68221_I2CNUM, SLAVE_ADDRESS_ISL68221_0, ucRegisterAddress, NULL );
     assert_true( ucStatus == XST_FAILURE );
-
 }
 
 static void test_ucISL68221ReadRegister( void **state )
@@ -95,11 +87,9 @@ static void test_ucISL68221ReadRegister( void **state )
     ucStatus = ucISL68221ReadRegister( ISL68221_I2CNUM, SLAVE_ADDRESS_ISL68221_0, ucRegisterAddress, &ucRegisterContent );
     assert_true( ucStatus == XST_SUCCESS );
 
-    
     /*Test Function*/
     ucStatus = ucISL68221ReadRegister( ISL68221_I2CNUM, SLAVE_ADDRESS_ISL68221_0, ucRegisterAddress, NULL );
     assert_true( ucStatus == XST_FAILURE );
-
 }
 
 static void test_ucISL68221ReadVoltage0Fail( void **state )
@@ -154,7 +144,6 @@ static void test_ucISL68221ReadVoltage0Fail( void **state )
 
     ucStatus = ucISL68221ReadVoltage0( ISL68221_I2CNUM, SLAVE_ADDRESS_ISL68221_0, &fVoltageInmV );
     assert_true( ucStatus == XST_FAILURE );
-
 }
 
 static void test_ucISL68221ReadVoltage0( void **state )
@@ -205,7 +194,6 @@ static void test_ucISL68221ReadVoltage0( void **state )
 
     ucStatus = ucISL68221ReadVoltage0( ISL68221_I2CNUM, SLAVE_ADDRESS_ISL68221_0, &fVoltageInmV );
     assert_true( ucStatus == XST_SUCCESS );
-
 }
 
 
@@ -262,7 +250,6 @@ static void test_ucISL68221ReadVoltage1Fail( void **state )
 
     ucStatus = ucISL68221ReadVoltage1( ISL68221_I2CNUM, SLAVE_ADDRESS_ISL68221_0, &fVoltageInmV );
     assert_true( ucStatus == XST_FAILURE );
-
 }
 
 static void test_ucISL68221ReadVoltage1( void **state )
@@ -314,7 +301,6 @@ static void test_ucISL68221ReadVoltage1( void **state )
 
     ucStatus = ucISL68221ReadVoltage1( ISL68221_I2CNUM, SLAVE_ADDRESS_ISL68221_0, &fVoltageInmV );
     assert_true( ucStatus == XST_SUCCESS );
-
 }
 
 static void test_ucISL68221ReadVoltage2Fail( void **state )
@@ -369,7 +355,6 @@ static void test_ucISL68221ReadVoltage2Fail( void **state )
 
     ucStatus = ucISL68221ReadVoltage2( ISL68221_I2CNUM, SLAVE_ADDRESS_ISL68221_0, &fVoltageInmV );
     assert_true( ucStatus == XST_FAILURE );
-
 }
 
 static void test_ucISL68221ReadVoltage2( void **state )
@@ -420,7 +405,6 @@ static void test_ucISL68221ReadVoltage2( void **state )
 
     ucStatus = ucISL68221ReadVoltage2( ISL68221_I2CNUM, SLAVE_ADDRESS_ISL68221_0, &fVoltageInmV );
     assert_true( ucStatus == XST_SUCCESS );
-
 }
 
 static void test_ucISL68221ReadCurrent0Fail( void **state )
@@ -476,7 +460,6 @@ static void test_ucISL68221ReadCurrent0Fail( void **state )
 
     ucStatus = ucISL68221ReadCurrent0( ISL68221_I2CNUM, SLAVE_ADDRESS_ISL68221_0, &fCurrentInmV );
     assert_true( ucStatus == XST_FAILURE );
-
 }
 
 static void test_ucISL68221ReadCurrent0( void **state )
@@ -527,7 +510,6 @@ static void test_ucISL68221ReadCurrent0( void **state )
 
     ucStatus = ucISL68221ReadCurrent0( ISL68221_I2CNUM, SLAVE_ADDRESS_ISL68221_0, &fCurrentInmV );
     assert_true( ucStatus == XST_SUCCESS );
-
 }
 
 
@@ -583,7 +565,6 @@ static void test_ucISL68221ReadCurrent1Fail( void **state )
 
     ucStatus = ucISL68221ReadCurrent1( ISL68221_I2CNUM, SLAVE_ADDRESS_ISL68221_0, &fCurrentInmV );
     assert_true( ucStatus == XST_FAILURE );
-
 }
 
 static void test_ucISL68221ReadCurrent1( void **state )
@@ -634,7 +615,6 @@ static void test_ucISL68221ReadCurrent1( void **state )
 
     ucStatus = ucISL68221ReadCurrent1( ISL68221_I2CNUM, SLAVE_ADDRESS_ISL68221_0, &fCurrentInmV );
     assert_true( ucStatus == XST_SUCCESS );
-
 }
 
 static void test_ucISL68221ReadCurrent2Fail( void **state )
@@ -689,7 +669,6 @@ static void test_ucISL68221ReadCurrent2Fail( void **state )
 
     ucStatus = ucISL68221ReadCurrent2( ISL68221_I2CNUM, SLAVE_ADDRESS_ISL68221_0, &fCurrentInmV );
     assert_true( ucStatus == XST_FAILURE );
-
 }
 
 static void test_ucISL68221ReadCurrent2( void **state )
@@ -740,7 +719,6 @@ static void test_ucISL68221ReadCurrent2( void **state )
 
     ucStatus = ucISL68221ReadCurrent2( ISL68221_I2CNUM, SLAVE_ADDRESS_ISL68221_0, &fCurrentInmV );
     assert_true( ucStatus == XST_SUCCESS );
-
 }
 
 /*************************************/
@@ -796,7 +774,6 @@ static void test_ucISL68221ReadTemperature0Fail( void **state )
 
     ucStatus = ucISL68221ReadTemperature0( ISL68221_I2CNUM, SLAVE_ADDRESS_ISL68221_0, &fTemperature );
     assert_true( ucStatus == XST_FAILURE );
-
 }
 
 static void test_ucISL68221ReadTemperature0( void **state )
@@ -847,7 +824,6 @@ static void test_ucISL68221ReadTemperature0( void **state )
 
     ucStatus = ucISL68221ReadTemperature0( ISL68221_I2CNUM, SLAVE_ADDRESS_ISL68221_0, &fTemperature );
     assert_true( ucStatus == XST_SUCCESS );
-
 }
 
 
@@ -953,7 +929,6 @@ static void test_ucISL68221ReadTemperature1( void **state )
 
     ucStatus = ucISL68221ReadTemperature1( ISL68221_I2CNUM, SLAVE_ADDRESS_ISL68221_0, &fTemperature );
     assert_true( ucStatus == XST_SUCCESS );
-
 }
 
 static void test_ucISL68221ReadTemperature2Fail( void **state )
@@ -1008,7 +983,6 @@ static void test_ucISL68221ReadTemperature2Fail( void **state )
 
     ucStatus = ucISL68221ReadTemperature2( ISL68221_I2CNUM, SLAVE_ADDRESS_ISL68221_0, &fTemperature );
     assert_true( ucStatus == XST_FAILURE );
-
 }
 
 static void test_ucISL68221ReadTemperature2( void **state )
@@ -1060,15 +1034,13 @@ static void test_ucISL68221ReadTemperature2( void **state )
 
     ucStatus = ucISL68221ReadTemperature2( ISL68221_I2CNUM, SLAVE_ADDRESS_ISL68221_0, &fTemperature );
     assert_true( ucStatus == XST_SUCCESS );
-
 }
 
 int main( void ) 
 {
     srand( time( 0 ) );
     const struct CMUnitTest tests[] = 
-    {
-        
+    {     
         cmocka_unit_test( test_ucISL68221WriteRegister ),
         cmocka_unit_test( test_ucISL68221ReadRegister ),
         cmocka_unit_test( test_ucISL68221ReadVoltage0Fail ),

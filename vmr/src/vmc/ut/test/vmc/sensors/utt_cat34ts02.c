@@ -11,7 +11,6 @@
 #include "cl_i2c.h"
 #include "cl_log.h"
 
-
 /* FreeRTOS includes */
 #include <FreeRTOS.h>
 #include <task.h>
@@ -54,7 +53,6 @@ static void test_ucCAT34TS02ReadTemperature(  void **state )
     /*Test Function*/
     ucStatus = ucCAT34TS02ReadTemperature(  I2CNUM, CAT34TS02_SLAVE_ADDRESS, &ssTemperatureValue );
     assert_true(  ucStatus == XST_SUCCESS );
-    //assert_in_range(  fVoltageInmV, INA3221_POSITIVE_MIN_TEMP, INA3221_POSITIVE_MAX_TEMP );
 
     /* 2. Test Negative Value*/
     /* This function will generate random values between the range.
@@ -76,7 +74,6 @@ static void test_ucCAT34TS02ReadTemperature(  void **state )
     /*Test Function*/
     ucStatus = ucCAT34TS02ReadTemperature(  I2CNUM, CAT34TS02_SLAVE_ADDRESS, &ssTemperatureValue );
     assert_true(  ucStatus == XST_SUCCESS );
-    //assert_in_range(  fVoltageInmV, INA3221_POSITIVE_MIN_TEMP, INA3221_POSITIVE_MAX_TEMP );
 }
 
 static void test_ucCAT34TS02ReadTemperatureFail(  void **state ) {
@@ -90,7 +87,6 @@ static void test_ucCAT34TS02ReadTemperatureFail(  void **state ) {
     /* 1. Test NULL pointer */
     ucStatus = ucCAT34TS02ReadTemperature(  I2CNUM, CAT34TS02_SLAVE_ADDRESS, NULL );
     assert_true(  ucStatus == XST_FAILURE );
-
 
     /* 2. Test failed i2c call  */
     set_Buffer(  &pucReadBuff[0], 0, 1360, 2 );
@@ -252,7 +248,6 @@ int main(  void )
         cmocka_unit_test(  test_ucCAT34TS02ReadByteFail ),
         cmocka_unit_test(  test_ucCAT34TS02ReadMultiBytes ),
         cmocka_unit_test(  test_ucCAT34TS02ReadMultiBytesFail )
-
     };
 
     return cmocka_run_group_tests(  tests, NULL, NULL );

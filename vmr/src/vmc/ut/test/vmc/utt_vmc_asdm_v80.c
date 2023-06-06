@@ -444,18 +444,12 @@ static void vTestAsdmGetAllSDR( void **state )
 
     /*Test function*/
     scRet = Asdm_Get_All_Sensor_Data( &pucReqBuffer[0], &pucRespBuffer[0], &usRespSize );
-    printf("usRespSize is 0x%x\n\r", usRespSize);
+
     /*Assert Asdm_Get_Sensor_Repository API Response*/
     assert_true( scRet == 0 );
-    //assert_true( ( (  usRespSize -1 ) >= ( usSdrSize - 8 ) ) && ( ( usRespSize - 1 ) <= usSdrSize ) );
     assert_true( get_sem_lock( ) == 0 );
     assert_true( pucRespBuffer[0] == Asdm_CC_Operation_Success );
     assert_true( pucRespBuffer[1] == VoltageSDR );  
-    
-    for(snsrIndex = 0; snsrIndex <usRespSize; snsrIndex++)
-    {
-        printf("pucRespBuffer[snsrIndex] 0x%x\n\r",pucRespBuffer[snsrIndex]);
-    }
 
 }
 

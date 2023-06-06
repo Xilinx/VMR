@@ -11,7 +11,6 @@
 #include "cl_i2c.h"
 #include "cl_log.h"
 
-
 /* FreeRTOS includes */
 #include <FreeRTOS.h>
 #include <task.h>
@@ -53,7 +52,7 @@ static void test_LM75_ReadTemperature( void **state )
     /*Test Function*/
     ucStatus = LM75_ReadTemperature( I2CNUM, SLAVE_ADDRESS, &ssTemperatureValue );
     assert_true( ucStatus == XST_SUCCESS );
-    //assert_in_range( fVoltageInmV, INA3221_POSITIVE_MIN_TEMP, INA3221_POSITIVE_MAX_TEMP );
+
 
     /* 2. Test Negative Value*/
     /* This function will generate random values between the range.
@@ -74,7 +73,6 @@ static void test_LM75_ReadTemperature( void **state )
     /*Test Function*/
     ucStatus = LM75_ReadTemperature( I2CNUM, SLAVE_ADDRESS, &ssTemperatureValue );
     assert_true( ucStatus == XST_SUCCESS );
-    //assert_in_range( fVoltageInmV, INA3221_POSITIVE_MIN_TEMP, INA3221_POSITIVE_MAX_TEMP );
 }
 
 static void test_LM75_ReadTemperatureFail( void **state )
@@ -114,8 +112,6 @@ int main( void )
     {
         cmocka_unit_test( test_LM75_ReadTemperature ),
         cmocka_unit_test( test_LM75_ReadTemperatureFail )
-
-
     };
 
     return cmocka_run_group_tests( tests, NULL, NULL );
