@@ -74,6 +74,7 @@ u8  __wrap_i2c_send(u8 i2c_num, unsigned char i2c_addr, unsigned char * i2c_writ
 	check_expected(i2c_addr);
 	check_expected(write_length);
 	check_expected(i2c_write_buff[0]);
+    if( 2 == write_length ) check_expected(i2c_write_buff[1]);
 
 	/*Returns the value passed to 'will_return()' written in testcase */
 	return mock_type(u8);

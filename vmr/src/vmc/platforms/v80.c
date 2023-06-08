@@ -13,6 +13,7 @@
 #include "../sensors/inc/ina3221.h"
 #include "../sensors/inc/isl68221.h"
 #include "../sensors/inc/cat34ts02.h"
+#include "../sensors/inc/tca6416a.h"
 #include "../vmc_main.h"
 #include "vmr_common.h"
 #include "../vmc_sc_comms.h"
@@ -1685,6 +1686,9 @@ u8 ucV80Init( void )
     fetch_boardinfo_ptr = &slV80VMCFetchBoardInfo;
     
     Monitor_Sensors = vV80MonitorSensors;
+
+    /* Enable DDR DIMM */
+    ucEnableDDRDIMM( );
 
     vV80ClkScalingParamsInit( );
 

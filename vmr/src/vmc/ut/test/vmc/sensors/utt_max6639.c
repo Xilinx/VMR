@@ -30,10 +30,9 @@ static void test_max6639_write_registerFail( void **state )
 {
     ( void ) state; /* unused */
     u8 ucStatus                     = 0;
-    u8 ucRegisterAddress            = 0;
-    u8 ucRegisterContent            = 0;
+    u8 ucRegisterAddress            = 0x1;
+    u8 ucRegisterContent            = 0x22;
     unsigned char pucReadBuff[2]    = {0};
-    u8 pucMyValues[2]               = {0x10, 0x1F};
 
     /* 1. Test NULL*/
     ucStatus = max6639_write_register( I2CNUM, SLAVE_ADDRESS, ucRegisterAddress, NULL );
@@ -48,7 +47,8 @@ static void test_max6639_write_registerFail( void **state )
     expect_value( __wrap_i2c_send, i2c_num, I2CNUM );
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
-    expect_value( __wrap_i2c_send, i2c_write_buff[0], ucRegisterContent );
+    expect_value( __wrap_i2c_send, i2c_write_buff[0], ucRegisterAddress );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], ucRegisterContent );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 1 );
@@ -61,10 +61,9 @@ static void test_max6639_write_register( void **state )
 {
     ( void ) state; /* unused */
     u8 ucStatus                     = 0;
-    u8 ucRegisterAddress            = 0;
-    u8 ucRegisterContent            = 0;
+    u8 ucRegisterAddress            = 0x1;
+    u8 ucRegisterContent            = 0x22;
     unsigned char pucReadBuff[2]    = {0};
-    u8 pucMyValues[2]               = {0x10, 0x1F};
 
     /* 1. Test */
     /* This function will generate random values between the range.
@@ -75,7 +74,8 @@ static void test_max6639_write_register( void **state )
     expect_value( __wrap_i2c_send, i2c_num, I2CNUM );
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
-    expect_value( __wrap_i2c_send, i2c_write_buff[0], ucRegisterContent );
+    expect_value( __wrap_i2c_send, i2c_write_buff[0], ucRegisterAddress );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], ucRegisterContent );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -163,6 +163,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN1_CONFIGURATION2A_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x49 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 1 );
@@ -178,6 +179,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN1_CONFIGURATION2A_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x49 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -187,6 +189,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN2_CONFIGURATION2A_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x49 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 1 );
@@ -202,6 +205,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN1_CONFIGURATION2A_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x49 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -211,6 +215,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN2_CONFIGURATION2A_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x49 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -220,6 +225,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN1_CONFIGURATION3_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x63 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 1 );
@@ -235,6 +241,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN1_CONFIGURATION2A_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x49 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -244,6 +251,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN2_CONFIGURATION2A_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x49 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -253,6 +261,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN1_CONFIGURATION3_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x63 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -262,6 +271,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN2_CONFIGURATION3_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x63 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 1 );
@@ -277,6 +287,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN1_CONFIGURATION2A_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x49 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -286,6 +297,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN2_CONFIGURATION2A_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x49 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -295,6 +307,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN1_CONFIGURATION3_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x63 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -304,6 +317,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN2_CONFIGURATION3_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x63 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -313,6 +327,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN1_CONFIGURATION2B_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0xF8 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 1 );
@@ -328,6 +343,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN1_CONFIGURATION2A_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x49 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -337,6 +353,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN2_CONFIGURATION2A_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x49 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -346,6 +363,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN1_CONFIGURATION3_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x63 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -355,6 +373,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN2_CONFIGURATION3_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x63 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -364,6 +383,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN1_CONFIGURATION2B_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0xF8 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -373,6 +393,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN2_CONFIGURATION2B_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0xF8 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 1 );
@@ -388,6 +409,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN1_CONFIGURATION2A_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x49 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -397,6 +419,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN2_CONFIGURATION2A_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x49 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -406,6 +429,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN1_CONFIGURATION3_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x63 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -415,6 +439,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN2_CONFIGURATION3_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x63 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -424,6 +449,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN1_CONFIGURATION2B_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0xF8 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -433,6 +459,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN2_CONFIGURATION2B_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0xF8 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -442,6 +469,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN1_START_TACH_COUNT_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x34 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 1 );
@@ -457,6 +485,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN1_CONFIGURATION2A_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x49 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -466,6 +495,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN2_CONFIGURATION2A_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x49 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -475,6 +505,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN1_CONFIGURATION3_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x63 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -484,6 +515,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN2_CONFIGURATION3_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x63 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -493,6 +525,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN1_CONFIGURATION2B_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0xF8 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -502,6 +535,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN2_CONFIGURATION2B_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0xF8 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -511,6 +545,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN1_START_TACH_COUNT_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x34 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -520,6 +555,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN2_START_TACH_COUNT_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x34 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 1 );
@@ -535,6 +571,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN1_CONFIGURATION2A_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x49 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -544,6 +581,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN2_CONFIGURATION2A_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x49 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -553,6 +591,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN1_CONFIGURATION3_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x63 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -562,6 +601,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN2_CONFIGURATION3_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x63 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -571,6 +611,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN1_CONFIGURATION2B_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0xF8 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -580,6 +621,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN2_CONFIGURATION2B_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0xF8 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -589,6 +631,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN1_START_TACH_COUNT_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x34 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -598,6 +641,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN2_START_TACH_COUNT_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x34 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -607,6 +651,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN1_MIN_TACH_COUNT_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x58 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 1 );
@@ -622,6 +667,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN1_CONFIGURATION2A_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x49 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -631,6 +677,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN2_CONFIGURATION2A_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x49 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -640,6 +687,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN1_CONFIGURATION3_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x63 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -649,6 +697,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN2_CONFIGURATION3_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x63 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -658,6 +707,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN1_CONFIGURATION2B_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0xF8 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -667,6 +717,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN2_CONFIGURATION2B_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0xF8 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -676,6 +727,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN1_START_TACH_COUNT_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x34 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -685,6 +737,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN2_START_TACH_COUNT_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x34 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -694,6 +747,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN1_MIN_TACH_COUNT_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x58 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -703,6 +757,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN2_MIN_TACH_COUNT_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x58 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 1 );
@@ -718,6 +773,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN1_CONFIGURATION2A_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x49 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -727,6 +783,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN2_CONFIGURATION2A_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x49 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -736,6 +793,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN1_CONFIGURATION3_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x63 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -745,6 +803,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN2_CONFIGURATION3_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x63 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -754,6 +813,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN1_CONFIGURATION2B_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0xF8 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -763,6 +823,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN2_CONFIGURATION2B_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0xF8 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -772,6 +833,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN1_START_TACH_COUNT_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x34 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -781,6 +843,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN2_START_TACH_COUNT_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x34 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -790,6 +853,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN1_MIN_TACH_COUNT_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x58 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -799,6 +863,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN2_MIN_TACH_COUNT_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x58 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -808,6 +873,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], CHANNEL1_MIN_FAN_START_TEMP_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x28 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 1 );
@@ -823,6 +889,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN1_CONFIGURATION2A_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x49 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -832,6 +899,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN2_CONFIGURATION2A_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x49 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -841,6 +909,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN1_CONFIGURATION3_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x63 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -850,6 +919,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN2_CONFIGURATION3_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x63 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -859,6 +929,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN1_CONFIGURATION2B_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0xF8 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -868,6 +939,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN2_CONFIGURATION2B_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0xF8 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -877,6 +949,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN1_START_TACH_COUNT_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x34 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -886,6 +959,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN2_START_TACH_COUNT_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x34 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -895,6 +969,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN1_MIN_TACH_COUNT_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x58 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -904,6 +979,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN2_MIN_TACH_COUNT_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x58 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -913,6 +989,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], CHANNEL1_MIN_FAN_START_TEMP_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x28 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -922,6 +999,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], CHANNEL2_MIN_FAN_START_TEMP_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x19 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 1 );
@@ -937,6 +1015,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN1_CONFIGURATION2A_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x49 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -946,6 +1025,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN2_CONFIGURATION2A_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x49 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -955,6 +1035,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN1_CONFIGURATION3_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x63 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -964,6 +1045,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN2_CONFIGURATION3_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x63 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -973,6 +1055,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN1_CONFIGURATION2B_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0xF8 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -982,6 +1065,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN2_CONFIGURATION2B_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0xF8 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -991,6 +1075,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN1_START_TACH_COUNT_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x34 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -1000,6 +1085,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN2_START_TACH_COUNT_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x34 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -1009,6 +1095,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN1_MIN_TACH_COUNT_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x58 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -1018,6 +1105,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN2_MIN_TACH_COUNT_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x58 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -1027,6 +1115,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], CHANNEL1_MIN_FAN_START_TEMP_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x28 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -1036,6 +1125,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], CHANNEL2_MIN_FAN_START_TEMP_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x19 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -1045,6 +1135,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN1_CONFIGURATION1_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x1B );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 1 );
@@ -1060,6 +1151,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN1_CONFIGURATION2A_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x49 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -1069,6 +1161,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN2_CONFIGURATION2A_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x49 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -1078,6 +1171,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN1_CONFIGURATION3_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x63 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -1087,6 +1181,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN2_CONFIGURATION3_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x63 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -1096,6 +1191,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN1_CONFIGURATION2B_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0xF8 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -1105,6 +1201,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN2_CONFIGURATION2B_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0xF8 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -1114,6 +1211,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN1_START_TACH_COUNT_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x34 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -1123,6 +1221,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN2_START_TACH_COUNT_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x34 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -1132,6 +1231,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN1_MIN_TACH_COUNT_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x58 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -1141,6 +1241,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN2_MIN_TACH_COUNT_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x58 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -1150,6 +1251,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], CHANNEL1_MIN_FAN_START_TEMP_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x28 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -1159,6 +1261,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], CHANNEL2_MIN_FAN_START_TEMP_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x19 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -1168,6 +1271,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN1_CONFIGURATION1_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x1B );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -1177,6 +1281,7 @@ static void test_max6639_initFail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN2_CONFIGURATION1_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x17 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 1 );
@@ -1196,12 +1301,13 @@ static void test_max6639_init( void **state )
 
     /* 1. Test */
     set_Buffer( &pucReadBuff[0], 0, 1360, 2 );
-
+    
     /*Check mock function parameters*/
     expect_value( __wrap_i2c_send, i2c_num, I2CNUM );
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN1_CONFIGURATION2A_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x49 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -1211,6 +1317,7 @@ static void test_max6639_init( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN2_CONFIGURATION2A_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x49 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -1220,6 +1327,8 @@ static void test_max6639_init( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN1_CONFIGURATION3_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x63 );
+
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -1229,6 +1338,7 @@ static void test_max6639_init( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN2_CONFIGURATION3_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x63 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -1238,6 +1348,7 @@ static void test_max6639_init( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN1_CONFIGURATION2B_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0xF8 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -1247,6 +1358,7 @@ static void test_max6639_init( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN2_CONFIGURATION2B_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0xF8 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -1256,6 +1368,7 @@ static void test_max6639_init( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN1_START_TACH_COUNT_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x34 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -1265,6 +1378,7 @@ static void test_max6639_init( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN2_START_TACH_COUNT_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x34 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -1274,6 +1388,7 @@ static void test_max6639_init( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN1_MIN_TACH_COUNT_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x58 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -1283,6 +1398,7 @@ static void test_max6639_init( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN2_MIN_TACH_COUNT_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x58 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -1292,6 +1408,7 @@ static void test_max6639_init( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], CHANNEL1_MIN_FAN_START_TEMP_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x28 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -1301,6 +1418,7 @@ static void test_max6639_init( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], CHANNEL2_MIN_FAN_START_TEMP_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x19 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -1310,6 +1428,7 @@ static void test_max6639_init( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN1_CONFIGURATION1_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x1B );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -1319,6 +1438,7 @@ static void test_max6639_init( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS );
     expect_value( __wrap_i2c_send, write_length, 2 );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], FAN2_CONFIGURATION1_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], 0x17 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );

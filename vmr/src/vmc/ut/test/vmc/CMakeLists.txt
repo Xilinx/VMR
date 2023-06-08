@@ -103,6 +103,21 @@ target_link_libraries( test_max6639
 add_test( NAME test_max6639
             COMMAND test_max6639 )
 
+set( TCA6416A_TEST_FILES ./sensors/utt_tca6416a.c
+                        ../../mocks/common/utm_cl_i2c.c
+                        ../../mocks/common/utm_cl_logs.c)
+
+add_executable( test_tca6416a ${TCA6416A_TEST_FILES} ../../../sensors/src/tca6416a.c )
+
+target_link_libraries( test_tca6416a
+                                cmocka
+                                -Wl,--wrap=i2c_send_rs_recv
+                                -Wl,--wrap=i2c_send
+                                -Wl,--wrap=cl_printf)
+
+add_test( NAME test_tca6416a
+            COMMAND test_tca6416a )
+
 set( QSFP_TEST_FILES ./sensors/utt_qsfp.c
                      ../../mocks/common/utm_cl_i2c.c
                      ../../mocks/common/utm_cl_logs.c
@@ -187,6 +202,7 @@ set( ASDM_V80_TEST_FILES ./utt_vmc_asdm_v80.c
                      ../../mocks/vmc/sensors/src/utm_qsfp.c
                      ../../mocks/vmc/sensors/src/utm_isl68221.c
                      ../../mocks/vmc/sensors/src/utm_ina3221.c
+                     ../../mocks/vmc/sensors/src/utm_tca6416a.c
                      ../../mocks/vmc/utm_vmc_sc_comms.c
                      ../../mocks/vmc/utm_vmc_api.c
                      ../../mocks/vmc/utm_vmc_main_v80.c
@@ -228,6 +244,9 @@ target_link_libraries( test_asdm_v80
                        -Wl,--wrap=INA3221_ReadVoltage
                        -Wl,--wrap=INA3221_ReadCurrent
                        -Wl,--wrap=INA3221_ReadPower
+                       -Wl,--wrap=ucTca6416aRegisterRead
+                       -Wl,--wrap=ucTca6416aRegisterWrite
+                       -Wl,--wrap=ucEnableDDRDIMM
                        -Wl,--wrap=ucs_clock_shutdown
                        -Wl,--wrap=VMC_Get_BoardInfo
                        -Wl,--wrap=ClockThrottling_Initialize)
@@ -245,6 +264,7 @@ set( COVERAGE_EXCLUDES ${SE98A_TEST_FILES}
                        ${LM75_TEST_FILES}
                        ${M24C128_TEST_FILES}
                        ${MAX6639_TEST_FILES}
+                       ${TCA6416A_TEST_FILES}
                        ${ISL68221_TEST_FILES}
                        ${QSFP_TEST_FILES}
                        ${ASDM_TEST_FILES}
@@ -259,6 +279,7 @@ SETUP_TARGET_FOR_COVERAGE_LCOV(
                         test_cat34ts02
                         test_m24c128
                         test_max6639
+                        test_tca6416a
                         test_lm75
                         test_qsfp
                         test_asdm

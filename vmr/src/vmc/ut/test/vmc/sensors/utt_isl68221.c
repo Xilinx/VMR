@@ -43,6 +43,7 @@ static void test_ucISL68221WriteRegister( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS_ISL68221_0 );
     expect_value( __wrap_i2c_send, write_length, ISL68221_WRITE_LEN );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], ucRegisterAddress );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], ucRegisterContent );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -113,6 +114,7 @@ static void test_ucISL68221ReadVoltage0Fail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS_ISL68221_0 );
     expect_value( __wrap_i2c_send, write_length, ISL68221_WRITE_LEN );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], ISL68221_PAGE_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], ucRegisterContent );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 1 );
@@ -126,6 +128,7 @@ static void test_ucISL68221ReadVoltage0Fail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS_ISL68221_0 );
     expect_value( __wrap_i2c_send, write_length, ISL68221_WRITE_LEN );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], ISL68221_PAGE_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], ucRegisterContent );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -163,6 +166,7 @@ static void test_ucISL68221ReadVoltage0( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS_ISL68221_0 );
     expect_value( __wrap_i2c_send, write_length, ISL68221_WRITE_LEN );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], ISL68221_PAGE_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], ucRegisterContent );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 1 );
@@ -176,6 +180,7 @@ static void test_ucISL68221ReadVoltage0( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS_ISL68221_0 );
     expect_value( __wrap_i2c_send, write_length, ISL68221_WRITE_LEN );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], ISL68221_PAGE_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], ucRegisterContent );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -219,6 +224,7 @@ static void test_ucISL68221ReadVoltage1Fail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS_ISL68221_0 );
     expect_value( __wrap_i2c_send, write_length, ISL68221_WRITE_LEN );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], ISL68221_PAGE_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], ISL68221_SELECT_PAGE_RAIL_1 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 1 );
@@ -232,6 +238,7 @@ static void test_ucISL68221ReadVoltage1Fail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS_ISL68221_0 );
     expect_value( __wrap_i2c_send, write_length, ISL68221_WRITE_LEN );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], ISL68221_PAGE_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], ISL68221_SELECT_PAGE_RAIL_1 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -270,6 +277,7 @@ static void test_ucISL68221ReadVoltage1( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS_ISL68221_0 );
     expect_value( __wrap_i2c_send, write_length, ISL68221_WRITE_LEN );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], ISL68221_PAGE_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], ISL68221_SELECT_PAGE_RAIL_1 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 1 );
@@ -283,6 +291,7 @@ static void test_ucISL68221ReadVoltage1( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS_ISL68221_0 );
     expect_value( __wrap_i2c_send, write_length, ISL68221_WRITE_LEN );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], ISL68221_PAGE_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], ISL68221_SELECT_PAGE_RAIL_1 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -324,6 +333,7 @@ static void test_ucISL68221ReadVoltage2Fail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS_ISL68221_0 );
     expect_value( __wrap_i2c_send, write_length, ISL68221_WRITE_LEN );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], ISL68221_PAGE_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], ISL68221_SELECT_PAGE_RAIL_2 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 1 );
@@ -337,6 +347,7 @@ static void test_ucISL68221ReadVoltage2Fail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS_ISL68221_0 );
     expect_value( __wrap_i2c_send, write_length, ISL68221_WRITE_LEN );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], ISL68221_PAGE_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], ISL68221_SELECT_PAGE_RAIL_2 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -374,6 +385,7 @@ static void test_ucISL68221ReadVoltage2( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS_ISL68221_0 );
     expect_value( __wrap_i2c_send, write_length, ISL68221_WRITE_LEN );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], ISL68221_PAGE_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], ISL68221_SELECT_PAGE_RAIL_2 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 1 );
@@ -387,6 +399,7 @@ static void test_ucISL68221ReadVoltage2( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS_ISL68221_0 );
     expect_value( __wrap_i2c_send, write_length, ISL68221_WRITE_LEN );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], ISL68221_PAGE_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], ISL68221_SELECT_PAGE_RAIL_2 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
@@ -429,6 +442,7 @@ static void test_ucISL68221ReadCurrent0Fail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS_ISL68221_0 );
     expect_value( __wrap_i2c_send, write_length, ISL68221_WRITE_LEN );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], ISL68221_PAGE_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], ISL68221_SELECT_PAGE_RAIL_0 ); 
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 1 );
@@ -442,7 +456,8 @@ static void test_ucISL68221ReadCurrent0Fail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS_ISL68221_0 );
     expect_value( __wrap_i2c_send, write_length, ISL68221_WRITE_LEN );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], ISL68221_PAGE_REGISTER );
-
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], ISL68221_SELECT_PAGE_RAIL_0 ); 
+    
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
 
@@ -479,6 +494,7 @@ static void test_ucISL68221ReadCurrent0( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS_ISL68221_0 );
     expect_value( __wrap_i2c_send, write_length, ISL68221_WRITE_LEN );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], ISL68221_PAGE_REGISTER );
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], ISL68221_SELECT_PAGE_RAIL_0 );
 
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 1 );
@@ -492,7 +508,8 @@ static void test_ucISL68221ReadCurrent0( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS_ISL68221_0 );
     expect_value( __wrap_i2c_send, write_length, ISL68221_WRITE_LEN );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], ISL68221_PAGE_REGISTER );
-
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], ISL68221_SELECT_PAGE_RAIL_0 ); 
+    
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
 
@@ -534,7 +551,8 @@ static void test_ucISL68221ReadCurrent1Fail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS_ISL68221_0 );
     expect_value( __wrap_i2c_send, write_length, ISL68221_WRITE_LEN );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], ISL68221_PAGE_REGISTER );
-
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], ISL68221_SELECT_PAGE_RAIL_1 ); 
+    
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 1 );
 
@@ -547,7 +565,8 @@ static void test_ucISL68221ReadCurrent1Fail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS_ISL68221_0 );
     expect_value( __wrap_i2c_send, write_length, ISL68221_WRITE_LEN );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], ISL68221_PAGE_REGISTER );
-
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], ISL68221_SELECT_PAGE_RAIL_1 ); 
+    
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
 
@@ -584,7 +603,8 @@ static void test_ucISL68221ReadCurrent1( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS_ISL68221_0 );
     expect_value( __wrap_i2c_send, write_length, ISL68221_WRITE_LEN );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], ISL68221_PAGE_REGISTER );
-
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], ISL68221_SELECT_PAGE_RAIL_1 ); 
+    
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 1 );
 
@@ -597,7 +617,8 @@ static void test_ucISL68221ReadCurrent1( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS_ISL68221_0 );
     expect_value( __wrap_i2c_send, write_length, ISL68221_WRITE_LEN );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], ISL68221_PAGE_REGISTER );
-
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], ISL68221_SELECT_PAGE_RAIL_1 ); 
+    
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
 
@@ -638,7 +659,8 @@ static void test_ucISL68221ReadCurrent2Fail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS_ISL68221_0 );
     expect_value( __wrap_i2c_send, write_length, ISL68221_WRITE_LEN );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], ISL68221_PAGE_REGISTER );
-
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], ISL68221_SELECT_PAGE_RAIL_2 ); 
+    
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 1 );
 
@@ -651,7 +673,8 @@ static void test_ucISL68221ReadCurrent2Fail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS_ISL68221_0 );
     expect_value( __wrap_i2c_send, write_length, ISL68221_WRITE_LEN );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], ISL68221_PAGE_REGISTER );
-
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], ISL68221_SELECT_PAGE_RAIL_2 ); 
+    
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
 
@@ -688,7 +711,8 @@ static void test_ucISL68221ReadCurrent2( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS_ISL68221_0 );
     expect_value( __wrap_i2c_send, write_length, ISL68221_WRITE_LEN );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], ISL68221_PAGE_REGISTER );
-
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], ISL68221_SELECT_PAGE_RAIL_2 ); 
+    
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 1 );
 
@@ -701,7 +725,8 @@ static void test_ucISL68221ReadCurrent2( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS_ISL68221_0 );
     expect_value( __wrap_i2c_send, write_length, ISL68221_WRITE_LEN );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], ISL68221_PAGE_REGISTER );
-
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], ISL68221_SELECT_PAGE_RAIL_2 ); 
+    
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
 
@@ -743,7 +768,8 @@ static void test_ucISL68221ReadTemperature0Fail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS_ISL68221_0 );
     expect_value( __wrap_i2c_send, write_length, ISL68221_WRITE_LEN );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], ISL68221_PAGE_REGISTER );
-
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], ISL68221_SELECT_PAGE_RAIL_0 ); 
+    
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 1 );
 
@@ -756,7 +782,8 @@ static void test_ucISL68221ReadTemperature0Fail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS_ISL68221_0 );
     expect_value( __wrap_i2c_send, write_length, ISL68221_WRITE_LEN );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], ISL68221_PAGE_REGISTER );
-
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], ISL68221_SELECT_PAGE_RAIL_0 ); 
+    
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
 
@@ -793,7 +820,8 @@ static void test_ucISL68221ReadTemperature0( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS_ISL68221_0 );
     expect_value( __wrap_i2c_send, write_length, ISL68221_WRITE_LEN );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], ISL68221_PAGE_REGISTER );
-
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], ISL68221_SELECT_PAGE_RAIL_0 ); 
+    
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 1 );
 
@@ -806,7 +834,8 @@ static void test_ucISL68221ReadTemperature0( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS_ISL68221_0 );
     expect_value( __wrap_i2c_send, write_length, ISL68221_WRITE_LEN );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], ISL68221_PAGE_REGISTER );
-
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], ISL68221_SELECT_PAGE_RAIL_0 ); 
+    
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
 
@@ -848,7 +877,8 @@ static void test_ucISL68221ReadTemperature1Fail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS_ISL68221_0 );
     expect_value( __wrap_i2c_send, write_length, ISL68221_WRITE_LEN );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], ISL68221_PAGE_REGISTER );
-
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], ISL68221_SELECT_PAGE_RAIL_0 ); 
+    
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 1 );
 
@@ -861,7 +891,8 @@ static void test_ucISL68221ReadTemperature1Fail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS_ISL68221_0 );
     expect_value( __wrap_i2c_send, write_length, ISL68221_WRITE_LEN );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], ISL68221_PAGE_REGISTER );
-
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], ISL68221_SELECT_PAGE_RAIL_0 ); 
+    
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
 
@@ -898,7 +929,8 @@ static void test_ucISL68221ReadTemperature1( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS_ISL68221_0 );
     expect_value( __wrap_i2c_send, write_length, ISL68221_WRITE_LEN );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], ISL68221_PAGE_REGISTER );
-
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], ISL68221_SELECT_PAGE_RAIL_0 ); 
+    
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 1 );
 
@@ -911,7 +943,8 @@ static void test_ucISL68221ReadTemperature1( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS_ISL68221_0 );
     expect_value( __wrap_i2c_send, write_length, ISL68221_WRITE_LEN );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], ISL68221_PAGE_REGISTER );
-
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], ISL68221_SELECT_PAGE_RAIL_0 ); 
+    
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
 
@@ -952,7 +985,8 @@ static void test_ucISL68221ReadTemperature2Fail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS_ISL68221_0 );
     expect_value( __wrap_i2c_send, write_length, ISL68221_WRITE_LEN );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], ISL68221_PAGE_REGISTER );
-
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], ISL68221_SELECT_PAGE_RAIL_0 ); 
+    
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 1 );
 
@@ -965,7 +999,8 @@ static void test_ucISL68221ReadTemperature2Fail( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS_ISL68221_0 );
     expect_value( __wrap_i2c_send, write_length, ISL68221_WRITE_LEN );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], ISL68221_PAGE_REGISTER );
-
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], ISL68221_SELECT_PAGE_RAIL_0 ); 
+    
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
 
@@ -1003,7 +1038,8 @@ static void test_ucISL68221ReadTemperature2( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS_ISL68221_0 );
     expect_value( __wrap_i2c_send, write_length, ISL68221_WRITE_LEN );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], ISL68221_PAGE_REGISTER );
-
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], ISL68221_SELECT_PAGE_RAIL_0 ); 
+    
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 1 );
 
@@ -1016,7 +1052,8 @@ static void test_ucISL68221ReadTemperature2( void **state )
     expect_value( __wrap_i2c_send, i2c_addr, SLAVE_ADDRESS_ISL68221_0 );
     expect_value( __wrap_i2c_send, write_length, ISL68221_WRITE_LEN );
     expect_value( __wrap_i2c_send, i2c_write_buff[0], ISL68221_PAGE_REGISTER );
-
+    expect_value( __wrap_i2c_send, i2c_write_buff[1], ISL68221_SELECT_PAGE_RAIL_0 ); 
+    
     /*set return value for mock function*/
     will_return( __wrap_i2c_send, 0 );
 
