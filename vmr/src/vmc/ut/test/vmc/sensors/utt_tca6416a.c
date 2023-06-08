@@ -29,11 +29,11 @@ extern void set_Buffer( unsigned char *buff, int min, int max, long int length )
 
 static void test_ucTca6416aRegisterRead( void **state ) 
 {
-	( void ) state; /* unused */
+    ( void ) state; /* unused */
     u8 ucStatus                     = 0;
-	u8 usAddressOffset             = 0x06;
+    u8 usAddressOffset              = 0x06;
     u8 ucRegisterValue              = 0;
-	unsigned char pucReadBuff[2]    = {0};
+    unsigned char pucReadBuff[2]    = {0};
     u8 pucMyValues[1]               = {0x10};
 
     /* 1. Test */
@@ -57,9 +57,9 @@ static void test_ucTca6416aRegisterRead( void **state )
 
 static void test_ucTca6416aRegisterReadFail( void **state ) 
 {
-	( void ) state; /* unused */
+    ( void ) state; /* unused */
     u8 ucStatus                     = 0;
-	u8 usAddressOffset             = 0x15;
+    u8 usAddressOffset              = 0x15;
     u8 ucRegisterValue              = 0;
     unsigned char pucReadBuff[2]    = {0};
     u8 pucMyValues[2]               = {0x10, 0x1F};
@@ -87,10 +87,10 @@ static void test_ucTca6416aRegisterReadFail( void **state )
 
 static void test_ucTca6416aRegisterWrite( void **state ) 
 {
-	( void ) state; /* unused */
+    ( void ) state; /* unused */
     u8 ucStatus                     = 0;
-	u8 usAddressOffset              = 0x15;
-	unsigned char pucReadBuff[2]    = {0};
+    u8 usAddressOffset              = 0x15;
+    unsigned char pucReadBuff[2]    = {0};
     u8 MyValue                      = 0x40;
 
     /* 1. Test */  
@@ -111,9 +111,9 @@ static void test_ucTca6416aRegisterWrite( void **state )
 
 static void test_ucTca6416aRegisterWriteFail( void **state ) 
 {
-	( void ) state; /* unused */
+    ( void ) state; /* unused */
     u8 ucStatus                     = 0;
-	u8 usAddressOffset              = 0x15;
+    u8 usAddressOffset              = 0x15;
     u8 ucRegisterValue              = 0;
     unsigned char pucReadBuff[2]    = {0};
     u8 MyValue                      = 0x40;
@@ -135,9 +135,9 @@ static void test_ucTca6416aRegisterWriteFail( void **state )
 
 static void test_ucEnableDDRDIMM( void **state ) 
 {
-	( void ) state; /* unused */
+    ( void ) state; /* unused */
     u8 ucStatus                     = 0;
-	unsigned char pucReadBuff[2]    = {0};
+    unsigned char pucReadBuff[2]    = {0};
     u8 MyValue                      = 0x40;
     u8 pucMyValues[2]               = {0xFF, 0xFF};
 
@@ -193,9 +193,9 @@ static void test_ucEnableDDRDIMM( void **state )
 
 static void test_ucEnableDDRDIMMFail( void **state ) 
 {
-	( void ) state; /* unused */
+    ( void ) state; /* unused */
     u8 ucStatus                     = 0;
-	unsigned char pucReadBuff[2]    = {0};
+    unsigned char pucReadBuff[2]    = {0};
     u8 MyValue                      = 0x40;
     u8 pucMyValues[2]               = {0x10, 0x1F};
 
@@ -330,8 +330,8 @@ static void test_ucEnableDDRDIMMFail( void **state )
 
 int main( void ) 
 {
-	srand( time( 0 ) );
-	const struct CMUnitTest tests[] = 
+    srand( time( 0 ) );
+    const struct CMUnitTest tests[] = 
     {
         cmocka_unit_test( test_ucTca6416aRegisterRead ),
         cmocka_unit_test( test_ucTca6416aRegisterReadFail ),
@@ -339,8 +339,7 @@ int main( void )
         cmocka_unit_test( test_ucTca6416aRegisterWriteFail ),
         cmocka_unit_test( test_ucEnableDDRDIMM ),
         cmocka_unit_test( test_ucEnableDDRDIMMFail )
-	};
+    };
 
-	return cmocka_run_group_tests( tests, NULL, NULL );
-
+    return cmocka_run_group_tests( tests, NULL, NULL );
 }

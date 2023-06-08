@@ -8,7 +8,7 @@
 #include "xstatus.h"
 #include "../inc/tca6416a.h"
 
-u8 ucTca6416aRegisterRead( u8 ucI2cNum, u8 ucSlaveAddr, u8 ucRegister ,u8 *pucRegisterValue )
+u8 ucTca6416aRegisterRead( u8 ucI2cNum, u8 ucSlaveAddr, u8 ucRegister, u8 *pucRegisterValue )
 {
     u8 ucStatus         = 1;
     u8 pucSendData[1]   = { 0 };
