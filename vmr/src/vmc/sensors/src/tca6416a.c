@@ -53,7 +53,7 @@ u8 ucEnableDDRDIMM( void )
         
         if( XST_SUCCESS == ucStatus )
         {
-            /* Read Configuration 0 Register - Command Byte 06 */
+            /* Read Output 0 Register - Command Byte 06 */
             ucStatus = ucTca6416aRegisterRead( ucI2cNum, TCA6416AR_ADDRESS, TCA6416AR_OUTPUT_PORT_0, &ucRegisterValue );
             
             if( XST_SUCCESS == ucStatus )
