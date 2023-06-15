@@ -439,6 +439,36 @@ static void vTestAsdmGetAllSDR( void **state )
     /* Record Type : 0xC1 - Temperature SDR */
     pucReqBuffer[1] = VoltageSDR;
 
+    will_return( __wrap_ucCAT34TS02ReadTemperature, XST_SUCCESS );
+    will_return( __wrap_LM75_ReadTemperature, XST_SUCCESS );
+    will_return( __wrap_ucISL68221ReadTemperature0, XST_SUCCESS );
+    will_return( __wrap_ucISL68221ReadTemperature0, XST_SUCCESS );
+    will_return( __wrap_ucISL68221ReadTemperature1, XST_SUCCESS );
+    will_return( __wrap_ucISL68221ReadTemperature2, XST_SUCCESS );
+    will_return( __wrap_ucQSFPI2CMuxReadTemperature, XST_SUCCESS );
+    will_return( __wrap_ucQSFPI2CMuxReadTemperature, XST_SUCCESS );
+    will_return( __wrap_ucQSFPI2CMuxReadTemperature, XST_SUCCESS );
+    will_return( __wrap_ucQSFPI2CMuxReadTemperature, XST_SUCCESS );
+    will_return( __wrap_INA3221_ReadVoltage, XST_SUCCESS );
+    will_return( __wrap_INA3221_ReadVoltage, XST_SUCCESS );
+    will_return( __wrap_INA3221_ReadVoltage, XST_SUCCESS );
+    will_return( __wrap_INA3221_ReadVoltage, XST_SUCCESS );
+    will_return( __wrap_INA3221_ReadVoltage, XST_SUCCESS );
+    will_return( __wrap_INA3221_ReadVoltage, XST_SUCCESS );
+    will_return( __wrap_ucISL68221ReadVoltage0, XST_SUCCESS );
+    will_return( __wrap_ucISL68221ReadVoltage0, XST_SUCCESS );
+    will_return( __wrap_ucISL68221ReadVoltage1, XST_SUCCESS );
+    will_return( __wrap_ucISL68221ReadVoltage2, XST_SUCCESS );
+    will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
+    will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
+    will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
+    will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
+    will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
+    will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
+    will_return( __wrap_ucISL68221ReadCurrent0, XST_SUCCESS );
+    will_return( __wrap_ucISL68221ReadCurrent0, XST_SUCCESS );
+    will_return( __wrap_ucISL68221ReadCurrent1, XST_SUCCESS );
+    will_return( __wrap_ucISL68221ReadCurrent2, XST_SUCCESS );
     vV80MonitorSensors( );
     Asdm_Update_Sensors( );
 
@@ -469,6 +499,37 @@ static void vTestAsdmGetTemperatureSDR( void **state )
     /* Record Type : 0xC1 - Temperature SDR */
     pucReqBuffer[1] = TemperatureSDR;
 
+    will_return( __wrap_ucCAT34TS02ReadTemperature, XST_SUCCESS );
+    will_return( __wrap_LM75_ReadTemperature, XST_SUCCESS );
+    will_return( __wrap_ucISL68221ReadTemperature0, XST_SUCCESS );
+    will_return( __wrap_ucISL68221ReadTemperature0, XST_SUCCESS );
+    will_return( __wrap_ucISL68221ReadTemperature1, XST_SUCCESS );
+    will_return( __wrap_ucISL68221ReadTemperature2, XST_SUCCESS );
+    will_return( __wrap_ucQSFPI2CMuxReadTemperature, XST_SUCCESS );
+    will_return( __wrap_ucQSFPI2CMuxReadTemperature, XST_SUCCESS );
+    will_return( __wrap_ucQSFPI2CMuxReadTemperature, XST_SUCCESS );
+    will_return( __wrap_ucQSFPI2CMuxReadTemperature, XST_SUCCESS );
+    will_return( __wrap_INA3221_ReadVoltage, XST_SUCCESS );
+    will_return( __wrap_INA3221_ReadVoltage, XST_SUCCESS );
+    will_return( __wrap_INA3221_ReadVoltage, XST_SUCCESS );
+    will_return( __wrap_INA3221_ReadVoltage, XST_SUCCESS );
+    will_return( __wrap_INA3221_ReadVoltage, XST_SUCCESS );
+    will_return( __wrap_INA3221_ReadVoltage, XST_SUCCESS );
+    will_return( __wrap_ucISL68221ReadVoltage0, XST_SUCCESS );
+    will_return( __wrap_ucISL68221ReadVoltage0, XST_SUCCESS );
+    will_return( __wrap_ucISL68221ReadVoltage1, XST_SUCCESS );
+    will_return( __wrap_ucISL68221ReadVoltage2, XST_SUCCESS );
+    will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
+    will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
+    will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
+    will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
+    will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
+    will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
+    will_return( __wrap_ucISL68221ReadCurrent0, XST_SUCCESS );
+    will_return( __wrap_ucISL68221ReadCurrent0, XST_SUCCESS );
+    will_return( __wrap_ucISL68221ReadCurrent1, XST_SUCCESS );
+    will_return( __wrap_ucISL68221ReadCurrent2, XST_SUCCESS );
+
     /*Test function*/
     scRet = Asdm_Process_Sensor_Request( &pucReqBuffer[0], &pucRespBuffer[0], &usRespSize );
 
@@ -480,6 +541,11 @@ static void vTestAsdmGetTemperatureSDR( void **state )
     assert_true( pucRespBuffer[1] == TemperatureSDR );   /*Repository Type*/
 
     /*set return value for mock function*/
+    will_return( __wrap_ucQSFPI2CMuxReadTemperature, XST_SUCCESS );
+    will_return( __wrap_ucQSFPI2CMuxReadTemperature, XST_SUCCESS );
+    will_return( __wrap_ucQSFPI2CMuxReadTemperature, XST_SUCCESS );
+    will_return( __wrap_ucQSFPI2CMuxReadTemperature, XST_SUCCESS );
+
     will_return_always( __wrap_xQueueSemaphoreTake, 1 );
     will_return_always( __wrap_xQueueGenericSend, 1 );
 
@@ -521,6 +587,37 @@ static void test_Asdm_Get_VoltageSDR( void **state )
     /* Record Type : 0xC2 - Voltage SDR */
     pucReqBuffer[1] = VoltageSDR;
 
+    will_return( __wrap_ucCAT34TS02ReadTemperature, XST_SUCCESS );
+    will_return( __wrap_LM75_ReadTemperature, XST_SUCCESS );
+    will_return( __wrap_ucISL68221ReadTemperature0, XST_SUCCESS );
+    will_return( __wrap_ucISL68221ReadTemperature0, XST_SUCCESS );
+    will_return( __wrap_ucISL68221ReadTemperature1, XST_SUCCESS );
+    will_return( __wrap_ucISL68221ReadTemperature2, XST_SUCCESS );
+    will_return( __wrap_ucQSFPI2CMuxReadTemperature, XST_SUCCESS );
+    will_return( __wrap_ucQSFPI2CMuxReadTemperature, XST_SUCCESS );
+    will_return( __wrap_ucQSFPI2CMuxReadTemperature, XST_SUCCESS );
+    will_return( __wrap_ucQSFPI2CMuxReadTemperature, XST_SUCCESS );
+    will_return( __wrap_INA3221_ReadVoltage, XST_SUCCESS );
+    will_return( __wrap_INA3221_ReadVoltage, XST_SUCCESS );
+    will_return( __wrap_INA3221_ReadVoltage, XST_SUCCESS );
+    will_return( __wrap_INA3221_ReadVoltage, XST_SUCCESS );
+    will_return( __wrap_INA3221_ReadVoltage, XST_SUCCESS );
+    will_return( __wrap_INA3221_ReadVoltage, XST_SUCCESS );
+    will_return( __wrap_ucISL68221ReadVoltage0, XST_SUCCESS );
+    will_return( __wrap_ucISL68221ReadVoltage0, XST_SUCCESS );
+    will_return( __wrap_ucISL68221ReadVoltage1, XST_SUCCESS );
+    will_return( __wrap_ucISL68221ReadVoltage2, XST_SUCCESS );
+    will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
+    will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
+    will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
+    will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
+    will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
+    will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
+    will_return( __wrap_ucISL68221ReadCurrent0, XST_SUCCESS );
+    will_return( __wrap_ucISL68221ReadCurrent0, XST_SUCCESS );
+    will_return( __wrap_ucISL68221ReadCurrent1, XST_SUCCESS );
+    will_return( __wrap_ucISL68221ReadCurrent2, XST_SUCCESS );
+
     /*Test function*/
     scRet = Asdm_Process_Sensor_Request( &pucReqBuffer[0], &pucRespBuffer[0], &usRespSize );
 
@@ -532,6 +629,11 @@ static void test_Asdm_Get_VoltageSDR( void **state )
     assert_true( pucRespBuffer[1] == VoltageSDR );   /*Repository Type*/
 
     /*set return value for mock function*/
+    will_return( __wrap_ucQSFPI2CMuxReadTemperature, XST_SUCCESS );
+    will_return( __wrap_ucQSFPI2CMuxReadTemperature, XST_SUCCESS );
+    will_return( __wrap_ucQSFPI2CMuxReadTemperature, XST_SUCCESS );
+    will_return( __wrap_ucQSFPI2CMuxReadTemperature, XST_SUCCESS );
+
     will_return_always( __wrap_xQueueSemaphoreTake, 1 );
     will_return_always( __wrap_xQueueGenericSend, 1 );
 
@@ -572,6 +674,37 @@ static void test_Asdm_Get_CurrentSDR ( void **state )
     /* Record Type : 0xC3 - current SDR */
     pucReqBuffer[1] = CurrentSDR;
 
+    will_return( __wrap_ucCAT34TS02ReadTemperature, XST_SUCCESS );
+    will_return( __wrap_LM75_ReadTemperature, XST_SUCCESS );
+    will_return( __wrap_ucISL68221ReadTemperature0, XST_SUCCESS );
+    will_return( __wrap_ucISL68221ReadTemperature0, XST_SUCCESS );
+    will_return( __wrap_ucISL68221ReadTemperature1, XST_SUCCESS );
+    will_return( __wrap_ucISL68221ReadTemperature2, XST_SUCCESS );
+    will_return( __wrap_ucQSFPI2CMuxReadTemperature, XST_SUCCESS );
+    will_return( __wrap_ucQSFPI2CMuxReadTemperature, XST_SUCCESS );
+    will_return( __wrap_ucQSFPI2CMuxReadTemperature, XST_SUCCESS );
+    will_return( __wrap_ucQSFPI2CMuxReadTemperature, XST_SUCCESS );
+    will_return( __wrap_INA3221_ReadVoltage, XST_SUCCESS );
+    will_return( __wrap_INA3221_ReadVoltage, XST_SUCCESS );
+    will_return( __wrap_INA3221_ReadVoltage, XST_SUCCESS );
+    will_return( __wrap_INA3221_ReadVoltage, XST_SUCCESS );
+    will_return( __wrap_INA3221_ReadVoltage, XST_SUCCESS );
+    will_return( __wrap_INA3221_ReadVoltage, XST_SUCCESS );
+    will_return( __wrap_ucISL68221ReadVoltage0, XST_SUCCESS );
+    will_return( __wrap_ucISL68221ReadVoltage0, XST_SUCCESS );
+    will_return( __wrap_ucISL68221ReadVoltage1, XST_SUCCESS );
+    will_return( __wrap_ucISL68221ReadVoltage2, XST_SUCCESS );
+    will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
+    will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
+    will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
+    will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
+    will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
+    will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
+    will_return( __wrap_ucISL68221ReadCurrent0, XST_SUCCESS );
+    will_return( __wrap_ucISL68221ReadCurrent0, XST_SUCCESS );
+    will_return( __wrap_ucISL68221ReadCurrent1, XST_SUCCESS );
+    will_return( __wrap_ucISL68221ReadCurrent2, XST_SUCCESS );
+
     /*test function*/
     scRet = Asdm_Process_Sensor_Request( &pucReqBuffer[0], &pucRespBuffer[0], &usRespSize );
 
@@ -583,6 +716,12 @@ static void test_Asdm_Get_CurrentSDR ( void **state )
     assert_true( pucRespBuffer[1] == CurrentSDR );   /*Repository Type*/
 
     /*set return value for mock function*/
+    
+    will_return( __wrap_ucQSFPI2CMuxReadTemperature, XST_SUCCESS );
+    will_return( __wrap_ucQSFPI2CMuxReadTemperature, XST_SUCCESS );
+    will_return( __wrap_ucQSFPI2CMuxReadTemperature, XST_SUCCESS );
+    will_return( __wrap_ucQSFPI2CMuxReadTemperature, XST_SUCCESS );
+
     will_return_always( __wrap_xQueueSemaphoreTake, 1 );
     will_return_always( __wrap_xQueueGenericSend, 1 );
 
@@ -623,6 +762,37 @@ static void test_Asdm_Get_PowerSDR( void **state )
     /* Record Type : 0xC4 - Power SDR */
     pucReqBuffer[1] = PowerSDR;
 
+    will_return( __wrap_ucCAT34TS02ReadTemperature, XST_SUCCESS );
+    will_return( __wrap_LM75_ReadTemperature, XST_SUCCESS );
+    will_return( __wrap_ucISL68221ReadTemperature0, XST_SUCCESS );
+    will_return( __wrap_ucISL68221ReadTemperature0, XST_SUCCESS );
+    will_return( __wrap_ucISL68221ReadTemperature1, XST_SUCCESS );
+    will_return( __wrap_ucISL68221ReadTemperature2, XST_SUCCESS );
+    will_return( __wrap_ucQSFPI2CMuxReadTemperature, XST_SUCCESS );
+    will_return( __wrap_ucQSFPI2CMuxReadTemperature, XST_SUCCESS );
+    will_return( __wrap_ucQSFPI2CMuxReadTemperature, XST_SUCCESS );
+    will_return( __wrap_ucQSFPI2CMuxReadTemperature, XST_SUCCESS );
+    will_return( __wrap_INA3221_ReadVoltage, XST_SUCCESS );
+    will_return( __wrap_INA3221_ReadVoltage, XST_SUCCESS );
+    will_return( __wrap_INA3221_ReadVoltage, XST_SUCCESS );
+    will_return( __wrap_INA3221_ReadVoltage, XST_SUCCESS );
+    will_return( __wrap_INA3221_ReadVoltage, XST_SUCCESS );
+    will_return( __wrap_INA3221_ReadVoltage, XST_SUCCESS );
+    will_return( __wrap_ucISL68221ReadVoltage0, XST_SUCCESS );
+    will_return( __wrap_ucISL68221ReadVoltage0, XST_SUCCESS );
+    will_return( __wrap_ucISL68221ReadVoltage1, XST_SUCCESS );
+    will_return( __wrap_ucISL68221ReadVoltage2, XST_SUCCESS );
+    will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
+    will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
+    will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
+    will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
+    will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
+    will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
+    will_return( __wrap_ucISL68221ReadCurrent0, XST_SUCCESS );
+    will_return( __wrap_ucISL68221ReadCurrent0, XST_SUCCESS );
+    will_return( __wrap_ucISL68221ReadCurrent1, XST_SUCCESS );
+    will_return( __wrap_ucISL68221ReadCurrent2, XST_SUCCESS );
+
     /*test function*/
     scRet = Asdm_Process_Sensor_Request( &pucReqBuffer[0], &pucRespBuffer[0], &usRespSize );
 
@@ -634,6 +804,11 @@ static void test_Asdm_Get_PowerSDR( void **state )
     assert_true( pucRespBuffer[1] == PowerSDR );     /*Repository Type*/
 
     /*set return value for mock function*/
+    will_return( __wrap_ucQSFPI2CMuxReadTemperature, XST_SUCCESS );
+    will_return( __wrap_ucQSFPI2CMuxReadTemperature, XST_SUCCESS );
+    will_return( __wrap_ucQSFPI2CMuxReadTemperature, XST_SUCCESS );
+    will_return( __wrap_ucQSFPI2CMuxReadTemperature, XST_SUCCESS );
+    
     will_return_always( __wrap_xQueueSemaphoreTake, 1 );
     will_return_always( __wrap_xQueueGenericSend, 1 );
 

@@ -136,6 +136,7 @@ target_link_libraries( test_qsfp
 add_test( NAME test_qsfp
           COMMAND test_qsfp )
 
+
 set( ASDM_TEST_FILES ./utt_vmc_asdm.c
                      ./utt_assert_SDRs.c
                      ../../mocks/common/utm_cl_mem.c
@@ -151,6 +152,7 @@ set( ASDM_TEST_FILES ./utt_vmc_asdm.c
                      ../../mocks/vmc/utm_vmc_main.c
                      ../../mocks/vmc/utm_vmc_update_sc.c
                      ../../mocks/vmc/utm_clock_throttling.c
+                     ../../mocks/vmc/utm_vmc_asdm.c
                      ../../../platforms/v70.c )
 					
 add_executable( test_asdm ${ASDM_TEST_FILES} ../../../vmc_asdm.c )
@@ -254,6 +256,58 @@ target_link_libraries( test_asdm_v80
 add_test( NAME test_asdm_v80
           COMMAND test_asdm_v80 )
 
+set( V80_TEST_FILES ./utt_v80.c
+          ../../mocks/common/utm_cl_i2c.c
+          ../../mocks/common/utm_cl_logs.c
+          ../../mocks/freertos/utm_queue.c
+          ../../mocks/common/utm_cl_mem.c
+          ../../mocks/vmc/sensors/src/utm_cat34ts02.c
+          ../../mocks/vmc/sensors/src/utm_lm75.c
+          ../../mocks/vmc/sensors/src/utm_qsfp.c
+          ../../mocks/vmc/sensors/src/utm_isl68221.c
+          ../../mocks/vmc/sensors/src/utm_ina3221.c
+          ../../mocks/vmc/sensors/src/utm_tca6416a.c
+          ../../mocks/vmc/utm_vmc_sensor.c
+          ../../mocks/vmc/utm_vmc_main_v80.c
+          ../../mocks/vmc/utm_vmc_asdm.c
+          ../../mocks/vmc/utm_vmc_api.c
+          ../../mocks/vmc/utm_vmc_sc_comms.c
+          ../../mocks/vmc/utm_clock_throttling.c
+          )
+
+add_executable( test_v80 ${V80_TEST_FILES} ../../../platforms/v80.c )
+
+target_link_libraries( test_v80
+            cmocka
+            -Wl,--wrap=i2c_send_rs_recv
+            -Wl,--wrap=i2c_send
+            -Wl,--wrap=cl_printf
+            -Wl,--wrap=vTaskDelay
+            -Wl,--wrap=Cl_SecureMemcpy
+            -Wl,--wrap=LM75_ReadTemperature
+            -Wl,--wrap=ucISL68221ReadVoltage0
+            -Wl,--wrap=ucISL68221ReadVoltage1
+            -Wl,--wrap=ucISL68221ReadVoltage2
+            -Wl,--wrap=ucISL68221ReadCurrent0
+            -Wl,--wrap=ucISL68221ReadCurrent1
+            -Wl,--wrap=ucISL68221ReadCurrent2
+            -Wl,--wrap=ucISL68221ReadTemperature0
+            -Wl,--wrap=ucISL68221ReadTemperature1
+            -Wl,--wrap=ucISL68221ReadTemperature2
+            -Wl,--wrap=INA3221_ReadVoltage
+            -Wl,--wrap=INA3221_ReadCurrent
+            -Wl,--wrap=INA3221_ReadPower
+            -Wl,--wrap=ucCAT34TS02ReadTemperature
+            -Wl,--wrap=ucQSFPI2CMuxReadTemperature
+            -Wl,--wrap=ucs_clock_shutdown
+            -Wl,--wrap=VMC_Get_BoardInfo
+            -Wl,--wrap=ClockThrottling_Initialize
+            -Wl,--wrap=ucEnableDDRDIMM
+            )
+
+add_test( NAME test_v80
+COMMAND test_v80 )
+
 #Code coverage for the src files
 include(CodeCoverage.cmake)
 append_coverage_compiler_flags()
@@ -267,8 +321,11 @@ set( COVERAGE_EXCLUDES ${SE98A_TEST_FILES}
                        ${TCA6416A_TEST_FILES}
                        ${ISL68221_TEST_FILES}
                        ${QSFP_TEST_FILES}
+                       ${V80_TEST_FILES}
                        ${ASDM_TEST_FILES}
-                       ${ASDM_V80_TEST_FILES} )
+                       ../../mocks/*
+                       ../../../../../../build/build_dir/*
+                       )
 
 SETUP_TARGET_FOR_COVERAGE_LCOV(
         NAME test_coverage
@@ -282,6 +339,6 @@ SETUP_TARGET_FOR_COVERAGE_LCOV(
                         test_tca6416a
                         test_lm75
                         test_qsfp
+                        test_v80
                         test_asdm
                         test_asdm_v80 )
-

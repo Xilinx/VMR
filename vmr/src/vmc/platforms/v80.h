@@ -109,7 +109,7 @@ void vV80CurrentMonitor12VAUX0( );
 void vV80CurrentMonitor12VAUX1( );
 void vV80CurrentMonitorVccHBM( );
 void vV80CurrentMonitor1V2VccoDimm( );
-void vV80CurrentMonitor1V2GTXAVT( );
+void vV80CurrentMonitor1V2GTXAVTT( );
 
 void vV80PowerMonitor( );
 void vV80VoltageMonitorVccint( );

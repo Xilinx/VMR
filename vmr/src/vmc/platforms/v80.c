@@ -120,6 +120,11 @@ s8 scV80AsdmGetQSFPName( u8 ucIndex, char8* pucSnsrName, u8 *pucSensorId, sensor
         { 3,  TEMP_CAGE3_NAME, scV80AsdmTemperatureReadQSFP }
     };
 
+    if( ( sizeof( qsfpData ) / sizeof( struct sensorData ) ) <= ucIndex )
+    {
+        return XST_FAILURE;
+    }
+
     if( NULL != pucSnsrName )
     {
         Cl_SecureMemcpy( pucSnsrName, SENSOR_NAME_MAX, &qsfpData[ucIndex].ucSensorName[0], SENSOR_NAME_MAX );
@@ -137,7 +142,15 @@ s8 scV80AsdmGetQSFPName( u8 ucIndex, char8* pucSnsrName, u8 *pucSensorId, sensor
     {
         return XST_FAILURE;
     }
-    *pxSensorHandler = qsfpData[ucIndex].xSensorHandler;
+
+    if( NULL != pxSensorHandler )
+    {
+        *pxSensorHandler = qsfpData[ucIndex].xSensorHandler;
+    }
+    else
+    {
+        return XST_FAILURE;
+    }
 
     return XST_SUCCESS;
 }
@@ -158,7 +171,7 @@ void vV80GetSupportedSdrInfo( u32 *pulPlatformSupportedSensors, u32 *pulSdrCount
 void vV80AsdmUpdateRecordCount( Asdm_Header_t *pxHeaderInfo )
 {
     u8 i = 0;
-    
+
     if( NULL != pxHeaderInfo )
     {
         for( i = 0; i < MAX_SDR_REPO; i++ )
@@ -223,7 +236,7 @@ s8 scV80AsdmTemperatureReadOutlet( snsrRead_t *pxSnsrData )
 
 s8 scV80AsdmTemperatureReadBoard( snsrRead_t *pxSnsrData )
 {
-    s8 scStatus = XST_SUCCESS;
+    s8 scStatus = XST_FAILURE;
     s16 ssTempReading = 0;
     if( NULL != pxSnsrData )
     {
@@ -232,6 +245,8 @@ s8 scV80AsdmTemperatureReadBoard( snsrRead_t *pxSnsrData )
         Cl_SecureMemcpy( &pxSnsrData->snsrValue[0],sizeof( ssTempReading ),&ssTempReading,sizeof( ssTempReading ) );
         pxSnsrData->sensorValueSize = sizeof( ssTempReading );
         pxSnsrData->snsrSatus = Vmc_Snsr_State_Normal;
+
+        scStatus = XST_SUCCESS;
     }
     
     return scStatus;

@@ -17,5 +17,6 @@ u8 __wrap_ucCAT34TS02ReadTemperature( u8 ucI2cNum, u8 ucSlaveAddr, s16 *pssTempe
     u8 status = 0;
 
     *pssTemperatureValue = 37;
-     return status;
+
+     return mock_type(u8);
 }
