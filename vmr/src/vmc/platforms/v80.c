@@ -492,8 +492,10 @@ void vV80VoltageMonitor12VPEX( void )
     {
         VMC_ERR( "Failed to read 12vPex voltage" );
     }
-
-    sensor_glvr.sensor_readings.voltage[e12V_PEX] = fVoltage;
+    else
+    {
+        sensor_glvr.sensor_readings.voltage[e12V_PEX] = fVoltage;
+    }  
 }
 
 void vV80CurrentMonitor12VPEX( void )
@@ -506,8 +508,10 @@ void vV80CurrentMonitor12VPEX( void )
     {
         VMC_ERR( "Failed to read 12vPex current" );
     }
-
-    sensor_glvr.sensor_readings.current[e12V_PEX] = fCurrent;
+    else
+    {
+        sensor_glvr.sensor_readings.current[e12V_PEX] = fCurrent;
+    }
 }
 
 void vV80VoltageMonitor3v3PEX( void )
@@ -520,8 +524,10 @@ void vV80VoltageMonitor3v3PEX( void )
     {
         VMC_ERR( "Failed to read 3v3 pex voltage" );
     }
-
-    sensor_glvr.sensor_readings.voltage[e3V3_PEX] = fVoltage;
+    else
+    {
+        sensor_glvr.sensor_readings.voltage[e3V3_PEX] = fVoltage;
+    }   
 }
 
 void vV80CurrentMonitor3v3PEX( void )
@@ -534,8 +540,10 @@ void vV80CurrentMonitor3v3PEX( void )
     {
         VMC_ERR( "Failed to read 3v3 Pex current" );
     }
-
-    sensor_glvr.sensor_readings.current[e3V3_PEX] = fCurrent;
+    else
+    {
+        sensor_glvr.sensor_readings.current[e3V3_PEX] = fCurrent;
+    }  
 }
 
 void vV80VoltageMonitor1V5VCCAUX( void )
@@ -548,11 +556,14 @@ void vV80VoltageMonitor1V5VCCAUX( void )
     {
         VMC_ERR( "Failed to read 1V5_VCC_AUX voltage" );
     }
-/* TODO Remove the test code before merging back to VMR main */
+    else
+    {
+        /* TODO Remove the test code before merging back to VMR main */
 #ifdef V80_ON_V70
-    fVoltage = 1561;
+        fVoltage = 1561;
 #endif
-    sensor_glvr.sensor_readings.voltage[e1V5_VCC_AUX] = fVoltage;
+        sensor_glvr.sensor_readings.voltage[e1V5_VCC_AUX] = fVoltage;
+    }
 }
 
 void vV80CurrentMonitor1V5VCCAUX( void )
@@ -565,16 +576,18 @@ void vV80CurrentMonitor1V5VCCAUX( void )
     {
         VMC_ERR( "Failed to read 1V5_VCC_AUX current" );
     }
-/* TODO Remove the test code before merging back to VMR main */
+    else
+    {
+        /* TODO Remove the test code before merging back to VMR main */
 #ifdef V80_ON_V70
-    fCurrent = 710;
+        fCurrent = 710;
 #endif
-    sensor_glvr.sensor_readings.current[e1V5_VCC_AUX] = fCurrent;
+        sensor_glvr.sensor_readings.current[e1V5_VCC_AUX] = fCurrent;
+    }
 }
 
 void vV80VoltageMonitor3V3QSFP( void )
-{
-    
+{ 
     float fVoltage  = 0.0;
 #ifdef V80_ON_V70
     fVoltage = 3362;
@@ -585,13 +598,15 @@ void vV80VoltageMonitor3V3QSFP( void )
     {
         VMC_ERR( "Failed to read 3V3_QSFP voltage" );
     }
+    else
+    {
+        sensor_glvr.sensor_readings.voltage[e3V3_QSFP] = fVoltage;
+    }
 #endif
-    sensor_glvr.sensor_readings.voltage[e3V3_QSFP] = fVoltage;
 }
 
 void vV80CurrentMonitor3V3QSFP( void )
-{
-    
+{  
     float fCurrent  = 0.0;
 /* TODO Remove the test code before merging back to VMR main */
 #ifdef V80_ON_V70
@@ -603,13 +618,15 @@ void vV80CurrentMonitor3V3QSFP( void )
     {
         VMC_ERR( "Failed to read 3V3_QSFP current" );
     }
+    else
+    {
+        sensor_glvr.sensor_readings.current[e3V3_QSFP] = fCurrent;
+    }
 #endif
-    sensor_glvr.sensor_readings.current[e3V3_QSFP] = fCurrent;
 }
 
 void vV80VoltageMonitor12VAUX0( void )
 {
-    
     float fVoltage  = 0.0;
 #ifdef V80_ON_V70
     fVoltage = 12073;
@@ -620,13 +637,15 @@ void vV80VoltageMonitor12VAUX0( void )
     {
         VMC_ERR( "Failed to read 12V_AUX_0 voltage" );
     }
+    else
+    {
+        sensor_glvr.sensor_readings.voltage[e12V_AUX0] = fVoltage;
+    }
 #endif
-    sensor_glvr.sensor_readings.voltage[e12V_AUX0] = fVoltage;
 }
 
 void vV80CurrentMonitor12VAUX0( void )
 {
-
     float fCurrent  = 0.0;
 /* TODO Remove the test code before merging back to VMR main */
 #ifdef V80_ON_V70
@@ -638,13 +657,15 @@ void vV80CurrentMonitor12VAUX0( void )
     {
         VMC_ERR( "Failed to read 12V_AUX_0 current" );
     }
+    else
+    {
+        sensor_glvr.sensor_readings.current[e12V_AUX0] = fCurrent;
+    }
 #endif
-    sensor_glvr.sensor_readings.current[e12V_AUX0] = fCurrent;
 }
 
 void vV80VoltageMonitor12VAUX1( void )
 {
-
     float fVoltage  = 0.0;
 #ifdef V80_ON_V70
     fVoltage = 12074;
@@ -655,13 +676,15 @@ void vV80VoltageMonitor12VAUX1( void )
     {
         VMC_ERR( "Failed to read 12V_AUX_1 voltage" );
     }
+    else
+    {
+        sensor_glvr.sensor_readings.voltage[e12V_AUX1] = fVoltage;
+    }
 #endif
-    sensor_glvr.sensor_readings.voltage[e12V_AUX1] = fVoltage;
 }
 
 void vV80CurrentMonitor12VAUX1( void )
 {
-
     float fCurrent  = 0.0;
 /* TODO Remove the test code before merging back to VMR main */
 #ifdef V80_ON_V70
@@ -673,13 +696,15 @@ void vV80CurrentMonitor12VAUX1( void )
     {
         VMC_ERR( "Failed to read 12V_AUX_1 current" );
     }
-#endif
-    sensor_glvr.sensor_readings.current[e12V_AUX1] = fCurrent;
+    else
+    {
+        sensor_glvr.sensor_readings.current[e12V_AUX1] = fCurrent;
+    }
+#endif   
 }
 
 void vV80VoltageMonitorVccHBM( void )
 {
-
     float fVoltage  = 0.0;
 #ifdef V80_ON_V70
     fVoltage = 650;
@@ -690,13 +715,15 @@ void vV80VoltageMonitorVccHBM( void )
     {
         VMC_ERR( "Failed to read Vcc HBM Voltage " );
     }
+    else
+    {
+        sensor_glvr.sensor_readings.voltage[eVCC_HBM] = fVoltage;
+    }
 #endif
-    sensor_glvr.sensor_readings.voltage[eVCC_HBM] = fVoltage;
 }
 
 void vV80CurrentMonitorVccHBM( void )
 {
-
     float fCurrentInA   = 0.0;
 /* TODO Remove the test code before merging back to VMR main */
 #ifdef V80_ON_V70
@@ -708,13 +735,15 @@ void vV80CurrentMonitorVccHBM( void )
     {
         VMC_ERR( "Failed to read Vcc HBM Current " );
     }
-#endif
-    sensor_glvr.sensor_readings.current[eVCC_HBM] = fCurrentInA; /* In Amps */
+    else
+    {
+        sensor_glvr.sensor_readings.current[eVCC_HBM] = fCurrentInA; /* In Amps */
+    }
+#endif   
 }
 
 void vV80VoltageMonitor1V2VccoDimm( void )
 {
-
     float fVoltage  = 0.0;
 #ifdef V80_ON_V70
     fVoltage = 1266;
@@ -725,13 +754,15 @@ void vV80VoltageMonitor1V2VccoDimm( void )
     {
         VMC_ERR( "Failed to read 1V2 Vcco Dimm Voltage " );
     }
+    else
+    {
+        sensor_glvr.sensor_readings.voltage[e1V2_VCCO_DIMM] = fVoltage;
+    }
 #endif
-    sensor_glvr.sensor_readings.voltage[e1V2_VCCO_DIMM] = fVoltage;
 }
 
 void vV80CurrentMonitor1V2VccoDimm( void )
 {
-
     float fCurrentInA   = 0.0;
 /* TODO Remove the test code before merging back to VMR main */
 #ifdef V80_ON_V70
@@ -743,13 +774,15 @@ void vV80CurrentMonitor1V2VccoDimm( void )
     {
         VMC_ERR( "Failed to read 1V2 Vcco Dimm Current " );
     }
+    else
+    {
+        sensor_glvr.sensor_readings.current[e1V2_VCCO_DIMM] = fCurrentInA; /* In Amps */
+    }
 #endif
-    sensor_glvr.sensor_readings.current[e1V2_VCCO_DIMM] = fCurrentInA; /* In Amps */
 }
 
 void vV80VoltageMonitor1V2GTXAVTT( void )
 {
-
     float fVoltage  = 0.0;
 #ifdef V80_ON_V70
     fVoltage = 1267;
@@ -760,14 +793,15 @@ void vV80VoltageMonitor1V2GTXAVTT( void )
     {
         VMC_ERR( "Failed to read 1V2GTXAVT Voltage " );
     }
+    else
+    {
+        sensor_glvr.sensor_readings.voltage[e1V2_GTXAVTT] = fVoltage;
+    }
 #endif
-    sensor_glvr.sensor_readings.voltage[e1V2_GTXAVTT] = fVoltage;
-
 }
 
 void vV80CurrentMonitor1V2GTXAVTT( void )
 {
-
     float fCurrentInA   = 0.0;
 /* TODO Remove the test code before merging back to VMR main */
 #ifdef V80_ON_V70
@@ -779,8 +813,11 @@ void vV80CurrentMonitor1V2GTXAVTT( void )
     {
         VMC_ERR( "Failed to read 1V2GTXAVT Current " );
     }
-#endif
-    sensor_glvr.sensor_readings.current[e1V2_GTXAVTT] = fCurrentInA; /* In Amps */
+    else
+    {
+        sensor_glvr.sensor_readings.current[e1V2_GTXAVTT] = fCurrentInA; /* In Amps */
+    }
+#endif  
 }
 
 
@@ -854,8 +891,10 @@ void vV80VoltageMonitorVccint( void )
     {
         VMC_ERR( "Failed to read Vccint Current " );
     }
-
-    sensor_glvr.sensor_readings.voltage[eVCCINT] = fVoltageInmV;
+    else
+    {
+        sensor_glvr.sensor_readings.voltage[eVCCINT] = fVoltageInmV;
+    }   
 }
 
 void vV80CurrentMonitorVccint( void )
@@ -868,8 +907,10 @@ void vV80CurrentMonitorVccint( void )
     {
         VMC_ERR( "Failed to read Vccint Current " );
     }
-
-    sensor_glvr.sensor_readings.current[eVCCINT] = fCurrentInA; /* In Amps */
+    else
+    {
+        sensor_glvr.sensor_readings.current[eVCCINT] = fCurrentInA; /* In Amps */
+    }
 }
 
 s8 scV80AsdmReadPower( snsrRead_t *pxSnsrData )
