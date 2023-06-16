@@ -13,6 +13,13 @@
 
 #define SLAVE_ADDRESS_INA3221_1     ( 0x41 )
 
+float fINA3221ChangedValue = 999;
+
+void vINA3221SetNewValue(float fNewValue)
+{
+	fINA3221ChangedValue = fNewValue;
+}
+
 /*****************************Mock functions *******************************/
 u8 __wrap_INA3221_ReadVoltage( u8 ucBusNum, u8 ucSlaveAddr, u8 ucChannelNum, float *pfVoltageInmV )
 {
@@ -22,33 +29,33 @@ u8 __wrap_INA3221_ReadVoltage( u8 ucBusNum, u8 ucSlaveAddr, u8 ucChannelNum, flo
     {
         if( 0 == ucChannelNum )
         {
-            *pfVoltageInmV = 3300;
+            *pfVoltageInmV = ( fINA3221ChangedValue ? 3300 : 0);
         }
         else if( 1 == ucChannelNum )
         {
-            *pfVoltageInmV = 12073;
+            *pfVoltageInmV = ( fINA3221ChangedValue ? 12073 : 0);
         }
         else if( 2 == ucChannelNum )
         {
-            *pfVoltageInmV = 12074;
+            *pfVoltageInmV = ( fINA3221ChangedValue ? 12074 : 0);
         }
     }
     else
     {
         if( 0 == ucChannelNum )
         {
-            *pfVoltageInmV = 12000;
+            *pfVoltageInmV = ( fINA3221ChangedValue ? 12000 : 0);
         }
         else if( 1 == ucChannelNum )
         {
-            *pfVoltageInmV = 3000;
+            *pfVoltageInmV = ( fINA3221ChangedValue ? 3000 : 0);
         }
         else if( 2 == ucChannelNum )
         {
-            *pfVoltageInmV = 1561;
+            *pfVoltageInmV = ( fINA3221ChangedValue ? 1561 : 0);
         }
     }
-        return ucStatus;
+        return mock_type(u8);
 }
 
 u8 __wrap_INA3221_ReadCurrent( u8 ucBusNum, u8 ucSlaveAddr, u8 ucChannelNum, float *pfCurrentInmA )
@@ -58,33 +65,33 @@ u8 __wrap_INA3221_ReadCurrent( u8 ucBusNum, u8 ucSlaveAddr, u8 ucChannelNum, flo
     {
         if( 0 == ucChannelNum )
         {
-            *pfCurrentInmA = 720;
+            *pfCurrentInmA = ( fINA3221ChangedValue ? ( ( 6000 == fINA3221ChangedValue ) ? 6000 : 720 ) : 0 );
         }
         else if( 1 == ucChannelNum )
         {
-            *pfCurrentInmA = 730;
+            *pfCurrentInmA = ( fINA3221ChangedValue ? ( ( 6000 == fINA3221ChangedValue ) ? 6000 : 730 ) : 0 );
         }
         else if( 2 == ucChannelNum )
         {
-            *pfCurrentInmA = 740;
+            *pfCurrentInmA = ( fINA3221ChangedValue ? ( ( 6000 == fINA3221ChangedValue ) ? 6000 : 740 ) : 0 );
         }
     }
     else
     {
         if( 0 == ucChannelNum)
         {
-            *pfCurrentInmA = 5000;
+            *pfCurrentInmA = ( fINA3221ChangedValue ? ( ( 6000 == fINA3221ChangedValue ) ? 6000 : 5000 ) : 0 );
         }
         else if( 1 == ucChannelNum )
         {
-            *pfCurrentInmA = 4000;
+            *pfCurrentInmA = ( fINA3221ChangedValue ? 4000 : 0);
         }
         else if( 2 == ucChannelNum )
         {
-            *pfCurrentInmA = 710;
+            *pfCurrentInmA = ( fINA3221ChangedValue ? 710 : 0);
         }
-}
-        return ucStatus;
+    }
+        return mock_type(u8);
 }
 
 u8 __wrap_INA3221_ReadPower( u8 ucBusNum, u8 ucSlaveAddr, u8 ucChannelNum, float *pfPowerInmW )
@@ -92,6 +99,6 @@ u8 __wrap_INA3221_ReadPower( u8 ucBusNum, u8 ucSlaveAddr, u8 ucChannelNum, float
         u8 ucStatus = 0;
         *pfPowerInmW = 75;
 
-        return ucStatus;
+        return mock_type(u8);
 }
 
