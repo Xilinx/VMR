@@ -482,7 +482,7 @@ s32 slV80VMCFetchBoardInfo( u8 *board_snsr_data )
     return ( slDataSize );
 }
 
-void vV80VoltageMonitor12VPEX( )
+void vV80VoltageMonitor12VPEX( void )
 {
     u8 scStatus     = XST_FAILURE;
     float fVoltage  = 0.0;
@@ -496,7 +496,7 @@ void vV80VoltageMonitor12VPEX( )
     sensor_glvr.sensor_readings.voltage[e12V_PEX] = fVoltage;
 }
 
-void vV80CurrentMonitor12VPEX( )
+void vV80CurrentMonitor12VPEX( void )
 {
     u8 scStatus     = XST_FAILURE;
     float fCurrent  = 0.0;
@@ -510,7 +510,7 @@ void vV80CurrentMonitor12VPEX( )
     sensor_glvr.sensor_readings.current[e12V_PEX] = fCurrent;
 }
 
-void vV80VoltageMonitor3v3PEX( )
+void vV80VoltageMonitor3v3PEX( void )
 {
     u8 scStatus     = XST_FAILURE;
     float fVoltage  = 0.0;
@@ -524,7 +524,7 @@ void vV80VoltageMonitor3v3PEX( )
     sensor_glvr.sensor_readings.voltage[e3V3_PEX] = fVoltage;
 }
 
-void vV80CurrentMonitor3v3PEX( )
+void vV80CurrentMonitor3v3PEX( void )
 {
     u8 scStatus     = XST_FAILURE;
     float fCurrent  = 0.0;
@@ -538,7 +538,7 @@ void vV80CurrentMonitor3v3PEX( )
     sensor_glvr.sensor_readings.current[e3V3_PEX] = fCurrent;
 }
 
-void vV80VoltageMonitor1V5VCCAUX( )
+void vV80VoltageMonitor1V5VCCAUX( void )
 {
     u8 scStatus     = XST_FAILURE;
     float fVoltage  = 0.0;
@@ -555,7 +555,7 @@ void vV80VoltageMonitor1V5VCCAUX( )
     sensor_glvr.sensor_readings.voltage[e1V5_VCC_AUX] = fVoltage;
 }
 
-void vV80CurrentMonitor1V5VCCAUX( )
+void vV80CurrentMonitor1V5VCCAUX( void )
 {
     u8 scStatus     = XST_FAILURE;
     float fCurrent  = 0.0;
@@ -572,7 +572,7 @@ void vV80CurrentMonitor1V5VCCAUX( )
     sensor_glvr.sensor_readings.current[e1V5_VCC_AUX] = fCurrent;
 }
 
-void vV80VoltageMonitor3V3QSFP( )
+void vV80VoltageMonitor3V3QSFP( void )
 {
     
     float fVoltage  = 0.0;
@@ -589,7 +589,7 @@ void vV80VoltageMonitor3V3QSFP( )
     sensor_glvr.sensor_readings.voltage[e3V3_QSFP] = fVoltage;
 }
 
-void vV80CurrentMonitor3V3QSFP( )
+void vV80CurrentMonitor3V3QSFP( void )
 {
     
     float fCurrent  = 0.0;
@@ -607,7 +607,7 @@ void vV80CurrentMonitor3V3QSFP( )
     sensor_glvr.sensor_readings.current[e3V3_QSFP] = fCurrent;
 }
 
-void vV80VoltageMonitor12VAUX0( )
+void vV80VoltageMonitor12VAUX0( void )
 {
     
     float fVoltage  = 0.0;
@@ -624,7 +624,7 @@ void vV80VoltageMonitor12VAUX0( )
     sensor_glvr.sensor_readings.voltage[e12V_AUX0] = fVoltage;
 }
 
-void vV80CurrentMonitor12VAUX0( )
+void vV80CurrentMonitor12VAUX0( void )
 {
 
     float fCurrent  = 0.0;
@@ -642,7 +642,7 @@ void vV80CurrentMonitor12VAUX0( )
     sensor_glvr.sensor_readings.current[e12V_AUX0] = fCurrent;
 }
 
-void vV80VoltageMonitor12VAUX1( )
+void vV80VoltageMonitor12VAUX1( void )
 {
 
     float fVoltage  = 0.0;
@@ -659,7 +659,7 @@ void vV80VoltageMonitor12VAUX1( )
     sensor_glvr.sensor_readings.voltage[e12V_AUX1] = fVoltage;
 }
 
-void vV80CurrentMonitor12VAUX1( )
+void vV80CurrentMonitor12VAUX1( void )
 {
 
     float fCurrent  = 0.0;
@@ -677,7 +677,7 @@ void vV80CurrentMonitor12VAUX1( )
     sensor_glvr.sensor_readings.current[e12V_AUX1] = fCurrent;
 }
 
-void vV80VoltageMonitorVccHBM( )
+void vV80VoltageMonitorVccHBM( void )
 {
 
     float fVoltage  = 0.0;
@@ -694,7 +694,7 @@ void vV80VoltageMonitorVccHBM( )
     sensor_glvr.sensor_readings.voltage[eVCC_HBM] = fVoltage;
 }
 
-void vV80CurrentMonitorVccHBM( )
+void vV80CurrentMonitorVccHBM( void )
 {
 
     float fCurrentInA   = 0.0;
@@ -712,7 +712,7 @@ void vV80CurrentMonitorVccHBM( )
     sensor_glvr.sensor_readings.current[eVCC_HBM] = fCurrentInA; /* In Amps */
 }
 
-void vV80VoltageMonitor1V2VccoDimm( )
+void vV80VoltageMonitor1V2VccoDimm( void )
 {
 
     float fVoltage  = 0.0;
@@ -729,7 +729,7 @@ void vV80VoltageMonitor1V2VccoDimm( )
     sensor_glvr.sensor_readings.voltage[e1V2_VCCO_DIMM] = fVoltage;
 }
 
-void vV80CurrentMonitor1V2VccoDimm( )
+void vV80CurrentMonitor1V2VccoDimm( void )
 {
 
     float fCurrentInA   = 0.0;
@@ -747,7 +747,7 @@ void vV80CurrentMonitor1V2VccoDimm( )
     sensor_glvr.sensor_readings.current[e1V2_VCCO_DIMM] = fCurrentInA; /* In Amps */
 }
 
-void vV80VoltageMonitor1V2GTXAVTT( )
+void vV80VoltageMonitor1V2GTXAVTT( void )
 {
 
     float fVoltage  = 0.0;
@@ -765,7 +765,7 @@ void vV80VoltageMonitor1V2GTXAVTT( )
 
 }
 
-void vV80CurrentMonitor1V2GTXAVTT( )
+void vV80CurrentMonitor1V2GTXAVTT( void )
 {
 
     float fCurrentInA   = 0.0;
@@ -784,7 +784,7 @@ void vV80CurrentMonitor1V2GTXAVTT( )
 }
 
 
-void vV80PowerMonitor( )
+void vV80PowerMonitor( void )
 {
     float fPower12vPex = 0.0;
     float fPower3v3pex = 0.0;
@@ -844,7 +844,7 @@ void vV80PowerMonitor( )
     }
 }
 
-void vV80VoltageMonitorVccint( )
+void vV80VoltageMonitorVccint( void )
 {
     u8 scStatus     = XST_SUCCESS;
     float fVoltageInmV  = 0.0;
@@ -858,7 +858,7 @@ void vV80VoltageMonitorVccint( )
     sensor_glvr.sensor_readings.voltage[eVCCINT] = fVoltageInmV;
 }
 
-void vV80CurrentMonitorVccint( )
+void vV80CurrentMonitorVccint( void )
 {
     u8 scStatus         = XST_SUCCESS;
     float fCurrentInA   = 0.0;
@@ -1612,7 +1612,7 @@ s8 scV80AsdmGetVoltageNames( u8 ucIndex, char8* pucSnsrName, u8 *pucSensorId, se
     return scReturnCode;
 }
 
-void vV80MonitorSensors( )
+void vV80MonitorSensors( void )
 {
     /* Read Temp Sensors */
     vV80TemperatureMonitor( );
@@ -1648,7 +1648,7 @@ void vV80MonitorSensors( )
     vV80PowerMonitor( );
 }
 
-static void vV80ClkScalingParamsInit( ) {
+static void vV80ClkScalingParamsInit( void ) {
 
     g_clk_throttling_params.is_clk_scaling_supported = true;
     g_clk_throttling_params.clk_scaling_mode = eCLK_SCALING_MODE_BOTH;

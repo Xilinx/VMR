@@ -15,31 +15,31 @@
 #include "xstatus.h"
 
 int __wrap_XSysMonPsv_ReadTempProcessed(XSysMonPsv *InstancePtr,
-				 XSysMonPsv_TempType Type, float *Val)
+                 XSysMonPsv_TempType Type, float *Val)
 {
-	if (InstancePtr == NULL || Val == NULL) {
-		return -XST_FAILURE;
-	}
-	
-	*Val = (float)38.5;
-	return XST_SUCCESS;
+    if (InstancePtr == NULL || Val == NULL) {
+        return -XST_FAILURE;
+    }
+    
+    *Val = (float)38.5;
+    return XST_SUCCESS;
 }
 
 int __wrap_XSysMonPsv_ReadSupplyProcessed(XSysMonPsv *InstancePtr, int Supply, float *Val)
 {
-	if (InstancePtr == NULL) {
-		return -XST_FAILURE;
-	}
+    if (InstancePtr == NULL) {
+        return -XST_FAILURE;
+    }
 
-	*Val = (float)5.5;
-	return XST_SUCCESS;
+    *Val = (float)5.5;
+    return XST_SUCCESS;
 }
 
 int __wrap_XSysMonPsv_Init(XSysMonPsv *InstancePtr, XScuGic *IntcInst)
 {
     if (InstancePtr == NULL || IntcInst == NULL) {
-		return -XST_FAILURE;
-	}
+        return -XST_FAILURE;
+    }
 
     return XST_SUCCESS;
 }

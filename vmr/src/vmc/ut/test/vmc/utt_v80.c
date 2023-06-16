@@ -11,8 +11,8 @@
 #include "cl_i2c.h"
 #include "cl_log.h"
 #include "v80.h"
-//#include "vmc_main.h"
 #include "vmc_api.h"
+#include "vmc_main.h"
 
 /* FreeRTOS includes */
 #include <FreeRTOS.h>
@@ -20,9 +20,7 @@
 
 extern void vQSFPSetNewValue(float fNewValue);
 extern void vINA3221SetNewValue(float fNewValue);
-//extern Vmc_Sensors_Gl_t sensor_glvr;
-
-//#define I2CNUM 1
+extern Vmc_Sensors_Gl_t sensor_glvr;
 
 static void test_scV80AsdmGetQSFPName( void **state ) 
 {
@@ -295,7 +293,7 @@ static void test_scV80AsdmTemperatureReadBoardFail( void **state )
 {
     ( void ) state; /* unused */
     u8 ucStatus             = 0;
-     snsrRead_t xSnsrData   = {0};
+    snsrRead_t xSnsrData    = {0};
 
     will_return( __wrap_ucCAT34TS02ReadTemperature, XST_SUCCESS );
     will_return( __wrap_LM75_ReadTemperature, XST_SUCCESS );
@@ -631,30 +629,6 @@ static void test_vV80TemperatureMonitor( void **state )
     will_return( __wrap_ucISL68221ReadTemperature1, XST_SUCCESS );
     will_return( __wrap_ucISL68221ReadTemperature2, XST_FAILURE );
     vV80TemperatureMonitor( );
-
-
-    //printf( "xSnsrData.sensorInstance  %d\n\r", xSnsrData.sensorInstance   );
-    //printf( "xSnsrData.sensorValueSize %d\n\r", xSnsrData.sensorValueSize  );
-    //printf( "xSnsrData.snsrSatus       %d\n\r", xSnsrData.snsrSatus        );
-    //printf( "xSnsrData.mspSensorIndex  %d\n\r", xSnsrData.mspSensorIndex   );
-    //printf( "xSnsrData.snsrValue[0]    %d\n\r", xSnsrData.snsrValue[0]     );
-    //printf( "xSnsrData.snsrValue[1]    %d\n\r", xSnsrData.snsrValue[1]     );
-    //printf( "xSnsrData.snsrValue[2]    %d\n\r", xSnsrData.snsrValue[2]     );
-    //printf( "xSnsrData.snsrValue[3]    %d\n\r", xSnsrData.snsrValue[3]     );
-
-    //printf( "sensor_glvr.sensor_readings.board_temp[0]    %d\n\r", sensor_glvr.sensor_readings.board_temp[0]     );
-
-
-    //assert_true(  ucStatus == XST_SUCCESS );
-    //assert_true(  xSnsrData.sensorInstance  == 0 );
-    //assert_true(  xSnsrData.sensorValueSize == 2 );
-    //assert_true(  xSnsrData.snsrSatus       == 1 );
-    //assert_true(  xSnsrData.mspSensorIndex  == 0 );
-    //assert_true(  xSnsrData.snsrValue[0]    == 60 );
-    //assert_true(  xSnsrData.snsrValue[1]    == 0 );
-    //assert_true(  xSnsrData.snsrValue[2]    == 0 );
-    //assert_true(  xSnsrData.snsrValue[3]    == 0 );
-
 }
 
 static void test_vV80QSFPMonitor( void **state ) 
@@ -681,29 +655,6 @@ static void test_vV80QSFPMonitor( void **state )
     will_return( __wrap_ucQSFPI2CMuxReadTemperature, XST_SUCCESS );
 
     vV80QSFPMonitor( );
-
-    //printf( "xSnsrData.sensorInstance  %d\n\r", xSnsrData.sensorInstance   );
-    //printf( "xSnsrData.sensorValueSize %d\n\r", xSnsrData.sensorValueSize  );
-    //printf( "xSnsrData.snsrSatus       %d\n\r", xSnsrData.snsrSatus        );
-    //printf( "xSnsrData.mspSensorIndex  %d\n\r", xSnsrData.mspSensorIndex   );
-    //printf( "xSnsrData.snsrValue[0]    %d\n\r", xSnsrData.snsrValue[0]     );
-    //printf( "xSnsrData.snsrValue[1]    %d\n\r", xSnsrData.snsrValue[1]     );
-    //printf( "xSnsrData.snsrValue[2]    %d\n\r", xSnsrData.snsrValue[2]     );
-    //printf( "xSnsrData.snsrValue[3]    %d\n\r", xSnsrData.snsrValue[3]     );
-
-    //printf( "sensor_glvr.sensor_readings.board_temp[0]    %d\n\r", sensor_glvr.sensor_readings.board_temp[0]     );
-
-
-    //assert_true(  ucStatus == XST_SUCCESS );
-    //assert_true(  xSnsrData.sensorInstance  == 0 );
-    //assert_true(  xSnsrData.sensorValueSize == 2 );
-    //assert_true(  xSnsrData.snsrSatus       == 1 );
-    //assert_true(  xSnsrData.mspSensorIndex  == 0 );
-    //assert_true(  xSnsrData.snsrValue[0]    == 60 );
-    //assert_true(  xSnsrData.snsrValue[1]    == 0 );
-    //assert_true(  xSnsrData.snsrValue[2]    == 0 );
-    //assert_true(  xSnsrData.snsrValue[3]    == 0 );
-
 }
 
 static void test_slV80VMCFetchBoardInfo( void **state ) 
@@ -731,10 +682,10 @@ static void test_slV80VMCFetchBoardInfoFail( void **state )
 static void test_vV80VoltageMonitor12VPEX( void **state ) 
 {
     ( void ) state; /* unused */
-
+    sensor_glvr.sensor_readings.voltage[e12V_PEX] = 0.0;
     will_return( __wrap_INA3221_ReadVoltage, XST_SUCCESS );
     vV80VoltageMonitor12VPEX( );
-
+    assert_true(  sensor_glvr.sensor_readings.voltage[e12V_PEX] == 12000 );
 }
 
 static void test_vV80VoltageMonitor12VPEXFail( void **state ) 
@@ -742,9 +693,10 @@ static void test_vV80VoltageMonitor12VPEXFail( void **state )
     ( void ) state; /* unused */
 
     /* Test 1 failed read */
+    sensor_glvr.sensor_readings.voltage[e12V_PEX] = 0.0;
     will_return( __wrap_INA3221_ReadVoltage, XST_FAILURE );
     vV80VoltageMonitor12VPEX( );
-    
+    assert_true(  sensor_glvr.sensor_readings.voltage[e12V_PEX] == 12000 );
 }
 
 static void test_vV80CurrentMonitor12VPEX( void **state ) 
@@ -753,7 +705,7 @@ static void test_vV80CurrentMonitor12VPEX( void **state )
 
     will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
     vV80CurrentMonitor12VPEX( );
-
+    assert_true(  sensor_glvr.sensor_readings.current[e12V_PEX] == 5000 );
 }
 
 static void test_vV80CurrentMonitor12VPEXFail( void **state ) 
@@ -763,7 +715,7 @@ static void test_vV80CurrentMonitor12VPEXFail( void **state )
     /* Test 1 failed read */
     will_return( __wrap_INA3221_ReadCurrent, XST_FAILURE );
     vV80CurrentMonitor12VPEX( );
-    
+    assert_true(  sensor_glvr.sensor_readings.current[e12V_PEX] == 5000 );    
 }
 
 static void test_vV80VoltageMonitor3v3PEX( void **state ) 
@@ -772,7 +724,7 @@ static void test_vV80VoltageMonitor3v3PEX( void **state )
 
     will_return( __wrap_INA3221_ReadVoltage, XST_SUCCESS );
     vV80VoltageMonitor3v3PEX( );
-
+    assert_true(  sensor_glvr.sensor_readings.voltage[e3V3_PEX] == 3000 );
 }
 
 static void test_vV80VoltageMonitor3v3PEXFail( void **state ) 
@@ -782,7 +734,7 @@ static void test_vV80VoltageMonitor3v3PEXFail( void **state )
     /* Test 1 failed read */
     will_return( __wrap_INA3221_ReadVoltage, XST_FAILURE );
     vV80VoltageMonitor3v3PEX( );
-    
+    assert_true(  sensor_glvr.sensor_readings.voltage[e3V3_PEX] == 3000 );
 }
 
 static void test_vV80CurrentMonitor3v3PEX( void **state ) 
@@ -791,7 +743,7 @@ static void test_vV80CurrentMonitor3v3PEX( void **state )
 
     will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
     vV80CurrentMonitor3v3PEX( );
-
+    assert_true(  sensor_glvr.sensor_readings.current[e3V3_PEX] == 4000 );
 }
 
 static void test_vV80CurrentMonitor3v3PEXFail( void **state ) 
@@ -801,7 +753,7 @@ static void test_vV80CurrentMonitor3v3PEXFail( void **state )
     /* Test 1 failed read */
     will_return( __wrap_INA3221_ReadCurrent, XST_FAILURE );
     vV80CurrentMonitor3v3PEX( );
-    
+    assert_true(  sensor_glvr.sensor_readings.current[e3V3_PEX] == 4000 );    
 }
 
 static void test_vV80VoltageMonitor1V5VCCAUX( void **state ) 
@@ -810,7 +762,7 @@ static void test_vV80VoltageMonitor1V5VCCAUX( void **state )
 
     will_return( __wrap_INA3221_ReadVoltage, XST_SUCCESS );
     vV80VoltageMonitor1V5VCCAUX( );
-
+    assert_true(  sensor_glvr.sensor_readings.voltage[e1V5_VCC_AUX] == 1561 );
 }
 
 static void test_vV80VoltageMonitor1V5VCCAUXFail( void **state ) 
@@ -820,7 +772,7 @@ static void test_vV80VoltageMonitor1V5VCCAUXFail( void **state )
     /* Test 1 failed read */
     will_return( __wrap_INA3221_ReadVoltage, XST_FAILURE );
     vV80VoltageMonitor1V5VCCAUX( );
-    
+    assert_true(  sensor_glvr.sensor_readings.voltage[e1V5_VCC_AUX] == 1561 );
 }
 
 static void test_vV80CurrentMonitor1V5VCCAUX( void **state ) 
@@ -829,7 +781,7 @@ static void test_vV80CurrentMonitor1V5VCCAUX( void **state )
 
     will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
     vV80CurrentMonitor1V5VCCAUX( );
-
+    assert_true(  sensor_glvr.sensor_readings.current[e1V5_VCC_AUX] == 710 );
 }
 
 static void test_vV80CurrentMonitor1V5VCCAUXFail( void **state ) 
@@ -839,7 +791,7 @@ static void test_vV80CurrentMonitor1V5VCCAUXFail( void **state )
     /* Test 1 failed read */
     will_return( __wrap_INA3221_ReadCurrent, XST_FAILURE );
     vV80CurrentMonitor1V5VCCAUX( );
-    
+    assert_true(  sensor_glvr.sensor_readings.current[e1V5_VCC_AUX] == 710 );    
 }
 
 static void test_vV80VoltageMonitor3V3QSFP( void **state ) 
@@ -848,7 +800,7 @@ static void test_vV80VoltageMonitor3V3QSFP( void **state )
 
     will_return( __wrap_INA3221_ReadVoltage, XST_SUCCESS );
     vV80VoltageMonitor3V3QSFP( );
-
+    assert_true(  sensor_glvr.sensor_readings.voltage[e3V3_QSFP] == 3300 );
 }
 
 static void test_vV80VoltageMonitor3V3QSFPFail( void **state ) 
@@ -858,7 +810,7 @@ static void test_vV80VoltageMonitor3V3QSFPFail( void **state )
     /* Test 1 failed read */
     will_return( __wrap_INA3221_ReadVoltage, XST_FAILURE );
     vV80VoltageMonitor3V3QSFP( );
-    
+    assert_true(  sensor_glvr.sensor_readings.voltage[e3V3_QSFP] == 3300 );
 }
 
 static void test_vV80CurrentMonitor3V3QSFP( void **state ) 
@@ -867,7 +819,7 @@ static void test_vV80CurrentMonitor3V3QSFP( void **state )
 
     will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
     vV80CurrentMonitor3V3QSFP( );
-
+    assert_true(  sensor_glvr.sensor_readings.current[e3V3_QSFP] == 720 );
 }
 
 static void test_vV80CurrentMonitor3V3QSFPFail( void **state ) 
@@ -877,7 +829,7 @@ static void test_vV80CurrentMonitor3V3QSFPFail( void **state )
     /* Test 1 failed read */
     will_return( __wrap_INA3221_ReadCurrent, XST_FAILURE );
     vV80CurrentMonitor3V3QSFP( );
-    
+    assert_true(  sensor_glvr.sensor_readings.current[e3V3_QSFP] == 720 );    
 }
 
 static void test_vV80VoltageMonitor12VAUX0( void **state ) 
@@ -886,7 +838,7 @@ static void test_vV80VoltageMonitor12VAUX0( void **state )
 
     will_return( __wrap_INA3221_ReadVoltage, XST_SUCCESS );
     vV80VoltageMonitor12VAUX0( );
-
+    assert_true(  sensor_glvr.sensor_readings.voltage[e12V_AUX0] == 12073 );
 }
 
 static void test_vV80VoltageMonitor12VAUX0Fail( void **state ) 
@@ -896,7 +848,7 @@ static void test_vV80VoltageMonitor12VAUX0Fail( void **state )
     /* Test 1 failed read */
     will_return( __wrap_INA3221_ReadVoltage, XST_FAILURE );
     vV80VoltageMonitor12VAUX0( );
-    
+    assert_true(  sensor_glvr.sensor_readings.voltage[e12V_AUX0] == 12073 );
 }
 
 static void test_vV80CurrentMonitor12VAUX0( void **state ) 
@@ -905,7 +857,7 @@ static void test_vV80CurrentMonitor12VAUX0( void **state )
 
     will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
     vV80CurrentMonitor12VAUX0( );
-
+    assert_true(  sensor_glvr.sensor_readings.current[e12V_AUX0] == 730 );
 }
 
 static void test_vV80CurrentMonitor12VAUX0Fail( void **state ) 
@@ -915,7 +867,7 @@ static void test_vV80CurrentMonitor12VAUX0Fail( void **state )
     /* Test 1 failed read */
     will_return( __wrap_INA3221_ReadCurrent, XST_FAILURE );
     vV80CurrentMonitor12VAUX0( );
-    
+    assert_true(  sensor_glvr.sensor_readings.current[e12V_AUX0] == 730 );    
 }
 
 static void test_vV80VoltageMonitor12VAUX1( void **state ) 
@@ -924,7 +876,7 @@ static void test_vV80VoltageMonitor12VAUX1( void **state )
 
     will_return( __wrap_INA3221_ReadVoltage, XST_SUCCESS );
     vV80VoltageMonitor12VAUX1( );
-
+    assert_true(  sensor_glvr.sensor_readings.voltage[e12V_AUX1] == 12074 );
 }
 
 static void test_vV80VoltageMonitor12VAUX1Fail( void **state ) 
@@ -934,7 +886,7 @@ static void test_vV80VoltageMonitor12VAUX1Fail( void **state )
     /* Test 1 failed read */
     will_return( __wrap_INA3221_ReadVoltage, XST_FAILURE );
     vV80VoltageMonitor12VAUX1( );
-    
+    assert_true(  sensor_glvr.sensor_readings.voltage[e12V_AUX1] == 12074 );
 }
 
 static void test_vV80CurrentMonitor12VAUX1( void **state ) 
@@ -943,7 +895,7 @@ static void test_vV80CurrentMonitor12VAUX1( void **state )
 
     will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
     vV80CurrentMonitor12VAUX1( );
-
+    assert_true(  sensor_glvr.sensor_readings.current[e12V_AUX1] == 740 );
 }
 
 static void test_vV80CurrentMonitor12VAUX1Fail( void **state ) 
@@ -953,7 +905,7 @@ static void test_vV80CurrentMonitor12VAUX1Fail( void **state )
     /* Test 1 failed read */
     will_return( __wrap_INA3221_ReadCurrent, XST_FAILURE );
     vV80CurrentMonitor12VAUX1( );
-    
+    assert_true(  sensor_glvr.sensor_readings.current[e12V_AUX1] == 740 );    
 }
 
 static void test_vV80VoltageMonitorVccHBM( void **state ) 
@@ -962,7 +914,7 @@ static void test_vV80VoltageMonitorVccHBM( void **state )
 
     will_return( __wrap_ucISL68221ReadVoltage0, XST_SUCCESS );
     vV80VoltageMonitorVccHBM( );
-
+    assert_true(  sensor_glvr.sensor_readings.voltage[eVCC_HBM] == 650 );
 }
 
 static void test_vV80VoltageMonitorVccHBMFail( void **state ) 
@@ -972,7 +924,7 @@ static void test_vV80VoltageMonitorVccHBMFail( void **state )
     /* Test 1 failed read */
     will_return( __wrap_ucISL68221ReadVoltage0, XST_FAILURE );
     vV80VoltageMonitorVccHBM( );
-    
+    assert_true(  sensor_glvr.sensor_readings.voltage[eVCC_HBM] == 650 );
 }
 
 static void test_vV80CurrentMonitorVccHBM( void **state ) 
@@ -981,7 +933,7 @@ static void test_vV80CurrentMonitorVccHBM( void **state )
 
     will_return( __wrap_ucISL68221ReadCurrent0, XST_SUCCESS );
     vV80CurrentMonitorVccHBM( );
-
+    assert_true(  sensor_glvr.sensor_readings.current[eVCC_HBM] == 0.75 );
 }
 
 static void test_vV80CurrentMonitorVccHBMFail( void **state ) 
@@ -991,7 +943,7 @@ static void test_vV80CurrentMonitorVccHBMFail( void **state )
     /* Test 1 failed read */
     will_return( __wrap_ucISL68221ReadCurrent0, XST_FAILURE );
     vV80CurrentMonitorVccHBM( );
-    
+     assert_true(  sensor_glvr.sensor_readings.current[eVCC_HBM] == 0.75 );   
 }
 
 static void test_vV80VoltageMonitor1V2VccoDimm( void **state ) 
@@ -1000,7 +952,7 @@ static void test_vV80VoltageMonitor1V2VccoDimm( void **state )
 
     will_return( __wrap_ucISL68221ReadVoltage1, XST_SUCCESS );
     vV80VoltageMonitor1V2VccoDimm( );
-
+    assert_true(  sensor_glvr.sensor_readings.voltage[e1V2_VCCO_DIMM] == 1266 );
 }
 
 static void test_vV80VoltageMonitor1V2VccoDimmFail( void **state ) 
@@ -1010,7 +962,7 @@ static void test_vV80VoltageMonitor1V2VccoDimmFail( void **state )
     /* Test 1 failed read */
     will_return( __wrap_ucISL68221ReadVoltage1, XST_FAILURE );
     vV80VoltageMonitor1V2VccoDimm( );
-    
+    assert_true(  sensor_glvr.sensor_readings.voltage[e1V2_VCCO_DIMM] == 1266 );
 }
 
 static void test_vV80CurrentMonitor1V2VccoDimm( void **state ) 
@@ -1019,7 +971,7 @@ static void test_vV80CurrentMonitor1V2VccoDimm( void **state )
 
     will_return( __wrap_ucISL68221ReadCurrent1, XST_SUCCESS );
     vV80CurrentMonitor1V2VccoDimm( );
-
+    assert_true(  sensor_glvr.sensor_readings.current[e1V2_VCCO_DIMM] == ( float )0.76 );
 }
 
 static void test_vV80CurrentMonitor1V2VccoDimmFail( void **state ) 
@@ -1029,7 +981,7 @@ static void test_vV80CurrentMonitor1V2VccoDimmFail( void **state )
     /* Test 1 failed read */
     will_return( __wrap_ucISL68221ReadCurrent1, XST_FAILURE );
     vV80CurrentMonitor1V2VccoDimm( );
-    
+    assert_true(  sensor_glvr.sensor_readings.current[e1V2_VCCO_DIMM] == ( float )0.76 );    
 }
 
 static void test_vV80VoltageMonitor1V2GTXAVTT( void **state ) 
@@ -1038,7 +990,7 @@ static void test_vV80VoltageMonitor1V2GTXAVTT( void **state )
 
     will_return( __wrap_ucISL68221ReadVoltage2, XST_SUCCESS );
     vV80VoltageMonitor1V2GTXAVTT( );
-
+    assert_true(  sensor_glvr.sensor_readings.voltage[e1V2_GTXAVTT] == 1267 );
 }
 
 static void test_vV80VoltageMonitor1V2GTXAVTTFail( void **state ) 
@@ -1048,7 +1000,7 @@ static void test_vV80VoltageMonitor1V2GTXAVTTFail( void **state )
     /* Test 1 failed read */
     will_return( __wrap_ucISL68221ReadVoltage2, XST_FAILURE );
     vV80VoltageMonitor1V2GTXAVTT( );
-    
+    assert_true(  sensor_glvr.sensor_readings.voltage[e1V2_GTXAVTT] == 1267 );
 }
 
 static void test_vV80CurrentMonitor1V2GTXAVTT( void **state ) 
@@ -1057,7 +1009,7 @@ static void test_vV80CurrentMonitor1V2GTXAVTT( void **state )
 
     will_return( __wrap_ucISL68221ReadCurrent2, XST_SUCCESS );
     vV80CurrentMonitor1V2GTXAVTT( );
-
+    assert_true(  sensor_glvr.sensor_readings.current[e1V2_GTXAVTT] == ( float )0.77 );
 }
 
 static void test_vV80CurrentMonitor1V2GTXAVTTFail( void **state ) 
@@ -1067,7 +1019,7 @@ static void test_vV80CurrentMonitor1V2GTXAVTTFail( void **state )
     /* Test 1 failed read */
     will_return( __wrap_ucISL68221ReadCurrent2, XST_FAILURE );
     vV80CurrentMonitor1V2GTXAVTT( );
-    
+    assert_true(  sensor_glvr.sensor_readings.current[e1V2_GTXAVTT] == ( float )0.77 );
 }
 
 static void test_vV80VoltageMonitorVccint( void **state ) 
@@ -1076,7 +1028,7 @@ static void test_vV80VoltageMonitorVccint( void **state )
 
     will_return( __wrap_ucISL68221ReadVoltage0, XST_SUCCESS );
     vV80VoltageMonitorVccint( );
-
+    assert_true(  sensor_glvr.sensor_readings.voltage[eVCCINT] == 12000 );
 }
 
 static void test_vV80VoltageMonitorVccintFail( void **state ) 
@@ -1086,16 +1038,15 @@ static void test_vV80VoltageMonitorVccintFail( void **state )
     /* Test 1 failed read */
     will_return( __wrap_ucISL68221ReadVoltage0, XST_FAILURE );
     vV80VoltageMonitorVccint( );
-    
+    assert_true(  sensor_glvr.sensor_readings.voltage[eVCCINT] == 12000 );
 }
 
 static void test_vV80CurrentMonitorVccint( void **state ) 
 {
     ( void ) state; /* unused */
-
     will_return( __wrap_ucISL68221ReadCurrent0, XST_SUCCESS );
     vV80CurrentMonitorVccint( );
-
+    assert_true(  sensor_glvr.sensor_readings.current[eVCCINT] == 4 );
 }
 
 static void test_vV80CurrentMonitorVccintFail( void **state ) 
@@ -1105,7 +1056,7 @@ static void test_vV80CurrentMonitorVccintFail( void **state )
     /* Test 1 failed read */
     will_return( __wrap_ucISL68221ReadCurrent0, XST_FAILURE );
     vV80CurrentMonitorVccint( );
-    
+    assert_true(  sensor_glvr.sensor_readings.current[eVCCINT] == 4 ); 
 }
 
 static void test_scV80AsdmReadPower( void **state ) 
@@ -1894,10 +1845,8 @@ static void test_scV80AsdmReadCurrent1V2GTXAVTFail( void **state )
 static void test_vV80PowerMonitor( void **state ) 
 {
     ( void ) state; /* unused */
-    snsrRead_t xSnsrData   = {0};
 
     /* Test 1 Zero Value */
-    //vINA3221SetNewValue( 0 );
     will_return( __wrap_INA3221_ReadVoltage, XST_SUCCESS );
     vV80VoltageMonitor12VPEX( );
     will_return( __wrap_INA3221_ReadVoltage, XST_SUCCESS );
@@ -1906,13 +1855,12 @@ static void test_vV80PowerMonitor( void **state )
     vV80CurrentMonitor12VPEX( );
     will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
     vV80CurrentMonitor3v3PEX( );
-    vV80PowerMonitor( &xSnsrData );
+    vV80PowerMonitor( );
 
 }
 static void test_vV80PowerMonitorZero( void **state ) 
 {
     ( void ) state; /* unused */
-    snsrRead_t xSnsrData   = {0};
 
     /* Test 1 Zero Value */
     vINA3221SetNewValue( 0 );
@@ -1924,14 +1872,13 @@ static void test_vV80PowerMonitorZero( void **state )
     vV80CurrentMonitor12VPEX( );
     will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
     vV80CurrentMonitor3v3PEX( );
-    vV80PowerMonitor( &xSnsrData );
+    vV80PowerMonitor( );
 
 }
 
 static void test_vV80PowerMonitorThresholdCross( void **state ) 
 {
     ( void ) state; /* unused */
-    snsrRead_t xSnsrData   = {0};
 
     /* Test 1 Threshold Cross */
     vINA3221SetNewValue( 6000 );
@@ -1947,7 +1894,7 @@ static void test_vV80PowerMonitorThresholdCross( void **state )
     will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
     vV80CurrentMonitor3v3PEX( );
 
-    vV80PowerMonitor( &xSnsrData );
+    vV80PowerMonitor( );
 
     will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
     vV80CurrentMonitor12VPEX( );
@@ -1960,7 +1907,7 @@ static void test_vV80PowerMonitorThresholdCross( void **state )
     will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
     vV80CurrentMonitor3v3PEX( );
 
-    vV80PowerMonitor( &xSnsrData );
+    vV80PowerMonitor( );
 
     will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
     vV80CurrentMonitor12VPEX( );
@@ -1973,7 +1920,7 @@ static void test_vV80PowerMonitorThresholdCross( void **state )
     will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
     vV80CurrentMonitor3v3PEX( );
 
-    vV80PowerMonitor( &xSnsrData );
+    vV80PowerMonitor( );
 
     will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
     vV80CurrentMonitor12VPEX( );
@@ -1986,7 +1933,7 @@ static void test_vV80PowerMonitorThresholdCross( void **state )
     will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
     vV80CurrentMonitor3v3PEX( );
 
-    vV80PowerMonitor( &xSnsrData );
+    vV80PowerMonitor( );
 
     will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
     vV80CurrentMonitor12VPEX( );
@@ -1999,7 +1946,7 @@ static void test_vV80PowerMonitorThresholdCross( void **state )
     will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
     vV80CurrentMonitor3v3PEX( );
 
-    vV80PowerMonitor( &xSnsrData );
+    vV80PowerMonitor( );
 
     will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
     vV80CurrentMonitor12VPEX( );
@@ -2012,7 +1959,7 @@ static void test_vV80PowerMonitorThresholdCross( void **state )
     will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
     vV80CurrentMonitor3v3PEX( );
 
-    vV80PowerMonitor( &xSnsrData );
+    vV80PowerMonitor( );
 
     will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
     vV80CurrentMonitor12VPEX( );
@@ -2025,7 +1972,7 @@ static void test_vV80PowerMonitorThresholdCross( void **state )
     will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
     vV80CurrentMonitor3v3PEX( );
 
-    vV80PowerMonitor( &xSnsrData );
+    vV80PowerMonitor( );
 
     will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
     vV80CurrentMonitor12VPEX( );
@@ -2038,7 +1985,7 @@ static void test_vV80PowerMonitorThresholdCross( void **state )
     will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
     vV80CurrentMonitor3v3PEX( );
 
-    vV80PowerMonitor( &xSnsrData );
+    vV80PowerMonitor( );
 
     will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
     vV80CurrentMonitor12VPEX( );
@@ -2051,7 +1998,7 @@ static void test_vV80PowerMonitorThresholdCross( void **state )
     will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
     vV80CurrentMonitor3v3PEX( );
 
-    vV80PowerMonitor( &xSnsrData );
+    vV80PowerMonitor( );
 
     will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
     vV80CurrentMonitor12VPEX( );
@@ -2064,7 +2011,7 @@ static void test_vV80PowerMonitorThresholdCross( void **state )
     will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
     vV80CurrentMonitor3v3PEX( );
 
-    vV80PowerMonitor( &xSnsrData );
+    vV80PowerMonitor( );
 
     will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
     vV80CurrentMonitor12VPEX( );
@@ -2077,9 +2024,7 @@ static void test_vV80PowerMonitorThresholdCross( void **state )
     will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
     vV80CurrentMonitor3v3PEX( );
 
-    vV80PowerMonitor( &xSnsrData );
-
-
+    vV80PowerMonitor( );
 }
 
 

@@ -90,28 +90,28 @@ s8 scV80AsdmGetCurrentNames( u8 ucIndex, char8* pucSnsrName, u8 *pucSensorId, se
 
 s8 scV80AsdmGetQSFPName( u8 ucIndex, char8* pucSnsrName, u8 *pucSensorId, sensorMonitorFunc *pxSensorHandler );
 
-void vV80VoltageMonitor12VPEX( );
-void vV80VoltageMonitor3v3PEX( );
-void vV80VoltageMonitor1V5VCCAUX( );
-void vV80VoltageMonitor3V3QSFP( );
-void vV80VoltageMonitor12VAUX0( );
-void vV80VoltageMonitor12VAUX1( );
-void vV80VoltageMonitorVccHBM( );
-void vV80VoltageMonitor1V2VccoDimm( );
-void vV80VoltageMonitor1V2GTXAVTT( );
+void vV80VoltageMonitor12VPEX( void );
+void vV80VoltageMonitor3v3PEX( void );
+void vV80VoltageMonitor1V5VCCAUX( void );
+void vV80VoltageMonitor3V3QSFP( void );
+void vV80VoltageMonitor12VAUX0( void );
+void vV80VoltageMonitor12VAUX1( void );
+void vV80VoltageMonitorVccHBM( void );
+void vV80VoltageMonitor1V2VccoDimm( void );
+void vV80VoltageMonitor1V2GTXAVTT( void );
 
-void vV80CurrentMonitor12VPEX( );
-void vV80CurrentMonitor3v3PEX( );
-void vV80CurrentMonitorVccint( );
-void vV80CurrentMonitor1V5VCCAUX( );
-void vV80CurrentMonitor3V3QSFP( );
-void vV80CurrentMonitor12VAUX0( );
-void vV80CurrentMonitor12VAUX1( );
-void vV80CurrentMonitorVccHBM( );
-void vV80CurrentMonitor1V2VccoDimm( );
-void vV80CurrentMonitor1V2GTXAVTT( );
+void vV80CurrentMonitor12VPEX( void );
+void vV80CurrentMonitor3v3PEX( void );
+void vV80CurrentMonitorVccint( void );
+void vV80CurrentMonitor1V5VCCAUX( void );
+void vV80CurrentMonitor3V3QSFP( void );
+void vV80CurrentMonitor12VAUX0( void );
+void vV80CurrentMonitor12VAUX1( void );
+void vV80CurrentMonitorVccHBM( void );
+void vV80CurrentMonitor1V2VccoDimm( void );
+void vV80CurrentMonitor1V2GTXAVTT( void );
 
-void vV80PowerMonitor( );
-void vV80VoltageMonitorVccint( );
+void vV80PowerMonitor( void );
+void vV80VoltageMonitorVccint( void );
 
 #endif
