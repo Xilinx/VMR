@@ -146,16 +146,6 @@ u8 ucQSFPI2CMuxReadTemperature( float *pfTemperatureValue, u8 ucSensorInstance )
 
     if ( NULL != pfTemperatureValue )
     {
-
-/* TODO Remove the test code before merging back to VMR main */
-#ifdef V80_ON_V70
-        *pfTemperatureValue = 32+ucSensorInstance;
-        if( 2 == ucSensorInstance )
-        {
-            ucStatus = XST_DEVICE_NOT_FOUND;
-        }
-        return ucStatus;
-#else
         unsigned char ucQSFPControlRegister = QSFP_IO_EXPANDER_INPUT_REG;
         unsigned char ucQSFPControlInput    = 0;
         unsigned char ucLsbTempReg          = QSFP_LSB_TEMPERATURE_REG;
@@ -328,5 +318,4 @@ u8 ucQSFPI2CMuxReadTemperature( float *pfTemperatureValue, u8 ucSensorInstance )
     }
 
     return ucStatus;
-#endif
 }

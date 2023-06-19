@@ -11,11 +11,6 @@
 u8 ucCAT34TS02ReadTemperature( u8 ucI2cNum, u8 ucSlaveAddr, s16 *pssTemperatureValue )
 {
     u8 ucStatus             = 1;
-/* TODO Remove the test code before merging back to VMR main */
-#ifdef V80_ON_V70
-    *pssTemperatureValue    = 38;
-    return ucStatus;
-#else
     u16 usTempHexVal        = 0;
     u8 ucI2cReadBuff[2]     = {0};
     u8 ucI2cReadLen         = 2;
@@ -55,8 +50,6 @@ u8 ucCAT34TS02ReadTemperature( u8 ucI2cNum, u8 ucSlaveAddr, s16 *pssTemperatureV
         }
     }
     return ucStatus;
-
-#endif
 }
 
 u8 ucCAT34TS02ReadByte( u8 ucI2cNum, u8 ucSlaveAddr, u16 *pusAddressOffset,u8 *pucRegisterValue )

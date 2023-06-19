@@ -358,36 +358,24 @@ void vV80TemperatureMonitor( void )
     }
 
     /* VCC_HBM Temp*/
-/* TODO Remove the test code before merging back to VMR main */
-#ifdef V80_ON_V70
-    sensor_glvr.sensor_readings.fVccHbmTemp = 31;
-#else
     scStatus =  ucISL68221ReadTemperature0( ucI2cMain, SLAVE_ADDRESS_ISL68221_1, &sensor_glvr.sensor_readings.fVccHbmTemp );
-#endif
+
     if( XST_FAILURE == scStatus )
     {
         VMC_DBG( "Failed to read VCC_HBM temp from : 0x%x", SLAVE_ADDRESS_ISL68221_1 );
     }
 
     /* 1V2 VCCO DIMM Temp*/
-/* TODO Remove the test code before merging back to VMR main */
-#ifdef V80_ON_V70
-    sensor_glvr.sensor_readings.f1V2VccoDimmTemp = 32;
-#else
     scStatus =  ucISL68221ReadTemperature1( ucI2cMain, SLAVE_ADDRESS_ISL68221_1, &sensor_glvr.sensor_readings.f1V2VccoDimmTemp );
-#endif
+
     if( XST_FAILURE == scStatus )
     {
         VMC_DBG( "Failed to read VCCO DIMM temp from : 0x%x", SLAVE_ADDRESS_ISL68221_1 );
     }
 
     /* GTXAVTT Temp*/
-/* TODO Remove the test code before merging back to VMR main */    
-#ifdef V80_ON_V70
-    sensor_glvr.sensor_readings.f1V2GtxaVttTemp = 33;
-#else
     scStatus =  ucISL68221ReadTemperature2( ucI2cMain, SLAVE_ADDRESS_ISL68221_1, &sensor_glvr.sensor_readings.f1V2GtxaVttTemp );
-#endif
+
     if( XST_FAILURE == scStatus )
     {
         VMC_DBG( "Failed to read GTXAVTT temp from : 0x%x", SLAVE_ADDRESS_ISL68221_1 );
@@ -558,10 +546,6 @@ void vV80VoltageMonitor1V5VCCAUX( void )
     }
     else
     {
-        /* TODO Remove the test code before merging back to VMR main */
-#ifdef V80_ON_V70
-        fVoltage = 1561;
-#endif
         sensor_glvr.sensor_readings.voltage[e1V5_VCC_AUX] = fVoltage;
     }
 }
@@ -578,10 +562,6 @@ void vV80CurrentMonitor1V5VCCAUX( void )
     }
     else
     {
-        /* TODO Remove the test code before merging back to VMR main */
-#ifdef V80_ON_V70
-        fCurrent = 710;
-#endif
         sensor_glvr.sensor_readings.current[e1V5_VCC_AUX] = fCurrent;
     }
 }
@@ -589,9 +569,6 @@ void vV80CurrentMonitor1V5VCCAUX( void )
 void vV80VoltageMonitor3V3QSFP( void )
 { 
     float fVoltage  = 0.0;
-#ifdef V80_ON_V70
-    fVoltage = 3362;
-#else
     u8 scStatus     = XST_FAILURE;
     scStatus = INA3221_ReadVoltage( ucI2cMain, SLAVE_ADDRESS_INA3221_1, 0, &fVoltage );
     if( XST_SUCCESS != scStatus )
@@ -602,16 +579,12 @@ void vV80VoltageMonitor3V3QSFP( void )
     {
         sensor_glvr.sensor_readings.voltage[e3V3_QSFP] = fVoltage;
     }
-#endif
+
 }
 
 void vV80CurrentMonitor3V3QSFP( void )
 {  
     float fCurrent  = 0.0;
-/* TODO Remove the test code before merging back to VMR main */
-#ifdef V80_ON_V70
-    fCurrent = 720;
-#else
     u8 scStatus     = XST_FAILURE;
     scStatus = INA3221_ReadCurrent( ucI2cMain, SLAVE_ADDRESS_INA3221_1, 0, &fCurrent );
     if( XST_SUCCESS != scStatus )
@@ -622,15 +595,12 @@ void vV80CurrentMonitor3V3QSFP( void )
     {
         sensor_glvr.sensor_readings.current[e3V3_QSFP] = fCurrent;
     }
-#endif
+
 }
 
 void vV80VoltageMonitor12VAUX0( void )
 {
     float fVoltage  = 0.0;
-#ifdef V80_ON_V70
-    fVoltage = 12073;
-#else
     u8 scStatus     = XST_FAILURE;
     scStatus = INA3221_ReadVoltage( ucI2cMain, SLAVE_ADDRESS_INA3221_1, 1, &fVoltage );
     if( XST_SUCCESS != scStatus )
@@ -641,16 +611,11 @@ void vV80VoltageMonitor12VAUX0( void )
     {
         sensor_glvr.sensor_readings.voltage[e12V_AUX0] = fVoltage;
     }
-#endif
 }
 
 void vV80CurrentMonitor12VAUX0( void )
 {
     float fCurrent  = 0.0;
-/* TODO Remove the test code before merging back to VMR main */
-#ifdef V80_ON_V70
-    fCurrent = 730;
-#else
     u8 scStatus     = XST_FAILURE;
     scStatus = INA3221_ReadCurrent( ucI2cMain, SLAVE_ADDRESS_INA3221_1, 1, &fCurrent );
     if( XST_SUCCESS != scStatus )
@@ -661,15 +626,11 @@ void vV80CurrentMonitor12VAUX0( void )
     {
         sensor_glvr.sensor_readings.current[e12V_AUX0] = fCurrent;
     }
-#endif
 }
 
 void vV80VoltageMonitor12VAUX1( void )
 {
     float fVoltage  = 0.0;
-#ifdef V80_ON_V70
-    fVoltage = 12074;
-#else
     u8 scStatus     = XST_FAILURE;
     scStatus = INA3221_ReadVoltage( ucI2cMain, SLAVE_ADDRESS_INA3221_1, 2, &fVoltage );
     if( XST_SUCCESS != scStatus )
@@ -680,16 +641,11 @@ void vV80VoltageMonitor12VAUX1( void )
     {
         sensor_glvr.sensor_readings.voltage[e12V_AUX1] = fVoltage;
     }
-#endif
 }
 
 void vV80CurrentMonitor12VAUX1( void )
 {
     float fCurrent  = 0.0;
-/* TODO Remove the test code before merging back to VMR main */
-#ifdef V80_ON_V70
-    fCurrent = 740;
-#else
     u8 scStatus     = XST_FAILURE;
     scStatus = INA3221_ReadCurrent( ucI2cMain, SLAVE_ADDRESS_INA3221_1, 2, &fCurrent );
     if( XST_SUCCESS != scStatus )
@@ -699,16 +655,12 @@ void vV80CurrentMonitor12VAUX1( void )
     else
     {
         sensor_glvr.sensor_readings.current[e12V_AUX1] = fCurrent;
-    }
-#endif   
+    } 
 }
 
 void vV80VoltageMonitorVccHBM( void )
 {
     float fVoltage  = 0.0;
-#ifdef V80_ON_V70
-    fVoltage = 650;
-#else
     u8 scStatus     = XST_FAILURE;
     scStatus =  ucISL68221ReadVoltage0( ucI2cMain, SLAVE_ADDRESS_ISL68221_1, &fVoltage );
     if( XST_SUCCESS != scStatus )
@@ -719,16 +671,11 @@ void vV80VoltageMonitorVccHBM( void )
     {
         sensor_glvr.sensor_readings.voltage[eVCC_HBM] = fVoltage;
     }
-#endif
 }
 
 void vV80CurrentMonitorVccHBM( void )
 {
     float fCurrentInA   = 0.0;
-/* TODO Remove the test code before merging back to VMR main */
-#ifdef V80_ON_V70
-    fCurrentInA = 0.75;
-#else
     u8 scStatus         = XST_SUCCESS;
     scStatus =  ucISL68221ReadCurrent0( ucI2cMain, SLAVE_ADDRESS_ISL68221_1, &fCurrentInA );
     if( XST_SUCCESS != scStatus )
@@ -738,16 +685,12 @@ void vV80CurrentMonitorVccHBM( void )
     else
     {
         sensor_glvr.sensor_readings.current[eVCC_HBM] = fCurrentInA; /* In Amps */
-    }
-#endif   
+    } 
 }
 
 void vV80VoltageMonitor1V2VccoDimm( void )
 {
     float fVoltage  = 0.0;
-#ifdef V80_ON_V70
-    fVoltage = 1266;
-#else
     u8 scStatus     = XST_SUCCESS;
     scStatus =  ucISL68221ReadVoltage1( ucI2cMain, SLAVE_ADDRESS_ISL68221_1, &fVoltage );
     if( XST_SUCCESS != scStatus )
@@ -758,16 +701,11 @@ void vV80VoltageMonitor1V2VccoDimm( void )
     {
         sensor_glvr.sensor_readings.voltage[e1V2_VCCO_DIMM] = fVoltage;
     }
-#endif
 }
 
 void vV80CurrentMonitor1V2VccoDimm( void )
 {
     float fCurrentInA   = 0.0;
-/* TODO Remove the test code before merging back to VMR main */
-#ifdef V80_ON_V70
-    fCurrentInA = 0.76;
-#else
     u8 scStatus         = XST_SUCCESS;
     scStatus =  ucISL68221ReadCurrent1( ucI2cMain, SLAVE_ADDRESS_ISL68221_1, &fCurrentInA );
     if( XST_SUCCESS != scStatus )
@@ -778,15 +716,11 @@ void vV80CurrentMonitor1V2VccoDimm( void )
     {
         sensor_glvr.sensor_readings.current[e1V2_VCCO_DIMM] = fCurrentInA; /* In Amps */
     }
-#endif
 }
 
 void vV80VoltageMonitor1V2GTXAVTT( void )
 {
     float fVoltage  = 0.0;
-#ifdef V80_ON_V70
-    fVoltage = 1267;
-#else
     u8 scStatus     = XST_SUCCESS;
     scStatus =  ucISL68221ReadVoltage2( ucI2cMain, SLAVE_ADDRESS_ISL68221_1, &fVoltage );
     if( XST_SUCCESS != scStatus )
@@ -797,16 +731,11 @@ void vV80VoltageMonitor1V2GTXAVTT( void )
     {
         sensor_glvr.sensor_readings.voltage[e1V2_GTXAVTT] = fVoltage;
     }
-#endif
 }
 
 void vV80CurrentMonitor1V2GTXAVTT( void )
 {
     float fCurrentInA   = 0.0;
-/* TODO Remove the test code before merging back to VMR main */
-#ifdef V80_ON_V70
-    fCurrentInA = 0.77;
-#else
     u8 scStatus         = XST_SUCCESS;
     scStatus =  ucISL68221ReadCurrent2( ucI2cMain, SLAVE_ADDRESS_ISL68221_1, &fCurrentInA );
     if( XST_SUCCESS != scStatus )
@@ -817,7 +746,6 @@ void vV80CurrentMonitor1V2GTXAVTT( void )
     {
         sensor_glvr.sensor_readings.current[e1V2_GTXAVTT] = fCurrentInA; /* In Amps */
     }
-#endif  
 }
 
 
