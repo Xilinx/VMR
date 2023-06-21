@@ -6,98 +6,295 @@
 #include "cl_i2c.h"
 #include "../inc/isl68221.h"
 
-#define STATUS_FAILURE		(1)
-u8 ISL68221_write_register(u8 i2c_num, u8 SlaveAddr, u8 register_address, u8 *register_content)
+#define STATUS_FAILURE      ( 1 )
+
+u8 ucISL68221WriteRegister( u8 ucI2cNum, u8 ucSlaveAddr, u8 ucRegisterAddress, u8 *pucRegisterContent )
 {
-    u8 status = 0;
+    u8 ucWriteData[2]   = {0};
+    u8 ucStatus         = STATUS_FAILURE;
+    
+    if( NULL != pucRegisterContent )
+    {
+        ucWriteData[0]      = ucRegisterAddress;
+        ucWriteData[1]      = *pucRegisterContent;
+        
+        ucStatus = i2c_send(ucI2cNum, ucSlaveAddr, ucWriteData, 2 );
+    }
 
-    u8 write_data[2]= {0};
-    write_data[0] = register_address;
-    write_data[1] = *register_content;
-    status = i2c_send(i2c_num, SlaveAddr, write_data, 2);
-
-    return status;
+    return( ucStatus );
 }
-u8 ISL68221_read_register(u8 i2c_num, u8 SlaveAddr, u8 register_address, u8 *register_content)
+
+u8 ucISL68221ReadRegister( u8 ucI2cNum, u8 ucSlaveAddr, u8 ucRegisterAddress, u8 *pucRegisterContent )
 {
-    u8 status = 0;
-
-    status = i2c_send_rs_recv(i2c_num, SlaveAddr, &register_address,1, register_content, 2);
-
-    return status;
+    u8 ucStatus = STATUS_FAILURE;
+    
+    if( NULL != pucRegisterContent )
+    {
+        ucStatus = i2c_send_rs_recv( ucI2cNum, ucSlaveAddr, &ucRegisterAddress,1, pucRegisterContent, 2 );
+    }
+    
+    return( ucStatus );
 }
-u8 ISL68221_ReadVCCINT_Voltage(u8 busnum, u8 slaveAddr, float *voltageInmV)
+
+u8 ucISL68221ReadVoltage0( u8 ucBusNum, u8 ucSlaveAddr, float *pfVoltageInmV )
 {
-    u8 wbuf[8] = {0};
-    u8 rbuf[8]= {0};
-    u8 status = 0;
-    u16 rddata = 0;
+    u8 ucWriteBuf[8]    = {0};
+    u8 ucReadBuf[8]     = {0};
+    u8 ucStatus         = 1;
+    u16 usReadData      = 0;
 
-    wbuf[0] = ISL68221_SELECT_PAGE_VCCINT;
-
-    status = ISL68221_write_register(busnum, slaveAddr, ISL68221_PAGE_REGISTER,(u8 *)wbuf);
-    if (STATUS_FAILURE == status)
+    if( NULL != pfVoltageInmV )
     {
-    	return status;
+        ucWriteBuf[0] = ISL68221_SELECT_PAGE_RAIL_0;
+
+        ucStatus = ucISL68221WriteRegister( ucBusNum, ucSlaveAddr, ISL68221_PAGE_REGISTER,( u8 * )ucWriteBuf );
+        if( STATUS_FAILURE == ucStatus )
+        {
+            return ucStatus;
+        }
+
+        ucStatus = ucISL68221ReadRegister( ucBusNum, ucSlaveAddr, ISL68221_OUTPUT_VOLTAGE_REGISTER,( u8 * )&ucReadBuf[0] );
+        if( STATUS_FAILURE == ucStatus ) 
+        {
+            return ucStatus;
+        }
+        usReadData = ( ucReadBuf[1] << 8 ) | ucReadBuf[0];
+        *pfVoltageInmV = ( ( float ) usReadData );
     }
 
-    status = ISL68221_read_register(busnum, slaveAddr, ISL68221_OUTPUT_VOLTAGE_REGISTER,(u8 *)&rbuf[0]);
-    if (STATUS_FAILURE == status)
+    return ucStatus;
+}
+
+u8 ucISL68221ReadVoltage1(u8 ucBusNum, u8 ucSlaveAddr, float *pfVoltageInmV)
+{
+    u8 ucWriteBuf[8]    = {0};
+    u8 ucReadBuf[8]     = {0};
+    u8 ucStatus         = 1;
+    u16 usReadData      = 0;
+
+    if( NULL != pfVoltageInmV )
     {
-    	return status;
+        ucWriteBuf[0] = ISL68221_SELECT_PAGE_RAIL_1;
+
+        ucStatus = ucISL68221WriteRegister( ucBusNum, ucSlaveAddr, ISL68221_PAGE_REGISTER,( u8 * )ucWriteBuf );
+        if( STATUS_FAILURE == ucStatus )
+        {
+            return ucStatus;
+        }
+
+        ucStatus = ucISL68221ReadRegister( ucBusNum, ucSlaveAddr, ISL68221_OUTPUT_VOLTAGE_REGISTER,( u8 * )&ucReadBuf[0] );
+        if( STATUS_FAILURE == ucStatus )
+        {
+            return ucStatus;
+        }
+        usReadData = ( ucReadBuf[1] << 8 ) | ucReadBuf[0];
+        *pfVoltageInmV = ( ( float ) usReadData );
     }
-    rddata = (rbuf[1] << 8) | rbuf[0];
-    *voltageInmV = ((float) rddata);
-    return status;
+    
+    return ucStatus;
+}
+
+u8 ucISL68221ReadVoltage2( u8 ucBusNum, u8 ucSlaveAddr, float *pfVoltageInmV )
+{
+    u8 ucWriteBuf[8]    = {0};
+    u8 ucReadBuf[8]     = {0};
+    u8 ucStatus         = 1;
+    u16 usReadData      = 0;
+
+    if( NULL != pfVoltageInmV )
+    {
+        ucWriteBuf[0] = ISL68221_SELECT_PAGE_RAIL_2;
+
+        ucStatus = ucISL68221WriteRegister( ucBusNum, ucSlaveAddr, ISL68221_PAGE_REGISTER,( u8 * )ucWriteBuf );
+        if( STATUS_FAILURE == ucStatus )
+        {
+            return ucStatus;
+        }
+
+        ucStatus = ucISL68221ReadRegister( ucBusNum, ucSlaveAddr, ISL68221_OUTPUT_VOLTAGE_REGISTER,( u8 * )&ucReadBuf[0] );
+        if( STATUS_FAILURE == ucStatus )
+        {
+            return ucStatus;
+        }
+        usReadData = ( ucReadBuf[1] << 8 ) | ucReadBuf[0];
+        *pfVoltageInmV = ( ( float ) usReadData );
+    }
+    
+    return ucStatus;
+}
+
+u8 ucISL68221ReadCurrent0( u8 ucBusNum, u8 ucSlaveAddr, float *pfCurrentInA )
+{
+    u8 ucWriteBuf[8]    = {0};
+    u8 ucReadBuf[8]     = {0};
+    u8 ucStatus         = 1;
+    u16 usReadData      = 0;
+
+    if( NULL != pfCurrentInA )
+    {
+        ucWriteBuf[0] = ISL68221_SELECT_PAGE_RAIL_0;
+
+        ucStatus = ucISL68221WriteRegister( ucBusNum, ucSlaveAddr, ISL68221_PAGE_REGISTER, ( u8 * )ucWriteBuf );
+        if( STATUS_FAILURE == ucStatus )
+        {
+            return ucStatus;
+        }
+
+        ucStatus = ucISL68221ReadRegister( ucBusNum, ucSlaveAddr, ISL68221_OUTPUT_CURRENT_REGISTER, ( u8 * )&ucReadBuf[0] );
+        if( STATUS_FAILURE == ucStatus )
+        {
+            return ucStatus;
+        }
+        usReadData = ( ucReadBuf[1] << 8 ) | ucReadBuf[0];
+        *pfCurrentInA = ( ( float ) usReadData )/10;
+    }
+    
+    return ucStatus;
 
 }
-u8 ISL68221_ReadVCCINT_Current(u8 busnum, u8 slaveAddr, float *currentInA)
+
+u8 ucISL68221ReadCurrent1( u8 ucBusNum, u8 ucSlaveAddr, float *pfCurrentInA )
 {
-    u8 wbuf[8] = {0};
-    u8 rbuf[8] = {0};
-    u8 status = 0;
-    u16 rddata = 0;
+    u8 ucWriteBuf[8]    = {0};
+    u8 ucReadBuf[8]     = {0};
+    u8 ucStatus         = 1;
+    u16 usReadData      = 0;
 
-    wbuf[0] = ISL68221_SELECT_PAGE_VCCINT;
-
-    status = ISL68221_write_register(busnum, slaveAddr, ISL68221_PAGE_REGISTER,(u8 *)wbuf);
-    if (STATUS_FAILURE == status)
+    if( NULL != pfCurrentInA )
     {
-    	return status;
-    }
+        ucWriteBuf[0] = ISL68221_SELECT_PAGE_RAIL_1;
 
-    status = ISL68221_read_register(busnum, slaveAddr, ISL68221_OUTPUT_CURRENT_REGISTER,(u8 *)&rbuf[0]);
-    if (STATUS_FAILURE == status)
-    {
-    	return status;
+        ucStatus = ucISL68221WriteRegister( ucBusNum, ucSlaveAddr, ISL68221_PAGE_REGISTER, ( u8 * )ucWriteBuf );
+        if( STATUS_FAILURE == ucStatus )
+        {
+            return ucStatus;
+        }
+
+        ucStatus = ucISL68221ReadRegister( ucBusNum, ucSlaveAddr, ISL68221_OUTPUT_CURRENT_REGISTER,( u8 * )&ucReadBuf[0] );
+        if( STATUS_FAILURE == ucStatus )
+        {
+            return ucStatus;
+        }
+        usReadData = ( ucReadBuf[1] << 8 ) | ucReadBuf[0];
+        *pfCurrentInA = ( ( float ) usReadData )/10;
     }
-    rddata = (rbuf[1] << 8) | rbuf[0];
-    *currentInA = ((float) rddata)/10;
-    return status;
+    
+    return ucStatus;
+}
+
+u8 ucISL68221ReadCurrent2( u8 ucBusNum, u8 ucSlaveAddr, float *pfCurrentInA )
+{
+    u8 ucWriteBuf[8]    = {0};
+    u8 ucReadBuf[8]     = {0};
+    u8 ucStatus         = 1;
+    u16 usReadData      = 0;
+
+    if( NULL != pfCurrentInA )
+    {
+        ucWriteBuf[0] = ISL68221_SELECT_PAGE_RAIL_2;
+
+        ucStatus = ucISL68221WriteRegister( ucBusNum, ucSlaveAddr, ISL68221_PAGE_REGISTER,( u8 * )ucWriteBuf );
+        if( STATUS_FAILURE == ucStatus )
+        {
+            return ucStatus;
+        }
+
+        ucStatus = ucISL68221ReadRegister( ucBusNum, ucSlaveAddr, ISL68221_OUTPUT_CURRENT_REGISTER,( u8 * )&ucReadBuf[0] );
+        if( STATUS_FAILURE == ucStatus )
+        {
+            return ucStatus;
+        }
+        usReadData = ( ucReadBuf[1] << 8 ) | ucReadBuf[0];
+        *pfCurrentInA = ( ( float ) usReadData )/10;
+    }
+    
+    return ucStatus;
 
 }
-u8 ISL68221_ReadVCCINT_Temperature(u8 busnum, u8 slaveAddr, float *temperature)
+
+u8 ucISL68221ReadTemperature0( u8 ucBusNum, u8 ucSlaveAddr, float *pfTemperature )
 {
-    u8 wbuf[8] = {0};
-    u8 rbuf[8] = {0};
-    u8 status = 0;
-    u16 rddata = 0;
+    u8 ucWriteBuf[8]    = {0};
+    u8 ucReadBuf[8]     = {0};
+    u8 ucStatus         = 1;
+    u16 usReadData      = 0;
 
-    wbuf[0] = ISL68221_SELECT_PAGE_VCCINT;
-
-    status = ISL68221_write_register(busnum, slaveAddr, ISL68221_PAGE_REGISTER,(u8 *)wbuf);
-    if (STATUS_FAILURE == status)
+    if( NULL != pfTemperature )
     {
-    	return status;
-    }
+        ucWriteBuf[0] = ISL68221_SELECT_PAGE_RAIL_0;
 
-    status = ISL68221_read_register(busnum, slaveAddr, ISL68221_READ_POWERSTAGE_TEMPERATURE,(u8 *)&rbuf[0]);
-    if (STATUS_FAILURE == status)
+        ucStatus = ucISL68221WriteRegister( ucBusNum, ucSlaveAddr, ISL68221_PAGE_REGISTER, ( u8 * )ucWriteBuf );
+        if( STATUS_FAILURE == ucStatus )
+        {
+            return ucStatus;
+        }
+
+        ucStatus = ucISL68221ReadRegister(ucBusNum, ucSlaveAddr, ISL68221_READ_TEMPERATURE_0, ( u8 * )&ucReadBuf[0] );
+        if( STATUS_FAILURE == ucStatus )
+        {
+            return ucStatus;
+        }
+        usReadData = ( ucReadBuf[1] << 8 ) | ucReadBuf[0];
+        *pfTemperature = ( ( float ) usReadData );
+    }
+    
+    return ucStatus;
+}
+
+u8 ucISL68221ReadTemperature1( u8 ucBusNum, u8 ucSlaveAddr, float *pfTemperature )
+{
+    u8 ucWriteBuf[8]    = {0};
+    u8 ucReadBuf[8]     = {0};
+    u8 ucStatus         = 1;
+    u16 usReadData      = 0;
+
+    if( NULL != pfTemperature )
     {
-    	return status;
-    }
-    rddata = (rbuf[1] << 8) | rbuf[0];
-    *temperature = ((float) rddata);
-    return status;
+        ucWriteBuf[0] = ISL68221_SELECT_PAGE_RAIL_0;
 
+        ucStatus = ucISL68221WriteRegister( ucBusNum, ucSlaveAddr, ISL68221_PAGE_REGISTER, ( u8 * )ucWriteBuf );
+        if( STATUS_FAILURE == ucStatus )
+        {
+            return ucStatus;
+        }
+
+        ucStatus = ucISL68221ReadRegister( ucBusNum, ucSlaveAddr, ISL68221_READ_TEMPERATURE_1, ( u8 * )&ucReadBuf[0] );
+        if( STATUS_FAILURE == ucStatus )
+        {
+            return ucStatus;
+        }
+        usReadData = (ucReadBuf[1] << 8) | ucReadBuf[0];
+        *pfTemperature = ( ( float ) usReadData) ;
+    }
+        
+    return ucStatus;
+}
+
+u8 ucISL68221ReadTemperature2(u8 ucBusNum, u8 ucSlaveAddr, float *pfTemperature)
+{
+    u8 ucWriteBuf[8]    = {0};
+    u8 ucReadBuf[8]     = {0};
+    u8 ucStatus         = 1;
+    u16 usReadData      = 0;
+
+    if( NULL != pfTemperature )
+    {
+        ucWriteBuf[0] = ISL68221_SELECT_PAGE_RAIL_0;
+
+        ucStatus = ucISL68221WriteRegister( ucBusNum, ucSlaveAddr, ISL68221_PAGE_REGISTER, ( u8 * )ucWriteBuf );
+        if( STATUS_FAILURE == ucStatus )
+        {
+            return ucStatus;
+        }
+
+        ucStatus = ucISL68221ReadRegister( ucBusNum, ucSlaveAddr, ISL68221_READ_TEMPERATURE_2, ( u8 * )&ucReadBuf[0] );
+        if( STATUS_FAILURE == ucStatus )
+        {
+            return ucStatus;
+        }
+        usReadData = ( ucReadBuf[1] << 8 ) | ucReadBuf[0];
+        *pfTemperature = ( ( float ) usReadData );
+    }
+    
+    return ucStatus;
 }

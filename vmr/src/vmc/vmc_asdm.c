@@ -16,28 +16,28 @@
 #include "cl_rmi.h"
 #endif
 
-#define ASDM_GET_SDR_SIZE_REQ (0x00)
-
-#define SENSOR_TYPE_NUM (0x0)
-#define SENSOR_TYPE_ASCII   (0xC << 4)
-
-#define SENSOR_SIZE_1B  (0x1)
-#define SENSOR_SIZE_2B  (0x2)
-#define SENSOR_SIZE_4B  (0x4)
-
-#define NO_THRESHOLDS   (0x0)
-#define SNSR_MAX_VAL    (0x1 << 7)
-#define SNSR_AVG_VAL    (0x1 << 6)
-#define HAS_LOWER_THRESHOLDS    (0x7 << 3)
-#define HAS_UPPER_THRESHOLDS    (0x7)
-
-#define LENGTH_BITMASK   (0x3F)
+#define ASDM_GET_SDR_SIZE_REQ       (0x00)
+    
+#define SENSOR_TYPE_NUM             (0x0)
+#define SENSOR_TYPE_ASCII           (0xC << 4)
+    
+#define SENSOR_SIZE_1B              (0x1)
+#define SENSOR_SIZE_2B              (0x2)
+#define SENSOR_SIZE_4B              (0x4)
+            
+#define NO_THRESHOLDS               (0x0)
+#define SNSR_MAX_VAL                (0x1 << 7)
+#define SNSR_AVG_VAL                (0x1 << 6)
+#define HAS_LOWER_THRESHOLDS        (0x7 << 3)
+#define HAS_UPPER_THRESHOLDS        (0x7)
+    
+#define LENGTH_BITMASK              (0x3F)
 #define SENSOR_REPOSITORY_REQUEST   (0xF1)
-#define THRESHOLDS_UNSUPPORTED  (0x00)
+#define THRESHOLDS_UNSUPPORTED      (0x00)
 
-#define QSFP_MAX_NUM    (2)
+#define QSFP_MAX_NUM                (4)
 
-#define ASDM_HEADER_VER     (0x1)
+#define ASDM_HEADER_VER             (0x1)
 
 #define SNSRNAME_ACTIVE_SC_VER "Active SC Ver\0"
 #define SNSRNAME_TARGET_SC_VER "Target SC Ver\0"
@@ -46,21 +46,17 @@
 #define TEMP_ACAP_NAME     "device\0"
 #define TEMP_VCCINT_NAME   "vccint\0"
 
-
-/* Voltage and Current Sensor Name */
-#define VCCINT_NAME    "vccint\0"
-
 /* ASDM API Req/Resp Offsets */
 #define ASDM_REQ_BYTE_CMD_CODE      (0)
 #define ASDM_REQ_BYTE_REPO_TYPE     (1)
 #define ASDM_REQ_BYTE_SNSR_ID       (2)
 
 /* CC - Completion Code */
-#define ASDM_RESP_BYTE_CC       (0)
+#define ASDM_RESP_BYTE_CC           (0)
 #define ASDM_RESP_BYTE_REPO_TYPE    (1)
 #define ASDM_RESP_BYTE_SNSR_SIZE    (2)
 
-#define MAX_SDR_INFO_COUNT      (100)
+#define MAX_SDR_INFO_COUNT          (100)
 
 SDR_t *sdrInfo;
 extern SemaphoreHandle_t sdr_lock;
@@ -84,7 +80,10 @@ s8 VCCINT_Read_ACAP_Device_Sysmon(snsrRead_t *snsrData);
 s8 getVoltagesName(u8 index, char8* snsrName, u8 *sensorId,sensorMonitorFunc *sensor_handler);
 s8 getCurrentNames(u8 index, char8* snsrName, u8 *sensorId,sensorMonitorFunc *sensor_handler);
 s8 getQSFPName(u8 index, char8* snsrName, u8 *sensorId,sensorMonitorFunc *sensor_handler);
+s8 scGetTemperatureName(u8 index, char8* snsrName, u8 *sensorId,sensorMonitorFunc *sensor_handler);
+s8 getVoltagesLength(u8 index, char8* snsrName, u8 *sensorId, snsrLengthFunc *SensorLength);
 
+u8 ucGetTemperatureSensorNum();
 u8 getVoltageSensorNum();
 u8 getCurrentSensorNum();
 
@@ -113,7 +112,8 @@ Asdm_Sensor_Thresholds_t thresholds_limit_tbl[]= {
     { TEMP_VCCINT_NAME, 0,   0,  0,     100, 110, 125 },
     { TEMP_CAGE0_NAME,  0,   0,  0,     80,  85, 90 },
     { TEMP_CAGE1_NAME,  0,   0,  0,     80,  85, 90 },
-
+    { TEMP_CAGE2_NAME,  0,   0,  0,     80,  85, 90 },
+    { TEMP_CAGE3_NAME,  0,   0,  0,     80,  85, 90 }
 };
 
 Asdm_Sensor_Unit_t sensor_unit_tbl[] = {
@@ -138,9 +138,9 @@ Asdm_Header_t asdmHeaderInfo[] = {
     /* Record Type  | Hdr Version | Record Count | NumBytes */
     {BoardInfoSDR ,     ASDM_HEADER_VER,  0,    0x7f},
     {TemperatureSDR,    ASDM_HEADER_VER,  0,    0x7f},
-    {VoltageSDR,    ASDM_HEADER_VER,  0,    0x7f},
-    {CurrentSDR,    ASDM_HEADER_VER,  0,    0x7f},
-    {PowerSDR,      ASDM_HEADER_VER,  0,    0x7f},
+    {VoltageSDR,        ASDM_HEADER_VER,  0,    0x7f},
+    {CurrentSDR,        ASDM_HEADER_VER,  0,    0x7f},
+    {PowerSDR,          ASDM_HEADER_VER,  0,    0x7f},
 };
 
 #define MAX_SDR_REPO    (sizeof(asdmHeaderInfo)/sizeof(asdmHeaderInfo[0]))
@@ -262,6 +262,16 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
     },
     {
         .repoType = TemperatureSDR,
+        .getSensorName = &scGetTemperatureName,
+        .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_2B,
+        .snsrUnitModifier = 0x0,
+        .supportedThreshold = SNSR_MAX_VAL | SNSR_AVG_VAL | HAS_UPPER_THRESHOLDS,
+        .sampleCount = 0x1,
+        .sensorInstance = ucGetTemperatureSensorNum(),
+        .monitorFunc = NULL,
+    },
+    {
+        .repoType = TemperatureSDR,
         .getSensorName = &getQSFPName,
         .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_2B,
         .snsrUnitModifier = 0x0,
@@ -281,16 +291,6 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
         .monitorFunc = NULL,
     },
     {
-        .repoType = VoltageSDR,
-        .sensorName = VCCINT_NAME,
-        .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_4B,
-        .snsrUnitModifier = -3,
-        .supportedThreshold = SNSR_MAX_VAL | SNSR_AVG_VAL ,
-        .sampleCount = 0x1,
-        .sensorListTbl = VCCINT,
-        .monitorFunc = &VCCINT_Read_ACAP_Device_Sysmon,
-    },
-    {
         .repoType = CurrentSDR,
         .getSensorName = &getCurrentNames,
         .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_4B,
@@ -301,16 +301,6 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
         .monitorFunc = NULL,
     },
     {
-        .repoType = CurrentSDR,
-        .sensorName = VCCINT_NAME,
-        .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_4B,
-        .snsrUnitModifier = -3,
-        .supportedThreshold = SNSR_MAX_VAL | SNSR_AVG_VAL ,
-        .sampleCount = 0x1,
-        .sensorListTbl = eSC_VCCINT_I,
-        .monitorFunc = &PMBUS_SC_Vccint_Read,
-    },
-    {
         .repoType = PowerSDR,
         .sensorName = "Total Power\0",
         .snsrValTypeLength = SENSOR_TYPE_NUM | SENSOR_SIZE_2B,
@@ -318,7 +308,7 @@ void getSDRMetaData(Asdm_Sensor_MetaData_t **pMetaData, u16 *sdrMetaDataCount)
         .supportedThreshold = SNSR_MAX_VAL | SNSR_AVG_VAL ,
         .sampleCount = 0x1,
         .monitorFunc = &Asdm_Read_Power,
-    },
+    }
     };
 
 
@@ -397,95 +387,116 @@ u8 isRepoTypeSupported(u32 sensorType)
  */
 s8 getSDRIndex(u8 repoType)
 {
-    s8 i=-1;
+    s8 scRet    = -1;
+    s8 i        = 0;
 
     for(i=0;i<MAX_SDR_REPO;i++)
     {
         if(asdmHeaderInfo[i].repository_type == repoType)
         {
-            return i;
+            scRet = i;
         }
     }
 
-    return i;
+    return( scRet );
 }
 
-u8 Update_Sensor_Value(Asdm_RepositoryTypeEnum_t repoType, u8 sensorIdx, snsrRead_t *snsrInfo)
+s8 Update_Sensor_Value(Asdm_RepositoryTypeEnum_t repoType, u8 sensorIdx, snsrRead_t *snsrInfo)
 {
-    /* Get the Repo index from Repotype */
-    u8 repoIndex = getSDRIndex(repoType);
-    /* SensorIdx is 0 indexed in memory vs 1 index in ASDM SDR, so substracting by 1 */
-    Asdm_SensorRecord_t *sensorRecord = &sdrInfo[repoIndex].sensorRecord[sensorIdx - 1];
+    s8 scRet        = 0;
+    s8 repoIndex    = -1;
 
-    if(NULL != sensorRecord)
+    if( NULL != snsrInfo )
     {
-        if( (0 != snsrInfo->sensorValueSize) && (NULL != sensorRecord->sensor_value) ){
-            Cl_SecureMemcpy(sensorRecord->sensor_value,snsrInfo->sensorValueSize,&snsrInfo->snsrValue[0],snsrInfo->sensorValueSize);
-        }
-        /* Update only if the sensor is not Static */
-        if(sensorRecord->sampleCount > 0)
+        /* Get the Repo index from Repotype */
+        repoIndex = getSDRIndex(repoType);
+        if( -1 != repoIndex )
         {
-            /* Update Sensor Status */
-            sensorRecord->sensor_status = snsrInfo->snsrSatus;
+            /* SensorIdx is 0 indexed in memory vs 1 index in ASDM SDR, so substracting by 1 */
+            Asdm_SensorRecord_t *sensorRecord = &sdrInfo[repoIndex].sensorRecord[sensorIdx - 1];
 
-            /*
-            * Only update average value if we have a valid sensor read.
-            * */
-            if(sensorRecord->sensor_status == Vmc_Snsr_State_Normal)
+            if(NULL != sensorRecord)
             {
-                if(snsrInfo->sensorValueSize == sizeof(u32))
+                if( (0 != snsrInfo->sensorValueSize) && (NULL != sensorRecord->sensor_value) )
                 {
-                    /* Update Max Sensor Value */
-                    if ( *((u32 *)sensorRecord->sensor_value) > *((u32 *)sensorRecord->sensorMaxValue))
-                    {
-                        Cl_SecureMemcpy(sensorRecord->sensorMaxValue,snsrInfo->sensorValueSize,sensorRecord->sensor_value,
-                        snsrInfo->sensorValueSize);
-                    }
-                    /* Calculate and Update Average Value */
-                    *((u32 *)sensorRecord->sensorAverageValue) = *((u32 *)sensorRecord->sensorAverageValue)
-                                - (*((u32 *)sensorRecord->sensorAverageValue)/sensorRecord->sampleCount)
-                                + (*((u32 *)sensorRecord->sensor_value)/sensorRecord->sampleCount);
+                    Cl_SecureMemcpy(sensorRecord->sensor_value,snsrInfo->sensorValueSize,&snsrInfo->snsrValue[0],snsrInfo->sensorValueSize);
                 }
-                else if(snsrInfo->sensorValueSize == sizeof(u16))
-                {
-                    /* Update Max Sensor Value */
-                    if ( *((u16 *)sensorRecord->sensor_value) > *((u16 *)sensorRecord->sensorMaxValue))
-                    {
-                        Cl_SecureMemcpy(sensorRecord->sensorMaxValue,snsrInfo->sensorValueSize,sensorRecord->sensor_value,
-                        snsrInfo->sensorValueSize);
-                    }
 
-                    /* Calculate and Update Average Value */
-                    *((u16 *)sensorRecord->sensorAverageValue) = (*((u16 *)sensorRecord->sensorAverageValue)
-                            - (*((u16 *)sensorRecord->sensorAverageValue)/sensorRecord->sampleCount))
-                            + (*((u16 *)sensorRecord->sensor_value)/sensorRecord->sampleCount);
-                }
-                else if(snsrInfo->sensorValueSize == sizeof(u8))
+                /* Update only if the sensor is not Static */
+                if(sensorRecord->sampleCount > 0)
                 {
-                    /* Update Max Sensor Value */
-                    if ( *((u8 *)sensorRecord->sensor_value) > *((u8 *)sensorRecord->sensorMaxValue))
-                    {
-                        Cl_SecureMemcpy(sensorRecord->sensorMaxValue,snsrInfo->sensorValueSize,sensorRecord->sensor_value,
-                        snsrInfo->sensorValueSize);
-                    }
+                    /* Update Sensor Status */
+                    sensorRecord->sensor_status = snsrInfo->snsrSatus;
 
-                    /* Calculate and Update Average Value */
-                    *((u8 *)sensorRecord->sensorAverageValue) = (*((u8 *)sensorRecord->sensorAverageValue)
-                            - (*((u8 *)sensorRecord->sensorAverageValue)/sensorRecord->sampleCount))
-                            + (*((u8 *)sensorRecord->sensor_value)/sensorRecord->sampleCount);
+                    /*
+                    * Only update average value if we have a valid sensor read.
+                    * */
+                    if(sensorRecord->sensor_status == Vmc_Snsr_State_Normal)
+                    {
+                        if(snsrInfo->sensorValueSize == sizeof(u32))
+                        {
+                            /* Update Max Sensor Value */
+                            if ( *((u32 *)sensorRecord->sensor_value) > *((u32 *)sensorRecord->sensorMaxValue))
+                            {
+                                Cl_SecureMemcpy(sensorRecord->sensorMaxValue,snsrInfo->sensorValueSize,sensorRecord->sensor_value,
+                                snsrInfo->sensorValueSize);
+                            }
+                            /* Calculate and Update Average Value */
+                            *((u32 *)sensorRecord->sensorAverageValue) = *((u32 *)sensorRecord->sensorAverageValue)
+                                        - (*((u32 *)sensorRecord->sensorAverageValue)/sensorRecord->sampleCount)
+                                        + (*((u32 *)sensorRecord->sensor_value)/sensorRecord->sampleCount);
+                        }
+                        else if(snsrInfo->sensorValueSize == sizeof(u16))
+                        {
+                            /* Update Max Sensor Value */
+                            if ( *((u16 *)sensorRecord->sensor_value) > *((u16 *)sensorRecord->sensorMaxValue))
+                            {
+                                Cl_SecureMemcpy(sensorRecord->sensorMaxValue,snsrInfo->sensorValueSize,sensorRecord->sensor_value,
+                                snsrInfo->sensorValueSize);
+                            }
+
+                            /* Calculate and Update Average Value */
+                            *((u16 *)sensorRecord->sensorAverageValue) = (*((u16 *)sensorRecord->sensorAverageValue)
+                                    - (*((u16 *)sensorRecord->sensorAverageValue)/sensorRecord->sampleCount))
+                                    + (*((u16 *)sensorRecord->sensor_value)/sensorRecord->sampleCount);
+                        }
+                        else if(snsrInfo->sensorValueSize == sizeof(u8))
+                        {
+                            /* Update Max Sensor Value */
+                            if ( *((u8 *)sensorRecord->sensor_value) > *((u8 *)sensorRecord->sensorMaxValue))
+                            {
+                                Cl_SecureMemcpy(sensorRecord->sensorMaxValue,snsrInfo->sensorValueSize,sensorRecord->sensor_value,
+                                snsrInfo->sensorValueSize);
+                            }
+
+                            /* Calculate and Update Average Value */
+                            *((u8 *)sensorRecord->sensorAverageValue) = (*((u8 *)sensorRecord->sensorAverageValue)
+                                    - (*((u8 *)sensorRecord->sensorAverageValue)/sensorRecord->sampleCount))
+                                    + (*((u8 *)sensorRecord->sensor_value)/sensorRecord->sampleCount);
+                        }
+                        /* Increment the Sample Count after a Successful read*/
+                        sensorRecord->sampleCount++;
+                    }
                 }
-                /* Increment the Sample Count after a Successful read*/
-                sensorRecord->sampleCount++;
             }
+            else
+            {
+                VMC_ERR("InValid SDR Data\n\r");
+                scRet = -1;
+            }
+        }
+        else
+        {
+            VMC_ERR("Invalid repoIndex\n\r");
+            scRet = -1;
         }
     }
     else
     {
-        VMC_ERR("InValid SDR Data\n\r");
-        return -1;
+        scRet = -1;
     }
 
-    return 0;
+    return scRet;
 }
 
 s8 Init_Asdm()
@@ -526,11 +537,12 @@ s8 Init_Asdm()
 
         idx++;
     }
+    VMC_ERR( "totalRecords %d\n\r", totalRecords );
 
     if(sdrMetaDataCount != totalRecords)
     {
         /* LoG Error, don't proceed for Init */
-        //VMC_ERR("Records Count Mismatch  !!!\n\r");
+        VMC_ERR("Records Count Mismatch  !!!\n\r");
         //return -1;
     }
 
@@ -566,7 +578,6 @@ s8 Init_Asdm()
                 VMC_ERR("Failed to allocate Memory for SDR Record !!!\n\r");
                 return -1;
             }
-
             Cl_SecureMemset(sdrInfo[sdrCount].sensorRecord,0x00,allocateSize);
 
             Asdm_SensorRecord_t *tmp = sdrInfo[sdrCount].sensorRecord;
@@ -627,11 +638,24 @@ s8 Init_Asdm()
 
                     byteCount += snsrNameLen;
 
-                    /* Sensor Value */
-                    tmp[idx].sensor_value_type_length = pSdrMetaData[totalRecords].snsrValTypeLength;
-                    byteCount += sizeof(tmp[idx].sensor_value_type_length);
+                    /* Handle vccint voltage as 4 bytes */
+                    if( ( VoltageSDR == currentRepoType ) &&
+                        ( 0 == strcmp("vccint\0", tmp[idx].sensor_name ) ) )
+                    {
+                        /* Sensor Value */
+                        tmp[idx].sensor_value_type_length = ( SENSOR_TYPE_NUM | SENSOR_SIZE_4B );
+                        byteCount += sizeof(tmp[idx].sensor_value_type_length);
 
-                    snsrValueLen = (pSdrMetaData[totalRecords].snsrValTypeLength & LENGTH_BITMASK);
+                        snsrValueLen = ( ( SENSOR_TYPE_NUM | SENSOR_SIZE_4B ) & LENGTH_BITMASK);
+                    }
+                    else
+                    {
+                        /* Sensor Value */
+                        tmp[idx].sensor_value_type_length = pSdrMetaData[totalRecords].snsrValTypeLength;
+                        byteCount += sizeof(tmp[idx].sensor_value_type_length);
+
+                        snsrValueLen = (pSdrMetaData[totalRecords].snsrValTypeLength & LENGTH_BITMASK);
+                    }
 
 
                     /* Only allocate the Memory, Value will be updated while Monitoring */
@@ -858,7 +882,7 @@ s8 Init_Asdm()
 
 s8 Asdm_Get_SDR_Size(u8 *req, u8 *resp, u16 *respSize)
 {
-    u8 sdrIndex = 0;
+    s8 sdrIndex = 0;
     u16 sdrSize = 0;
 
     if((req == NULL) || (resp == NULL) || (respSize == NULL))
@@ -899,7 +923,7 @@ s8 Asdm_Get_SDR_Size(u8 *req, u8 *resp, u16 *respSize)
 s8 Asdm_Get_Sensor_Repository(u8 *req, u8 *resp, u16 *respSize)
 {
     s8 retStatus = -1;
-    u8 sdrIndex = 0;
+    s8 sdrIndex = 0;
     u8 idx = 0;
     u8 snsrNameLen = 0;
     u8 snsrValueLen = 0;
@@ -915,6 +939,11 @@ s8 Asdm_Get_Sensor_Repository(u8 *req, u8 *resp, u16 *respSize)
     }
 
     sdrIndex = getSDRIndex(req[1]);
+
+    if( -1 == sdrIndex )
+    {
+        return -1;
+    }
 
     if (xSemaphoreTake(sdr_lock, portMAX_DELAY))
     {
@@ -1033,7 +1062,7 @@ s8 Asdm_Get_Sensor_Repository(u8 *req, u8 *resp, u16 *respSize)
 
 s8 Asdm_Get_All_Sensor_Data(u8 *req, u8 *resp, u16 *respSize)
 {
-    u8 sdrIndex = 0;
+    s8 sdrIndex = 0;
     u8 snsrIndex = 0;
     u8 total_records = 0;
     u8 payload_size = 0;
@@ -1054,6 +1083,11 @@ s8 Asdm_Get_All_Sensor_Data(u8 *req, u8 *resp, u16 *respSize)
     }
 
     sdrIndex = getSDRIndex(req[ASDM_REQ_BYTE_REPO_TYPE]);
+    if( -1 == sdrIndex )
+    {
+        return -1;
+    }
+
     total_records = sdrInfo[sdrIndex].header.no_of_records;
 
     *respSize = 0;
@@ -1107,7 +1141,7 @@ s8 Asdm_Get_All_Sensor_Data(u8 *req, u8 *resp, u16 *respSize)
 
 s8 Asdm_Get_Sensor_Data(u8 *req, u8 *resp, u16 *respSize)
 {
-    u8 sdrIndex = 0;
+    s8 sdrIndex = 0;
     u8 snsrIndex = 0;
     u8 snsrValueLen = 0;
     u8 snsrStatusLen = 0;
@@ -1128,6 +1162,11 @@ s8 Asdm_Get_Sensor_Data(u8 *req, u8 *resp, u16 *respSize)
     }
 
     sdrIndex = getSDRIndex(req[ASDM_REQ_BYTE_REPO_TYPE]);
+    if( -1 == sdrIndex )
+    {
+        return -1;
+    }
+
     /* Sensor Id are 1 indexed, but we have 0 indexed */
     snsrIndex = req[ASDM_REQ_BYTE_SNSR_ID] - 1;
     *respSize = 0;
@@ -1173,6 +1212,14 @@ s8 Asdm_Get_Sensor_Data(u8 *req, u8 *resp, u16 *respSize)
 
 s8 Asdm_Process_Sensor_Request(u8 *req, u8 *resp, u16 *respSize)
 {
+    if( ( NULL == req ) ||
+        ( NULL == resp ) ||
+        ( NULL == respSize ) )
+    {
+        VMC_ERR("NULL pointer \n\r");
+        return -1;
+    }
+
     if(asdmInitSuccess != true)
     {
         VMC_ERR(" ASDM Data not Initialized yet or has Failed \n\r");
@@ -1222,7 +1269,7 @@ void Asdm_Update_Sensors(void)
 {
     snsrRead_t snsrData = {0};
     u8 idx = 0;
-    u8 sdrIndex = 0;
+    s8 sdrIndex = 0;
 
     if(asdmInitSuccess == true)
     {
@@ -1290,7 +1337,7 @@ void AsdmSensor_Display(void)
     VMC_PRNT("------------------          ASDM Sensor Data    ------------------\n\r");
     VMC_PRNT("------------------------------------------------------------------\n\r");
     u8 idx = 0;
-    u8 sdrIndex = 0;
+    s8 sdrIndex = 0;
     u8 stringCount = 0;
 
     VMC_PRNT("|   Sensor Name    |   Value     | Status |    Max    |   Average | \n\r");

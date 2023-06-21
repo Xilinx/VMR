@@ -4,12 +4,12 @@
 #define SENSOR_RESP_BUFFER_SIZE 512
 
 /* Number of records for v70 */
-#define V70_NUM_BOARD_INFO_SENSORS      (11)
-#define V70_NUM_TEMPERATURE_SENSORS     (3)
-#define V70_NUM_SC_VOLTAGE_SENSORS      (2)
-#define V70_NUM_SYSMON_VOLTAGE_SENSORS  (1)
-#define V70_NUM_SC_CURRENT_SENSORS      (3)
-#define V70_NUM_POWER_SENSORS           (1)
+#define V70_NUM_BOARD_INFO_SENSORS      ( 11 )
+#define V70_NUM_TEMPERATURE_SENSORS     ( 3 )
+#define V70_NUM_SC_VOLTAGE_SENSORS      ( 3 )
+#define V70_NUM_SYSMON_VOLTAGE_SENSORS  ( 0 )
+#define V70_NUM_SC_CURRENT_SENSORS      ( 3 )
+#define V70_NUM_POWER_SENSORS           ( 1 )
 
 #define REPOSITORY_VERSION (1)
 
@@ -95,6 +95,16 @@ static void test_Asdm_Get_TemperatureSDR(void **state) {
 	/* Record Type : 0xC1 - Temperature SDR */
 	reqBuffer[1] = TemperatureSDR;
 
+        will_return( __wrap_LM75_ReadTemperature, XST_SUCCESS );
+        will_return( __wrap_LM75_ReadTemperature, XST_SUCCESS );
+        will_return( __wrap_ucISL68221ReadTemperature0, XST_SUCCESS );
+        will_return( __wrap_ucISL68221ReadCurrent0, XST_SUCCESS );
+        will_return( __wrap_INA3221_ReadVoltage, XST_SUCCESS );
+        will_return( __wrap_INA3221_ReadVoltage, XST_SUCCESS );
+        will_return( __wrap_INA3221_ReadVoltage, XST_SUCCESS );
+        will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
+        will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
+
 	/*Test function*/
 	ret = Asdm_Process_Sensor_Request(&reqBuffer[0], &respBuffer[0], &respSize);
 
@@ -146,6 +156,16 @@ static void test_Asdm_Get_VoltageSDR(void **state) {
 	/* Record Type : 0xC2 - Voltage SDR */
 	reqBuffer[1] = VoltageSDR;
 
+        will_return( __wrap_LM75_ReadTemperature, XST_SUCCESS );
+        will_return( __wrap_LM75_ReadTemperature, XST_SUCCESS );
+        will_return( __wrap_ucISL68221ReadTemperature0, XST_SUCCESS );
+        will_return( __wrap_ucISL68221ReadCurrent0, XST_SUCCESS );
+        will_return( __wrap_INA3221_ReadVoltage, XST_SUCCESS );
+        will_return( __wrap_INA3221_ReadVoltage, XST_SUCCESS );
+        will_return( __wrap_INA3221_ReadVoltage, XST_SUCCESS );
+        will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
+        will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
+
 	/*Test function*/
 	ret = Asdm_Process_Sensor_Request(&reqBuffer[0], &respBuffer[0], &respSize);
 
@@ -195,6 +215,16 @@ static void test_Asdm_Get_CurrentSDR(void **state) {
 	reqBuffer[0] = ASDM_CMD_GET_SIZE;
 	/* Record Type : 0xC3 - current SDR */
 	reqBuffer[1] = CurrentSDR;
+
+        will_return( __wrap_LM75_ReadTemperature, XST_SUCCESS );
+        will_return( __wrap_LM75_ReadTemperature, XST_SUCCESS );
+        will_return( __wrap_ucISL68221ReadTemperature0, XST_SUCCESS );
+        will_return( __wrap_ucISL68221ReadCurrent0, XST_SUCCESS );
+        will_return( __wrap_INA3221_ReadVoltage, XST_SUCCESS );
+        will_return( __wrap_INA3221_ReadVoltage, XST_SUCCESS );
+        will_return( __wrap_INA3221_ReadVoltage, XST_SUCCESS );
+        will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
+        will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
 
 	/*test function*/
 	ret = Asdm_Process_Sensor_Request(&reqBuffer[0], &respBuffer[0], &respSize);
@@ -246,6 +276,16 @@ static void test_Asdm_Get_PowerSDR(void **state) {
 	/* Record Type : 0xC4 - Power SDR */
 	reqBuffer[1] = PowerSDR;
 
+        will_return( __wrap_LM75_ReadTemperature, XST_SUCCESS );
+        will_return( __wrap_LM75_ReadTemperature, XST_SUCCESS );
+        will_return( __wrap_ucISL68221ReadTemperature0, XST_SUCCESS );
+        will_return( __wrap_ucISL68221ReadCurrent0, XST_SUCCESS );
+        will_return( __wrap_INA3221_ReadVoltage, XST_SUCCESS );
+        will_return( __wrap_INA3221_ReadVoltage, XST_SUCCESS );
+        will_return( __wrap_INA3221_ReadVoltage, XST_SUCCESS );
+        will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
+        will_return( __wrap_INA3221_ReadCurrent, XST_SUCCESS );
+    
 	/*test function*/
 	ret = Asdm_Process_Sensor_Request(&reqBuffer[0], &respBuffer[0], &respSize);
 

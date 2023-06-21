@@ -8,9 +8,10 @@ execute_process(COMMAND git submodule update --init cmocka
                 ERROR_QUIET)
 
 set(CMAKE_BUILD_TYPE Debug)
-set(DEV xilinx_v70_gen5x8_qdma_2_202220_1)
+set(DEV xilinx_v70_gen5x8_qdma_3_202310_1)
 
-include_directories(../ 
+include_directories(./mocks/common
+                    ../
                     ../sensors/inc 
                     ../platforms
                     ../../include
