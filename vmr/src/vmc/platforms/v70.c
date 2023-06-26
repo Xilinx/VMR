@@ -203,8 +203,58 @@ s32 V70_VMC_Fetch_BoardInfo(u8 *board_snsr_data)
 
     (void)VMC_Get_BoardInfo(&board_info);
 
-    Cl_SecureMemcpy(board_snsr_data, sizeof(Versal_BoardInfo), &board_info, sizeof(Versal_BoardInfo));
-    byte_count = sizeof(Versal_BoardInfo);
+    /* copy data in the order of SC BordInfo structure */
+    Cl_SecureMemcpy(board_snsr_data, sizeof(board_info.product_name), &board_info.product_name[0], sizeof(board_info.product_name));
+    byte_count += sizeof(board_info.product_name);
+
+    Cl_SecureMemcpy(board_snsr_data + byte_count, sizeof(board_info.board_rev), &board_info.board_rev[0], sizeof(board_info.board_rev));
+    byte_count += sizeof(board_info.board_rev);
+
+    Cl_SecureMemcpy(board_snsr_data + byte_count, sizeof(board_info.board_serial), &board_info.board_serial[0], sizeof(board_info.board_serial));
+    byte_count += sizeof(board_info.board_serial);
+
+    Cl_SecureMemcpy(board_snsr_data + byte_count, sizeof(board_info.eeprom_version), &board_info.eeprom_version[0], sizeof(board_info.eeprom_version));
+    byte_count += sizeof(board_info.eeprom_version);
+
+    Cl_SecureMemcpy(board_snsr_data + byte_count, sizeof(board_info.board_mac), &board_info.board_mac[0], sizeof(board_info.board_mac));
+    byte_count += sizeof(board_info.board_mac);
+
+    Cl_SecureMemcpy(board_snsr_data + byte_count, sizeof(board_info.board_act_pas), &board_info.board_act_pas[0], sizeof(board_info.board_act_pas));
+    byte_count += sizeof(board_info.board_act_pas);
+
+    Cl_SecureMemcpy(board_snsr_data + byte_count, sizeof(board_info.board_config_mode), &board_info.board_config_mode[0], sizeof(board_info.board_config_mode));
+    byte_count += sizeof(board_info.board_config_mode);
+
+    Cl_SecureMemcpy(board_snsr_data + byte_count, sizeof(board_info.board_mfg_date), &board_info.board_mfg_date[0], sizeof(board_info.board_mfg_date));
+    byte_count += sizeof(board_info.board_mfg_date);
+
+    Cl_SecureMemcpy(board_snsr_data + byte_count, sizeof(board_info.board_part_num), &board_info.board_part_num[0], sizeof(board_info.board_part_num));
+    byte_count += sizeof(board_info.board_part_num);
+
+    Cl_SecureMemcpy(board_snsr_data + byte_count, sizeof(board_info.board_uuid), &board_info.board_uuid[0], sizeof(board_info.board_uuid));
+    byte_count += sizeof(board_info.board_uuid);
+
+    Cl_SecureMemcpy(board_snsr_data + byte_count, sizeof(board_info.board_pcie_info), &board_info.board_pcie_info[0], sizeof(board_info.board_pcie_info));
+    byte_count += sizeof(board_info.board_pcie_info);
+
+    Cl_SecureMemcpy(board_snsr_data + byte_count, sizeof(board_info.board_max_power_mode), &board_info.board_max_power_mode[0], sizeof(board_info.board_max_power_mode));
+    byte_count += sizeof(board_info.board_max_power_mode);
+
+    Cl_SecureMemcpy(board_snsr_data + byte_count, sizeof(board_info.Memory_size), &board_info.Memory_size[0], sizeof(board_info.Memory_size));
+    byte_count += sizeof(board_info.Memory_size);
+
+    Cl_SecureMemcpy(board_snsr_data + byte_count, sizeof(board_info.OEM_ID), &board_info.OEM_ID[0], sizeof(board_info.OEM_ID));
+    byte_count += sizeof(board_info.OEM_ID);
+
+    Cl_SecureMemcpy(board_snsr_data + byte_count, sizeof(board_info.DIMM_size), &board_info.DIMM_size[0], sizeof(board_info.DIMM_size));
+    byte_count += sizeof(board_info.DIMM_size);
+
+    Cl_SecureMemcpy(board_snsr_data + byte_count, sizeof(board_info.Num_MAC_IDS), &board_info.Num_MAC_IDS, sizeof(board_info.Num_MAC_IDS));
+    byte_count += sizeof(board_info.Num_MAC_IDS);
+
+    Cl_SecureMemcpy(board_snsr_data + byte_count, sizeof(board_info.capability), &board_info.capability[0], sizeof(board_info.capability));
+    byte_count += sizeof(board_info.capability);
+
 
     /* Check and return -1 if size of response is > 256 */
     return ((byte_count <= MAX_VMC_SC_UART_BUF_SIZE) ? (byte_count) : (-1));
