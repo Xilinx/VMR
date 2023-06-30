@@ -9,7 +9,7 @@
 /* C includes */
 #include "stdlib.h"
 #include "stdio.h"
-#include "stdint.h"
+
 #include "cl_version.h"
 #include "cl_config.h"
 

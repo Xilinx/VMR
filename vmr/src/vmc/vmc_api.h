@@ -234,7 +234,6 @@ typedef struct Versal_BoardInfo
 typedef enum{
     eVCK5000 = 0, /* VCK5000 or V350, so 2 platforms in one enum*/
     eV70 = 2,
-    eV80,
     eMax_Platforms,
 } ePlatformType;
 
@@ -248,7 +247,6 @@ typedef enum{
     eTemperature_Sensor_Outlet,
     eTemperature_Sensor_Board,
     eTemperature_Sensor_QSFP,
-    eTemperature_Sensors,
     eVccint_Temp,
     eVoltage_Sensors,
     eCurrent_Sensors,
@@ -394,7 +392,6 @@ extern sensorMonitorFunc Temperature_Read_QSFP_Ptr;
 extern sensorMonitorFunc Temperature_Read_VCCINT_Ptr;
 extern sensorMonitorFunc Power_Read_Ptr;
 
-extern snsrNameFunc Temperature_Read_Ptr;
 extern snsrNameFunc Voltage_Read_Ptr;
 extern snsrNameFunc Current_Read_Ptr;
 extern snsrNameFunc QSFP_Read_Ptr;

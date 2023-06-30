@@ -19,13 +19,6 @@ int get_sem_lock()
 	return lock;
 }
 
-/* Used to reset lock value in testcase*/
-int set_sem_lock()
-{
-    lock = 0;
-}
-
-
 /*****************************Mock functions *******************************/
 BaseType_t __wrap_xQueueSemaphoreTake( QueueHandle_t xQueue, TickType_t xTicksToWait )
 {
@@ -39,9 +32,4 @@ BaseType_t __wrap_xQueueGenericSend( QueueHandle_t xQueue, const void * const pv
 	lock--;
 	/*Returns the value passed to 'will_return()' written in testcase */
 	return mock_type(BaseType_t);
-}
-
-void  __wrap_vTaskDelay( const TickType_t xTicksToDelay )
-{
-    return;
 }

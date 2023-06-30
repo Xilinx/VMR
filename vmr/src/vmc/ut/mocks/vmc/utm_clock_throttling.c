@@ -18,13 +18,3 @@ void __wrap_ClockThrottling_Initialize(Clock_Throttling_Handle_t  *pContext, Clo
 {
 	/*Do Nothing for now*/
 }
-
-void __wrap_clock_throttling_algorithm_power(Clock_Throttling_Handle_t  *pContext )
-{
-	/*Do Nothing for now*/
-}
-
-void __wrap_clock_throttling_algorithm_temperature(Clock_Throttling_Handle_t  *pContext )
-{
-	/*Do Nothing for now*/
-}
