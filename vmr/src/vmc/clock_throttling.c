@@ -292,6 +292,13 @@ void clock_throttling_algorithm(Clock_Throttling_Handle_t* pContext, bool Readin
 	{
 		pContext->Activity = ACTIVITY_MAX;
 	}
+	/*
+	 *The below condition is limit the clock speed to 5%
+	 *when override values are less than the idle readings.
+	 *
+ 	*/	
+	if (pContext->Activity < REDUCE_GAPPING_DEMAND_RATE_TO_FIVE_PERCENTAGE)
+		pContext->Activity = REDUCE_GAPPING_DEMAND_RATE_TO_FIVE_PERCENTAGE;
 
 	VMC_DBG(" %d 	%d	%f	%f \n\r",pContext->Activity,(pContext->BoardMeasuredPower)/1000000,pContext->FPGAMeasuredTemp,pContext->VccIntMeasuredTemp);
 	IO_SYNC_WRITE32(pContext->Activity | MASK_CLOCKTHROTTLING_ENABLE_THROTTLING, VMR_EP_GAPPING_DEMAND);

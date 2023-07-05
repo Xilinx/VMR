@@ -253,11 +253,7 @@ void BoardInfoTest(void)
 void SensorData_Display(void)
 {
 	VMC_PRNT("\n\r");
-
-
-	//VMC_PRNT("====================================================================\n\r");
-	//VMC_PRNT("TBD: Sensor Data to be printed!\n\r");
-	//VMC_PRNT("====================================================================\n\r");
+#ifdef VMC_TEST_VCK5000
 	VMC_PRNT("SE98A_0 temperature 			: %d \n\r",sensor_glvr.sensor_readings.board_temp[0]);
 	VMC_PRNT("SE98A_1 temperature 			: %d \n\r",sensor_glvr.sensor_readings.board_temp[1]);
 	VMC_PRNT("local temperature(max6639) 		: %f \n\r",sensor_glvr.sensor_readings.local_temp);
@@ -266,8 +262,23 @@ void SensorData_Display(void)
 	VMC_PRNT("Maximum SYSMON temp 			: %f \n\r ",sensor_glvr.sensor_readings.sysmon_max_temp);
 	VMC_PRNT("QSFP_0 temperature			: %f \n\r ",sensor_glvr.sensor_readings.qsfp_temp[0]);
 	VMC_PRNT("QSFP_1 temperature			: %f \n\r ",sensor_glvr.sensor_readings.qsfp_temp[1]);
-	VMC_PRNT("\n\r");
+#endif
 
+#ifdef VMC_TEST_V70
+	VMC_PRNT("Maximum SYSMON Temperature	: %f C \n\r",sensor_glvr.sensor_readings.sysmon_max_temp);
+	VMC_PRNT("LM75_0 Temperature 		: %d C \n\r",sensor_glvr.sensor_readings.board_temp[0]);
+	VMC_PRNT("LM75_1 Temperature 		: %d C \n\r",sensor_glvr.sensor_readings.board_temp[1]);
+	VMC_PRNT("ISL_68221 VCCINT Temperature 	: %f C \n\r",sensor_glvr.sensor_readings.vccint_temp);
+	VMC_PRNT("Voltage VCCINT			: %f mV \n\r",sensor_glvr.sensor_readings.voltage[eVCCINT]);
+	VMC_PRNT("Voltage 12V_PEX			: %f mV \n\r",sensor_glvr.sensor_readings.voltage[e12V_PEX]);
+	VMC_PRNT("Voltage 3V3_PEX			: %f mV \n\r",sensor_glvr.sensor_readings.voltage[e3V3_PEX]);
+	VMC_PRNT("Voltage 3V3_AUX			: %f mV \n\r",sensor_glvr.sensor_readings.voltage[e3V3_AUX]);
+	VMC_PRNT("Current 12V_PEX			: %f mA \n\r",sensor_glvr.sensor_readings.current[e12V_PEX]);
+	VMC_PRNT("Current 3V3_PEX			: %f mA \n\r",sensor_glvr.sensor_readings.current[e3V3_PEX]);
+	VMC_PRNT("Current VCCINT			: %f mA \n\r",(sensor_glvr.sensor_readings.current[eVCCINT] * 1000));
+	VMC_PRNT("Total Power			: %f W \n\r",sensor_glvr.sensor_readings.total_power);
+#endif
+	VMC_PRNT("\n\r");
 
 }
 
@@ -296,12 +307,12 @@ void EepromDump(void)
 
 static void Print_Eeprom_3_0(void)
 {
-	VMR_PRNT( "EEPROM Version        : %s \n\r",board_info.eeprom_version);
-	VMR_PRNT( "Product Name          : %s \n\r",board_info.product_name);
-	VMR_PRNT( "Board Rev             : %s \n\r",board_info.board_rev);
-	VMR_PRNT( "Board Serial          : %s \n\r",board_info.board_serial);
+	VMR_PRNT( "EEPROM Version        : %s ",board_info.eeprom_version);
+	VMR_PRNT( "Product Name          : %s ",board_info.product_name);
+	VMR_PRNT( "Board Rev             : %s ",board_info.board_rev);
+	VMR_PRNT( "Board Serial          : %s ",board_info.board_serial);
 
-	VMR_PRNT( "Board MAC             : %02x:%02x:%02x:%02x:%02x:%02x\n\r",
+	VMR_PRNT( "Board MAC             : %02x:%02x:%02x:%02x:%02x:%02x",
 						board_info.board_mac[0][0],
 						board_info.board_mac[0][1],
 						board_info.board_mac[0][2],
@@ -310,18 +321,18 @@ static void Print_Eeprom_3_0(void)
 						board_info.board_mac[0][5]);
 
 
-	VMR_PRNT( "Board A/P             : %s \n\r",board_info.board_act_pas);
+	VMR_PRNT( "Board A/P             : %s ",board_info.board_act_pas);
 
-	VMR_PRNT( "Board Config          : %02x \n\r",board_info.board_config_mode[0]);
+	VMR_PRNT( "Board Config          : %02x ",board_info.board_config_mode[0]);
 
-	VMR_PRNT( "MFG DATE              : %02x%02x%02x\n\r",
+	VMR_PRNT( "MFG DATE              : %02x%02x%02x",
 	                                        board_info.board_mfg_date[0],
 	                                        board_info.board_mfg_date[1],
 	                                        board_info.board_mfg_date[2]);
 
-	VMR_PRNT( "PART NUM              : %s \n\r",board_info.board_part_num);
+	VMR_PRNT( "PART NUM              : %s ",board_info.board_part_num);
 
-	VMR_PRNT( "UUID                  : %02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x\n\r",
+	VMR_PRNT( "UUID                  : %02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
 		                                    board_info.board_uuid[0],
 		                                    board_info.board_uuid[1],
 		                                    board_info.board_uuid[2],
@@ -339,7 +350,7 @@ static void Print_Eeprom_3_0(void)
 		                                    board_info.board_uuid[14],
 		                                    board_info.board_uuid[15]);
 
-	VMR_PRNT( "PCIe Info             : %02x%02x, %02x%02x, %02x%02x, %02x%02x\n\r",
+	VMR_PRNT( "PCIe Info             : %02x%02x, %02x%02x, %02x%02x, %02x%02x",
                                             board_info.board_pcie_info[0],
                                             board_info.board_pcie_info[1],
                                             board_info.board_pcie_info[2],
@@ -349,18 +360,18 @@ static void Print_Eeprom_3_0(void)
                                             board_info.board_pcie_info[6],
                                             board_info.board_pcie_info[7]);
 
-	VMR_PRNT( "OEM ID                : %02x%02x%02x%02x\n\r", board_info.OEM_ID[3],
+	VMR_PRNT( "OEM ID                : %02x%02x%02x%02x", board_info.OEM_ID[3],
 								  board_info.OEM_ID[2],
 								  board_info.OEM_ID[1],
 								  board_info.OEM_ID[0]);
 
 
-	VMR_PRNT( "Max Power Mode        : %x \n\r", board_info.board_max_power_mode);
+	VMR_PRNT( "Max Power Mode        : %d \n\r", board_info.board_max_power_mode[0]);
 	VMR_PRNT( "Memory size           : %s \n\r", board_info.Memory_size);
 	VMR_PRNT( "Capabilities          : %02x%02x \n\r", board_info.capability[0], board_info.capability[1]);
 }
 
-static bool Checksum_Ok(void)
+static bool Verify_Checksum(void)
 {
 	unsigned char buf[EEPROM_BUF_SIZE] = { 0 };
 
@@ -383,7 +394,7 @@ static bool Checksum_Ok(void)
 	}
 	else
 	{
-		VMC_ERR("Incorrect checksum: calculated %hu %x%x expected %hu %x%x\n\r", checksum, checksum >> 8, checksum & 0xFF,																	expected, buf[EEPROM_V3_0_CHECKSUM_MSB_OFFSET], 																buf[EEPROM_V3_0_CHECKSUM_LSB_OFFSET]);
+		VMC_ERR("Incorrect checksum: calculated %hu %x%x expected %hu %x%x", checksum, checksum >> 8, checksum & 0xFF,																	expected, buf[EEPROM_V3_0_CHECKSUM_MSB_OFFSET], 																buf[EEPROM_V3_0_CHECKSUM_LSB_OFFSET]);
 		return false;
 	}
 }
@@ -427,8 +438,7 @@ u8 Versal_EEPROM_ReadBoardInfo(void)
 	EEPROM_Content_Details_t *eeprom_offset = NULL;
 
 	u8 *data_ptr = NULL;
-
-	Checksum_Ok();
+	Verify_Checksum();
 
 	status = Update_BoardInfo_Data(i2c_num, board_info.eeprom_version,
 			EEPROM_VERSION_OFFSET, EEPROM_VERSION_SIZE);

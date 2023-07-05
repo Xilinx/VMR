@@ -183,9 +183,16 @@ upgrade_vmr_pdi()
 	sleep 1
 
 	echo "check vmr is in good status"
-	xbmgmt examine -d $BDF -r vmr --verbose
+	xbmgmt examine -d $BDF -r vmr --verbose |tee /tmp/vmr_verbose_info.txt
 	if [[ $? -ne 0 ]];then
 		echo "xbmgmt examine -vmr failed"
+		exit 1;
+	fi
+
+	VMR_VER=`grep -i "vmr build version" /tmp/vmr_verbose_info.txt|cut -d: -f2|sed "s/[ \t].//g"`
+	echo "VMR Version: $VMR_VER" 
+	if [[ $VMR_VER != "0.0.0.0" ]];then
+		echo "WARN!!! The VMR Version seems not from a customized build"
 		exit 1;
 	fi
 

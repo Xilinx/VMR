@@ -565,7 +565,7 @@ static int rmgmt_clear_firewall()
 	int i = 0;
 
 	if (!check_firewall()) {
-		VMR_LOG("done");
+		VMR_LOG("DONE");
 		return 0;
 	}
 	
@@ -1071,7 +1071,7 @@ int rmgmt_enable_boot_default(cl_msg_t *msg)
 		return -1;
 	}
 
-	VMR_LOG("done");
+	VMR_LOG("DONE");
 	return 0;
 }
 
@@ -1088,7 +1088,7 @@ int rmgmt_enable_boot_backup(cl_msg_t *msg)
 		return -1;
 	}
 
-	VMR_LOG("done");
+	VMR_LOG("DONE");
 	return 0;
 }
 
@@ -1189,6 +1189,6 @@ int cl_rmgmt_init( void )
 	}
 
 	rmgmt_is_ready_flag = true;
-	VMR_LOG("Done. rmgmt is ready.");
+	VMR_LOG("DONE. rmgmt is ready.");
 	return 0;
 }

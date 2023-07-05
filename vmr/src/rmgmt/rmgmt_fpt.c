@@ -84,7 +84,7 @@ static int rmgmt_fpt_pdi_meta_get(struct cl_msg *msg, int fpt_type,
 		return -1;
 	}
 
-	VMR_LOG("fpt_type 0x%x", fpt_type);
+	VMR_DBG("fpt_type 0x%x", fpt_type);
 
 	ret = ospi_flash_read(CL_FLASH_BOOT, (u8 *)buf, base_addr, sizeof(buf));
 	if (ret)

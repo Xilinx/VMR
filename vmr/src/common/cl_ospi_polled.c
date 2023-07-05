@@ -266,6 +266,8 @@ int FlashReadID(XOspiPsv *OspiPsvPtr)
 	int Status;
 	int ReadIdBytes = 8;
 	u32 ReadId = 0;
+	char flashIDBuf[75];
+	char *bufPtr = flashIDBuf;
 
 	/*
 	 * Read ID
@@ -288,13 +290,12 @@ int FlashReadID(XOspiPsv *OspiPsvPtr)
 	if (Status != XST_SUCCESS) {
 		return XST_FAILURE;
 	}
-	xil_printf("FlashID = ");
+
 	while(ReadIdBytes >= 0 ) {
-		xil_printf("0x%x ", ReadBfrPtr[FlashMsg.ByteCount - ReadIdBytes]);
+		bufPtr += snprintf(bufPtr,6, "0x%02X ",ReadBfrPtr[FlashMsg.ByteCount - ReadIdBytes]);
 		ReadIdBytes--;
 	}
-	xil_printf("\n\r");
-
+	VMR_LOG("FlashID = %s",flashIDBuf);
 	OspiPsvPtr->DeviceIdData = ((ReadBfrPtr[3] << 24) | (ReadBfrPtr[2] << 16) |
 		(ReadBfrPtr[1] << 8) | ReadBfrPtr[0]);
 	ReadId = ((ReadBfrPtr[0] << 16) | (ReadBfrPtr[1] << 8) | ReadBfrPtr[2]);

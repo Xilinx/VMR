@@ -7,7 +7,8 @@ TOOL_VERSION="2022.2"
 DEFAULT_VITIS="/proj/xbuilds/${TOOL_VERSION}_daily_latest/installs/lin64/Vitis/HEAD/settings64.sh"
 STDOUT_JTAG=2 # 0: uart0; 1: uart1; 2: default to uartlite
 BUILD_XRT=0
-BUILD_RMI=0
+UPDATE_RMI=0
+BUILD_RMI_LIB=0
 ROOT_DIR=`pwd`
 #REAL_BSP=`realpath ../bsp/2021.2_stable/bsp`
 #REAL_VMR=`realpath ../vmr`
@@ -19,6 +20,9 @@ REGEN_VMR="regen_vmrpdi.sh"
 BUILD_CLEAN=0
 CURRENT_DIR=$(dirname "$0")
 BASE_NAME=$(basename "$0")
+
+BUILD_DATE=`date +%F-%T`
+BUILD_DATE_FILE="$ROOT_DIR/$BUILD_DIR/build_date.txt"
 
 check_result()
 {
@@ -68,6 +72,12 @@ build_clean() {
 	rm -rf build_tmp_dir
 	rm -rf $BUILD_DIR
 
+#	RMI=$ROOT_DIR/../RMI/build/
+#	if [ -d $RMI ];then
+#		echo "=== Clean RMI ==="	
+#		cd $RMI
+#		bash ./build.sh -clean
+#	fi
 
 	echo "=== build_clean Took: $((SECONDS - start_seconds)) S"
 }
@@ -196,7 +206,7 @@ make_version_h()
 		VMR_VERSION_PATCH=`grep_file "VMR_VERSION_PATCH" ${BUILD_VERSION_FILE}`
 
 	fi
-	VMR_BUILD_VERSION_DATE=`date`
+	VMR_BUILD_VERSION_DATE="$BUILD_DATE"
 	VMR_BUILD_VERSION="$VMR_VERSION_RELEASE.$VMR_VERSION_MAJOR.$VMR_VERSION_MINOR.$VMR_VERSION_PATCH"
 
 	# NOTE: we only take git version, version date and branch for now
@@ -286,9 +296,13 @@ check_vmr()
 	else
 		echo "Full Build"
 	fi
-
-	if [ $BUILD_RMI == 1 ];then
-		echo "Full Build with RMI"
+	
+	if [ $UPDATE_RMI == 1 ];then
+		echo "Full Build with UPDATE_RMI"
+	fi
+	
+	if [ $BUILD_RMI_LIB == 1 ];then
+		echo "Full Build with RMI_LIB"
 	fi
 	
 	echo "=== Build vmr.elf ==="
@@ -300,18 +314,30 @@ build_app_all() {
 	cd $ROOT_DIR
 	rsync -a ../vmr/src $BUILD_DIR/vmr_app --exclude cmc --exclude vmc/ut
 
-	RMI=$ROOT_DIR/../RMI
-	if [ -d $RMI ];then
-		echo "=== Adding RMI submodule to build ==="	
-		rsync -a ../RMI "$BUILD_DIR/vmr_app/src" --exclude *.md
+	RMI=$ROOT_DIR/librmi.a
+	if [ -f $RMI ];then
+		echo "=== Adding RMI lib to build ==="	
+		cp $RMI $BUILD_DIR
+		realpath $BUILD_DIR/librmi.a
+		
+		cd $ROOT_DIR
+		RMI_INCLUDE_DIR=$BUILD_DIR/vmr_app/src/include/RMI
+		mkdir $RMI_INCLUDE_DIR
+		rsync -a ../RMI/src/include/* $RMI_INCLUDE_DIR
 	fi
 	
-	cp config_app.tcl $BUILD_DIR
 	cp make_app.tcl $BUILD_DIR
 
-	cd $BUILD_DIR
-	xsct ./config_app.tcl >> $BUILD_LOG 2>&1
-
+	if [ -f $RMI ];then
+		cp config_vmr_app_RMI.tcl $BUILD_DIR
+		cd $BUILD_DIR
+		xsct ./config_vmr_app_RMI.tcl $ROOT_DIR/$BUILD_DIR rmi >> $BUILD_LOG 2>&1
+	else
+		cp config_app.tcl $BUILD_DIR
+		cd $BUILD_DIR
+		xsct ./config_app.tcl >> $BUILD_LOG 2>&1
+	fi
+	
 	cd $ROOT_DIR
 	make_version_h "$BUILD_DIR/vmr_app"
 
@@ -334,6 +360,19 @@ build_vmr_source() {
 	# copy new source file
 	cd $ROOT_DIR
 	rsync -a ../vmr/src "$BUILD_DIR/vmr_app" --exclude cmc --exclude *.swp --exclude vmc/ut
+	
+	RMI=$ROOT_DIR/librmi.a
+	if [ -f $RMI ];then
+		echo "=== Adding RMI lib to build ==="	
+		cp $RMI $BUILD_DIR
+		realpath $BUILD_DIR/librmi.a
+		
+		cd $ROOT_DIR
+		RMI_INCLUDE_DIR=$BUILD_DIR/vmr_app/src/include/RMI
+		mkdir $RMI_INCLUDE_DIR
+		rsync -a ../RMI/src/include/* $RMI_INCLUDE_DIR
+	fi
+	
 	make_version_h "$BUILD_DIR/vmr_app"
 
 	cd $ROOT_DIR/$BUILD_DIR/vmr_app/Debug
@@ -362,11 +401,17 @@ build_app_incremental() {
 	cd $ROOT_DIR
 	rsync -a ../vmr/src "$BUILD_DIR/vmr_app" --exclude cmc --exclude *.swp --exclude vmc/ut
 	make_version_h "$BUILD_DIR/vmr_app"
-
-	RMI=$ROOT_DIR/../RMI
-	if [ -d $RMI ];then
-		echo "=== Adding RMI submodule to build ==="	
-		rsync -a ../RMI "$BUILD_DIR/vmr_app/src" --exclude *.md
+	
+	RMI=$ROOT_DIR/librmi.a
+	if [ -f $RMI ];then
+		echo "=== Adding RMI lib to build ==="	
+		cp $RMI $BUILD_DIR
+		realpath $BUILD_DIR/librmi.a
+		
+		cd $ROOT_DIR
+		RMI_INCLUDE_DIR=$BUILD_DIR/vmr_app/src/include/RMI
+		mkdir $RMI_INCLUDE_DIR
+		rsync -a ../RMI/src/include/* $RMI_INCLUDE_DIR
 	fi
 	
 	cd $BUILD_DIR
@@ -439,6 +484,8 @@ diff_xgq_cmd_headers() {
 	diff /tmp/xgq_cmd_common.h.vmr /tmp/xgq_cmd_common.h.xrt >> $ROOT_DIR/diff.log
 	if [ $? -ne 0 ];then
 		echo "WARN!!! please make xgq_cmd_common.h the same between XRT and VMR"
+	else
+		echo "GOOD JOB! xgq_cmd_common.h is the same between XRT and VMR"
 	fi
 
 	tail -n +5 $ROOT_DIR/../vmr/src/common/xgq_cmd_vmr.h > /tmp/xgq_cmd_vmr.h.vmr
@@ -448,17 +495,13 @@ diff_xgq_cmd_headers() {
 	diff /tmp/xgq_cmd_vmr.h.vmr /tmp/xgq_cmd_vmr.h.xrt >> $ROOT_DIR/diff.log
 	if [ $? -ne 0 ];then
 		echo "WARN!!! please make xgq_cmd_vmr.h the same between XRT and VMR"
+	else
+		echo "GOOD JOB! xgq_cmd_vmr.h is the same between XRT and VMR"
 	fi
 }
 
 build_RMI() {
 	echo "=== Build RMI ==="
-	
-	cd $ROOT_DIR/$BUILD_DIR/vmr_app/Debug
-	if [ $? -ne 0 ];then
-		echo "Please rebuild entire project"
-		exit 1;
-	fi
 	
 	echo "=== Update RMI submodule ==="
 	if [ -f "$ROOT_DIR/../.gitmodules" ];then
@@ -475,23 +518,38 @@ build_RMI() {
 	
 	RMI=$ROOT_DIR/../RMI
 	if [ -z $RMI ];then
-		echo "=== RMI submodule doesn't exist, skip checking ==="
+		echo "=== RMI submodule doesn't exist ==="
+		exit 1;
+	fi
+
+	build_make_RMI_lib
+}
+
+build_make_RMI_lib(){
+
+	RMI=$ROOT_DIR/../RMI
+	if [ -z $RMI ];then
+		echo "=== RMI submodule doesn't exist ==="
 		exit 1;
 	fi
 	
 	start_seconds=$SECONDS
 
 	# copy new source file
-	cd $ROOT_DIR
-	rsync -a ../vmr/src "$BUILD_DIR/vmr_app" --exclude cmc --exclude *.swp --exclude vmc/ut
-	rsync -a ../RMI "$BUILD_DIR/vmr_app/src" --exclude *.md
-	make_version_h "$BUILD_DIR/vmr_app"
-	cd $ROOT_DIR/$BUILD_DIR/vmr_app/Debug
-	make clean;make -j
+	cd $RMI/build
+	bash ./build.sh -config build_smbus.json
 
-	cd $ROOT_DIR
-	check_vmr "$BUILD_DIR/vmr_app"
-
+	RMI_LIB_FILE=$RMI/build/librmi.a
+	if [[ ! -f "${RMI_LIB_FILE}" ]];then
+		echo "RMI Build failed, cannot find $RMI_LIB_FILE"
+		cat $BUILD_DIR/$BUILD_LOG
+		exit 1;
+	else
+		# copy header files and rmi library 
+		cp librmi.a $ROOT_DIR
+		realpath $ROOT_DIR/librmi.a
+	fi
+	
 	echo "=== Make VMR-app with RMI took: $((SECONDS - start_seconds)) S"
 }
 
@@ -559,7 +617,8 @@ usage() {
     echo "-config <json file>        build with pre configured options"
     echo "-app                       Re-build Vitis Application only"  
     echo "-vmr                       Re-build vmr source code only, fatest!!!"  
-    echo "-RMI                       Full vmr build with RMI included!" 
+    echo "-RMI                       Update RMI from git and build!" 
+    echo "-RMI_LIB                   Build RMI library!" 
     echo "-help"
     exit $1
 }
@@ -602,7 +661,10 @@ do
 			BUILD_XRT=1
 			;;
 		-RMI)
-			BUILD_RMI=1
+			UPDATE_RMI=1
+			;;
+		-RMI_LIB)
+			BUILD_RMI_LIB=1
 			;;
 		-version)
 			shift
@@ -635,9 +697,23 @@ done
 echo "=== build log =="
 echo "" > $ROOT_DIR/$BUILD_DIR/$BUILD_LOG
 echo "tail -f $ROOT_DIR/$BUILD_DIR/$BUILD_LOG"
+echo "build date: $BUILD_DATE"
+echo $BUILD_DATE > $BUILD_DATE_FILE
 
 if [[ $BUILD_CLEAN == 1 ]];then
 	build_clean
+	exit 0;
+fi
+
+# UPDATE RMI and build
+if [[ $UPDATE_RMI == 1 ]];then
+	build_RMI
+	exit 0;
+fi
+
+# build RMI library
+if [[ $BUILD_RMI_LIB == 1 ]];then
+	build_make_RMI_lib
 	exit 0;
 fi
 
@@ -674,12 +750,6 @@ if [[ $BUILD_VMR == 1 ]];then
 	exit 0;
 fi
 
-# only build vmr source code with RMI
-if [[ $BUILD_RMI == 1 ]];then
-	build_RMI
-	exit 0;
-fi
-
 # only build app by vitis
 if [[ $BUILD_APP == 1 ]];then
 	build_app_incremental
@@ -689,10 +759,11 @@ fi
 
 # default build based on cached stable bsp
 if [ -z $BUILD_XSA ] || [ $BUILD_XSA == "No" ];then
-	echo "=== No XSA specified, build from stable BSP.";
-	build_clean
-	build_bsp_stable
-	exit 0;
+#echo "=== No XSA specified, build from stable BSP.";
+#build_clean
+#build_bsp_stable
+	echo "=== No XSA specified, build failed.";
+	exit 1;
 fi
 
 #####################
@@ -707,6 +778,7 @@ fi
 
 echo "=== (1) Build clean and preparation ..."
 build_clean
+cd $ROOT_DIR
 mkdir $BUILD_DIR
 #cp $BUILD_XSA $BUILD_DIR/vmr.xsa
 #check_result "copy $BUILD_XSA" $?

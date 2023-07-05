@@ -21,10 +21,21 @@
 #include "cl_vmc.h"
 #include "vmr_common.h"
 
+#ifdef BUILD_FOR_RMI
+#include "cl_rmi.h"
+#endif
+
 #define XGQ_XQUEUE_LENGTH	8
 #define XGQ_XQUEUE_WAIT_MS	10
-/* Depth "number of words" of the stack. depth (64k) * sizeof(word) = total size (256k) */
-#define TASK_STACK_DEPTH 	0x10000
+/* 
+ * use check_usage.sh to check peak usage in theory.
+ * use vmr_mem_status to check peak usage in certain load.
+ * the current peak usage is < 2k, seting thread to 16k heap size.
+ *  The thread Depth "number of words" of the stack.
+ *  depth (12k) * sizeof(word) = total size (48k)
+ * If we have 5 tasks, it takes up to 240k.
+ */
+#define TASK_STACK_DEPTH 	0x3000
 
 /*
  * VMR (Versal Management Runtime) design diagram.
@@ -95,6 +106,10 @@ static TaskHandle_t cl_xgq_program_handle = NULL;
 static TaskHandle_t cl_xgq_opcode_handle = NULL;
 static TaskHandle_t cl_vmc_sensor_handle = NULL;
 static TaskHandle_t cl_vmc_sc_comms_handle = NULL;
+#ifdef BUILD_FOR_RMI
+static TaskHandle_t cl_rmi_handle = NULL;
+#endif
+
 #ifdef VMC_DEBUG
 static TaskHandle_t cl_uart_demo_handle = NULL;
 #endif
@@ -133,6 +148,11 @@ struct cl_task_handle {
 		"Sensor Monitor", NULL, &cl_vmc_sensor_handle},
 	{APP_VMC, cl_vmc_sc_comms_init, cl_vmc_sc_comms_func,
 		"SC Common Handler", NULL, &cl_vmc_sc_comms_handle},
+#ifdef BUILD_FOR_RMI
+	{APP_VMC, cl_rmi_init, cl_rmi_func,
+		"RMI Task Handler", NULL, &cl_rmi_handle},
+#endif
+		
 #ifdef VMC_DEBUG
 	{APP_VMC, cl_uart_demo_init, cl_uart_demo_func,
 		"Uart Demo", NULL, &cl_uart_demo_handle},
