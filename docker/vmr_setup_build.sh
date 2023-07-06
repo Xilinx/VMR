@@ -15,6 +15,7 @@ sudo dpkg  -i /proj/xbuilds/${TA}/xbb/xrt/packages/xrt_*_20.04-amd64-xrt.deb
 #Install V70 packages
 sudo dpkg -i /proj/xbuilds/${TA}/xbb/packages/internal_platforms/v70/gen5x8_qdma/2-*-dev/xilinx-v70-*_all.deb
 sudo dpkg -i /proj/xbuilds/${TA}/xbb/packages/internal_platforms/v70/gen5x8_qdma/base/xilinx-v70*-base_2-*_all.deb
+sudo dpkg -i /proj/xbuilds/${TA}/xbb/packages/internal_platforms/v70/gen5x8_qdma/base/xilinx-v70*-base_3-*_all.deb
 sudo dpkg -i /proj/xbuilds/${TA}/xbb/xrt/packages/apu_packages/xrt-apu_*all.deb
 
 #Run VMR build
