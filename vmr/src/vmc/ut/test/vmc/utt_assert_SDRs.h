@@ -17,16 +17,11 @@
 /*This enum and structure is created only for the purpose of asserting SDRs in UT*/
 typedef enum
 {
-    eBoardInfoSDR_offset        = 0,
-    eTemperatureSDR_offset      = 11,
-    eVoltageSDR_offset          = 14,
-    eCurrentSDR_offset          = 17,
-    ePowerSDR_offset            = 20,
-    eBoardInfoSDR_V80_offset    = 0,
-    eTemperatureSDR_V80_offset  = 11,
-    eVoltageSDR_V80_offset      = 20,
-    eCurrentSDR_V80_offset      = 30,
-    ePowerSDR_V80_offset        = 40,
+	eBoardInfoSDR_offset = 0,
+	eTemperatureSDR_offset = 11,
+	eVoltageSDR_offset = 14,
+	eCurrentSDR_offset = 17,
+	ePowerSDR_offset = 20
 }Assert_SdrOffset_t;
 
 typedef struct  Assert_Sdr_s

@@ -9,7 +9,6 @@
 #include "cl_mem.h"
 #include "vmc_sc_comms.h"
 #include "vmc_update_sc.h"
-#include "vmc_main.h"
 
 
 #define MAX_RETRY_TO_CHK_SC_ACTIVE	  (10u)
@@ -607,16 +606,13 @@ void VMC_SC_UART_Messages_All()
 
 static void cl_vmc_sc_active()
 {
-	if( eV80 != Vmc_Get_PlatformType() )
-	{
-		for (int i = 0; i < MAX_RETRY_TO_CHK_SC_ACTIVE; i++) {
-			if (vmc_get_sc_status()) 
-				return;
+	for (int i = 0; i < MAX_RETRY_TO_CHK_SC_ACTIVE; i++) {
+		if (vmc_get_sc_status()) 
+			return;
 
-			vTaskDelay(pdMS_TO_TICKS(1000));
-			vmc_set_active_resp_len(MSP432_COMMS_GENERAL_RESP_LEN);
-			VMC_SC_COMMS_Tx_Rx(MSP432_COMMS_VMC_ACTIVE_REQ);
-		}
+		vTaskDelay(pdMS_TO_TICKS(1000));
+		vmc_set_active_resp_len(MSP432_COMMS_GENERAL_RESP_LEN);
+		VMC_SC_COMMS_Tx_Rx(MSP432_COMMS_VMC_ACTIVE_REQ);
 	}
 }
 

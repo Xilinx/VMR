@@ -28,11 +28,6 @@ typedef enum {
 	eVCCINT,
 	e12V_AUX0,
 	e12V_AUX1,
-	e1V5_VCC_AUX,
-	e3V3_QSFP,
-	eVCC_HBM,
-	e1V2_VCCO_DIMM,
-	e1V2_GTXAVTT,
 	eElectrical_Sensor_Max,
 }eElectrical_sensors_t;
 
@@ -43,9 +38,6 @@ typedef struct
 	float remote_temp;
 	float sysmon_max_temp;
 	float vccint_temp;
-	float fVccHbmTemp;
-	float f1V2VccoDimmTemp;
-	float f1V2GtxaVttTemp;
 	float qsfp_temp[QSFP_TEMPERATURE_SENSOR_NUM];
 	u16 fanRpm;
 	float voltage[eElectrical_Sensor_Max];

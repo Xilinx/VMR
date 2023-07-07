@@ -29,7 +29,7 @@ extern msg_id_ptr msg_id_handler_ptr;
 extern Fetch_BoardInfo_Func fetch_boardinfo_ptr;
 extern clk_throttling_params_t g_clk_throttling_params;
 
-static u8 ucI2cMain = LPD_I2C_0;
+static u8 i2c_main = LPD_I2C_0;
 
 u8 V70_VMC_SC_Comms_Msg[] = {
         SC_COMMS_TX_I2C_SNSR
@@ -40,7 +40,8 @@ u8 V70_VMC_SC_Comms_Msg[] = {
 
 #define V70_NUM_BOARD_INFO_SENSORS  (11)
 #define V70_NUM_TEMPERATURE_SENSORS (3)
-#define V70_NUM_SC_VOLTAGE_SENSORS  (3)
+#define V70_NUM_SC_VOLTAGE_SENSORS  (2)
+#define V70_NUM_SYSMON_VOLTAGE_SENSORS  (1)
 #define V70_NUM_SC_CURRENT_SENSORS  (3)
 #define V70_NUM_POWER_SENSORS       (1)
 
@@ -51,7 +52,6 @@ extern asdm_update_record_count_ptr asdm_update_record_count;
 Clock_Throttling_Profile_t clock_throttling_v70;
 extern Clock_Throttling_Handle_t clock_throttling_std_algorithm;
 
-s8 VCCINT_Read_ACAP_Device_Sysmon(snsrRead_t *snsrData);
 void V70_Voltage_Monitor_12V_PEX(void);
 void V70_Current_Monitor_12V_PEX(void);
 void V70_Voltage_Monitor_3v3_PEX(void);
@@ -61,7 +61,7 @@ void V70_Voltage_Monitor_3v3_AUX(void);
 AsdmHeader_info_t v70_asdmHeader_info[] = {
         {BoardInfoSDR,      V70_NUM_BOARD_INFO_SENSORS},
         {TemperatureSDR,    V70_NUM_TEMPERATURE_SENSORS},
-        {VoltageSDR,        V70_NUM_SC_VOLTAGE_SENSORS},
+        {VoltageSDR,        V70_NUM_SC_VOLTAGE_SENSORS + V70_NUM_SYSMON_VOLTAGE_SENSORS},
         {CurrentSDR,        V70_NUM_SC_CURRENT_SENSORS},
         {PowerSDR,      V70_NUM_POWER_SENSORS},
 };
@@ -87,6 +87,7 @@ u32 V70_Supported_Sensors[] = {
 
     /* Voltage SDR */
     eVoltage_Group_Sensors,
+    eVoltage_Sysmon_Vccint,
 
     /* Current SDR */
     eCurrent_Group_Sensors,
@@ -121,7 +122,7 @@ s8 V70_Temperature_Read_Inlet(snsrRead_t *snsrData)
     s8 status = XST_FAILURE;
     s16 tempValue = 0;
 
-    status = LM75_ReadTemperature(ucI2cMain, SLAVE_ADDRESS_LM75_0_V70, &tempValue);
+    status = LM75_ReadTemperature(i2c_main, SLAVE_ADDRESS_LM75_0_V70, &tempValue);
     if (status == XST_SUCCESS)
     {
         Cl_SecureMemcpy(snsrData->snsrValue,sizeof(tempValue),&tempValue,sizeof(tempValue));
@@ -142,7 +143,7 @@ s8 V70_Temperature_Read_Outlet(snsrRead_t *snsrData)
     s8 status = XST_FAILURE;
     s16 tempValue = 0;
 
-    status = LM75_ReadTemperature(ucI2cMain, SLAVE_ADDRESS_LM75_1_V70, &tempValue);
+    status = LM75_ReadTemperature(i2c_main, SLAVE_ADDRESS_LM75_1_V70, &tempValue);
     if (status == XST_SUCCESS)
     {
         Cl_SecureMemcpy(snsrData->snsrValue,sizeof(tempValue),&tempValue,sizeof(tempValue));
@@ -175,19 +176,19 @@ s8 V70_Temperature_Read_Board(snsrRead_t *snsrData)
 void V70_Temperature_Monitor(void)
 {
     u8 status = XST_FAILURE;
-    status = LM75_ReadTemperature(ucI2cMain, SLAVE_ADDRESS_LM75_0_V70, &sensor_glvr.sensor_readings.board_temp[0]);
+    status = LM75_ReadTemperature(i2c_main, SLAVE_ADDRESS_LM75_0_V70, &sensor_glvr.sensor_readings.board_temp[0]);
     if (status == XST_FAILURE)
     {
         VMC_DBG("Failed to read LM75_0 \n\r");
     }
 
-    status = LM75_ReadTemperature(ucI2cMain, SLAVE_ADDRESS_LM75_1_V70, &sensor_glvr.sensor_readings.board_temp[1]);
+    status = LM75_ReadTemperature(i2c_main, SLAVE_ADDRESS_LM75_1_V70, &sensor_glvr.sensor_readings.board_temp[1]);
     if (status == XST_FAILURE)
     {
         VMC_DBG("Failed to read LM75_1 \n\r");
     }
 
-    status =  ucISL68221ReadTemperature0(ucI2cMain, SLAVE_ADDRESS_ISL68221, &sensor_glvr.sensor_readings.vccint_temp);
+    status =  ISL68221_ReadVCCINT_Temperature(i2c_main, SLAVE_ADDRESS_ISL68221, &sensor_glvr.sensor_readings.vccint_temp);
     if (status == XST_FAILURE)
     {
         VMC_DBG("Failed to read Vccint_temp from : 0x%x", SLAVE_ADDRESS_ISL68221);
@@ -264,7 +265,7 @@ void V70_Voltage_Monitor_12V_PEX()
 {
     u8 status = XST_FAILURE;
     float volatge = 0.0;
-    status = INA3221_ReadVoltage(ucI2cMain, SLAVE_ADDRESS_INA3221, 0, &volatge);
+    status = INA3221_ReadVoltage(i2c_main, SLAVE_ADDRESS_INA3221, 0, &volatge);
     if(XST_SUCCESS != status)
     {
         VMC_ERR("Failed to read 12vPex voltage");
@@ -277,7 +278,7 @@ void V70_Current_Monitor_12V_PEX()
 {
     u8 status = XST_FAILURE;
     float current = 0.0;
-    status = INA3221_ReadCurrent(ucI2cMain, SLAVE_ADDRESS_INA3221, 0, &current);
+    status = INA3221_ReadCurrent(i2c_main, SLAVE_ADDRESS_INA3221, 0, &current);
     if(XST_SUCCESS != status)
     {
         VMC_ERR("Failed to read 12vPex current");
@@ -290,7 +291,7 @@ void V70_Voltage_Monitor_3v3_PEX()
 {
     u8 status = XST_FAILURE;
     float volatge = 0.0;
-    status = INA3221_ReadVoltage(ucI2cMain, SLAVE_ADDRESS_INA3221, 1, &volatge);
+    status = INA3221_ReadVoltage(i2c_main, SLAVE_ADDRESS_INA3221, 1, &volatge);
     if(XST_SUCCESS != status)
     {
         VMC_ERR("Failed to read 3v3 pex voltage");
@@ -303,7 +304,7 @@ void V70_Current_Monitor_3v3_PEX()
 {
     u8 status = XST_FAILURE;
     float current = 0.0;
-    status = INA3221_ReadCurrent(ucI2cMain, SLAVE_ADDRESS_INA3221, 1, &current);
+    status = INA3221_ReadCurrent(i2c_main, SLAVE_ADDRESS_INA3221, 1, &current);
     if(XST_SUCCESS != status)
     {
         VMC_ERR("Failed to read 3v3 Pex current");
@@ -316,7 +317,7 @@ void V70_Voltage_Monitor_3v3_AUX()
 {
     u8 status = XST_FAILURE;
     float volatge = 0.0;
-    status = INA3221_ReadVoltage(ucI2cMain, SLAVE_ADDRESS_INA3221, 2, &volatge);
+    status = INA3221_ReadVoltage(i2c_main, SLAVE_ADDRESS_INA3221, 2, &volatge);
     if(XST_SUCCESS != status)
     {
         VMC_ERR("Failed to read 3v3 Aux voltage");
@@ -386,7 +387,7 @@ void V70_Current_Monitor_Vccint()
     u8 status = XST_SUCCESS;
     float currentInA = 0.0;
 
-    status =  ucISL68221ReadCurrent0(ucI2cMain, SLAVE_ADDRESS_ISL68221, &currentInA);
+    status =  ISL68221_ReadVCCINT_Current(i2c_main, SLAVE_ADDRESS_ISL68221, &currentInA);
     if(XST_SUCCESS != status)
     {
         VMC_ERR("Failed to read Vccint Current ");
@@ -547,9 +548,8 @@ s8 V70_Get_Voltage_Names(u8 index, char8* snsrName, u8 *sensorId,sensorMonitorFu
 
     struct sensorData voltageData[] =
     {
-        { "12v_pex\0", V70_Asdm_Read_Voltage_12v },
-        { "3v3_pex\0", V70_Asdm_Read_Voltage_3v3},
-        {  "vccint\0", VCCINT_Read_ACAP_Device_Sysmon} // Reading of sysmon VCCINT moved from asdm code
+        { "12v_pex\0",V70_Asdm_Read_Voltage_12v },
+        { "3v3_pex\0" ,V70_Asdm_Read_Voltage_3v3}
 
     };
 

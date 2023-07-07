@@ -13,6 +13,6 @@ u8 __wrap_LM75_ReadTemperature(u8 i2c_num, u8 slaveAddr, s16 *temperatureValue)
 	  u8 status = 0;
 	  *temperatureValue = 70;
 
-	  return mock_type(u8);
+	  return status;
 }
 
