@@ -1,5 +1,6 @@
 /******************************************************************************
 * Copyright (C) 2022 Xilinx, Inc.  All rights reserved.
+* Copyright (C) 2023, Advanced Micro Devices, Inc.  All rights reserved.
 * SPDX-License-Identifier: MIT
 *******************************************************************************/
 
@@ -166,6 +167,7 @@ struct xgq {
 #define XGQ_NEED_DOUBLE_READ(xgq)	(((xgq)->xq_flags & XGQ_DOUBLE_READ) != 0)
 #define XGQ_IS_IN_MEM_PROD(xgq)		(((xgq)->xq_flags & XGQ_IN_MEM_PROD) != 0)
 
+#define XGQ_INTR_ENABLE_OFFSET 12
 
 /*
  * XGQ implementation details and helper routines.
@@ -259,13 +261,23 @@ static inline void xgq_ring_write_consumed(uint64_t io_hdl, struct xgq_ring *rin
 static inline uint64_t xgq_ring_slot_ptr_produced(struct xgq_ring *ring)
 {
 	return ring->xr_slot_addr +
-	       (uint64_t)ring->xr_slot_sz * (ring->xr_produced & (ring->xr_slot_num - 1));
+		/*
+		 * In reality, below multiplication of two 32-bit ints will not overflow.
+		 * So, keep it as-is, instead of doing 64-bit mutiplication, which is very
+		 * slow on 32-bit CPU, e.g., Microblaze.
+		 */
+		ring->xr_slot_sz * (ring->xr_produced & (ring->xr_slot_num - 1));
 }
 
 static inline uint64_t xgq_ring_slot_ptr_consumed(struct xgq_ring *ring)
 {
 	return ring->xr_slot_addr +
-	       (uint64_t)ring->xr_slot_sz * (ring->xr_consumed & (ring->xr_slot_num - 1));
+		/*
+		 * In reality, below multiplication of two 32-bit ints will not overflow.
+		 * So, keep it as-is, instead of doing 64-bit mutiplication, which is very
+		 * slow on 32-bit CPU, e.g., Microblaze.
+		 */
+		ring->xr_slot_sz * (ring->xr_consumed & (ring->xr_slot_num - 1));
 }
 
 static inline int xgq_can_produce(struct xgq *xgq)
@@ -337,6 +349,8 @@ xgq_init(struct xgq *xgq, uint64_t flags, uint64_t io_hdl, uint64_t ring_addr,
 	} else {
 		sqprod = sq_produced;
 		cqprod = cq_produced;
+		// Write 1 to GCQ interrupt enable register to always enable interrupt
+		xgq_reg_write32(xgq->xq_io_hdl, cqprod + XGQ_INTR_ENABLE_OFFSET, 1);
 	}
 	xgq_init_ring(xgq, &xgq->xq_sq, sqprod,
 		      ring_addr + offsetof(struct xgq_header, xh_sq_consumed),
@@ -484,6 +498,8 @@ static inline int xgq_attach(struct xgq *xgq, uint64_t flags, uint64_t io_hdl, u
 	} else {
 		sqprod = sq_produced;
 		cqprod = cq_produced;
+		// Write 1 to GCQ interrupt enable register to always enable interrupt
+		xgq_reg_write32(xgq->xq_io_hdl, sqprod + XGQ_INTR_ENABLE_OFFSET, 1);
 	}
 	xgq_init_ring(xgq, &xgq->xq_sq, sqprod,
 		      ring_addr + offsetof(struct xgq_header, xh_sq_consumed),
