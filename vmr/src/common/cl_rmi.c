@@ -155,14 +155,31 @@ static s8 rmi_sensor_init(void)
     return ret_val;
 }
 
+/**
+*  @brief Callback registered with RMI to respond to API requests
+*  @param req Request buffer - incoming API request from RMI
+*  @param req_size Size of request buffer
+*  @param res Response buffer - returned to RMI
+*  @param res_size Size of response buffer
+*  @return 0 on success
+*/
+int8_t rmi_request(uint8_t* req, uint16_t* req_size, uint8_t* res, uint16_t* res_size)
+{
+    //TODO
+    return 0;
+}
+
 /*
 *  @brief Calls initializes rmi library. It is called from cl_main
 *  @return
 */
 int cl_rmi_init(void)
 {
+    rmi_config_t rmi_config = { .rmi_malloc_fptr = pvPortMalloc, .rmi_request_fptr = rmi_request, .rmi_free_fptr = vPortFree,
+                                .rmi_memcpy_fptr = Cl_SecureMemcpy, .rmi_memset_fptr = Cl_SecureMemset, .rmi_memcmp_fptr = Cl_SecureMemcmp,
+                                .rmi_memmove_fptr = Cl_SecureMemmove, .rmi_strncpy_fptr = Cl_SecureStrncpy, .rmi_strncmp_fptr = Cl_SecureStrncmp };
 
-    rmi_init();
+    lRmiInitialize(rmi_config);
 
     is_rmi_ready = true;
 
