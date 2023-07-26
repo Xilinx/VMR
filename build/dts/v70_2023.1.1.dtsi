@@ -100,6 +100,12 @@
     reset-gpio = <&blp_blp_logic_aresetn_apu_vdu_gpio 0x0 0x01>;
 };
 &amba_pl {
+    ai_engine@20000000000 {
+    	reg = <0x00000200 0x00000000 0x00000001 0x00000000>;
+	aie_aperture@20000000000 {
+	    	reg = <0x00000200 0x00000000 0x00000001 0x00000000>;
+	};
+    };
     al5d@204a4020000 {
         memory-region = <&vdu_zocl_versal_region0>;
     };
