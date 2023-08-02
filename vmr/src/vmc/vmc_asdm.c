@@ -30,8 +30,7 @@
 #define SNSR_AVG_VAL                (0x1 << 6)
 #define HAS_LOWER_THRESHOLDS        (0x7 << 3)
 #define HAS_UPPER_THRESHOLDS        (0x7)
-    
-#define LENGTH_BITMASK              (0x3F)
+
 #define SENSOR_REPOSITORY_REQUEST   (0xF1)
 #define THRESHOLDS_UNSUPPORTED      (0x00)
 
