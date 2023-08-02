@@ -41,6 +41,7 @@ typedef enum Asdm_Repository_Type_Enum_e
     IPMIFRUSDR     = 0xD1,
     CSDRLogDataSDR = 0xE0,
     VMCLogDataSDR  = 0xE1,
+    RmiSDR         = 0xF0,
 }Asdm_RepositoryTypeEnum_t;
 
 typedef enum
@@ -104,6 +105,8 @@ typedef enum Asdm_CMD_Id_e {
     ASDM_CMD_GET_SDR                    = 0x2,
     ASDM_CMD_GET_SINGLE_SENSOR_DATA     = 0x3,
     ASDM_CMD_GET_ALL_SENSOR_DATA        = 0x4,
+    ASDM_CMD_GET_SDR_API_ID             = 0x5,
+    ASDM_CMD_GET_ALL_SENSOR_DATA_API_ID = 0x6,
 }Asdm_CMD_Id_t;
 
 /*typedef s8 (*Asdm_GetRepository_func)(u8 *respData, u16 respSize);
@@ -223,6 +226,7 @@ typedef struct __attribute__((packed)) Asdm_EOR_s
 }Asdm_EOR_t;
 
 #define ASDM_EOR_MAX_SIZE       (4u)
+#define LENGTH_BITMASK          (0x3F)
 
 typedef struct __attribute__((packed)) SDR_s
 {
