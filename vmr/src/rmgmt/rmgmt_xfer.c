@@ -416,8 +416,7 @@ static int rmgmt_fpga_download(struct rmgmt_handler *rh, u32 len)
 	}
 
 
-	VMR_WARN("sends xclbin to apu: original size %d, real size %d",
-		rh->rh_data_size, axlf->m_header.m_length);
+	VMR_WARN("data size %d, axlf size %d", rh->rh_data_size, axlf->m_header.m_length);
 	/* reset real data size to transfer */
 	rh->rh_data_size = axlf->m_header.m_length;
 
