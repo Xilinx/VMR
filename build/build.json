@@ -5,6 +5,6 @@
   "CONF_BUILD_PLATFORM" : "platform_2022.1_vitis.json",
   "CONF_BUILD_JTAG" : "0",
   "CONF_BUILD_AIE2" : "yes",
-  "CONF_BUILD_SHELL" : "yes"
+  "CONF_BUILD_SHELL" : "no"
 }
 
