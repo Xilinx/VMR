@@ -344,7 +344,10 @@ static int rmgmt_fpga_download(struct rmgmt_handler *rh, u32 len)
 	ret = rmgmt_get_uuids((u32)axlf, (char *)xclbin_int_uuid);
 	if (ret) {
 		VMR_ERR("Failed to find UUID from xclbin");
-		return -EINVAL;
+		/* Assuming that file with no UUID means incoming file is PS Kernel xclbin in which case UUID check is skipped
+		 * Failure of a valid xclbin with UUID needs handling here in case if necessary
+		 */
+		goto skip_uuid;
 	}
 
     	if (rmgmt_fpt_get_xsabin(&msg, &fdtdata, &fdtdata_size)) {
@@ -371,7 +374,7 @@ static int rmgmt_fpga_download(struct rmgmt_handler *rh, u32 len)
 		VMR_DBG("xsa:0x%s", xsabin_int_uuid);
 		VMR_WARN("Interface UUID Match Found!");
 	}
-
+skip_uuid:
 	ret = rmgmt_xclbin_section_info(axlf, CLOCK_FREQ_TOPOLOGY, &offset, &size);
 	if (ret || size == 0) {
 		VMR_LOG("no CLOCK TOPOLOGY from xclbin: %d", ret);
