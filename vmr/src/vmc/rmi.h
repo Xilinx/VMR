@@ -20,7 +20,7 @@ extern SDR_t *sdrInfo;
 *  @param pusResp_size Size of response buffer
 *  @return eRMI_SUCCESS on success
 */
-rmi_error_codes_t xRmi_Request_Handler(uint8_t* pucReq, uint16_t* pusReq_size, uint8_t* pucResp, uint16_t* pusResp_size);
+rmi_error_codes_t xRmi_Request_Handler(uint8_t* pucReq, uint16_t* pusReq_size, uint8_t** pucResp, uint16_t* pusResp_size);
 
 rmi_error_codes_t get_SDR_API(uint8_t **pucBuffer, uint16_t *pusBufSize);
 rmi_error_codes_t get_ALL_SENSOR_DATA_API(void);
