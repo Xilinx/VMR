@@ -2,6 +2,7 @@
 * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
 * SPDX-License-Identifier: MIT
 *******************************************************************************/
+#ifdef BUILD_FOR_RMI
 #include <stdint.h>
 
 #include "FreeRTOS.h"
@@ -209,3 +210,5 @@ rmi_error_codes_t xRmi_Request_Handler(uint8_t* pucReq, uint16_t* pusReq_size, u
 
     return xErr;
 }
+
+#endif /* BUILD_FOR_RMI */

@@ -2,6 +2,7 @@
 * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
 * SPDX-License-Identifier: MIT
 *******************************************************************************/
+#ifdef BUILD_FOR_RMI
 #ifndef RMI_H
 #define RMI_H
 
@@ -26,3 +27,4 @@ rmi_error_codes_t get_SDR_API(uint8_t **pucBuffer, uint16_t *pusBufSize);
 rmi_error_codes_t get_ALL_SENSOR_DATA_API(void);
 
 #endif /* RMI_H */
+#endif /* BUILD_FOR_RMI */
