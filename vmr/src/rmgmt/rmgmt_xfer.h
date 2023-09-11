@@ -93,4 +93,5 @@ int rmgmt_load_apu(struct rmgmt_handler *rh);
 int rmgmt_check_for_status(struct rmgmt_handler *rh, u8 status);
 u8 rmgmt_get_pkt_flags(struct rmgmt_handler *rh);
 
+int rmgmt_fdt_get_uuids(u32 fdt_addr, char *int_uuid, u32 uuid_size);
 #endif

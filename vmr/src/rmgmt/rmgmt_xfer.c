@@ -241,79 +241,49 @@ static inline int pdi_download(UINTPTR data, UINTPTR size, const char *clock,
 	return fpga_pdi_download(data, size, clock, clock_size, has_pl);
 }
 
-static int rmgmt_get_uuids(u32 fdtdata, char *int_uuid)
+/*
+ * Validate incoming UUID from xclbin matches Interface UUID in xsabin
+ */
+static int rmgmt_validate_uuid(u32 xclbin)
 {
-	struct axlf *axlf = NULL;
-    	uint64_t offset = 0;
-    	uint64_t size = 0;
-    	struct fdt_header *bph = NULL;
-    	u32 version = 0;
-    	u32 off_dt = 0;
-    	int ret = 0;
-    	char *p_struct = NULL;
-    	u32 off_str = 0;
-    	char *p_strings = NULL;
-    	char *p, *s;
-    	u32 tag = 0;
-    	int sz = 0;
+	char xclbin_int_uuid[UUID_BYTES_LEN] = { 0 };
+	char xsabin_int_uuid[UUID_BYTES_LEN] = { 0 };
+	int uuid_size = UUID_BYTES_LEN;
+	u32 fdtdata_size = 0;
+	u32 fdtdata = 0;
+    	cl_msg_t msg = { 0 };
+	int ret = 0;
 
-    	axlf = (struct axlf *)fdtdata;
-
-    	ret = rmgmt_xclbin_section_info(axlf, PARTITION_METADATA, &offset, &size);
-    	if (ret || size == 0) {
-        	VMR_WARN("no PARTITION_METADATA in xclbin: %d", ret);
-		return ret;
-    	}
-    	else {
-        	VMR_DBG("offset %llx", offset);
-        	bph = (struct fdt_header *)((char *)axlf + offset);
-    	}
-
-    	version = cl_bswap32(bph->version);
-    	off_dt = cl_bswap32(bph->off_dt_struct);
-    	VMR_DBG("version %d, off_dt %d", version, off_dt);
-
-    	for (int i = 0; i < 16; i+=4) {
-        	VMR_DBG("0x%x", IO_SYNC_READ32((u32)bph + i));
-    	}
-
-    	p_struct = (char *)bph + off_dt;
-    	off_str = cl_bswap32(bph->off_dt_strings);
-    	p_strings = (char *)bph + off_str;
-
-    	p = p_struct;
-
-    	ret = 0;
-    	while ((tag = cl_bswap32(GET_CELL(p))) != FDT_END) {
-        	VMR_DBG("tag: 0x%x count:%d", tag, ret);
-        	if (ret++ > 1000)
-            		return -EINVAL;
-		if (tag == FDT_BEGIN_NODE) {
-            		s = p;
-            		p = PALIGN(p + strlen(s) + 1, 4);
-            		continue;
-        	}
-		if (tag != FDT_PROP) {
-            		continue;
-        	}
-
-        	sz = cl_bswap32(GET_CELL(p));
-        	s = p_strings + cl_bswap32(GET_CELL(p));
-
-        	VMR_DBG("s:%s p:%s", s, p);
-        	if (version < 16 && sz >= 8)
-            		p = PALIGN(p, 8);
-
-		if (!strncmp(s, "logic_uuid", strlen("logic_uuid"))) {
-			VMR_DBG("found lg s:%s p:%s", s, p);
-        	}
-		if (!strncmp(s, "interface_uuid", strlen("interface_uuid"))) {
-			VMR_DBG("found it s:%s p:%s", s, p);
-			strncpy(int_uuid, p, UUID_BYTES_LEN);
-			break;
-        	}
-        	p = PALIGN(p + sz, 4);
+	ret = rmgmt_fdt_get_uuids((u32)xclbin, xclbin_int_uuid, uuid_size);
+	if (ret) {
+		VMR_WARN("WARN: no UUID found from xclbin");
+		/*
+		 * Assuming that file with no UUID means incoming file is PS
+		 * Kernel xclbin in which case UUID check is skipped.
+		 */
+		return 0;
 	}
+
+    	if (rmgmt_fpt_get_xsabin(&msg, &fdtdata, &fdtdata_size))
+        	return -EINVAL;
+
+	ret = rmgmt_fdt_get_uuids(fdtdata, xsabin_int_uuid, uuid_size);
+	if (ret) {
+		VMR_ERR("FAIL: no UUID found from xsabin");
+		return -EINVAL;
+	}
+
+	if (strncmp(xclbin_int_uuid, xsabin_int_uuid, uuid_size)) {
+		VMR_ERR("Interface UUID Mismatch!");
+		VMR_ERR("xcl:0x%s", xclbin_int_uuid);
+		VMR_ERR("xsa:0x%s", xsabin_int_uuid);
+
+		return -EINVAL;
+	}
+	VMR_DBG("xcl:0x%s", xclbin_int_uuid);
+	VMR_DBG("xsa:0x%s", xsabin_int_uuid);
+	VMR_WARN("Interface UUID Match Found!");
+	
 	return 0;
 }
 
@@ -329,52 +299,14 @@ static int rmgmt_fpga_download(struct rmgmt_handler *rh, u32 len)
 	u32 partial_pdi_size = 0;
 	u32 pdi_size = 0;
 	u32 xclbin_topo_size = 0;
-	char xclbin_int_uuid[UUID_BYTES_LEN] = { 0 };
-	char xsabin_int_uuid[UUID_BYTES_LEN] = { 0 };
-	u32 fdtdata_size = 0;
-	u32 fdtdata = 0;
-    	cl_msg_t msg = { 0 };
 
 	/* Sync data from cache to memory */
 	Xil_DCacheFlush();
 
-	/*
-   	* Validate incoming UUID from xclbin matches Interface UUID in xsabin
-    	*/
-	ret = rmgmt_get_uuids((u32)axlf, (char *)xclbin_int_uuid);
-	if (ret) {
-		VMR_ERR("Failed to find UUID from xclbin");
-		/* Assuming that file with no UUID means incoming file is PS Kernel xclbin in which case UUID check is skipped
-		 * Failure of a valid xclbin with UUID needs handling here in case if necessary
-		 */
-		goto skip_uuid;
-	}
+	ret = rmgmt_validate_uuid((u32)axlf);
+	if (ret)
+		return ret;
 
-    	if (rmgmt_fpt_get_xsabin(&msg, &fdtdata, &fdtdata_size)) {
-        	VMR_ERR("get xsabin medata failed");
-        	return -EINVAL;
-    	}
-
-	ret = rmgmt_get_uuids((u32)fdtdata, (char *)xsabin_int_uuid);
-	if (ret) {
-		VMR_ERR("Failed to find UUID from xsabin");
-		return -EINVAL;
-	}
-
-	if (strncmp(xclbin_int_uuid, xsabin_int_uuid, UUID_BYTES_LEN)){
-		VMR_WARN("Interface UUID Mismatch!");
-		VMR_WARN("xcl:0x%s", xclbin_int_uuid);
-		VMR_WARN("xsa:0x%s", xsabin_int_uuid);
-		/*
-		* Implement UUID Mismatch Handling for V80/Foraker VMR Releases as default case.
-		* If the Platform supports legacy Shell, then bypass this check and continue irrespective of failure
-		*/
-	} else{
-		VMR_DBG("xcl:0x%s", xclbin_int_uuid);
-		VMR_DBG("xsa:0x%s", xsabin_int_uuid);
-		VMR_WARN("Interface UUID Match Found!");
-	}
-skip_uuid:
 	ret = rmgmt_xclbin_section_info(axlf, CLOCK_FREQ_TOPOLOGY, &offset, &size);
 	if (ret || size == 0) {
 		VMR_LOG("no CLOCK TOPOLOGY from xclbin: %d", ret);
@@ -553,4 +485,85 @@ int rmgmt_download_rpu_pdi(struct rmgmt_handler *rh)
 int rmgmt_download_apu_pdi(struct rmgmt_handler *rh)
 {
 	return rmgmt_ospi_apu_download(rh, rh->rh_data_size);
+}
+
+/*
+ * The following algorithm is used in fdt library too.
+ */
+int rmgmt_fdt_get_uuids(u32 fdt_addr, char *int_uuid, u32 uuid_size)
+{
+	struct axlf *axlf = NULL;
+    	uint64_t offset = 0;
+    	uint64_t size = 0;
+    	struct fdt_header *bph = NULL;
+    	u32 version = 0;
+    	u32 off_dt = 0;
+    	int ret = 0;
+    	char *p_struct = NULL;
+    	u32 off_str = 0;
+    	char *p_strings = NULL;
+    	char *p, *s;
+    	u32 tag = 0;
+    	int sz = 0;
+
+    	axlf = (struct axlf *)fdt_addr;
+
+    	ret = rmgmt_xclbin_section_info(axlf, PARTITION_METADATA, &offset, &size);
+    	if (ret || size == 0) {
+        	VMR_WARN("no PARTITION_METADATA in xclbin: %d", ret);
+		return -EINVAL;
+    	} else {
+        	VMR_DBG("offset %llx", offset);
+        	bph = (struct fdt_header *)((char *)axlf + offset);
+    	}
+
+    	version = cl_bswap32(bph->version);
+    	off_dt = cl_bswap32(bph->off_dt_struct);
+    	VMR_DBG("version %d, off_dt %d", version, off_dt);
+
+    	for (int i = 0; i < 16; i += 4) {
+        	VMR_DBG("0x%x", IO_SYNC_READ32((u32)bph + i));
+    	}
+
+    	p_struct = (char *)bph + off_dt;
+    	off_str = cl_bswap32(bph->off_dt_strings);
+    	p_strings = (char *)bph + off_str;
+
+    	p = p_struct;
+
+    	ret = 0;
+    	while ((tag = cl_bswap32(GET_CELL(p))) != FDT_END) {
+        	VMR_DBG("tag: 0x%x count:%d", tag, ret);
+        	if (ret++ > 1000) {
+			VMR_ERR("exceed retry count %d", ret);
+            		return -EINVAL;
+		}
+		if (tag == FDT_BEGIN_NODE) {
+            		s = p;
+            		p = PALIGN(p + strlen(s) + 1, 4);
+            		continue;
+        	}
+		if (tag != FDT_PROP) {
+            		continue;
+        	}
+
+        	sz = cl_bswap32(GET_CELL(p));
+        	s = p_strings + cl_bswap32(GET_CELL(p));
+
+        	VMR_DBG("s:%s p:%s", s, p);
+        	if (version < 16 && sz >= 8)
+            		p = PALIGN(p, 8);
+
+		if (!strncmp(s, "logic_uuid", strlen("logic_uuid"))) {
+			VMR_DBG("found lg s:%s p:%s", s, p);
+        	}
+		if (!strncmp(s, "interface_uuid", strlen("interface_uuid"))) {
+			VMR_DBG("found it s:%s p:%s", s, p);
+			strncpy(int_uuid, p, uuid_size);
+			break;
+        	}
+        	p = PALIGN(p + sz, 4);
+	}
+
+	return 0;
 }
