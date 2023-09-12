@@ -46,7 +46,8 @@ typedef enum cl_log_type {
 	CL_LOG_SYSTEM_DTB	= 0x8,
 	CL_LOG_PLM_LOG		= 0x9,
 	CL_LOG_APU_LOG		= 0x10,
-	CL_LOG_MAX_TYPE		= 0x11,
+	CL_LOG_SHELL_INTERFACE_UUID	= 0xa,
+	CL_LOG_MAX_TYPE,
 } cl_log_type_t;
 
 typedef enum cl_clock_type {

@@ -68,6 +68,7 @@ static struct xgq_cmd_cl_map xgq_cmd_log_page_map[] = {
 	{XGQ_CMD_LOG_SYSTEM_DTB, CL_LOG_SYSTEM_DTB},
 	{XGQ_CMD_LOG_PLM_LOG, CL_LOG_PLM_LOG},
 	{XGQ_CMD_LOG_APU_LOG, CL_LOG_APU_LOG},
+	{XGQ_CMD_LOG_SHELL_INTERFACE_UUID, CL_LOG_SHELL_INTERFACE_UUID},
 };
 
 static struct xgq_cmd_cl_map xgq_cmd_sensor_map[] = {
@@ -403,7 +404,6 @@ void cl_msg_handle_complete(cl_msg_t *msg)
 	
 	return;
 }
-
 
 /*
  * 1. parse the xgq com to internal cl_msg_t.

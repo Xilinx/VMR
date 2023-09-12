@@ -780,6 +780,38 @@ static int rmgmt_load_firmware(cl_msg_t *msg)
 	return 0;
 }
 
+static int rmgmt_load_shell_interface_uuid(cl_msg_t *msg)
+{
+	u32 dst_addr = 0;
+	u32 fw_offset = 0;
+	u32 fw_size = 0;
+	u32 uuid_size = UUID_BYTES_LEN;
+	char uuid[UUID_BYTES_LEN] = { 0 };
+	int ret = 0;
+
+	if (rmgmt_fpt_get_xsabin(msg, &fw_offset, &fw_size)) {
+		VMR_ERR("get xsabin firmware failed");
+		return -EINVAL;
+	}
+
+	ret = validate_log_payload(&msg->log_payload, fw_size);
+	if (ret)
+		return ret;
+
+	ret = rmgmt_fdt_get_uuids(fw_offset, uuid, uuid_size);
+	if (ret)
+		return ret;
+
+	dst_addr = RPU_SHARED_MEMORY_ADDR(msg->log_payload.address);
+
+	cl_memcpy(dst_addr, (u32)&uuid, uuid_size);
+
+	/* adjust result pay_load size */
+	msg->log_payload.size = uuid_size;
+
+	return 0;
+}
+
 static int rmgmt_load_system_dtb(cl_msg_t *msg)
 {
 	u32 dst_addr = 0;
@@ -1020,6 +1052,9 @@ int cl_rmgmt_log_page(cl_msg_t *msg)
 		break;
 	case CL_LOG_APU_LOG:
 		ret = rmgmt_load_apu_log(msg);
+		break;
+	case CL_LOG_SHELL_INTERFACE_UUID:
+		ret = rmgmt_load_shell_interface_uuid(msg);
 		break;
 	default:
 		VMR_WARN("unsupported type %d", msg->log_payload.pid);

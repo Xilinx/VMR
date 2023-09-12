@@ -71,4 +71,5 @@ int rmgmt_fpt_get_systemdtb(struct cl_msg *msg, u32 *addr, u32 *size);
 /* Debug APIs */
 int rmgmt_fpt_set_debug_type(struct cl_msg *msg);
 int rmgmt_fpt_get_debug_type(struct cl_msg *msg, u8 *debug_type);
+
 #endif

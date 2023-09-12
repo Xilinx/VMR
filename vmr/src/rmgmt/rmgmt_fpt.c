@@ -173,7 +173,7 @@ int rmgmt_fpt_get_xsabin(struct cl_msg *msg, u32 *offset, u32 *size)
 
 	if (!msg->multiboot_payload.has_ext_xsabin) {
 		VMR_ERR("no xsabin metadata");
-		return -1;
+		return -EINVAL;
 	}
 
 	*offset = msg->multiboot_payload.xsabin_offset;
