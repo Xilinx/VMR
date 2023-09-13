@@ -196,6 +196,37 @@ int rmgmt_fpt_get_systemdtb(struct cl_msg *msg, u32 *offset, u32 *size)
 }
 
 /*
+ * Validate default FPT and query recovery FPT if default FPT fails.
+ */
+int rmgmt_boot_fpt_validate(struct cl_msg *msg, struct fpt_hdr *hdr)
+{
+	int ret = 0;
+	ret = ospi_flash_read(CL_FLASH_BOOT, (u8 *)hdr, FPT_DEFAULT_OFFSET, sizeof(struct fpt_hdr));
+	if (ret)
+		return ret;
+	if (hdr->fpt_magic != FPT_MAGIC) {
+		VMR_ERR("Default FPT magic is Corrupt! reading backup FPT");
+		bzero(hdr, sizeof(struct fpt_hdr));
+		ret = ospi_flash_read(CL_FLASH_BOOT, (u8 *)hdr, FPT_BACKUP_OFFSET, sizeof(struct fpt_hdr));
+		if (ret)
+			return ret;
+		if (hdr->fpt_magic != FPT_MAGIC) {
+			msg->multiboot_payload.has_fpt = 0;
+			VMR_ERR("Backup fpt magic invalid");
+			return -EINVAL;
+		}
+	}
+
+	msg->multiboot_payload.has_fpt = 1;
+	VMR_DBG("magic %x fpt_magic %x", hdr->fpt_magic, FPT_MAGIC);
+        VMR_DBG("version %x", hdr->fpt_version);
+        VMR_DBG("hdr size %x", hdr->fpt_header_size);
+        VMR_DBG("entry size %x", hdr->fpt_entry_size);
+        VMR_DBG("num entries %x", hdr->fpt_num_entries);
+	return 0;
+}
+
+/*
  * Read fpt table and return status
  */
 void rmgmt_boot_fpt_query(struct cl_msg *msg)
@@ -205,23 +236,10 @@ void rmgmt_boot_fpt_query(struct cl_msg *msg)
 	int ret = 0;
 	u32 current_multi_boot_offset = 0;
 	u32 boot_on_offset = 0;
-	
-	ret = ospi_flash_read(CL_FLASH_BOOT, (u8 *)&hdr, FPT_DEFAULT_OFFSET, sizeof(hdr));
+
+	ret = rmgmt_boot_fpt_validate(msg, &hdr);
 	if (ret)
 		return;
-
-	msg->multiboot_payload.has_fpt = (hdr.fpt_magic == FPT_MAGIC) ? 1 : 0;
-
-	VMR_DBG("magic %x fpt_magic %x", hdr.fpt_magic, FPT_MAGIC);
-	VMR_DBG("version %x", hdr.fpt_version);
-	VMR_DBG("hdr size %x", hdr.fpt_header_size);
-	VMR_DBG("entry size %x", hdr.fpt_entry_size);
-	VMR_DBG("num entries %x", hdr.fpt_num_entries);
-
-	if (!msg->multiboot_payload.has_fpt) {
-		VMR_ERR("invalid fpt magic %x", hdr.fpt_magic);
-		return;
-	}
 
 	for (int i = 1; i <= hdr.fpt_num_entries; i++) {
 		struct fpt_entry entry;
