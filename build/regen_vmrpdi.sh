@@ -15,6 +15,8 @@ Help()
     echo "Usage: $0 [-h] -v <vmr.elf>"
     echo "options:"
     echo "-h                print this help"
+    echo "-a                build AIE2 shell"
+    echo "-b                build AIE2 PQ2 shell"
     echo "-v    <vmr.elf>   fw file to use in PDI (MUST BE SPECIFIED)"
     echo
     echo "Script expects VITIS to be installed, this can be achieved by sourcing install script, e.g."
@@ -126,7 +128,6 @@ printf "%s\n" 'vmr_bif:
   { core = r5-0, file = _VMR_FILE_ }
  }
 }' > scripts/vmr_v70pq2.bif
-
 
 vmr_bif=scripts/vmr.bif
 if [ $AIE2 == "1" ];then

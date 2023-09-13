@@ -15,6 +15,8 @@ Help()
     echo "Usage: $0 [-h] [-s] -v <vmr.elf>"
     echo "options:"
     echo "-h                print this help"
+    echo "-a                build AIE2 shell"
+    echo "-b                build AIE2 PQ2 shell"
     echo "-s                skip plm.elf generation. Requires ./plm.elf to already exist"
     echo "-v    <vmr.elf>   fw file to use in PDI (MUST BE SPECIFIED)"
     echo

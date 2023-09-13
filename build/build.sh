@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (C) 2018-2022 Xilinx, Inc. All rights reserved.
 
-TOOL_VERSION="2022.2"
+TOOL_VERSION="2023.1"
 DEFAULT_VITIS="/proj/xbuilds/${TOOL_VERSION}_daily_latest/installs/lin64/Vitis/HEAD/settings64.sh"
 STDOUT_JTAG=2 # 0: uart0; 1: uart1; 2: default to uartlite
 BUILD_XRT=0
@@ -639,6 +639,7 @@ usage() {
     echo "-config <json file>        build with pre configured options"
     echo "-app                       Re-build Vitis Application only"  
     echo "-vmr                       Re-build vmr source code only, fatest!!!"  
+    echo "-shell                     Re-build shell, -config is needed"  
     echo "-RMI                       Update RMI from git and build!" 
     echo "-RMI_LIB                   Build RMI library!" 
     echo "-help"
