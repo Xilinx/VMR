@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (C) 2018-2022 Xilinx, Inc. All rights reserved.
 
-TOOL_VERSION="2022.2"
+TOOL_VERSION="2023.1"
 DEFAULT_VITIS="/proj/xbuilds/${TOOL_VERSION}_daily_latest/installs/lin64/Vitis/HEAD/settings64.sh"
 STDOUT_JTAG=2 # 0: uart0; 1: uart1; 2: default to uartlite
 BUILD_XRT=0
@@ -155,6 +155,13 @@ load_build_info()
 		echo "not aie2 shell"
 	else
 		BUILD_AIE2=$CONF_BUILD_AIE2;
+	fi
+
+	CONF_BUILD_AIE2PQ2=`grep_file "CONF_BUILD_AIE2PQ2" ${BUILD_CONF_FILE}`
+	if [ -z $CONF_BUILD_AIE2PQ2 ];then
+		echo "not aie2 pq2 shell"
+	else
+		BUILD_AIE2PQ2=$CONF_BUILD_AIE2PQ2;
 	fi
 
 	CONF_BUILD_JTAG=`grep_file "CONF_BUILD_JTAG" ${BUILD_CONF_FILE}`
@@ -428,11 +435,16 @@ build_vmrpdi()
 	cd $ROOT_DIR
 	cp $REGEN_VMR $BUILD_DIR
 	cd $BUILD_DIR
-
-	if [ -z $BUILD_AIE2 ] || [ ! $BUILD_AIE2 = "yes" ];then
-		bash $REGEN_VMR -v $ROOT_DIR/vmr.elf >> $BUILD_LOG 2>&1
-	else
+	
+	if [ ! -z $BUILD_AIE2 ] && [ $BUILD_AIE2 = "yes" ];then
+		echo "build AIE2 shell"
 		bash $REGEN_VMR -a -v $ROOT_DIR/vmr.elf >> $BUILD_LOG 2>&1
+	elif [ ! -z $BUILD_AIE2PQ2 ] && [ $BUILD_AIE2PQ2 = "yes" ];then
+		echo "build AIE2 PQ2 shell"
+		bash $REGEN_VMR -b -v $ROOT_DIR/vmr.elf >> $BUILD_LOG 2>&1
+	else
+		echo "build vck5000 aie shell"
+		bash $REGEN_VMR -v $ROOT_DIR/vmr.elf >> $BUILD_LOG 2>&1
 	fi
 
 	ls vmr.pdi >> $BUILD_LOG
@@ -454,13 +466,23 @@ build_shell()
 		return
 	fi
 
+	if [ -z $BUILD_XSA ] || [ -z $BUILD_XSABIN ];then
+		echo "please provide -config file"
+		return
+	fi
+
 	cp $REGEN_SHELL $BUILD_DIR
 	cd $BUILD_DIR
 
-	if [ -z $BUILD_AIE2 ] || [ ! $BUILD_AIE2 = "yes" ];then
-		bash $REGEN_SHELL -v $ROOT_DIR/vmr.elf -x $BUILD_XSA -y $BUILD_XSABIN >> $BUILD_LOG 2>&1
-	else
+	if [ ! -z $BUILD_AIE2 ] && [ $BUILD_AIE2 = "yes" ];then
+		echo "build AIE2 shell"
 		bash $REGEN_SHELL -a -v $ROOT_DIR/vmr.elf -x $BUILD_XSA -y $BUILD_XSABIN >> $BUILD_LOG 2>&1
+	elif [ ! -z $BUILD_AIE2PQ2 ] && [ $BUILD_AIE2PQ2 = "yes" ];then
+		echo "build AIE2 PQ2 shell"
+		bash $REGEN_SHELL -b -v $ROOT_DIR/vmr.elf -x $BUILD_XSA -y $BUILD_XSABIN >> $BUILD_LOG 2>&1
+	else
+		echo "build vck5000 aie shell"
+		bash $REGEN_SHELL -b -v $ROOT_DIR/vmr.elf -x $BUILD_XSA -y $BUILD_XSABIN >> $BUILD_LOG 2>&1
 	fi
 
 	ls rebuilt.xsabin >> $BUILD_LOG
@@ -617,6 +639,7 @@ usage() {
     echo "-config <json file>        build with pre configured options"
     echo "-app                       Re-build Vitis Application only"  
     echo "-vmr                       Re-build vmr source code only, fatest!!!"  
+    echo "-shell                     Re-build shell, -config is needed"  
     echo "-RMI                       Update RMI from git and build!" 
     echo "-RMI_LIB                   Build RMI library!" 
     echo "-help"
@@ -636,6 +659,9 @@ do
                         ;;
 		-vmr)
 			BUILD_VMR=1
+			;;
+		-shell)
+			BUILD_SHELL_PDI=1
 			;;
                 -xsa)
 			shift
@@ -753,6 +779,14 @@ fi
 # only build app by vitis
 if [[ $BUILD_APP == 1 ]];then
 	build_app_incremental
+	build_checking
+	exit 0;
+fi
+
+# only build pdi and shell
+if [[ $BUILD_SHELL_PDI == 1 ]];then
+	build_vmrpdi
+	build_shell
 	build_checking
 	exit 0;
 fi

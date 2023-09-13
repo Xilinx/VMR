@@ -15,6 +15,8 @@ Help()
     echo "Usage: $0 [-h] -v <vmr.elf>"
     echo "options:"
     echo "-h                print this help"
+    echo "-a                build AIE2 shell"
+    echo "-b                build AIE2 PQ2 shell"
     echo "-v    <vmr.elf>   fw file to use in PDI (MUST BE SPECIFIED)"
     echo
     echo "Script expects VITIS to be installed, this can be achieved by sourcing install script, e.g."
@@ -39,7 +41,7 @@ AIE2=0
 ############################################################
 
 # Get the options
-while getopts ":hav:" option; do
+while getopts ":habv:" option; do
    case $option in
       h) # display Help
          Help
@@ -47,6 +49,9 @@ while getopts ":hav:" option; do
       a) # AIE2 V70
          echo "AIE2 platform"
 	 AIE2=1;;
+      b) # AIE2PQ2 V70
+         echo "AIE2PQ2 platform"
+	 AIE2PQ2=1;;
       v) # VMR.elf location
          vmr=$OPTARG
          echo "  vmr chosen: $vmr";;
@@ -112,10 +117,25 @@ printf "%s\n" 'vmr_bif:
  }
 }' > scripts/vmr_v70.bif
 
+printf "%s\n" 'vmr_bif:
+{
+ id_code = 0x14cd7093
+ extended_id_code = 0x01
+ id = 0x2
+ image
+ {
+  name = rpu_test, id = 0x1c000000
+  { core = r5-0, file = _VMR_FILE_ }
+ }
+}' > scripts/vmr_v70pq2.bif
+
 vmr_bif=scripts/vmr.bif
 if [ $AIE2 == "1" ];then
 	echo "aie2 using v70.bif"
 	vmr_bif=scripts/vmr_v70.bif
+elif [ $AIE2PQ2 == "1" ];then
+	echo "aie2pq2 using v70.bif"
+	vmr_bif=scripts/vmr_v70pq2.bif
 fi
 
 # replace _VMR_FILE_ with -v script argument
