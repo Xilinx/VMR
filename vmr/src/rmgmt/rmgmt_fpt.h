@@ -25,6 +25,7 @@
 #define BOOT_TAG_OFFSET 0x14
 #define BOOT_TAG_MASK	0xFFFFFFFF
 
+#define FW_COPY_SIZE_64_KB	(0x10000)
 #define PLM_BOOT_TAG(data) (*(u32 *)(data + BOOT_TAG_OFFSET))
 
 struct rmgmt_handler;
@@ -58,6 +59,12 @@ struct fpt_pdi_meta {
 	uint32_t	fpt_pdi_rsvd0:24;
 };
 
+typedef enum {
+        FPT_TYPE_DEFAULT =      0x0,
+        FPT_TYPE_BACKUP =       0x1,
+        FPT_MAX_TYPES,
+}fpt_type_t;
+
 void rmgmt_fpt_query(struct cl_msg *msg);
 void rmgmt_boot_fpt_query(struct cl_msg *msg);
 void rmgmt_extension_fpt_query(struct cl_msg *msg);
@@ -67,7 +74,7 @@ int rmgmt_flash_rpu_pdi(struct rmgmt_handler *rh, struct cl_msg *msg);
 int rmgmt_fpt_get_xsabin(struct cl_msg *msg, u32 *addr, u32 *size);
 int rmgmt_fpt_get_scfw(struct cl_msg *msg, u32 *addr, u32 *size);
 int rmgmt_fpt_get_systemdtb(struct cl_msg *msg, u32 *addr, u32 *size);
-
+int rmgmt_fpt_get_data(struct cl_msg *msg, u32 *addr, fpt_type_t type);
 /* Debug APIs */
 int rmgmt_fpt_set_debug_type(struct cl_msg *msg);
 int rmgmt_fpt_get_debug_type(struct cl_msg *msg, u8 *debug_type);

@@ -69,6 +69,8 @@ static struct xgq_cmd_cl_map xgq_cmd_log_page_map[] = {
 	{XGQ_CMD_LOG_PLM_LOG, CL_LOG_PLM_LOG},
 	{XGQ_CMD_LOG_APU_LOG, CL_LOG_APU_LOG},
 	{XGQ_CMD_LOG_SHELL_INTERFACE_UUID, CL_LOG_SHELL_INTERFACE_UUID},
+	{XGQ_CMD_LOG_DEFAULT_FPT, CL_LOG_DEFAULT_FPT},
+	{XGQ_CMD_LOG_BACKUP_FPT, CL_LOG_BACKUP_FPT},
 };
 
 static struct xgq_cmd_cl_map xgq_cmd_sensor_map[] = {
