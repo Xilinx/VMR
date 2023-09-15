@@ -12,7 +12,7 @@ rmgmt_xclbin_get_section_hdr(const struct axlf *xclbin,
 {
 	int i = 0;
 
-	VMR_DBG("looking for kind %d \r\n", kind);
+	VMR_DBG("looking for kind %d", kind);
 
 	/* Sanity check. */
 	if (xclbin->m_header.m_numSections > XCLBIN_MAX_NUM_SECTION)
@@ -20,12 +20,12 @@ rmgmt_xclbin_get_section_hdr(const struct axlf *xclbin,
 
 	for (i = 0; i < xclbin->m_header.m_numSections; i++) {
 		if (xclbin->m_sections[i].m_sectionKind == kind) {
-			VMR_DBG("found kind[%d]= %d\r\n", i, kind);
+			VMR_DBG("found kind[%d]= %d", i, kind);
 			return &xclbin->m_sections[i];
 		}
 	}
 
-	VMR_DBG("did not find kind %d from %d sections\r\n",
+	VMR_DBG("did not find kind %d from %d sections",
 		kind, xclbin->m_header.m_numSections);
 	return NULL;
 }
@@ -46,7 +46,7 @@ rmgmt_xclbin_section_info(const struct axlf *xclbin, enum axlf_section_kind kind
         uint64_t xclbin_len;
         int err = 0;
 
-        VMR_DBG("magic %s\r\n", xclbin->m_magic);
+        VMR_DBG("magic %s", xclbin->m_magic);
 
         memHeader = rmgmt_xclbin_get_section_hdr(xclbin, kind);
         if (!memHeader)
@@ -62,7 +62,7 @@ rmgmt_xclbin_section_info(const struct axlf *xclbin, enum axlf_section_kind kind
         *offset = memHeader->m_sectionOffset;
         *size = memHeader->m_sectionSize;
 
-        VMR_DBG("Found section offset: %lld, size: %lld\r\n", *offset, *size);
+        VMR_DBG("Found section offset: %lld, size: %lld", *offset, *size);
         return 0;
 }
 
@@ -152,4 +152,14 @@ void rmgmt_xclbin_section_remove(struct axlf *xclbin, enum axlf_section_kind kin
 			sectionHeaderArray[idx].m_sectionOffset -= sizeof(struct axlf_section_header);
 		}
 	}
+}
+
+int rmgmt_xclbin_validate(const struct axlf *xclbin)
+{
+	if (memcmp(xclbin->m_magic, VMR_XCLBIN_V2, sizeof(VMR_XCLBIN_V2))) {
+		VMR_ERR("Incorrect magic string");
+		return -EINVAL;
+	}
+
+	return 0;
 }
