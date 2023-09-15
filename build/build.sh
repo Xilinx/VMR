@@ -505,9 +505,11 @@ diff_xgq_cmd_headers() {
 	echo "=== diff of xgq_cmd_common.h ===" >> $ROOT_DIR/diff.log
 	diff /tmp/xgq_cmd_common.h.vmr /tmp/xgq_cmd_common.h.xrt >> $ROOT_DIR/diff.log
 	if [ $? -ne 0 ];then
-		echo "WARN!!! please make xgq_cmd_common.h the same between XRT and VMR"
+		echo "WARN!!! please make xgq_cmd_common.h the same between VMR and XRT"
+		echo "VMR <" realpath $ROOT_DIR/../vmr/src/common/xgq_cmd_common.h
+		echo "XRT >" realpath $ROOT_DIR/../XRT/src/runtime_src/core/include/xgq_cmd_common.h
 	else
-		echo "GOOD JOB! xgq_cmd_common.h is the same between XRT and VMR"
+		echo "GOOD JOB! xgq_cmd_common.h is the same between VMR and XRT"
 	fi
 
 	tail -n +5 $ROOT_DIR/../vmr/src/common/xgq_cmd_vmr.h > /tmp/xgq_cmd_vmr.h.vmr
@@ -516,9 +518,11 @@ diff_xgq_cmd_headers() {
 	echo "=== diff of xgq_cmd_vmr.h ===" >> $ROOT_DIR/diff.log
 	diff /tmp/xgq_cmd_vmr.h.vmr /tmp/xgq_cmd_vmr.h.xrt >> $ROOT_DIR/diff.log
 	if [ $? -ne 0 ];then
-		echo "WARN!!! please make xgq_cmd_vmr.h the same between XRT and VMR"
+		echo "WARN!!! please make xgq_cmd_vmr.h the same between VMR and XRT"
+		echo "VMR <" realpath $ROOT_DIR/../vmr/src/common/xgq_cmd_vmr.h
+		echo "XRT >" realpath $ROOT_DIR/../XRT/src/runtime_src/core/include/xgq_cmd_vmr.h
 	else
-		echo "GOOD JOB! xgq_cmd_vmr.h is the same between XRT and VMR"
+		echo "GOOD JOB! xgq_cmd_vmr.h is the same between VMR and XRT"
 	fi
 }
 
