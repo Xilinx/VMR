@@ -17,6 +17,7 @@ Help()
     echo "-h                print this help"
     echo "-a                build AIE2 shell"
     echo "-b                build AIE2 PQ2 shell"
+    echo "-c                build AIE2 PQ2 base2 shell"
     echo "-s                skip plm.elf generation. Requires ./plm.elf to already exist"
     echo "-v    <vmr.elf>   fw file to use in PDI (MUST BE SPECIFIED)"
     echo
@@ -45,6 +46,7 @@ vmr=""
 skip_plm=0
 AIE2=0
 AIE2PQ2=0
+AIE2PQ2BASE2=0
 
 
 ############################################################
@@ -52,7 +54,7 @@ AIE2PQ2=0
 ############################################################
 
 # Get the options
-while getopts ":hsabv:x:y:" option; do
+while getopts ":hsabcv:x:y:" option; do
    case $option in
       h) # display Help
          Help
@@ -61,8 +63,11 @@ while getopts ":hsabv:x:y:" option; do
          echo "AIE2 base pdi"
          AIE2=1;;
       b) # AIE2 V70pq2 platform specific
-         echo "AIE2 PQ2 base pdi"
+         echo "AIE2 PQ2 base1 pdi"
          AIE2PQ2=1;;
+      c) # AIE2 V70pq2 base2 platform specific
+         echo "AIE2 PQ2 base2 pdi"
+         AIE2PQ2BASE2=1;;
       s) # skip plm.elf generation
          echo "  skipping plm.elf generation, using ./plm.elf"    
          skip_plm=1;;
@@ -193,6 +198,7 @@ pdi=bins/base.pdi
 rebuild_bif=scripts/rebuild.bif
 aie2_rebuild_bif=scripts/aie2_rebuild.bif
 aie2pq2_rebuild_bif=scripts/aie2pq2_rebuild.bif
+aie2pq2_base2_rebuild_bif=scripts/aie2pq2_base2_rebuild.bif
 
 # get PDI from XSABIN and disassemble into binaries
 printf "\nDisassemblinng the PDI located here $xsabin...\n"
@@ -228,9 +234,26 @@ pmc_subsys_0.bin
 rpu_subsystem_0.1.bin
 rpu_subsystem_0.bin"
 
+aie2_base2_golden_list="aie2_subsys.0.0.bin
+cpm.0.0.bin
+ext_fpt.0.0.bin
+fpd.0.0.bin
+lpd.0.0.bin
+lpd.1.0.bin
+pl_cfi.0.0.bin
+pl_cfi.1.0.bin
+pmc_cdo.0.0.bin
+pmc_subsys.0.0.bin
+rpu_subsystem.0.0.bin
+rpu_subsystem.0.1.bin"
+
+
 if [ $AIE2 == "1" ] || [ $AIE2PQ2 == "1" ];then
 	echo "using aie2_golden_list"
 	golden_list=$aie2_golden_list
+elif [ $AIE2PQ2BASE2 == "1" ];then
+	echo "using aie2_base2_golden_list"
+	golden_list=$aie2_base2_golden_list
 fi
 
 if [ "$bin_list" != "$golden_list" ]; then
@@ -392,6 +415,58 @@ printf "%s\n" 'new_bif:
  }
 }' > $aie2pq2_rebuild_bif
 
+# aie2pq2 base2 version bif for
+printf "%s\n" 'new_bif:
+{
+ id_code = 0x14cd7093
+ extended_id_code = 0x01
+ id = 0x2
+ image
+ {
+  name = pmc_subsys, id = 0x1c000001
+  partition { id = 0x01, type = bootloader, file = plm.elf }
+  partition { id = 0x09, type = pmcdata, load = 0xf2000000, file = bins/pmc_cdo.0.0.bin }
+ }
+ image
+ {
+  name = lpd, id = 0x4210002 
+  partition { id = 0x0C, type = cdo, file = bins/lpd.0.0.bin }
+  partition { id = 0x0B, core = psm, file = _PSM_FILE_  }
+ }
+ image
+ {
+  name = pl_cfi, id = 0x18700000
+  partition { id = 0x03, type = cdo, file = bins/pl_cfi.0.0.bin }
+  partition { id = 0x05, type = cdo, file = bins/pl_cfi.1.0.bin }
+ }
+ image
+ {
+  name = cpm, id = 0x4218007
+  partition { id = 0x06, type = cdo, file = bins/cpm.0.0.bin }
+ }
+ image
+ {
+  name = aie_subsys, id = 0x421c028
+  partition { id = 0x07, type = cdo, file = bins/aie2_subsys.0.0.bin }
+ }
+ image
+ {
+  name = fpd, id = 0x420c003
+  partition { id = 0x08, type = cdo, file = bins/fpd.0.0.bin }
+ }
+ image 
+ {
+   name = rpu_subsystem, id = 0x1c000000, delay_handoff
+   { core = r5-0, file = _VMR_FILE_ }
+ }
+ image
+ {
+   name = ext_fpt, id = 0x1c000000
+   { type = cdo, file = bins/ext_fpt.0.0.bin }
+ }
+}' > $aie2pq2_base2_rebuild_bif
+
+
 # update paths in rebuild.bif
 # TODO: rebuild BIF may be a bit brittle as tools could change the source that this was built on
 #       may need to add a check to build flow to detect if the source top_wrapper.bif changes
@@ -404,6 +479,9 @@ if [ $AIE2 == "1" ];then
 elif [ $AIE2PQ2 == "1" ];then
 	echo "aie2pq2 using $aie2pq2_rebuild_bif"
 	rebuild_bif=$aie2pq2_rebuild_bif
+elif [ $AIE2PQ2BASE2 == "1" ];then
+	echo "aie2pq2 using $aie2pq2_base2_rebuild_bif"
+	rebuild_bif=$aie2pq2_base2_rebuild_bif
 fi
 # find path to psm_fw.elf based on installed vitis path
 # /proj/xbuilds/2022.1_daily_latest/installs/lin64/Vivado/2022.1/data/versal/flows/data_files/psm_fw.elf

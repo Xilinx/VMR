@@ -155,6 +155,7 @@ load_build_info()
 		echo "not aie2 shell"
 	else
 		BUILD_AIE2=$CONF_BUILD_AIE2;
+		echo "aie2 shell: $BUILD_AIE2"
 	fi
 
 	CONF_BUILD_AIE2PQ2=`grep_file "CONF_BUILD_AIE2PQ2" ${BUILD_CONF_FILE}`
@@ -162,6 +163,15 @@ load_build_info()
 		echo "not aie2 pq2 shell"
 	else
 		BUILD_AIE2PQ2=$CONF_BUILD_AIE2PQ2;
+		echo "aie2 pq2 shell: $BUILD_AIE2PQ2"
+	fi
+
+	CONF_BUILD_AIE2PQ2_BASE2=`grep_file "CONF_BUILD_AIE2PQ2_BASE2" ${BUILD_CONF_FILE}`
+	if [ -z $CONF_BUILD_AIE2PQ2_BASE2 ];then
+		echo "not aie2 pq2 base2 shell"
+	else
+		BUILD_AIE2PQ2_BASE2=$CONF_BUILD_AIE2PQ2_BASE2;
+		echo "aie2 pq2 base2 shell: $BUILD_AIE2PQ2_BASE2"
 	fi
 
 	CONF_BUILD_JTAG=`grep_file "CONF_BUILD_JTAG" ${BUILD_CONF_FILE}`
@@ -442,6 +452,9 @@ build_vmrpdi()
 	elif [ ! -z $BUILD_AIE2PQ2 ] && [ $BUILD_AIE2PQ2 = "yes" ];then
 		echo "build AIE2 PQ2 shell"
 		bash $REGEN_VMR -b -v $ROOT_DIR/vmr.elf >> $BUILD_LOG 2>&1
+	elif [ ! -z $BUILD_AIE2PQ2_BASE2 ] && [ $BUILD_AIE2PQ2_BASE2 = "yes" ];then
+		echo "build AIE2 PQ2 base2 shell"
+		bash $REGEN_VMR -b -v $ROOT_DIR/vmr.elf >> $BUILD_LOG 2>&1
 	else
 		echo "build vck5000 aie shell"
 		bash $REGEN_VMR -v $ROOT_DIR/vmr.elf >> $BUILD_LOG 2>&1
@@ -480,9 +493,12 @@ build_shell()
 	elif [ ! -z $BUILD_AIE2PQ2 ] && [ $BUILD_AIE2PQ2 = "yes" ];then
 		echo "build AIE2 PQ2 shell"
 		bash $REGEN_SHELL -b -v $ROOT_DIR/vmr.elf -x $BUILD_XSA -y $BUILD_XSABIN >> $BUILD_LOG 2>&1
+	elif [ ! -z $BUILD_AIE2PQ2_BASE2 ] && [ $BUILD_AIE2PQ2_BASE2 = "yes" ];then
+		echo "build AIE2 PQ2 base2 shell"
+		bash $REGEN_SHELL -c -v $ROOT_DIR/vmr.elf -x $BUILD_XSA -y $BUILD_XSABIN >> $BUILD_LOG 2>&1
 	else
 		echo "build vck5000 aie shell"
-		bash $REGEN_SHELL -b -v $ROOT_DIR/vmr.elf -x $BUILD_XSA -y $BUILD_XSABIN >> $BUILD_LOG 2>&1
+		bash $REGEN_SHELL -v $ROOT_DIR/vmr.elf -x $BUILD_XSA -y $BUILD_XSABIN >> $BUILD_LOG 2>&1
 	fi
 
 	ls rebuilt.xsabin >> $BUILD_LOG
