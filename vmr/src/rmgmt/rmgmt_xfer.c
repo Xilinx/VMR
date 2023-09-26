@@ -254,19 +254,25 @@ static int rmgmt_validate_uuid(u32 xclbin)
     	cl_msg_t msg = { 0 };
 	int ret = 0;
 
+	VMR_DBG("get xclbin uuid");
 	ret = rmgmt_fdt_get_uuids((u32)xclbin, xclbin_int_uuid, uuid_size);
 	if (ret) {
-		VMR_WARN("WARN: no UUID found from xclbin");
-		/*
-		 * Assuming that file with no UUID means incoming file is PS
-		 * Kernel xclbin in which case UUID check is skipped.
-		 */
-		return 0;
+		if (ret == -ENOENT) {
+			VMR_WARN("WARN: no UUID found from xclbin");
+			/*
+			 * Assuming that file with no UUID means incoming file
+			 * is PS Kernel xclbin in which case UUID check is
+			 * skipped.
+			 */
+			return 0;
+		}
+		return ret;
 	}
 
     	if (rmgmt_fpt_get_xsabin(&msg, &fdtdata, &fdtdata_size))
         	return -EINVAL;
 
+	VMR_DBG("get xsabin uuid");
 	ret = rmgmt_fdt_get_uuids(fdtdata, xsabin_int_uuid, uuid_size);
 	if (ret) {
 		VMR_ERR("FAIL: no UUID found from xsabin");
@@ -505,8 +511,12 @@ int rmgmt_fdt_get_uuids(u32 fdt_addr, char *int_uuid, u32 uuid_size)
     	char *p, *s;
     	u32 tag = 0;
     	int sz = 0;
+	int retry = 1000;
 
     	axlf = (struct axlf *)fdt_addr;
+	ret = rmgmt_xclbin_validate(axlf);
+	if (ret)
+		return ret;
 
     	ret = rmgmt_xclbin_section_info(axlf, PARTITION_METADATA, &offset, &size);
     	if (ret || size == 0) {
@@ -534,10 +544,12 @@ int rmgmt_fdt_get_uuids(u32 fdt_addr, char *int_uuid, u32 uuid_size)
     	ret = 0;
     	while ((tag = cl_bswap32(GET_CELL(p))) != FDT_END) {
         	VMR_DBG("tag: 0x%x count:%d", tag, ret);
-        	if (ret++ > 1000) {
-			VMR_ERR("exceed retry count %d", ret);
-            		return -EINVAL;
+        	if (ret > retry) {
+			VMR_WARN("cannot find uuid, retry count %d", ret);
+			break;
 		}
+		ret++;
+
 		if (tag == FDT_BEGIN_NODE) {
             		s = p;
             		p = PALIGN(p + strlen(s) + 1, 4);
@@ -560,10 +572,13 @@ int rmgmt_fdt_get_uuids(u32 fdt_addr, char *int_uuid, u32 uuid_size)
 		if (!strncmp(s, "interface_uuid", strlen("interface_uuid"))) {
 			VMR_DBG("found it s:%s p:%s", s, p);
 			strncpy(int_uuid, p, uuid_size);
-			break;
+			return 0;
         	}
         	p = PALIGN(p + sz, 4);
 	}
 
-	return 0;
+	if (ret <= retry)
+		VMR_WARN("incoming xclbin might be corrupted! retry count %d", ret);
+
+	return -ENOENT;
 }
