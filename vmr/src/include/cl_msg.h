@@ -35,18 +35,20 @@ typedef enum cl_sensor_type {
 } cl_sensor_type_t;
 
 typedef enum cl_log_type {
-	CL_LOG_UNKNOWN		= 0x0,
-	CL_LOG_AF_CHECK		= 0x1,
-	CL_LOG_FW		= 0x2,
-	CL_LOG_INFO		= 0x3,
-	CL_LOG_AF_CLEAR		= 0x4,
-	CL_LOG_ENDPOINT		= 0x5,
-	CL_LOG_TASK_STATS	= 0x6,
-	CL_LOG_MEM_STATS	= 0x7,
-	CL_LOG_SYSTEM_DTB	= 0x8,
-	CL_LOG_PLM_LOG		= 0x9,
-	CL_LOG_APU_LOG		= 0x10,
+	CL_LOG_UNKNOWN			= 0x0,
+	CL_LOG_AF_CHECK			= 0x1,
+	CL_LOG_FW			= 0x2,
+	CL_LOG_INFO			= 0x3,
+	CL_LOG_AF_CLEAR			= 0x4,
+	CL_LOG_ENDPOINT			= 0x5,
+	CL_LOG_TASK_STATS		= 0x6,
+	CL_LOG_MEM_STATS		= 0x7,
+	CL_LOG_SYSTEM_DTB		= 0x8,
+	CL_LOG_PLM_LOG			= 0x9,
+	CL_LOG_APU_LOG			= 0x10,
 	CL_LOG_SHELL_INTERFACE_UUID	= 0xa,
+	CL_LOG_DEFAULT_FPT		= 0xb,
+	CL_LOG_BACKUP_FPT		= 0xc,
 	CL_LOG_MAX_TYPE,
 } cl_log_type_t;
 

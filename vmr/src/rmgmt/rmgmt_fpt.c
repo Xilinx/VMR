@@ -15,6 +15,7 @@
 #include "cl_flash.h"
 #include "cl_rmgmt.h"
 
+
 static inline bool rmgmt_boot_has_fpt(struct cl_msg *msg)
 {
 	return msg->multiboot_payload.has_fpt;
@@ -205,7 +206,7 @@ void rmgmt_boot_fpt_query(struct cl_msg *msg)
 	int ret = 0;
 	u32 current_multi_boot_offset = 0;
 	u32 boot_on_offset = 0;
-	
+
 	ret = ospi_flash_read(CL_FLASH_BOOT, (u8 *)&hdr, FPT_DEFAULT_OFFSET, sizeof(hdr));
 	if (ret)
 		return;
@@ -314,6 +315,38 @@ void rmgmt_boot_fpt_query(struct cl_msg *msg)
 
 	VMR_LOG("A size 0x%x, B size 0x%x", msg->multiboot_payload.pdimeta_size,
 		msg->multiboot_payload.pdimeta_backup_size);
+}
+
+int rmgmt_fpt_get_data(struct cl_msg *msg, u32 *offset, fpt_type_t type)
+{
+        struct fpt_hdr *hdr = NULL;
+	int ret = 0;
+        hdr = (struct fpt_hdr*)offset;
+
+	if (type >= FPT_MAX_TYPES || type < FPT_TYPE_DEFAULT) {
+		VMR_ERR("Invalid FPT type");
+		return -EINVAL;
+	}
+
+	if (type == FPT_TYPE_DEFAULT)
+	        ret = ospi_flash_read(CL_FLASH_BOOT, (u8 *)offset, FPT_DEFAULT_OFFSET, FW_COPY_SIZE_64_KB);
+        else
+		ret = ospi_flash_read(CL_FLASH_BOOT, (u8 *)offset, FPT_BACKUP_OFFSET, FW_COPY_SIZE_64_KB);
+	if (ret) {
+		VMR_ERR("FPT ospi read error");
+                return ret;
+	}
+
+	if (hdr->fpt_magic != FPT_MAGIC) {
+		VMR_ERR("invalid fpt magic %x", hdr->fpt_magic);
+		VMR_DBG("magic %x fpt_magic %x", hdr->fpt_magic, FPT_MAGIC);
+		VMR_DBG("version %x", hdr->fpt_version);
+		VMR_DBG("hdr size %x", hdr->fpt_header_size);
+		VMR_DBG("entry size %x", hdr->fpt_entry_size);
+		VMR_DBG("num entries %x", hdr->fpt_num_entries);
+	}
+
+        return 0;
 }
 
 static int rmgmt_copy_default_to_backup(struct cl_msg *msg)

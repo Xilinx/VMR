@@ -780,6 +780,51 @@ static int rmgmt_load_firmware(cl_msg_t *msg)
 	return 0;
 }
 
+static int rmgmt_load_fpt(cl_msg_t *msg, fpt_type_t type)
+{
+	u32 dst_addr = 0;
+        int ret = 0;
+
+	char *buf = (char *)pvPortMalloc(FW_COPY_SIZE_64_KB);
+	if (!buf) {
+		VMR_ERR("malloc failed no memory");
+		return -ENOMEM;
+	}
+
+	bzero(buf, FW_COPY_SIZE_64_KB);
+
+	if (type >= FPT_MAX_TYPES || type < FPT_TYPE_DEFAULT) {
+		VMR_ERR("Invalid FPT type");
+		vPortFree(buf);
+		return -EINVAL;
+	}
+
+	if(type == FPT_TYPE_DEFAULT && rmgmt_fpt_get_data(msg, (u32 *)buf, FPT_TYPE_DEFAULT)) {
+                VMR_ERR("get default fpt failed");
+		vPortFree(buf);
+                return -EINVAL;
+        }
+	else if (type == FPT_TYPE_BACKUP && rmgmt_fpt_get_data(msg, (u32 *)buf, FPT_TYPE_BACKUP)) {
+		VMR_ERR("get backup fpt failed");
+		vPortFree(buf);
+                return -EINVAL;
+	}
+
+        ret = validate_log_payload(&msg->log_payload, FW_COPY_SIZE_64_KB);
+        if (ret) {
+		vPortFree(buf);
+                return ret;
+	}
+
+        dst_addr = RPU_SHARED_MEMORY_ADDR(msg->log_payload.address);
+
+        cl_memcpy(dst_addr, (u32)buf, FW_COPY_SIZE_64_KB);
+
+        msg->log_payload.size = FW_COPY_SIZE_64_KB;
+	vPortFree(buf);
+        return 0;
+}
+
 static int rmgmt_load_shell_interface_uuid(cl_msg_t *msg)
 {
 	u32 dst_addr = 0;
@@ -876,7 +921,7 @@ static int rmgmt_load_apu_log(cl_msg_t *msg)
 	u32 size = 0;
 	u32 off = 0;
 	int ret = 0;
-	
+
 	ret = validate_log_payload(&msg->log_payload, msg->log_payload.size);
 	if (ret)
 		return ret;
@@ -1055,6 +1100,12 @@ int cl_rmgmt_log_page(cl_msg_t *msg)
 		break;
 	case CL_LOG_SHELL_INTERFACE_UUID:
 		ret = rmgmt_load_shell_interface_uuid(msg);
+		break;
+	case CL_LOG_DEFAULT_FPT:
+		ret = rmgmt_load_fpt(msg,FPT_TYPE_DEFAULT);
+		break;
+	case CL_LOG_BACKUP_FPT:
+		ret = rmgmt_load_fpt(msg,FPT_TYPE_BACKUP);
 		break;
 	default:
 		VMR_WARN("unsupported type %d", msg->log_payload.pid);
