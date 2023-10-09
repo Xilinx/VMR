@@ -521,7 +521,7 @@ int rmgmt_fdt_get_uuids(u32 fdt_addr, char *int_uuid, u32 uuid_size)
     	ret = rmgmt_xclbin_section_info(axlf, PARTITION_METADATA, &offset, &size);
     	if (ret || size == 0) {
         	VMR_WARN("no PARTITION_METADATA in xclbin: %d", ret);
-		return -EINVAL;
+		return -ENOENT;
     	} else {
         	VMR_DBG("offset %llx", offset);
         	bph = (struct fdt_header *)((char *)axlf + offset);
