@@ -126,7 +126,7 @@ static s8 rmi_board_info_init(void)
     temp_size = sizeof(rmi_board_info.product_name);
     Cl_SecureMemcpy(&rmi_board_info.product_name, temp_size, &versal_board_info.product_name, temp_size);
 
-    if(eRMI_SUCCESS != rmi_write_board_info(&rmi_board_info, sizeof(rmi_board_info_t))){
+    if(eRMI_SUCCESS != lRmi_Write_Board_Info(&rmi_board_info, sizeof(rmi_board_info_t))){
         VMR_ERR(" RMI Write Board Info Failed! \n\r");
         ret_val = -1;
     }
@@ -144,7 +144,7 @@ static s8 rmi_sensor_init(void)
 
     cl_rmi_init_sensors();
 
-    if(eRMI_SUCCESS != rmi_configure_sensors(cl_rmi_p_sensors, cl_rmi_dynamic_sensors_count))
+    if(eRMI_SUCCESS != lRmi_Configure_Sensors(cl_rmi_p_sensors, cl_rmi_dynamic_sensors_count))
     {
         VMR_ERR(" RMI Sensor Configuration Failed! \n\r");
         ret_val = -1;
@@ -165,9 +165,10 @@ int cl_rmi_init(void)
 {
     rmi_config_t rmi_config = { .rmi_malloc_fptr = pvPortMalloc, .rmi_request_fptr = xRmi_Request_Handler, .rmi_free_fptr = vPortFree,
                                 .rmi_memcpy_fptr = Cl_SecureMemcpy, .rmi_memset_fptr = Cl_SecureMemset, .rmi_memcmp_fptr = Cl_SecureMemcmp,
-                                .rmi_memmove_fptr = Cl_SecureMemmove, .rmi_strncpy_fptr = Cl_SecureStrncpy, .rmi_strncmp_fptr = Cl_SecureStrncmp };
+                                .rmi_memmove_fptr = Cl_SecureMemmove, .rmi_strncpy_fptr = Cl_SecureStrncpy, .rmi_strncmp_fptr = Cl_SecureStrncmp,
+                                .task_delay = vTaskDelay };
 
-    lRmiInitialize(rmi_config);
+    lRmi_Init(rmi_config);
 
     is_rmi_ready = true;
 
@@ -215,7 +216,7 @@ void cl_rmi_func(void *task_args)
         }
 
         /* Call RMI Task here. */
-        rmi_task_func();
+        vRmi_Task_Func();
 
         /* every 100ms we should check hardware status */
         vTaskDelay(pdMS_TO_TICKS(100));
