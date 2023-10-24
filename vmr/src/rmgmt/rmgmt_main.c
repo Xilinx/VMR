@@ -322,7 +322,6 @@ int cl_rmgmt_program_vmr(cl_msg_t *msg)
 static u32 rmgmt_fpt_status_query(cl_msg_t *msg, char *buf, u32 size)
 {
 	u32 count = 0;
-	struct fpt_sc_version version = { 0 };
 
 	rmgmt_fpt_query(msg);
 
@@ -352,7 +351,8 @@ static u32 rmgmt_fpt_status_query(cl_msg_t *msg, char *buf, u32 size)
 		VMR_WARN("msg is truncated");
 		return size;
 	}
-
+#ifndef BUILD_VMR_EXCLUDE_VMC
+    struct fpt_sc_version version = { 0 };
 	(void) cl_vmc_pdi_scfw_version(&version); 
 	count += snprintf(buf + count, size - count, "SCFW image version: %d.%d.%d\n",
 		version.fsv_major, version.fsv_minor, version.fsv_revision);
@@ -360,7 +360,7 @@ static u32 rmgmt_fpt_status_query(cl_msg_t *msg, char *buf, u32 size)
 		VMR_WARN("msg is truncated");
 		return size;
 	}
-
+#endif
 	return count;
 }
 
@@ -708,7 +708,11 @@ static u32 rmgmt_log_clock_shutdown(cl_msg_t *msg)
 
 static u8 rmgmt_log_clock_throttling_percentage(cl_msg_t *msg)
 {
+#ifndef BUILD_VMR_EXCLUDE_VMC
 	u8 val = cl_clk_throttling_enabled_or_disabled();
+#else
+    u8 val = 0;
+#endif
 
 	/*
 	 * copy message back from rh_log to shared memory

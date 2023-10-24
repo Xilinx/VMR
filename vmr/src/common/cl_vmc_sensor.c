@@ -13,6 +13,7 @@
 #include "cl_vmc.h"
 #include "vmr_common.h"
 
+#ifndef BUILD_VMR_EXCLUDE_VMC
 /*
  * Note: the 2022.1_web flow is the legacy code flow that is revisited and
  *     refactored by newer 2022.2 Resilient VMR new flow. We document legacy
@@ -148,3 +149,4 @@ void cl_vmc_sensor_func(void *task_args)
 		vTaskDelay(pdMS_TO_TICKS(100));
 	}
 }
+#endif

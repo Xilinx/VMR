@@ -11,3 +11,9 @@ puts "=== analyze stack usage per function"
 app config -name vmr_app -add compiler-misc -fstack-usage
 puts "=== set warnings if stack is above 4k"
 app config -name vmr_app -add compiler-misc -Wstack-usage=4096
+
+set no_vmc [lindex $argv 0]
+if { $no_vmc == 1 } {
+	puts "=== Enable BUILD_VMR_EXCLUDE_VMC Flag"
+    app config -name vmr_app -add compiler-misc -DBUILD_VMR_EXCLUDE_VMC
+}

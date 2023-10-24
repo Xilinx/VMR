@@ -7,6 +7,7 @@ TOOL_VERSION="2023.1"
 DEFAULT_VITIS="/proj/xbuilds/${TOOL_VERSION}_daily_latest/installs/lin64/Vitis/HEAD/settings64.sh"
 STDOUT_JTAG=2 # 0: uart0; 1: uart1; 2: default to uartlite
 BUILD_XRT=0
+BUILD_VMR_EXCLUDE_VMC=0
 UPDATE_RMI=0
 BUILD_RMI_LIB=0
 ROOT_DIR=`pwd`
@@ -329,8 +330,12 @@ check_vmr()
 
 build_app_all() {
 	cd $ROOT_DIR
-	rsync -a ../vmr/src $BUILD_DIR/vmr_app --exclude cmc --exclude vmc/ut
-
+	
+	if [ $BUILD_VMR_EXCLUDE_VMC -eq 1 ]; then
+        rsync -a ../vmr/src $BUILD_DIR/vmr_app --exclude cmc --exclude vmc
+	else
+	    rsync -a ../vmr/src $BUILD_DIR/vmr_app --exclude cmc --exclude vmc/ut
+	fi
 	RMI=$ROOT_DIR/librmi.a
 	if [ -f $RMI ];then
 		echo "=== Adding RMI lib to build ==="	
@@ -352,7 +357,7 @@ build_app_all() {
 	else
 		cp config_app.tcl $BUILD_DIR
 		cd $BUILD_DIR
-		xsct ./config_app.tcl >> $BUILD_LOG 2>&1
+		xsct ./config_app.tcl $BUILD_VMR_EXCLUDE_VMC >> $BUILD_LOG 2>&1
 	fi
 	
 	cd $ROOT_DIR
@@ -705,6 +710,9 @@ do
 			;;
 		-XRT)
 			BUILD_XRT=1
+			;;
+		-novmc)
+		    BUILD_VMR_EXCLUDE_VMC=1
 			;;
 		-RMI)
 			UPDATE_RMI=1

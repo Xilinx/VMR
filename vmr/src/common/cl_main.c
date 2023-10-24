@@ -104,8 +104,10 @@ static TaskHandle_t cl_main_task_handle = NULL;
 static TaskHandle_t cl_xgq_receive_handle = NULL;
 static TaskHandle_t cl_xgq_program_handle = NULL;
 static TaskHandle_t cl_xgq_opcode_handle = NULL;
+#ifndef BUILD_VMR_EXCLUDE_VMC
 static TaskHandle_t cl_vmc_sensor_handle = NULL;
 static TaskHandle_t cl_vmc_sc_comms_handle = NULL;
+#endif
 #ifdef BUILD_FOR_RMI
 static TaskHandle_t cl_rmi_handle = NULL;
 #endif
@@ -144,10 +146,12 @@ struct cl_task_handle {
 		"XGQ Program", NULL, &cl_xgq_program_handle},
 	{APP_VMR, cl_xgq_opcode_init, cl_xgq_opcode_func,
 		"XGQ Operation", NULL, &cl_xgq_opcode_handle},
+#ifndef BUILD_VMR_EXCLUDE_VMC
 	{APP_VMC, cl_vmc_sensor_init, cl_vmc_sensor_func,
 		"Sensor Monitor", NULL, &cl_vmc_sensor_handle},
 	{APP_VMC, cl_vmc_sc_comms_init, cl_vmc_sc_comms_func,
 		"SC Common Handler", NULL, &cl_vmc_sc_comms_handle},
+#endif
 #ifdef BUILD_FOR_RMI
 	{APP_VMC, cl_rmi_init, cl_rmi_func,
 		"RMI Task Handler", NULL, &cl_rmi_handle},
@@ -278,10 +282,12 @@ static int cl_main_task_init(void)
 	 * workaround: sysmon cannot be inited after vTaskSchedulerStart for 2022.1 release
 	 * AI: find the root cause of this issue and add comments.
 	 */
+#ifndef BUILD_VMR_EXCLUDE_VMC
 	if (cl_vmc_sysmon_init() == 0)
 	{
 		VMR_WARN("Failed to init sysmon \n\r");
 	}
+#endif
 	return 0;
 }
 
@@ -303,7 +309,7 @@ static void cl_main_task_func(void *task_args)
 	 * can query debugging logs.
 	 */
 	(void) cl_rmgmt_init();
-
+#ifndef BUILD_VMR_EXCLUDE_VMC
 	/*
 	 * If vmc is not ready, cl_vmc_is_ready will return false.
 	 * We stop creating vmc task and report error via xgq receiving task.
@@ -311,12 +317,6 @@ static void cl_main_task_func(void *task_args)
 	 */
 	(void) cl_vmc_init();
 
-	/*
-	 * Make sure queue is created prior to being used.
-         */
-	for (int i = 0; i < ARRAY_SIZE(queue_handles); i++) {
-		configASSERT(cl_queue_create(&queue_handles[i]) == 0);
-	}
 
 	for (int i = 0; i < ARRAY_SIZE(task_handles); i++) {
 		if (task_handles[i].cl_task_type == APP_VMC &&
@@ -326,7 +326,15 @@ static void cl_main_task_func(void *task_args)
 		}
 		configASSERT(cl_task_create(&task_handles[i]) == 0);
 	}
+#endif
 
+    //TBD: check if queue creation is for VMC or global.
+	/*
+	 * Make sure queue is created prior to being used.
+         */
+	for (int i = 0; i < ARRAY_SIZE(queue_handles); i++) {
+		configASSERT(cl_queue_create(&queue_handles[i]) == 0);
+	}
 
 	while (1) {
 		/* check APU status every second */

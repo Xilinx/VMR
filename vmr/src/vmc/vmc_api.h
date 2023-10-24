@@ -19,6 +19,7 @@
 #include "cl_log.h"
 #include "cl_main.h"
 #include "cl_io.h"
+#include "cl_vmc.h"
 
 #include "vmc_asdm.h"
 
@@ -230,13 +231,6 @@ typedef struct Versal_BoardInfo
 
 #define     MAX_PLATFORM_NAME_LEN (20u)
 #define     MAX_FUNCTION_NAME_LEN (20u)
-
-typedef enum{
-    eVCK5000 = 0, /* VCK5000 or V350, so 2 platforms in one enum*/
-    eV70 = 2,
-    eV80,
-    eMax_Platforms,
-} ePlatformType;
 
 typedef struct __attribute__((packed)) {
     ePlatformType   product_type_id;

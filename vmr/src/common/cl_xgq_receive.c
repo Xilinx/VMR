@@ -297,11 +297,16 @@ static void vmr_control_complete(cl_msg_t *msg, struct xgq_cmd_cq *cmd_cq)
 	cmd_cq->cq_vmr_payload.pl_is_ready = cl_rmgmt_pl_is_ready();
 	
 	/* pass back status, SC is ready and VMC has SC version */
+#ifndef BUILD_VMR_EXCLUDE_VMC
 	cmd_cq->cq_vmr_payload.sc_is_ready = cl_vmc_has_sc_version();
-
+	cmd_cq->cq_vmr_payload.program_progress = FLASH_PROGRESS;
+#else
+    //TBD: what should be filed for sc_is_ready?
+	// also check if ospi_flash_progress() is ideal to assign below.
+    cmd_cq->cq_vmr_payload.program_progress = ospi_flash_progress();
+#endif
 	/* pass back log level and flash progress */
 	cmd_cq->cq_vmr_payload.debug_level = cl_loglevel_get();
-	cmd_cq->cq_vmr_payload.program_progress = FLASH_PROGRESS;
 }
 
 static void log_page_complete(cl_msg_t *msg, struct xgq_cmd_cq *cmd_cq)
@@ -312,9 +317,9 @@ static void log_page_complete(cl_msg_t *msg, struct xgq_cmd_cq *cmd_cq)
 static void clk_throttling_complete(cl_msg_t *msg, struct xgq_cmd_cq *cmd_cq)
 {
 	clk_throttling_params_t scaling_params = { 0 };
-
+#ifndef BUILD_VMR_EXCLUDE_VMC
 	cl_vmc_get_clk_throttling_params(&scaling_params);
-
+#endif
 	cmd_cq->cq_clk_scaling_payload.has_clk_scaling = 
 				scaling_params.is_clk_scaling_supported;
 	cmd_cq->cq_clk_scaling_payload.clk_scaling_mode =

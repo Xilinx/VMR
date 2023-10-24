@@ -30,6 +30,13 @@ typedef struct  __attribute__((packed)) {
 	u8 limits_update_req;
 }clk_throttling_params_t;
 
+typedef enum{
+    eVCK5000 = 0, /* VCK5000 or V350, so 2 platforms in one enum*/
+    eV70 = 2,
+    eV80,
+    eMax_Platforms,
+} ePlatformType;
+
 
 int cl_vmc_sensor_request(struct cl_msg *msg);
 int cl_vmc_is_ready(void);

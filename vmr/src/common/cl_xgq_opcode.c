@@ -33,7 +33,7 @@ static int opcode_vmr_control(cl_msg_t *msg)
 {
 	return cl_rmgmt_vmr_control(msg);
 }
-
+#ifndef BUILD_VMR_EXCLUDE_VMC
 static int opcode_vmc_sensor(cl_msg_t *msg)
 {
 	return cl_vmc_sensor_request(msg);
@@ -43,7 +43,7 @@ static int opcode_vmc_clk_throttling(cl_msg_t *msg)
 {
 	return cl_vmc_clk_scaling(msg);
 }
-
+#endif
 static int opcode_vmr_identify(cl_msg_t *msg)
 {
 	//Assuming 0 on a successful event and only one response type for this Command; so cl_vmr_identify() is not defined.
@@ -60,8 +60,10 @@ struct opcode_handle {
 	{"LOG PAGE", CL_MSG_LOG_PAGE, opcode_log_page},
 	{"CLOCK", CL_MSG_CLOCK, opcode_clock},
 	{"VMR CONTROL", CL_MSG_VMR_CONTROL, opcode_vmr_control},
+#ifndef BUILD_VMR_EXCLUDE_VMC
 	{"SENSOR", CL_MSG_SENSOR, opcode_vmc_sensor},
 	{"CLOCK THROTTLING", CL_MSG_CLK_THROTTLING, opcode_vmc_clk_throttling},
+#endif
 	{"VMR IDENTIFY CMD", CL_MSG_VMR_IDENTIFY, opcode_vmr_identify},
 };
 

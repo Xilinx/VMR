@@ -10,11 +10,12 @@
 #include <FreeRTOS.h>
 #include <event_groups.h>
 #include <semphr.h>
+#include <stdbool.h>
 
 #include "xil_types.h"
 #include "xscugic.h"
 
-#include "../vmc/vmc_api.h"
+#include "cl_vmc.h"
 
 
 #define MAX_LOG_SIZE	(1024u)

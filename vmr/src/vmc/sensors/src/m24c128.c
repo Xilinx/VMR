@@ -7,6 +7,7 @@
 #include "cl_log.h"
 #include "cl_i2c.h"
 #include "../inc/m24c128.h"
+#include "../../vmc_api.h"
 
 u8 M24C128_ReadByte(u8 i2c_num, u8 slaveAddr, u16 *AddressOffset,u8 *RegisterValue)
 {

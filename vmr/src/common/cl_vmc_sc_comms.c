@@ -13,6 +13,7 @@
 #include "cl_vmc.h"
 #include "vmr_common.h"
 
+#ifndef BUILD_VMR_EXCLUDE_VMC
 /*
  *   every 1000ms ---> cl_vmc_sc_update --+<---  go back and recheck <--------+
  *                                        |                                   |
@@ -66,3 +67,4 @@ void cl_vmc_sc_comms_func(void *task_args)
 		vTaskDelay(pdMS_TO_TICKS(1000));
 	}
 }
+#endif
