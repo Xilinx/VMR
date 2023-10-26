@@ -459,9 +459,22 @@ static int rmgmt_ospi_apu_download(struct rmgmt_handler *rh, u32 len)
 		return -1;
 	}
 
+	/*
+	 * If there is SYSTEM_METADATA section in APU xsabin, then the data is
+	 * customized system.dtb device tree for debugging only. We load this
+	 * system.dtb prior to download the APU PDI.
+	 */
+	ret = rmgmt_xclbin_section_info(axlf, SYSTEM_METADATA, &offset, &size);
+	if (ret) {
+		VMR_LOG("no SYSTEM_METADATA (system.dtb), continue...");
+	} else {
+		VMR_WARN("found SYSTEM_METADATA (system.dtb), size:%d", size);
+		cl_memcpy(VMR_EP_SYSTEM_DTB, offset, size);
+	}
+
 	ret = rmgmt_xclbin_section_info(axlf, PDI, &offset, &size);
 	if (ret) {
-		VMR_LOG("get PDI failed %d", ret);
+		VMR_ERR("get PDI failed %d", ret);
 		return ret;
 	}
 	Xil_DCacheFlush();
