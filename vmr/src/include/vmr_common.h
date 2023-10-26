@@ -183,4 +183,12 @@ static inline int rmgmt_enable_pl_reset() { return -ENODEV; }
 #define XPAR_BLP_BLP_LOGIC_XGQ_M2R_HIGHADDR 0x80010FFF
 #endif //endif of CONFIG_2022_1_VITIS
 
+#if defined(CONFIG_RAVE)
+/*
+ * This is a workaround for RAVE Build only.
+ */
+#undef VCCINT
+#define VCCINT 1 
+#endif // endif of CONFIG_RAVE
+
 #endif //endif of VMR_COMMON_H
