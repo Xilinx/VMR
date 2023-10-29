@@ -22,6 +22,11 @@
 #define XILLOADER_MODULE_ID		(7U)
 #define XILLOADER_LOAD_PPDI_CMD_ID	(1U)
 
+#define PDI_ID 0x0
+#define PDI_SIZE_IN_WORDS 0
+#define PDI_ADDRESS_LOW 0
+#define PDI_ADDRESS_HIGH 0
+
 static 	XIpiPsu IpiInst;
 
 static int IpiInit(void)
@@ -62,17 +67,18 @@ int rmgmt_ipi_image_store(u32 pdi_address, u32 pdi_size)
 	u32 Response;
 
 	/*
+	 * Revisited @ 2023.2 interface changes.
+	 *
 	 * Command: Add ImageStore PDI
-	 *   Reserved[31:25]=0
-	 *   Security Flag[24]
-	 *   Length[23:16]=2
-	 *   XilLoader=7
-	 *   CMD_ADD_IMG_STORE_PDI=9
+	 *   Reserved[31:25]=0	Security Flag[24]	Length[23:16]=4	XilLoader=7	CMD_ADD_IMG_STORE_PDI=9
+	 *   PDI ID
 	 *   High PDI Address
 	 *   Low PDI Address
+	 *   PDI Size ( In Words )
+	 *
 	 * See examples in SSW/xiloader/examples.
 	 */
-	u32 Payload[] = {0x020709, 0, 0};
+	u32 Payload[] = {0x040709, PDI_ID, PDI_ADDRESS_HIGH, PDI_ADDRESS_LOW, PDI_SIZE_IN_WORDS};
 
 	VMR_WARN("addr 0x%x size %d", pdi_address, pdi_size);
 
@@ -81,8 +87,8 @@ int rmgmt_ipi_image_store(u32 pdi_address, u32 pdi_size)
 		goto END;
 
 	/* Note: set pdi_address into image store, size is not concerned for now */
-	Payload[2] = pdi_address;
-	VMR_WARN("pdi store payload addr:0x%x", pdi_address);
+	Payload[3] = pdi_address;
+	Payload[4] = pdi_size;
 
 	Xil_DCacheDisable();
 
