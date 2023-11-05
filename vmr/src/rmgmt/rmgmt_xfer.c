@@ -468,8 +468,11 @@ static int rmgmt_ospi_apu_download(struct rmgmt_handler *rh, u32 len)
 	if (ret) {
 		VMR_LOG("no SYSTEM_METADATA (system.dtb), continue...");
 	} else {
-		VMR_WARN("found SYSTEM_METADATA (system.dtb), size:%d", size);
-		cl_memcpy(VMR_EP_SYSTEM_DTB, offset, size);
+		dtb_offset = (UINTPTR)((char *)axlf + (u32)offset);
+		dtb_size = (u32)size;
+		VMR_WARN("copy system.dtb off 0x%x size %d to 0x%x",
+			dtb_offset, dtb_size, VMR_EP_SYSTEM_DTB);
+		cl_memcpy(VMR_EP_SYSTEM_DTB, dtb_offset, dtb_size);
 	}
 
 	ret = rmgmt_xclbin_section_info(axlf, PDI, &offset, &size);
