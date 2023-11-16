@@ -440,15 +440,18 @@ static int rmgmt_ospi_apu_download(struct rmgmt_handler *rh, u32 len)
 	struct axlf *axlf = (struct axlf *)rh->rh_data_base;
 	uint64_t offset = 0;
 	uint64_t size = 0;
+#ifndef CONFIG_RAVE
 	cl_msg_t msg = { 0 };
 	u32 dtb_offset = 0;
 	u32 dtb_size = 0;
+#endif
 
 	if (cl_rmgmt_apu_is_ready()) {
 		VMR_WARN("apu is ready, no need to re-download");
 		return 0;
 	}
-
+    /* system.dtb is part of APU for RAVE, hence skip checking for system.dtb as part of extension FTP */
+#ifndef CONFIG_RAVE
 	/*
 	 * The systemdtb has been loaded when shell starts.
 	 * We just to verify if there is valid systemdtb before loading
@@ -458,7 +461,7 @@ static int rmgmt_ospi_apu_download(struct rmgmt_handler *rh, u32 len)
 		VMR_ERR("get system.dtb failed");
 		return -1;
 	}
-
+#endif
 	/*
 	 * If there is SYSTEM_METADATA section in APU xsabin, then the data is
 	 * customized system.dtb device tree for debugging only. We load this
