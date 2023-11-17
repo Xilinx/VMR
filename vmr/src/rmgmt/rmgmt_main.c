@@ -1269,7 +1269,7 @@ int cl_rmgmt_init( void )
 
 	/* copy systemdtb to correct location */
 	if (rmgmt_fpt_get_systemdtb(&msg, &dtb_offset, &dtb_size) == 0) {
-		VMR_WARN("copy system.dtb off 0x%x size 0x%x to 0x%x",
+		VMR_WARN("copy system.dtb off 0x%x size %d to 0x%x",
 			dtb_offset, dtb_size, VMR_EP_SYSTEM_DTB);
 		cl_memcpy(VMR_EP_SYSTEM_DTB, dtb_offset, dtb_size);
 	}
