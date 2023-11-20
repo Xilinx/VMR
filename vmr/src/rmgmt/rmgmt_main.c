@@ -1273,6 +1273,11 @@ int cl_rmgmt_init( void )
 			dtb_offset, dtb_size, VMR_EP_SYSTEM_DTB);
 		cl_memcpy(VMR_EP_SYSTEM_DTB, dtb_offset, dtb_size);
 	}
+	else
+	{
+        /* system.dtb is not exclusively included as part of FPT for all the platforms */
+		VMR_WARN("Loading system.dtp at 0x%x failed",VMR_EP_SYSTEM_DTB);
+	}
 
 	rmgmt_is_ready_flag = true;
 	VMR_LOG("DONE. rmgmt is ready.");
