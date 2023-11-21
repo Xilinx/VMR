@@ -448,17 +448,17 @@ static int rmgmt_ospi_apu_download(struct rmgmt_handler *rh, u32 len)
 		VMR_WARN("apu is ready, no need to re-download");
 		return 0;
 	}
-
 	/*
 	 * The systemdtb has been loaded when shell starts.
 	 * We just to verify if there is valid systemdtb before loading
 	 * apu pdi.
 	 */
 	if (rmgmt_fpt_get_systemdtb(&msg, &dtb_offset, &dtb_size)) {
-		VMR_ERR("get system.dtb failed");
-		return -1;
+		/* system.dtb is not exclusively included as part of Extension FPT for all the platforms.
+		 * Log a warning and continue to load APU package.
+		 */
+		VMR_WARN("Failed to get system.dtb from Extension FPT");
 	}
-
 	/*
 	 * If there is SYSTEM_METADATA section in APU xsabin, then the data is
 	 * customized system.dtb device tree for debugging only. We load this
