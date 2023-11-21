@@ -457,7 +457,7 @@ static int rmgmt_ospi_apu_download(struct rmgmt_handler *rh, u32 len)
 		/* system.dtb is not exclusively included as part of Extension FPT for all the platforms.
 		 * Log a warning and continue to load APU package.
 		 */
-		VMR_WARN("Failed to get system.dtp from Extension FPT");
+		VMR_WARN("Failed to get system.dtb from Extension FPT");
 	}
 	/*
 	 * If there is SYSTEM_METADATA section in APU xsabin, then the data is
