@@ -15,6 +15,7 @@
 #include "cl_msg.h"
 #include "cl_flash.h"
 #include "cl_rmgmt.h"
+#include "cl_vmc.h"
 
 #define CLK_TYPE_DATA   0
 #define CLK_TYPE_KERNEL 1
@@ -39,7 +40,7 @@ int rmgmt_init_handler(struct rmgmt_handler *rh)
 		VMR_ERR("pvPortMalloc %d bytes for rh_log failed", rh->rh_log_max_size);
 		return -ENOMEM;
 	}
-	
+
 	rh->rh_already_flashed = false;
 
 	/* ospi flash should alreay be initialized */
@@ -98,14 +99,19 @@ static int sensor_task_request(cl_msg_t *msg)
 
 static int disable_kernel_clock()
 {
-	cl_msg_t msg = { 0 };
+	if (cl_vmc_is_ready() == false) {
+		return cl_vmc_clk_throttling_disable();
+	}
+	else {
+		cl_msg_t msg = { 0 };
 
-	msg.hdr.type = CL_MSG_CLK_DISABLE;
-	return sensor_task_request(&msg);
+		msg.hdr.type = CL_MSG_CLK_DISABLE;
+		return sensor_task_request(&msg);
+	}
 }
 
 static int freq_scaling_internal(unsigned short *freqs, int num_freqs)
-{	
+{
 	cl_msg_t msg = { 0 };
 
 	/* This is an internal clock scaling command */
@@ -187,16 +193,21 @@ static int reconfig_clock(const char *clock, int clock_size)
         VMR_LOG("set %lu freq, data: %d, kernel: %d, sys: %d, sys1: %d",
             ARRAY_SIZE(target_freqs), target_freqs[0], target_freqs[1],
             target_freqs[2], target_freqs[3]);
-	
+
 	return freq_scaling_internal(target_freqs, ARRAY_SIZE(target_freqs));
 }
 
 static int enable_kernel_clock()
 {
-	cl_msg_t msg = { 0 };
+	if (cl_vmc_is_ready() == false) {
+		return cl_vmc_clk_throttling_enable();
+	}
+	else {
+		cl_msg_t msg = { 0 };
 
-	msg.hdr.type = CL_MSG_CLK_ENABLE;
-	return sensor_task_request(&msg);
+		msg.hdr.type = CL_MSG_CLK_ENABLE;
+		return sensor_task_request(&msg);
+	}
 }
 
 int fpga_pdi_download(UINTPTR data, UINTPTR size, const char *clock, int clock_size, int has_pl)
