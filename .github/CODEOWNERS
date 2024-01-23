@@ -5,10 +5,6 @@
 # <path>/ matches files under <path> and any of its subdirectories unless later match
 # <path>/* matches files under <path> but *not* further nested files.
 
-vmr/src/common/	@xdavidz @prapulkrishnamurthy
-vmr/src/include/	@xdavidz @prapulkrishnamurthy
-vmr/src/lscript.ld	@xdavidz @prapulkrishnamurthy
-vmr/src/rmgmt/	@xdavidz @prapulkrishnamurthy
-vmr/src/vmc/	@xdavidz @prapulkrishnamurthy
+vmr/ @xdavidz @prapulkrishnamurthy @chvamshi-xilinx
 
-build/ @xdavidz @prapulkrishnamurthy
+build/ @xdavidz @prapulkrishnamurthy @chvamshi-xilinx
