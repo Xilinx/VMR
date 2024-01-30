@@ -120,6 +120,9 @@
 /* note: this should be set by APU, hardcode for now */
 #define APU_RING_BUFFER_SIZE		0x1000 
 
+/* XGQ Ring buffer offset in 4k RPU-APU shared memory*/
+#define VMR_APU_CHANNEL_XGQ_OFF		4
+
 /* xgq ring buffer is right after the partition table */
 #define VMR_EP_RPU_RING_BUFFER_BASE (VMR_EP_RPU_SHARED_MEMORY_START + VMR_PARTITION_TABLE_SIZE)
 
