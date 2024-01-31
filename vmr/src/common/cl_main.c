@@ -287,7 +287,7 @@ static int cl_main_task_init(void)
 
 static int cl_platform_init()
 {
-	/* Initialize the APU shared XGQ Ring buffer DDR memory to 0. */
+	/* Initialize the 4k Aligned APU shared XGQ Ring buffer DDR memory to 0. */
 	cl_memset_io32(VMR_EP_APU_SHARED_MEMORY_START, 0, (VMR_APU_CHANNEL_XGQ_OFF + APU_RING_BUFFER_SIZE));
 	return 0;
 }
