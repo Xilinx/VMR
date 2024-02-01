@@ -122,7 +122,7 @@ static inline int cl_memcpy_fromio32(u32 src, void *buf, size_t len)
 {
 	size_t i;
 	u32 *dst = (u32 *)buf;
-	
+
 	if (len % sizeof(u32))
 		return -1;
 
@@ -137,7 +137,7 @@ static inline int cl_memcpy_fromio8(u32 src, void *buf, size_t len)
 {
 	size_t i;
 	u8 *dst = (u8 *)buf;
-	
+
 	for (i = 0; i < len; i++, src++) {
 		dst[i] = IO_SYNC_READ8(src);
 	}
@@ -187,6 +187,21 @@ static inline int cl_memset_io8(u32 dst, u8 val, size_t len)
 
 	for (i = 0; i < len; i++, dst++ ) {
 		IO_SYNC_WRITE8(val, dst);
+	}
+
+	return len;
+}
+
+static inline int cl_memset_io32(u32 dst, u8 val, size_t len)
+{
+	size_t i;
+
+	if (len & 0x3) {
+		return -1;
+	}
+
+	for (i = 0; i < len / 4; i++, dst += 4 ) {
+		IO_SYNC_WRITE32(val, dst);
 	}
 
 	return len;
