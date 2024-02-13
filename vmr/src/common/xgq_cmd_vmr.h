@@ -298,7 +298,7 @@ struct xgq_cmd_cq_clock_payload {
  */
 struct xgq_cmd_cq_sensor_payload {
 	uint32_t result;
-	uint32_t resvd;
+	uint32_t sensor_size;
 };
 
 /**

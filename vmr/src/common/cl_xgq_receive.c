@@ -304,6 +304,12 @@ static void vmr_control_complete(cl_msg_t *msg, struct xgq_cmd_cq *cmd_cq)
 	cmd_cq->cq_vmr_payload.program_progress = FLASH_PROGRESS;
 }
 
+static void sensor_complete(cl_msg_t *msg, struct xgq_cmd_cq *cmd_cq)
+{
+	/* Fill the completion queue with sensor size information */
+	cmd_cq->cq_sensor_payload.sensor_size = msg->sensor_payload.size;
+}
+
 static void log_page_complete(cl_msg_t *msg, struct xgq_cmd_cq *cmd_cq)
 {
 	cmd_cq->cq_log_payload.count = msg->log_payload.size;
@@ -366,7 +372,7 @@ static struct xgq_cmd_handler xgq_cmd_handlers[] = {
 	{XGQ_CMD_OP_VMR_CONTROL, CL_MSG_VMR_CONTROL, "VMR_CONTROL", CL_QUEUE_OPCODE,
 		vmr_control_handle, vmr_control_complete},
 	{XGQ_CMD_OP_SENSOR, CL_MSG_SENSOR, "SENSOR", CL_QUEUE_OPCODE,
-		sensor_handle, NULL},
+		sensor_handle, sensor_complete},
 	{XGQ_CMD_OP_PROGRAM_SCFW, CL_MSG_PROGRAM_SCFW, "PROGRAM SCFW", CL_QUEUE_PROGRAM,
 		NULL, NULL},
 	{XGQ_CMD_OP_CLK_THROTTLING, CL_MSG_CLK_THROTTLING, "CLOCK THROTTLING", CL_QUEUE_OPCODE,

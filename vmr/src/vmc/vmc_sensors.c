@@ -330,12 +330,6 @@ static int validate_sensor_payload(struct xgq_vmr_sensor_payload *payload)
         return ret;
     }
 
-    /* Check if the Response Buffer is greater than Request buffer */
-    if (SENSOR_RESP_BUFFER_SIZE > payload->size) {
-        VMC_ERR("Resp size 0x%x exceeding Req size 0x%x",SENSOR_RESP_BUFFER_SIZE, payload->size);
-        return ret;
-    }
-
     return 0;
 }
 
@@ -351,6 +345,13 @@ int cl_vmc_sensor_request(cl_msg_t *msg)
     reqBuffer[0] = msg->sensor_payload.aid;
     reqBuffer[1] = msg->sensor_payload.sid;
     reqBuffer[2] = msg->sensor_payload.sensor_id;
+
+    if(reqBuffer[0] == ASDM_CMD_GET_SIZE)
+    {
+        Asdm_Get_SDR_Size(&reqBuffer[0], &respBuffer[0], &respSize);
+        msg->sensor_payload.size = respSize;
+        return ret;
+    }
 
     ret = validate_sensor_payload(&msg->sensor_payload);
     if (ret)

@@ -910,13 +910,10 @@ s8 Asdm_Get_SDR_Size(u8 *req, u8 *resp, u16 *respSize)
 
     /* Fill the Size of the SDR */
     sdrSize = sizeof(Asdm_Header_t) + (sdrInfo[sdrIndex].header.no_of_bytes * 8);
-
     Cl_SecureMemcpy(&resp[2],sizeof(sdrSize),&sdrSize, sizeof(sdrSize));
-
-    *respSize +=  sizeof(sdrSize);
+    *respSize += sdrSize;
 
     return 0;
-
 }
 
 s8 Asdm_Get_Sensor_Repository(u8 *req, u8 *resp, u16 *respSize)
@@ -1223,11 +1220,6 @@ s8 Asdm_Process_Sensor_Request(u8 *req, u8 *resp, u16 *respSize)
     {
         VMC_ERR(" ASDM Data not Initialized yet or has Failed \n\r");
         return -1;
-    }
-
-    if(req[0] == ASDM_CMD_GET_SIZE)
-    {
-        return Asdm_Get_SDR_Size(req, resp, respSize);
     }
 
     if(!isRepoTypeSupported(req[1]))

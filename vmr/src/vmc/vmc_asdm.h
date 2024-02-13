@@ -253,6 +253,7 @@ typedef struct __attribute__((packed)) {
 s8 Init_Asdm();
 void Asdm_Update_Sensors(void);
 s8 Asdm_Process_Sensor_Request(u8 *req, u8 *resp, u16 *respSize);
+s8 Asdm_Get_SDR_Size(u8 *req, u8 *resp, u16 *respSize);
 s8 PMBUS_SC_Sensor_Read(snsrRead_t *snsrData);
 s8 Temperature_Read_QSFP(snsrRead_t *snsrData);
 s8 Temperature_Read_VCCINT(snsrRead_t *snsrData);
