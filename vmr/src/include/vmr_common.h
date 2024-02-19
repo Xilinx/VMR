@@ -88,7 +88,8 @@
 /* Note: eventually we should be driven by xparameter.h */
 #define VMR_EP_RPU_SHARED_MEMORY_START	(0x38000000)
 #define VMR_EP_RPU_SHARED_MEMORY_END	(0x3FFFF000)
-#ifdef CONFIG_RAVE
+
+#if defined(CONFIG_RAVE)
 /* RPU execution space on RAVE platform is only 512MB, hence the preload extension FPT address is adjusted accordingly */
 #define VMR_EP_RPU_PRELOAD_FPT		(0x5FBF0000)
 #else

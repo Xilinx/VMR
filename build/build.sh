@@ -360,10 +360,11 @@ build_app_all() {
 
 	# Copy the platform specific lscript.ld file to $BUILD_DIR.
 	CONFIG_RAVE=`grep_file "CONFIG_RAVE" $PLATFORM_FILE`
+
 	if [ ! -z $CONFIG_RAVE ];then
-		cp lscript_rave.ld $BUILD_DIR/lscript.ld
+		cp lscript_rave.ld "$BUILD_DIR/vmr_app/src/lscript.ld"
 	else
-		cp lscript.ld $BUILD_DIR
+		cp lscript.ld "$BUILD_DIR/vmr_app/src/lscript.ld"
 	fi
 
 	cd $BUILD_DIR
