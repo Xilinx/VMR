@@ -68,13 +68,13 @@ build_clean() {
 	typeset start_seconds=$SECONDS
 
 	echo "=== Remove build directories ==="
-	rm -rf xsa .metadata vmr_platform vmr_system vmr 
+	rm -rf xsa .metadata vmr_platform vmr_system vmr
 	rm -rf build_tmp_dir
 	rm -rf $BUILD_DIR
 
 #	RMI=$ROOT_DIR/../RMI/build/
 #	if [ -d $RMI ];then
-#		echo "=== Clean RMI ==="	
+#		echo "=== Clean RMI ==="
 #		cd $RMI
 #		bash ./build.sh -clean
 #	fi
@@ -111,7 +111,7 @@ load_build_info()
 		echo "=== build conf file is $BUILD_CONF_FILE"
 	else
 		echo "=== cannot find $BUILD_CONF_FILE"
-		exit 1	
+		exit 1
 	fi
 
 	if [ ! -z $BUILD_XSA ];then
@@ -214,7 +214,7 @@ make_version_h()
 	else
 		echo "=== Loading version from ${BUILD_VERSION_FILE}"
 		check_file_exists "${BUILD_VERSION_FILE}"
-		VMR_VERSION_HASH=`grep_file "VERSION_HASH" ${BUILD_VERSION_FILE}` 
+		VMR_VERSION_HASH=`grep_file "VERSION_HASH" ${BUILD_VERSION_FILE}`
 		VMR_VERSION_HASH_DATE=`grep_file "VERSION_HASH_DATE" ${BUILD_VERSION_FILE}`
 		VMR_BUILD_BRANCH=`grep_file "BUILD_BRANCH" ${BUILD_VERSION_FILE}`
 		VMR_VERSION_RELEASE=`grep_file "VMR_VERSION_RELEASE" ${BUILD_VERSION_FILE}`
@@ -246,7 +246,7 @@ make_version_h()
 	else
 		echo "=== Full build ==="
 	fi
-	
+
 	echo "" >> $CL_VERSION_H
 
 	# set platform specific config macros
@@ -313,15 +313,15 @@ check_vmr()
 	else
 		echo "Full Build"
 	fi
-	
+
 	if [ $UPDATE_RMI == 1 ];then
 		echo "Full Build with UPDATE_RMI"
 	fi
-	
+
 	if [ $BUILD_RMI_LIB == 1 ];then
 		echo "Full Build with RMI_LIB"
 	fi
-	
+
 	echo "=== Build vmr.elf ==="
 	cp $VMR_FILE $ROOT_DIR/vmr.elf
 	realpath $ROOT_DIR/vmr.elf
@@ -333,16 +333,16 @@ build_app_all() {
 
 	RMI=$ROOT_DIR/librmi.a
 	if [ -f $RMI ];then
-		echo "=== Adding RMI lib to build ==="	
+		echo "=== Adding RMI lib to build ==="
 		cp $RMI $BUILD_DIR
 		realpath $BUILD_DIR/librmi.a
-		
+
 		cd $ROOT_DIR
 		RMI_INCLUDE_DIR=$BUILD_DIR/vmr_app/src/include/RMI
 		mkdir $RMI_INCLUDE_DIR
 		rsync -a ../RMI/src/include/* $RMI_INCLUDE_DIR
 	fi
-	
+
 	cp make_app.tcl $BUILD_DIR
 
 	if [ -f $RMI ];then
@@ -354,9 +354,18 @@ build_app_all() {
 		cd $BUILD_DIR
 		xsct ./config_app.tcl >> $BUILD_LOG 2>&1
 	fi
-	
+
 	cd $ROOT_DIR
 	make_version_h "$BUILD_DIR/vmr_app"
+
+	# Copy the platform specific lscript.ld file to $BUILD_DIR.
+	CONFIG_RAVE=`grep_file "CONFIG_RAVE" $PLATFORM_FILE`
+
+	if [ ! -z $CONFIG_RAVE ];then
+		cp lscript_rave.ld "$BUILD_DIR/vmr_app/src/lscript.ld"
+	else
+		cp lscript.ld "$BUILD_DIR/vmr_app/src/lscript.ld"
+	fi
 
 	cd $BUILD_DIR
 	xsct ./make_app.tcl >> $BUILD_LOG 2>&1
@@ -371,25 +380,25 @@ build_vmr_source() {
 		echo "Please rebuild entire project"
 		exit 1;
 	fi
-	
+
 	start_seconds=$SECONDS
 
 	# copy new source file
 	cd $ROOT_DIR
 	rsync -a ../vmr/src "$BUILD_DIR/vmr_app" --exclude cmc --exclude *.swp --exclude vmc/ut
-	
+
 	RMI=$ROOT_DIR/librmi.a
 	if [ -f $RMI ];then
-		echo "=== Adding RMI lib to build ==="	
+		echo "=== Adding RMI lib to build ==="
 		cp $RMI $BUILD_DIR
 		realpath $BUILD_DIR/librmi.a
-		
+
 		cd $ROOT_DIR
 		RMI_INCLUDE_DIR=$BUILD_DIR/vmr_app/src/include/RMI
 		mkdir $RMI_INCLUDE_DIR
 		rsync -a ../RMI/src/include/* $RMI_INCLUDE_DIR
 	fi
-	
+
 	make_version_h "$BUILD_DIR/vmr_app"
 
 	cd $ROOT_DIR/$BUILD_DIR/vmr_app/Debug
@@ -418,19 +427,19 @@ build_app_incremental() {
 	cd $ROOT_DIR
 	rsync -a ../vmr/src "$BUILD_DIR/vmr_app" --exclude cmc --exclude *.swp --exclude vmc/ut
 	make_version_h "$BUILD_DIR/vmr_app"
-	
+
 	RMI=$ROOT_DIR/librmi.a
 	if [ -f $RMI ];then
-		echo "=== Adding RMI lib to build ==="	
+		echo "=== Adding RMI lib to build ==="
 		cp $RMI $BUILD_DIR
 		realpath $BUILD_DIR/librmi.a
-		
+
 		cd $ROOT_DIR
 		RMI_INCLUDE_DIR=$BUILD_DIR/vmr_app/src/include/RMI
 		mkdir $RMI_INCLUDE_DIR
 		rsync -a ../RMI/src/include/* $RMI_INCLUDE_DIR
 	fi
-	
+
 	cd $BUILD_DIR
 	xsct ./make_app.tcl
 
@@ -445,7 +454,7 @@ build_vmrpdi()
 	cd $ROOT_DIR
 	cp $REGEN_VMR $BUILD_DIR
 	cd $BUILD_DIR
-	
+
 	if [ ! -z $BUILD_AIE2 ] && [ $BUILD_AIE2 = "yes" ];then
 		echo "build AIE2 shell"
 		bash $REGEN_VMR -a -v $ROOT_DIR/vmr.elf >> $BUILD_LOG 2>&1
@@ -544,7 +553,7 @@ diff_xgq_cmd_headers() {
 
 build_RMI() {
 	echo "=== Build RMI ==="
-	
+
 	echo "=== Update RMI submodule ==="
 	if [ -f "$ROOT_DIR/../.gitmodules" ];then
 		cd $ROOT_DIR/../
@@ -557,7 +566,7 @@ build_RMI() {
 		echo "=== skip ${FUNCNAME[0]} ==="
 		return
 	fi
-	
+
 	RMI=$ROOT_DIR/../RMI
 	if [ -z $RMI ];then
 		echo "=== RMI submodule doesn't exist ==="
@@ -574,7 +583,7 @@ build_make_RMI_lib(){
 		echo "=== RMI submodule doesn't exist ==="
 		exit 1;
 	fi
-	
+
 	start_seconds=$SECONDS
 
 	# copy new source file
@@ -587,11 +596,11 @@ build_make_RMI_lib(){
 		cat $BUILD_DIR/$BUILD_LOG
 		exit 1;
 	else
-		# copy header files and rmi library 
+		# copy header files and rmi library
 		cp librmi.a $ROOT_DIR
 		realpath $ROOT_DIR/librmi.a
 	fi
-	
+
 	echo "=== Make VMR-app with RMI took: $((SECONDS - start_seconds)) S"
 }
 
@@ -620,7 +629,7 @@ build_checking() {
 	else
 		diff_xgq_cmd_headers
 	fi
-	
+
 }
 
 # Obsolated since 2022.1 #
@@ -631,7 +640,7 @@ build_bsp_stable() {
 	mkdir build_tmp_dir
 	echo "rsync and make BSP"
 	rsync -aq $REAL_BSP build_tmp_dir
-	cd build_tmp_dir/bsp 
+	cd build_tmp_dir/bsp
 	make clean;make all
 	check_result "make stable BSP" $?
 	cd $ROOT_DIR
@@ -648,20 +657,20 @@ build_bsp_stable() {
 
 usage() {
     echo "Usage:"
-    echo 
-    echo "-config <config file.json> config json instead of using default build.json"  
-    echo "-clean                     Remove build directories"  
-    echo "-xsa <xsa file.xsa>        XSA file"  
+    echo
+    echo "-config <config file.json> config json instead of using default build.json"
+    echo "-clean                     Remove build directories"
+    echo "-xsa <xsa file.xsa>        XSA file"
     echo "-config_VMR                Update VMR project too edit in Vitis GUI"
     echo "-version                   version.json file"
     echo "-platform                  platform.json file for enable platform specific resources"
     echo "-jtag [0|1|2]              RPU console is on jtag uart 0, 1, or 2 for uartlite 0; APU is always on uartlite 1."
     echo "-config <json file>        build with pre configured options"
-    echo "-app                       Re-build Vitis Application only"  
-    echo "-vmr                       Re-build vmr source code only, fatest!!!"  
-    echo "-shell                     Re-build shell, -config is needed"  
-    echo "-RMI                       Update RMI from git and build!" 
-    echo "-RMI_LIB                   Build RMI library!" 
+    echo "-app                       Re-build Vitis Application only"
+    echo "-vmr                       Re-build vmr source code only, fatest!!!"
+    echo "-shell                     Re-build shell, -config is needed"
+    echo "-RMI                       Update RMI from git and build!"
+    echo "-RMI_LIB                   Build RMI library!"
     echo "-help"
     exit $1
 }
