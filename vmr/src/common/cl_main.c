@@ -287,8 +287,25 @@ static int cl_main_task_init(void)
 
 static int cl_platform_init()
 {
-	/* Initialize the 4k Aligned APU shared XGQ Ring buffer DDR memory to 0. */
-	cl_memset_io32(VMR_EP_APU_SHARED_MEMORY_START, 0, (VMR_APU_CHANNEL_XGQ_OFF + APU_RING_BUFFER_SIZE));
+	uint32_t ret = 0;
+	uint32_t apu_channel_ready = 0;
+
+	ret = cl_memcpy_fromio(VMR_EP_APU_SHARED_MEMORY_START, &apu_channel_ready, sizeof(uint32_t));
+	if (ret == -1) {
+		VMR_ERR("cl_platform_init: Read APU shared mem table failed");
+		return -EINVAL;
+	}
+	/* If VMR is programmed via xsdb when APU is already UP, Initializing APU shared buffer resets
+	 * APU ready status aswell. Hence skip Initialization if APU is already UP.
+	 */
+	if (apu_channel_ready == 1) {
+		VMR_ERR("APU Channel is ready, skip initializing APU shared mem");
+	}
+	else
+	{
+		/* Initialize the 4k Aligned APU shared XGQ Ring buffer DDR memory to 0. */
+		cl_memset_io32(VMR_EP_APU_SHARED_MEMORY_START, 0, (VMR_APU_CHANNEL_XGQ_OFF + APU_RING_BUFFER_SIZE));
+	}
 	return 0;
 }
 
