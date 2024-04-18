@@ -299,7 +299,7 @@ static int cl_platform_init()
 	 * APU ready status aswell. Hence skip Initialization if APU is already UP.
 	 */
 	if (apu_channel_ready == 1) {
-		VMR_ERR("APU Channel is ready, skip initializing APU shared mem");
+		VMR_DBG("APU Channel is ready, skip initializing APU shared mem");
 	}
 	else
 	{
