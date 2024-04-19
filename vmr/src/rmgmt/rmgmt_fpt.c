@@ -257,6 +257,11 @@ void rmgmt_boot_fpt_query(struct cl_msg *msg)
 				entry.partition_base_addr;
 		}
 
+        if (entry.partition_type == FPT_TYPE_OSPI_VERSION){
+			msg->multiboot_payload.ospi_version_offset = entry.partition_base_addr;
+			msg->multiboot_payload.ospi_version_size = entry.partition_size;
+		}
+
 		VMR_DBG("type %x", entry.partition_type);
 		VMR_DBG("base %x", entry.partition_base_addr);
 		VMR_DBG("size %x", entry.partition_size);
@@ -605,4 +610,24 @@ int rmgmt_fpt_get_debug_type(struct cl_msg *msg, u8 *debug_type)
 
 	VMR_LOG("debug_type %d", meta.fpt_pdi_debug_type);
 	return ret;
+}
+
+int rmgmt_fpt_get_ospi_version(struct cl_msg *msg, char *ospi_version)
+{
+	char buf[OSPI_VERSAL_PAGESIZE] = { 0 };
+	int ret = 0;
+	if (msg->multiboot_payload.ospi_version_offset == 0) {
+		VMR_DBG("base addr of ospi_version_offset cannot be 0");
+		return -1;
+	}
+
+	ret = ospi_flash_read(CL_FLASH_BOOT, (u8 *)buf, msg->multiboot_payload.ospi_version_offset, sizeof(buf));
+	if (ret) {
+		VMR_ERR("OSPI flash read failed rcode = %d", ret);
+		return ret;
+	}
+
+	memcpy(ospi_version, buf, sizeof(buf));
+
+	return 0;
 }

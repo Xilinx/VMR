@@ -323,6 +323,8 @@ static u32 rmgmt_fpt_status_query(cl_msg_t *msg, char *buf, u32 size)
 {
 	u32 count = 0;
 	struct fpt_sc_version version = { 0 };
+    char ospi_version[OSPI_VERSAL_PAGESIZE] = { 0 };
+	int ret = 0;
 
 	rmgmt_fpt_query(msg);
 
@@ -357,6 +359,13 @@ static u32 rmgmt_fpt_status_query(cl_msg_t *msg, char *buf, u32 size)
 	count += snprintf(buf + count, size - count, "SCFW image version: %d.%d.%d\n",
 		version.fsv_major, version.fsv_minor, version.fsv_revision);
 	if (count > size) {
+		VMR_WARN("msg is truncated");
+		return size;
+	}
+
+    ret = rmgmt_fpt_get_ospi_version(msg, ospi_version);
+	count += snprintf(buf + count, size - count, "OSPI image version: %s\n", ret ? "N/A" : ospi_version);
+	if (count > size){
 		VMR_WARN("msg is truncated");
 		return size;
 	}
