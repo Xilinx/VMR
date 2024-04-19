@@ -157,8 +157,8 @@ struct xgq_vmr_multiboot_payload {
 	uint32_t pdimeta_backup_offset;
 	uint32_t pdimeta_backup_size;
 	uint8_t vmr_debug_type;
-    uint32_t ospi_version_offset;
-    uint32_t ospi_version_size;
+	uint32_t ospi_version_offset;
+	uint32_t ospi_version_size;
 };
 
 struct xgq_vmr_clk_scaling_payload {

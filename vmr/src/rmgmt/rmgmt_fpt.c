@@ -257,7 +257,7 @@ void rmgmt_boot_fpt_query(struct cl_msg *msg)
 				entry.partition_base_addr;
 		}
 
-        if (entry.partition_type == FPT_TYPE_OSPI_VERSION){
+		if (entry.partition_type == FPT_TYPE_OSPI_VERSION) {
 			msg->multiboot_payload.ospi_version_offset = entry.partition_base_addr;
 			msg->multiboot_payload.ospi_version_size = entry.partition_size;
 		}
