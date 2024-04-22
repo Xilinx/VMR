@@ -9,6 +9,6 @@
 struct cl_msg;
 
 int rmgmt_pm_init(void);
-int rmgmt_pm_reset_rpu(struct cl_msg *msg);
+int rmgmt_pm_reset(struct cl_msg *msg);
 
 #endif

@@ -90,7 +90,7 @@ static int rmgmt_subsystem_fini()
 	return 0;
 }
 
-int rmgmt_pm_reset_rpu(struct cl_msg *msg)
+int rmgmt_pm_reset(struct cl_msg *msg)
 {
 	int Status = XST_FAILURE;
 
@@ -102,21 +102,29 @@ int rmgmt_pm_reset_rpu(struct cl_msg *msg)
 	if (Status)
 		return Status;
 
-	VMR_WARN("xgq recevie cleanup successfully! reset continues ...");
-	/*
-	 * We don't need to reset whole system.
-	 * Status = XPm_SystemShutdown(PM_SHUTDOWN_TYPE_RESET, PM_SHUTDOWN_SUBTYPE_RST_SYSTEM);
-	 */
-	Status = XPm_SystemShutdown(PM_SHUTDOWN_TYPE_RESET, PM_SHUTDOWN_SUBTYPE_RST_SUBSYSTEM);
-	VMR_WARN("reset requested, wait for RPU subsystem reset.");
-
-	if (XST_SUCCESS != Status) {
-		VMR_ERR("Reset RPU subsystem error=%d", Status);
-		goto done;
+	VMR_WARN("xgq receive cleanup successfully! reset continues ...");
+	
+	if (msg->multiboot_payload.req_type == CL_VMR_EEMI_SRST) {
+		/*  Reset whole system. */
+		Status = XPm_SystemShutdown(PM_SHUTDOWN_TYPE_RESET, PM_SHUTDOWN_SUBTYPE_RST_SYSTEM);
+		VMR_WARN("reset requested, wait for system reset.");
+		if (XST_SUCCESS != Status) {
+			VMR_ERR("Reset system error=%d", Status);
+			goto done;
+		}
+		VMR_WARN("Reset entire system ... in progress");
+	}
+	else {
+		Status = XPm_SystemShutdown(PM_SHUTDOWN_TYPE_RESET, PM_SHUTDOWN_SUBTYPE_RST_SUBSYSTEM);
+		VMR_WARN("reset requested, wait for RPU subsystem reset.");
+		if (XST_SUCCESS != Status) {
+			VMR_ERR("Reset RPU subsystem error=%d", Status);
+			goto done;
+		}
+		VMR_WARN("Reset RPU subsystem ... in progress");
 	}
 
-	VMR_WARN("Reset RPU subsystem ... in progress");
-	/* since we attempted to restart, hung here */
+	/* since VMR attempted to restart, suspend here */
 	while (1);
 
 done:

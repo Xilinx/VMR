@@ -257,7 +257,7 @@ done:
 static int rmgmt_download_vmr(struct rmgmt_handler *rh, cl_msg_t *msg)
 {
 	rmgmt_ipi_image_store((u32)rh->rh_data_base, rh->rh_data_size);
-	return rmgmt_pm_reset_rpu(msg);
+	return rmgmt_pm_reset(msg);
 }
 
 static int rmgmt_download_pdi(cl_msg_t *msg, enum pdi_type ptype)
@@ -1210,6 +1210,7 @@ struct xgq_vmr_op {
 	{ CL_VMR_QUERY, "VMR_QUERY", cl_rmgmt_fpt_query },
 	{ CL_VMR_DEBUG, "VMR_DEBUG", rmgmt_fpt_debug },
 	{ CL_PROGRAM_SC, "PROGRAM_SC", rmgmt_program_sc },
+	{ CL_VMR_EEMI_SRST, "PMC SRST", rmgmt_pm_reset },
 };
 
 int cl_rmgmt_vmr_control(cl_msg_t *msg)

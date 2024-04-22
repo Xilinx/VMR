@@ -66,6 +66,7 @@ typedef enum cl_vmr_control_type {
 	CL_MULTIBOOT_BACKUP	= 0x2,
 	CL_PROGRAM_SC		= 0x3,
 	CL_VMR_DEBUG		= 0x4,
+	CL_VMR_EEMI_SRST	= 0x5,
 } cl_vmr_control_type_t;
 
 typedef enum cl_vmr_debug_type {
