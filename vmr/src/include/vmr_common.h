@@ -13,6 +13,7 @@
 #define EBUSY	16
 #define ENODEV	19
 #define EINVAL	22
+#define EFAULT	14
 
 #define OCL_MAX_ID	3
 #define OCL_MAX_NUM	4

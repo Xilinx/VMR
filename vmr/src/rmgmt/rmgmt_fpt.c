@@ -614,20 +614,17 @@ int rmgmt_fpt_get_debug_type(struct cl_msg *msg, u8 *debug_type)
 
 int rmgmt_fpt_get_ospi_version(struct cl_msg *msg, char *ospi_version)
 {
-	char buf[OSPI_VERSAL_PAGESIZE] = { 0 };
 	int ret = 0;
 	if (msg->multiboot_payload.ospi_version_offset == 0) {
 		VMR_DBG("base addr of ospi_version_offset cannot be 0");
-		return -1;
+		return -EFAULT;
 	}
 
-	ret = ospi_flash_read(CL_FLASH_BOOT, (u8 *)buf, msg->multiboot_payload.ospi_version_offset, sizeof(buf));
+	ret = ospi_flash_read(CL_FLASH_BOOT, (u8 *)ospi_version, msg->multiboot_payload.ospi_version_offset, OSPI_VERSAL_PAGESIZE);
 	if (ret) {
 		VMR_ERR("OSPI flash read failed rcode = %d", ret);
 		return ret;
 	}
-
-	memcpy(ospi_version, buf, sizeof(buf));
 
 	return 0;
 }
