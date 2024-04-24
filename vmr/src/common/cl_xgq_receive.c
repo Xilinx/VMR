@@ -154,6 +154,7 @@ static int vmr_control_handle(cl_msg_t *msg, struct xgq_cmd_sq *sq)
 		return ret;
 
 	msg->multiboot_payload.vmr_debug_type = vmr_debug_type;
+	msg->multiboot_payload.boot_on_backup = sq->vmr_control_payload.eemi_boot_from_backup;
 
 	return 0;
 }

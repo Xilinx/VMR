@@ -102,12 +102,18 @@ int rmgmt_pm_reset(struct cl_msg *msg)
 	if (Status)
 		return Status;
 
-	VMR_WARN("xgq receive cleanup successfully! reset continues ...");
+	VMR_WARN("xgq receive cleanup successfully! reset continues ...multiboot=%x req_type=%x", msg->multiboot_payload.boot_on_backup, msg->multiboot_payload.req_type);
+
+	if (msg->multiboot_payload.boot_on_backup == 1) {
+		rmgmt_enable_boot_backup(msg);
+	}
+	else {
+		rmgmt_enable_boot_default(msg);
+	}
 	
 	if (msg->multiboot_payload.req_type == CL_VMR_EEMI_SRST) {
 		/*  Reset whole system. */
 		Status = XPm_SystemShutdown(PM_SHUTDOWN_TYPE_RESET, PM_SHUTDOWN_SUBTYPE_RST_SYSTEM);
-		VMR_WARN("reset requested, wait for system reset.");
 		if (XST_SUCCESS != Status) {
 			VMR_ERR("Reset system error=%d", Status);
 			goto done;
@@ -116,7 +122,6 @@ int rmgmt_pm_reset(struct cl_msg *msg)
 	}
 	else {
 		Status = XPm_SystemShutdown(PM_SHUTDOWN_TYPE_RESET, PM_SHUTDOWN_SUBTYPE_RST_SUBSYSTEM);
-		VMR_WARN("reset requested, wait for RPU subsystem reset.");
 		if (XST_SUCCESS != Status) {
 			VMR_ERR("Reset RPU subsystem error=%d", Status);
 			goto done;
