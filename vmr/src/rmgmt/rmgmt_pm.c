@@ -122,3 +122,42 @@ int rmgmt_pm_reset_rpu(struct cl_msg *msg)
 done:
 	return Status;
 }
+
+int rmgmt_eemi_pm_reset(struct cl_msg *msg)
+{
+	int Status = XST_FAILURE;
+
+	VMR_WARN("start reset subsystem ...");
+	vTaskDelay(pdMS_TO_TICKS(1000));
+
+	/* wait for rpu app cleanup itself */
+	Status = rmgmt_subsystem_fini();
+	if (Status)
+		goto done;
+
+	VMR_WARN("xgq receive cleanup successfully! reset continues ...multiboot=%x req_type=%x", msg->multiboot_payload.boot_on_backup, msg->multiboot_payload.req_type);
+
+	/* Enable multiboot based on the boot config from EEMI SRST XGQ command.
+	 * NOTE: Here at this point this is not the config read from fpt query yet.
+	 */
+	if (msg->multiboot_payload.boot_on_backup == 1) {
+		rmgmt_enable_boot_backup(msg);
+	}
+	else {
+		rmgmt_enable_boot_default(msg);
+	}
+	/*  Reset whole system. */
+	Status = XPm_SystemShutdown(PM_SHUTDOWN_TYPE_RESET, PM_SHUTDOWN_SUBTYPE_RST_SYSTEM);
+	if (XST_SUCCESS != Status) {
+		VMR_ERR("Reset system error=%d", Status);
+		goto done;
+	}
+	VMR_WARN("Reset entire system ... in progress");
+
+	/* since VMR attempted to restart, suspend here */
+	while (1);
+
+done:
+	return Status;
+}
+

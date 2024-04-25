@@ -85,7 +85,7 @@ int cl_xgq_program_init(void)
 
 void cl_xgq_program_func(void *task_args)
 {
-	cl_msg_t msg;
+	cl_msg_t msg = { 0 };
 
 	for ( ;; ) {
 		VMR_DBG("Wait for new messages ...");
