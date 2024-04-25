@@ -69,6 +69,15 @@ static void process_program_msg(cl_msg_t *msg)
 {
 	for (int i = 0; i < ARRAY_SIZE(opcode_handles); i++) {
 		if (msg->hdr.type == opcode_handles[i].msg_type) {
+			/* If the request type is EMMI based SRST, VMR would not be able to send response
+			 *  post SRST, hence respond to host before callback.
+			 */
+			if (msg->multiboot_payload.req_type == CL_VMR_EEMI_SRST) {
+				msg->hdr.rcode = 0;
+				cl_msg_handle_complete(msg);
+				opcode_handles[i].msg_cb(msg);
+				return;
+			}
 			msg->hdr.rcode = opcode_handles[i].msg_cb(msg);
 			cl_msg_handle_complete(msg);
 			return;

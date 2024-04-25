@@ -49,6 +49,7 @@ static struct xgq_cmd_cl_map xgq_cmd_vmr_control_map[] = {
 	{XGQ_CMD_PROGRAM_SC, CL_PROGRAM_SC},
 	{XGQ_CMD_VMR_DEBUG, CL_VMR_DEBUG},
 	{XGQ_CMD_VMR_QUERY, CL_VMR_QUERY},
+	{XGQ_CMD_VMR_EEMI_SRST, CL_VMR_EEMI_SRST},
 };
 
 static struct xgq_cmd_cl_map xgq_cmd_vmr_debug_map[] = {
@@ -153,6 +154,7 @@ static int vmr_control_handle(cl_msg_t *msg, struct xgq_cmd_sq *sq)
 		return ret;
 
 	msg->multiboot_payload.vmr_debug_type = vmr_debug_type;
+	msg->multiboot_payload.boot_on_backup = sq->vmr_control_payload.eemi_boot_from_backup;
 
 	return 0;
 }

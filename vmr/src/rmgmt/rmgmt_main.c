@@ -1210,6 +1210,7 @@ struct xgq_vmr_op {
 	{ CL_VMR_QUERY, "VMR_QUERY", cl_rmgmt_fpt_query },
 	{ CL_VMR_DEBUG, "VMR_DEBUG", rmgmt_fpt_debug },
 	{ CL_PROGRAM_SC, "PROGRAM_SC", rmgmt_program_sc },
+	{ CL_VMR_EEMI_SRST, "PMC SRST", rmgmt_eemi_pm_reset },
 };
 
 int cl_rmgmt_vmr_control(cl_msg_t *msg)
