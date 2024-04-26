@@ -20,6 +20,7 @@
 #define FPT_TYPE_SYSDTB		0x0E04
 #define FPT_TYPE_PDIMETA	0x0E05
 #define FPT_TYPE_PDIMETA_BACKUP	0x0E06
+#define FPT_TYPE_OSPI_VERSION	0x0E07
 
 #define MULTIBOOT_OFF(x) (x / 1024 / 32 ) // divided by 32k
 #define BOOT_TAG_OFFSET 0x14
@@ -75,6 +76,7 @@ int rmgmt_fpt_get_xsabin(struct cl_msg *msg, u32 *addr, u32 *size);
 int rmgmt_fpt_get_scfw(struct cl_msg *msg, u32 *addr, u32 *size);
 int rmgmt_fpt_get_systemdtb(struct cl_msg *msg, u32 *addr, u32 *size);
 int rmgmt_fpt_get_data(struct cl_msg *msg, u32 *addr, fpt_type_t type);
+int rmgmt_fpt_get_ospi_version(struct cl_msg *msg, char* ospi_version);
 /* Debug APIs */
 int rmgmt_fpt_set_debug_type(struct cl_msg *msg);
 int rmgmt_fpt_get_debug_type(struct cl_msg *msg, u8 *debug_type);
