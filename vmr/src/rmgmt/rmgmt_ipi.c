@@ -35,7 +35,11 @@ static int IpiInit(void)
 	XIpiPsu_Config *IpiCfgPtr;
 
 	/* Look Up the config data */
+#ifndef SDT
 	IpiCfgPtr = XIpiPsu_LookupConfig(XPAR_XIPIPSU_0_DEVICE_ID);
+#else
+	IpiCfgPtr = XIpiPsu_LookupConfig(XPAR_XIPIPSU_0_BASEADDR);
+#endif
 	if (NULL == IpiCfgPtr) {
 		VMR_ERR("XIpiPsu_Lookup failed");
 		goto END;

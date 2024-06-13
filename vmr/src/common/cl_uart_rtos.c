@@ -11,6 +11,7 @@
 #include "semphr.h"
 #include "event_groups.h"
 #include "portmacro.h"
+#include "xparameters.h"
 
 #include "cl_mem.h"
 #include "cl_uart_rtos.h"
@@ -21,7 +22,15 @@
 
 
 /**************************** Type Definitions ******************************/
-
+#ifndef SDT
+#define VMR_XPAR_XUARTPSV_0_DEVICE XPAR_XUARTPSV_0_DEVICE_ID
+#define VMR_XPAR_XUARTPSV_1_DEVICE XPAR_XUARTPSV_1_DEVICE_ID
+static int32_t UART_Config(uart_rtos_handle_t *handle, XUartPsv *UartInstPtr, uint16_t DeviceId, uint16_t UartIntrId, ePlatformType curr_platform);
+#else
+#define VMR_XPAR_XUARTPSV_0_DEVICE XPAR_XUARTPSV_0_BASEADDR
+#define VMR_XPAR_XUARTPSV_1_DEVICE XPAR_XUARTPSV_1_BASEADDR
+static int32_t UART_Config(uart_rtos_handle_t *handle, XUartPsv *UartInstPtr, UINTPTR Device_BaseAddress, uint16_t UartIntrId, ePlatformType curr_platform);
+#endif
 
 #define UART_RTOS_TASK_STACK_SIZE	(configMINIMAL_STACK_SIZE + 100)
 #define UART_RTOS_TASK_PRIORITY		(5)
@@ -35,8 +44,7 @@
 /************************** Function Prototypes *****************************/
 
 static void UART_RTOS_Handler(void *CallBackRef, u32 Event, unsigned int EventData);
-static int32_t UART_Config(uart_rtos_handle_t *handle, XUartPsv *UartInstPtr,
-		uint16_t DeviceId, uint16_t UartIntrId, ePlatformType curr_platform);
+
 
 /************************** Variable Definitions ***************************/
 
@@ -161,8 +169,13 @@ static void UART_RTOS_Handler(void *CallBackRef, u32 Event, unsigned int EventDa
 * @note
 *
 **************************************************************************/
+#ifndef SDT
 static int32_t UART_RTOS_Init(uart_rtos_handle_t *handle, XScuGic *IntcInstPtr,
 		u16 DeviceId, u16 UartIntrId, ePlatformType curr_platform)
+#else
+	static int32_t UART_RTOS_Init(uart_rtos_handle_t *handle, XScuGic *IntcInstPtr,
+		UINTPTR Device_BaseAddress, u16 UartIntrId, ePlatformType curr_platform)
+#endif
 {
 	UART_STATUS ret = UART_SUCCESS;
 	if(NULL == handle){
@@ -198,8 +211,11 @@ static int32_t UART_RTOS_Init(uart_rtos_handle_t *handle, XScuGic *IntcInstPtr,
 
 	Cl_SecureMemset(&handle->cb_msg,0,sizeof(handle->cb_msg));
 
-
+#ifndef SDT
 	ret = UART_Config(handle, &handle->uartPsv, DeviceId, UartIntrId, curr_platform);
+#else
+	ret = UART_Config(handle, &handle->uartPsv, Device_BaseAddress, UartIntrId, curr_platform);
+#endif
 
 	return ret;
 }
@@ -229,8 +245,13 @@ static int32_t UART_RTOS_Init(uart_rtos_handle_t *handle, XScuGic *IntcInstPtr,
 * @note
 *
 **************************************************************************/
+#ifndef SDT
 static int32_t UART_Config(uart_rtos_handle_t *handle, XUartPsv *UartInstPtr,
 		uint16_t DeviceId, uint16_t UartIntrId, ePlatformType curr_platform)
+#else
+static int32_t UART_Config(uart_rtos_handle_t *handle, XUartPsv *UartInstPtr,
+                UINTPTR Device_BaseAddress, uint16_t UartIntrId, ePlatformType curr_platform)
+#endif
 {
 	int32_t Status;
 	XUartPsv_Config *Config;
@@ -241,7 +262,11 @@ static int32_t UART_Config(uart_rtos_handle_t *handle, XUartPsv *UartInstPtr,
 	 * Initialize the UART driver so that it's ready to use
 	 * Look up the configuration in the config table, then initialize it.
 	 */
+#ifndef SDT
 	Config = XUartPsv_LookupConfig(DeviceId);
+#else
+	Config = XUartPsv_LookupConfig(Device_BaseAddress);
+#endif
 	if (NULL == Config) {
 		return XST_FAILURE;
 	}
@@ -250,9 +275,13 @@ static int32_t UART_Config(uart_rtos_handle_t *handle, XUartPsv *UartInstPtr,
 	if (Status != XST_SUCCESS) {
 		return XST_FAILURE;
 	}
-
-	if (((curr_platform == eVCK5000) && (DeviceId == XPAR_XUARTPSV_0_DEVICE_ID))
-			|| ((curr_platform == eV70) && (DeviceId == XPAR_XUARTPSV_1_DEVICE_ID)))
+#ifndef SDT
+	if (((curr_platform == eVCK5000) && (DeviceId == VMR_XPAR_XUARTPSV_0_DEVICE))
+			|| ((curr_platform == eV70) && (DeviceId == VMR_XPAR_XUARTPSV_1_DEVICE)))
+#else
+	if (((curr_platform == eVCK5000) && (Device_BaseAddress == VMR_XPAR_XUARTPSV_0_DEVICE))
+                        || ((curr_platform == eV70) && (Device_BaseAddress == VMR_XPAR_XUARTPSV_1_DEVICE)))
+#endif
 	{
 		LineCtrlRegister = XUartPsv_ReadReg(Config->BaseAddress, XUARTPSV_UARTLCR_OFFSET);
 		LineCtrlRegister |= XUARTPSV_UARTLCR_PARITY_EVEN;
@@ -602,9 +631,14 @@ UART_STATUS UART_RTOS_Receive_Wait(uart_rtos_handle_t *handle, uint32_t *receive
 **************************************************************************/
 int32_t UART_RTOS_Enable(uart_rtos_config_t *uartConfig, ePlatformType curr_platform)
 {
-	int32_t status = UART_RTOS_Init(uartConfig->uartHandler, &uartConfig->INTC,
+	int32_t status;
+#ifndef SDT
+	status = UART_RTOS_Init(uartConfig->uartHandler, &uartConfig->INTC,
 		uartConfig->uart_ID, uartConfig->uart_IRQ_ID, curr_platform);
-
+#else
+	status = UART_RTOS_Init(uartConfig->uartHandler, &uartConfig->INTC,
+                uartConfig->Device_BaseAddress, uartConfig->uart_IRQ_ID, curr_platform);
+#endif
 	if (status != XST_SUCCESS) {
 		xil_printf("Uart RTOS Initialization Failed\r\n");
 		return XST_FAILURE;
@@ -657,12 +691,12 @@ s32 UART_RTOS_Debug_Enable(uart_rtos_handle_t *handle, ePlatformType curr_platfo
 
 	static uart_rtos_config_t debugUartConig = {
 			.INTC_ID = XPAR_SCUGIC_SINGLE_DEVICE_ID,
-			.uart_ID = XPAR_XUARTPSV_0_DEVICE_ID,
+			.uart_ID = VMR_XPAR_XUARTPSV_0_DEVICE,
 			.uart_IRQ_ID = XPAR_XUARTPS_0_INTR
 	};
 
 	if(curr_platform == eVCK5000){
-		debugUartConig.uart_ID = XPAR_XUARTPSV_1_DEVICE_ID;
+		debugUartConig.uart_ID = VMR_XPAR_XUARTPSV_1_DEVICE;
 		debugUartConig.uart_IRQ_ID = XPAR_XUARTPS_1_INTR;
 	}
 
@@ -680,12 +714,12 @@ s32 UART_VMC_SC_Enable(uart_rtos_handle_t *handle, ePlatformType curr_platform)
 
 	static uart_rtos_config_t vmcscUartConfig = {
 			.INTC_ID = XPAR_SCUGIC_SINGLE_DEVICE_ID,
-			.uart_ID = XPAR_XUARTPSV_1_DEVICE_ID,
+			.uart_ID = VMR_XPAR_XUARTPSV_1_DEVICE,
 			.uart_IRQ_ID = XPAR_XUARTPS_1_INTR
 	};
 
 	if(curr_platform == eVCK5000){
-		vmcscUartConfig.uart_ID = XPAR_XUARTPSV_0_DEVICE_ID;
+		vmcscUartConfig.uart_ID = VMR_XPAR_XUARTPSV_0_DEVICE;
 		vmcscUartConfig.uart_IRQ_ID = XPAR_XUARTPS_0_INTR;
 	}
 

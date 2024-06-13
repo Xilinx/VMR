@@ -2,9 +2,23 @@
 * Copyright (C) 2021 Xilinx, Inc.  All rights reserved.
 * SPDX-License-Identifier: MIT
 *******************************************************************************/
-
+#include "xparameters.h"
 #ifndef VMR_COMMON_H
 #define VMR_COMMON_H
+
+
+#undef XPAR_BLP_BLP_LOGIC_XGQ_R2A_BASEADDR
+#define XPAR_BLP_BLP_LOGIC_XGQ_R2A_BASEADDR 0x80011000
+
+#undef XPAR_BLP_BLP_LOGIC_XGQ_R2A_HIGHADDR
+#define XPAR_BLP_BLP_LOGIC_XGQ_R2A_HIGHADDR 0x80011FFF
+
+#undef XPAR_BLP_BLP_LOGIC_XGQ_M2R_BASEADDR
+#define XPAR_BLP_BLP_LOGIC_XGQ_M2R_BASEADDR 0x80010000
+
+#undef XPAR_BLP_BLP_LOGIC_XGQ_M2R_HIGHADDR
+#define XPAR_BLP_BLP_LOGIC_XGQ_M2R_HIGHADDR 0x80010FFF
+
 
 /* compatible with linux OS error codes */
 #define ENOENT	2	
@@ -52,8 +66,14 @@
 
 #define VMR_EP_FIREWALL_USER_BASE XPAR_AXI_FIREWALL_0_BASEADDR
 
+#ifndef SDT
 #define VMR_EP_ACLK_KERNEL_0	XPAR_CLK_WIZ_0_BASEADDR
 #define VMR_EP_ACLK_KERNEL_1	XPAR_CLK_WIZ_1_BASEADDR
+#else
+#define VMR_EP_ACLK_KERNEL_0 XPAR_XCLK_WIZ_0_BASEADDR
+#define VMR_EP_ACLK_KERNEL_1 XPAR_XCLK_WIZ_1_BASEADDR
+#endif
+
 #define VMR_EP_ACLK_HBM_0	0	
 #define VMR_EP_ACLK_SHUTDOWN_0	0	
 
@@ -168,36 +188,5 @@ static inline int rmgmt_enable_pl_reset()
 #else
 static inline int rmgmt_enable_pl_reset() { return -ENODEV; }
 #endif //endif of CONFIG_FORCE_RESET
-
-#if defined(CONFIG_2022_1_VITIS)
-/*
- * This is the workaround hardcode for 2022.1 xparameters.h only
-#undef STDIN_BASEADDRESS
-#define STDIN_BASEADDRESS 0xFF010000
-
-#undef STDOUT_BASEADDRESS
-#define STDOUT_BASEADDRESS 0xFF010000
- */
-
-#undef XPAR_BLP_BLP_LOGIC_XGQ_R2A_BASEADDR
-#define XPAR_BLP_BLP_LOGIC_XGQ_R2A_BASEADDR 0x80011000
-
-#undef XPAR_BLP_BLP_LOGIC_XGQ_R2A_HIGHADDR
-#define XPAR_BLP_BLP_LOGIC_XGQ_R2A_HIGHADDR 0x80011FFF
-
-#undef XPAR_BLP_BLP_LOGIC_XGQ_M2R_BASEADDR
-#define XPAR_BLP_BLP_LOGIC_XGQ_M2R_BASEADDR 0x80010000
-
-#undef XPAR_BLP_BLP_LOGIC_XGQ_M2R_HIGHADDR
-#define XPAR_BLP_BLP_LOGIC_XGQ_M2R_HIGHADDR 0x80010FFF
-#endif //endif of CONFIG_2022_1_VITIS
-
-#if defined(CONFIG_RAVE)
-/*
- * This is a workaround for RAVE Build only.
- */
-#undef VCCINT
-#define VCCINT 1 
-#endif // endif of CONFIG_RAVE
 
 #endif //endif of VMR_COMMON_H
