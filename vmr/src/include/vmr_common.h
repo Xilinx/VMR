@@ -2,23 +2,11 @@
 * Copyright (C) 2021 Xilinx, Inc.  All rights reserved.
 * SPDX-License-Identifier: MIT
 *******************************************************************************/
-#include "xparameters.h"
+
 #ifndef VMR_COMMON_H
 #define VMR_COMMON_H
 
-
-#undef XPAR_BLP_BLP_LOGIC_XGQ_R2A_BASEADDR
-#define XPAR_BLP_BLP_LOGIC_XGQ_R2A_BASEADDR 0x80011000
-
-#undef XPAR_BLP_BLP_LOGIC_XGQ_R2A_HIGHADDR
-#define XPAR_BLP_BLP_LOGIC_XGQ_R2A_HIGHADDR 0x80011FFF
-
-#undef XPAR_BLP_BLP_LOGIC_XGQ_M2R_BASEADDR
-#define XPAR_BLP_BLP_LOGIC_XGQ_M2R_BASEADDR 0x80010000
-
-#undef XPAR_BLP_BLP_LOGIC_XGQ_M2R_HIGHADDR
-#define XPAR_BLP_BLP_LOGIC_XGQ_M2R_HIGHADDR 0x80010FFF
-
+#include "xparameters.h"
 
 /* compatible with linux OS error codes */
 #define ENOENT	2	
@@ -125,6 +113,7 @@
 #define VMR_PLM_DATA_TOTAL_SIZE        (4096 * 4)
 
 /* Select between GCQ and XGQ IP */
+#ifndef SDT
 #ifdef XPAR_BLP_BLP_LOGIC_GCQ_M2R_S01_AXI_BASEADDR
 #define VMR_EP_RPU_SQ_BASE (XPAR_BLP_BLP_LOGIC_GCQ_M2R_S01_AXI_BASEADDR + GCQ_SERVER_SQ_TAIL_POINTER)
 #define VMR_EP_RPU_CQ_BASE (XPAR_BLP_BLP_LOGIC_GCQ_M2R_S01_AXI_BASEADDR + GCQ_SERVER_CQ_TAIL_POINTER)
@@ -132,13 +121,22 @@
 #define VMR_EP_RPU_SQ_BASE ((u32)XPAR_BLP_BLP_LOGIC_XGQ_M2R_BASEADDR + XGQ_SQ_TAIL_POINTER)
 #define VMR_EP_RPU_CQ_BASE ((u32)XPAR_BLP_BLP_LOGIC_XGQ_M2R_BASEADDR + XGQ_CQ_TAIL_POINTER)
 #endif
+#else
+#define VMR_EP_RPU_SQ_BASE (XPAR_BLP_BLP_LOGIC_GCQ_M2R_BASEADDR + GCQ_SERVER_SQ_TAIL_POINTER)
+#define VMR_EP_RPU_CQ_BASE (XPAR_BLP_BLP_LOGIC_GCQ_M2R_BASEADDR + GCQ_SERVER_CQ_TAIL_POINTER)
+#endif
 
+#ifndef SDT
 #ifdef XPAR_BLP_BLP_LOGIC_GCQ_R2A_S00_AXI_BASEADDR
 #define VMR_EP_APU_SQ_BASE ((u32)XPAR_BLP_BLP_LOGIC_GCQ_R2A_S00_AXI_BASEADDR + GCQ_CLIENT_SQ_TAIL_POINTER)
 #define VMR_EP_APU_CQ_BASE ((u32)XPAR_BLP_BLP_LOGIC_GCQ_R2A_S00_AXI_BASEADDR + GCQ_CLIENT_CQ_TAIL_POINTER)
 #else
 #define VMR_EP_APU_SQ_BASE ((u32)XPAR_BLP_BLP_LOGIC_XGQ_R2A_BASEADDR + XGQ_SQ_TAIL_POINTER)
 #define VMR_EP_APU_CQ_BASE ((u32)XPAR_BLP_BLP_LOGIC_XGQ_R2A_BASEADDR + XGQ_CQ_TAIL_POINTER)
+#endif
+#else
+#define VMR_EP_APU_SQ_BASE ((u32)XPAR_BLP_BLP_LOGIC_GCQ_R2A_BASEADDR + GCQ_CLIENT_SQ_TAIL_POINTER)
+#define VMR_EP_APU_CQ_BASE ((u32)XPAR_BLP_BLP_LOGIC_GCQ_R2A_BASEADDR + GCQ_CLIENT_CQ_TAIL_POINTER)
 #endif
 
 /* Reserve 4K for partition table */
@@ -188,5 +186,13 @@ static inline int rmgmt_enable_pl_reset()
 #else
 static inline int rmgmt_enable_pl_reset() { return -ENODEV; }
 #endif //endif of CONFIG_FORCE_RESET
+
+#if defined(CONFIG_RAVE)
+/*
+ * This is a workaround for RAVE Build only.
+ */
+#undef VCCINT
+#define VCCINT 1 
+#endif // endif of CONFIG_RAVE
 
 #endif //endif of VMR_COMMON_H
