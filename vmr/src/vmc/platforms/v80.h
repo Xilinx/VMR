@@ -6,7 +6,11 @@
 #ifndef INC_PLATFORMS_V80_H_
 #define INC_PLATFORMS_V80_H_
 
+#ifndef SDT
 #include "../vmc_asdm.h"
+#else
+#include "vmc_asdm.h"
+#endif
 
 #define V80_NUM_POWER_RAILS                     ( 2 )
 #define V80_PEX_12V_I_IN_THROTTLING_LIMIT       ( 5500 )

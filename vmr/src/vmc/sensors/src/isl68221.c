@@ -4,7 +4,11 @@
  *    * *******************************************************************************/
 
 #include "cl_i2c.h"
+#ifndef SDT
 #include "../inc/isl68221.h"
+#else
+#include "isl68221.h"
+#endif
 
 #define STATUS_FAILURE      ( 1 )
 

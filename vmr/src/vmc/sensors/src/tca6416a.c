@@ -6,7 +6,11 @@
 #include "cl_i2c.h"
 #include "cl_log.h"
 #include "xstatus.h"
+#ifndef SDT
 #include "../inc/tca6416a.h"
+#else
+#include "tca6416a.h"
+#endif
 
 u8 ucTca6416aRegisterRead( u8 ucI2cNum, u8 ucSlaveAddr, u8 ucRegister, u8 *pucRegisterValue )
 {

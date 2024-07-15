@@ -6,7 +6,9 @@
 #ifndef VMR_COMMON_H
 #define VMR_COMMON_H
 
+#ifdef SDT
 #include "xparameters.h"
+#endif
 
 /* compatible with linux OS error codes */
 #define ENOENT	2	

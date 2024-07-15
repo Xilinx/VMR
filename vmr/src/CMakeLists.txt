@@ -7,6 +7,7 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/UserConfig.cmake)
 include_directories(${CMAKE_BINARY_DIR}/include)
 
 set(APP_NAME vmr_app)
+set(CONFIG_PLATFORM OFF CACHE BOOL "Enable Specific Platform")
 project(${APP_NAME})
 
 find_package(common)
@@ -34,7 +35,7 @@ add_subdirectory(include)
 collector_list (_sources PROJECT_LIB_SOURCES)
 collector_list (_headers PROJECT_LIB_HEADERS)
 file(COPY ${_headers} DESTINATION ${CMAKE_BINARY_DIR}/include)
-
+add_definitions(-DCONFIG_RAVE)
 if(CMAKE_EXPORT_COMPILE_COMMANDS)
     set(CMAKE_CXX_STANDARD_INCLUDE_DIRECTORIES ${CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES})
     set(CMAKE_C_STANDARD_INCLUDE_DIRECTORIES ${CMAKE_C_IMPLICIT_INCLUDE_DIRECTORIES})

@@ -11,7 +11,9 @@
 #include "semphr.h"
 #include "event_groups.h"
 #include "portmacro.h"
+#ifdef SDT
 #include "xparameters.h"
+#endif
 
 #include "cl_mem.h"
 #include "cl_uart_rtos.h"
@@ -27,8 +29,8 @@
 #define VMR_XPAR_XUARTPSV_1_DEVICE XPAR_XUARTPSV_1_DEVICE_ID
 static int32_t UART_Config(uart_rtos_handle_t *handle, XUartPsv *UartInstPtr, uint16_t DeviceId, uint16_t UartIntrId, ePlatformType curr_platform);
 #else
-#define VMR_XPAR_XUARTPSV_0_DEVICE XPAR_XUARTPSV_0_BASEADDR
-#define VMR_XPAR_XUARTPSV_1_DEVICE XPAR_XUARTPSV_1_BASEADDR
+#define VMR_XPAR_XUARTPSV_0_BASEADDR XPAR_XUARTPSV_0_BASEADDR
+#define VMR_XPAR_XUARTPSV_1_BASEADDR XPAR_XUARTPSV_1_BASEADDR
 static int32_t UART_Config(uart_rtos_handle_t *handle, XUartPsv *UartInstPtr, UINTPTR Device_BaseAddress, uint16_t UartIntrId, ePlatformType curr_platform);
 #endif
 
@@ -279,8 +281,8 @@ static int32_t UART_Config(uart_rtos_handle_t *handle, XUartPsv *UartInstPtr,
 	if (((curr_platform == eVCK5000) && (DeviceId == VMR_XPAR_XUARTPSV_0_DEVICE))
 			|| ((curr_platform == eV70) && (DeviceId == VMR_XPAR_XUARTPSV_1_DEVICE)))
 #else
-	if (((curr_platform == eVCK5000) && (Device_BaseAddress == VMR_XPAR_XUARTPSV_0_DEVICE))
-                        || ((curr_platform == eV70) && (Device_BaseAddress == VMR_XPAR_XUARTPSV_1_DEVICE)))
+	if (((curr_platform == eVCK5000) && (Device_BaseAddress == VMR_XPAR_XUARTPSV_0_BASEADDR))
+                        || ((curr_platform == eV70) && (Device_BaseAddress == VMR_XPAR_XUARTPSV_1_BASEADDR)))
 #endif
 	{
 		LineCtrlRegister = XUartPsv_ReadReg(Config->BaseAddress, XUARTPSV_UARTLCR_OFFSET);
@@ -495,7 +497,6 @@ UART_STATUS UART_RTOS_Send(uart_rtos_handle_t *handle, uint8_t *buf, uint32_t si
 			retVal = UART_ERROR_EVENT;
 		}
 	}
-
 	if (!uart_shm_release(handle->txSem)) {
 		return UART_ERROR_SEMAPHORE;
 	}
@@ -583,7 +584,6 @@ UART_STATUS UART_RTOS_Receive_Wait(uart_rtos_handle_t *handle, uint32_t *receive
 	{
 		return UART_ERROR_GENERIC;
 	}
-
 	ev = xEventGroupWaitBits(handle->rxEvent, UART_RTOS_COMPLETE | UART_RTOS_RX_ERROR, pdTRUE, pdFALSE,(const TickType_t)timeout);
 
 	/**
@@ -691,12 +691,20 @@ s32 UART_RTOS_Debug_Enable(uart_rtos_handle_t *handle, ePlatformType curr_platfo
 
 	static uart_rtos_config_t debugUartConig = {
 			.INTC_ID = XPAR_SCUGIC_SINGLE_DEVICE_ID,
+#ifndef SDT
 			.uart_ID = VMR_XPAR_XUARTPSV_0_DEVICE,
+#else
+			.Device_BaseAddress = VMR_XPAR_XUARTPSV_0_BASEADDR,
+#endif
 			.uart_IRQ_ID = XPAR_XUARTPS_0_INTR
 	};
 
 	if(curr_platform == eVCK5000){
+#ifndef SDT
 		debugUartConig.uart_ID = VMR_XPAR_XUARTPSV_1_DEVICE;
+#else
+		debugUartConig.Device_BaseAddress = VMR_XPAR_XUARTPSV_1_BASEADDR;
+#endif
 		debugUartConig.uart_IRQ_ID = XPAR_XUARTPS_1_INTR;
 	}
 
@@ -714,12 +722,20 @@ s32 UART_VMC_SC_Enable(uart_rtos_handle_t *handle, ePlatformType curr_platform)
 
 	static uart_rtos_config_t vmcscUartConfig = {
 			.INTC_ID = XPAR_SCUGIC_SINGLE_DEVICE_ID,
+#ifndef SDT
 			.uart_ID = VMR_XPAR_XUARTPSV_1_DEVICE,
+#else
+			.Device_BaseAddress = VMR_XPAR_XUARTPSV_1_BASEADDR,
+#endif
 			.uart_IRQ_ID = XPAR_XUARTPS_1_INTR
 	};
 
 	if(curr_platform == eVCK5000){
+#ifndef SDT
 		vmcscUartConfig.uart_ID = VMR_XPAR_XUARTPSV_0_DEVICE;
+#else
+		vmcscUartConfig.Device_BaseAddress = VMR_XPAR_XUARTPSV_0_BASEADDR;
+#endif
 		vmcscUartConfig.uart_IRQ_ID = XPAR_XUARTPS_0_INTR;
 	}
 

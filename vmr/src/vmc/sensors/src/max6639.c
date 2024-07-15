@@ -6,7 +6,11 @@
 #include "xil_types.h"
 #include "xstatus.h"
 #include "cl_i2c.h"
+#ifndef SDT
 #include "../inc/max6639.h"
+#else
+#include "max6639.h"
+#endif
 
 u8 max6639_write_register( u8 i2c_num, u8 SlaveAddr, u8 register_address, u8 *register_content )
 {
