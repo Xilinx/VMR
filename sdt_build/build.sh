@@ -4,8 +4,12 @@
 # Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
 
 
+#usage:
+#source build.sh hw-design.xsa
+
 #setting up the environment
-export XILINX_VITIS=/proj/xbuilds/2024.2_daily_latest/installs/lin64/Vitis/2024.2
+TOOL_VERSION="2024.2"
+export XILINX_VITIS=/proj/xbuilds/${TOOL_VERSION}_daily_latest/installs/lin64/Vitis/${TOOL_VERSION}
 export PYTHON_VER="python-3.8.3"
 export CMAKE_VER="cmake-3.24.2"
 export XBUILDS_CMAKE_PATH=${XILINX_VITIS}/tps/lnx64/${CMAKE_VER}
@@ -44,16 +48,18 @@ rm -rf src sdt_dir
 
 #to store generated .dts/.dtsi files
 mkdir -p sdt_dir
+SDT_DIR="sdt_dir"
+XSA=$1
 
 #generating the SDT
 #hardcoding it for now, need to clean the code
-xsct sdt.tcl Xilinx-emb-plus-ve2302.xsa sdt_dir
+xsct sdt.tcl ${XSA} ${SDT_DIR}
 
 #setting the embeddedsw repo
 python3 ${XILINX_VITIS}/data/embeddedsw/scripts/pyesw/repo.py -st ${XILINX_VITIS}/data/embeddedsw/
 
 #creating the bsp
-python ${XILINX_VITIS}/data/embeddedsw/scripts/pyesw/create_bsp.py -p psv_cortexr5_0 -s ./sdt_dir/system-top.dts -w ./ -o freertos -t empty_application
+python ${XILINX_VITIS}/data/embeddedsw/scripts/pyesw/create_bsp.py -p psv_cortexr5_0 -s ./${SDT_DIR}/system-top.dts -w ./ -o freertos -t empty_application
 
 #configuring the bsp
 python ${XILINX_VITIS}/data/embeddedsw/scripts/pyesw/config_bsp.py -d ./ -al xilmailbox
