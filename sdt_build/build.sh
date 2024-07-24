@@ -12,6 +12,7 @@ TOOL_VERSION="2024.2"
 export XILINX_VITIS=/proj/xbuilds/${TOOL_VERSION}_daily_latest/installs/lin64/Vitis/${TOOL_VERSION}
 export PYTHON_VER="python-3.8.3"
 export CMAKE_VER="cmake-3.24.2"
+export LOPPER_VER="lopper-1.1.0"
 export XBUILDS_CMAKE_PATH=${XILINX_VITIS}/tps/lnx64/${CMAKE_VER}
 export XBUILDS_PYTHON_PATH=${XILINX_VITIS}/tps/lnx64/${PYTHON_VER}
 
@@ -31,7 +32,7 @@ export OSF="False"
 
 # LOPPER_DTC_FLAGS is needed to generate device tree with symbols in it.
 export LOPPER_DTC_FLAGS="-b 0 -@"
-source ${XILINX_VITIS}/tps/lnx64/lopper-1.1.0/env/bin/activate
+source ${XILINX_VITIS}/tps/lnx64/${LOPPER_VER}/env/bin/activate
 
 
 #cleaning before building
