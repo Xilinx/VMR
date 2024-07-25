@@ -88,6 +88,7 @@ build_clean() {
     rm -rf libsrc
     rm -rf *.dtb *.pp *.spec
     rm -rf src sdt_dir output_dts
+    rm -rf .Xil .repo.yaml vmr_app.elf
     echo "*** cleaning done ***"
 }
 

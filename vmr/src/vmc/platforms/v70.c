@@ -10,16 +10,6 @@
 #include "cl_i2c.h"
 #include "vmr_common.h"
 
-#ifndef SDT
-#include "../vmc_api.h"
-#include "../sensors/inc/lm75.h"
-#include "../sensors/inc/ina3221.h"
-#include "../sensors/inc/isl68221.h"
-#include "../vmc_main.h"
-#include "../vmc_sc_comms.h"
-#include "../vmc_sensors.h"
-#include "../clock_throttling.h"
-#else
 #include "vmc_api.h"
 #include "lm75.h"
 #include "ina3221.h"
@@ -28,7 +18,6 @@
 #include "vmc_sc_comms.h"
 #include "vmc_sensors.h"
 #include "clock_throttling.h"
-#endif
 
 #define SLAVE_ADDRESS_LM75_0_V70  (0x48)
 #define SLAVE_ADDRESS_LM75_1_V70  (0x4A)

@@ -8,11 +8,7 @@
 #include "cl_log.h"
 #include "cl_mem.h"
 #include "cl_i2c.h"
-#ifndef SDT
-#include "sensors/inc/m24c128.h"
-#else
 #include "m24c128.h"
-#endif
 #include <stdio.h>
 
 /* FreeRTOS includes */

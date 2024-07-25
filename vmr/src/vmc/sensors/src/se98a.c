@@ -4,11 +4,7 @@
 *******************************************************************************/
 
 #include "cl_i2c.h"
-#ifndef SDT
-#include "../inc/se98a.h"
-#else
 #include "se98a.h"
-#endif
 
 u8 SE98A_ReadTemperature(u8 i2c_num, u8 slaveAddr, s16 *temperatureValue)
 {

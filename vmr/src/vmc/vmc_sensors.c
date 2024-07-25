@@ -24,21 +24,12 @@
 #include "vmc_main.h"
 #include "clock_throttling.h"
 
-#ifndef SDT
-#include "sensors/inc/se98a.h"
-#include "sensors/inc/max6639.h"
-#include "sensors/inc/qsfp.h"
-#include "platforms/vck5000.h"
-#include "platforms/v70.h"
-#include "platforms/v80.h"
-#else
 #include "se98a.h"
 #include "max6639.h"
 #include "qsfp.h"
 #include "vck5000.h"
 #include "v70.h"
 #include "v80.h"
-#endif
 
 #include "cl_config.h"
 

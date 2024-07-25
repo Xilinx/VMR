@@ -4,11 +4,7 @@
  * *******************************************************************************/
 
 #include "cl_i2c.h"
-#ifndef SDT
-#include "../inc/lm75.h"
-#else
 #include "lm75.h"
-#endif
 
 u8 LM75_ReadTemperature( u8 i2c_num, u8 slaveAddr, s16 *temperatureValue )
 {

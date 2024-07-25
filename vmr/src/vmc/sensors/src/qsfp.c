@@ -6,13 +6,8 @@
 #include "xstatus.h"
 #include "cl_i2c.h"
 #include "cl_log.h"
-#ifndef SDT
-#include "../inc/qsfp.h"
-#include "../../vmc_api.h"
-#else
 #include "qsfp.h"
 #include "vmc_api.h"
-#endif
 
 /* FreeRTOS includes */
 #include <FreeRTOS.h>

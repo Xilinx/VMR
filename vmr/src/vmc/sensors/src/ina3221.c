@@ -4,11 +4,7 @@
  *    * *******************************************************************************/
 
 #include "cl_i2c.h"
-#ifndef SDT
-#include "../inc/ina3221.h"
-#else
 #include "ina3221.h"
-#endif
 
 #define SHUNT_RESISTANCE_VALUE (0.002)
 

@@ -6,11 +6,7 @@
 //#include "cl_uart_rtos.h"
 #include "cl_log.h"
 #include "cl_i2c.h"
-#ifndef SDT
-#include "../inc/cat34ts02.h"
-#else
 #include "cat34ts02.h"
-#endif
 
 u8 ucCAT34TS02ReadTemperature( u8 ucI2cNum, u8 ucSlaveAddr, s16 *pssTemperatureValue )
 {

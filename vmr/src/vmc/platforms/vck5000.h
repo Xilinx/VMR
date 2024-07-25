@@ -6,11 +6,7 @@
 #ifndef INC_PLATFORMS_VCK5000_H_
 #define INC_PLATFORMS_VCK5000_H_
 
-#ifndef SDT
-#include "../vmc_asdm.h"
-#else
 #include "vmc_asdm.h"
-#endif
 
 //Slave Addresses
 #define SLAVE_ADDRESS_SE98A_0 0x18

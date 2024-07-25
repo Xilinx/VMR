@@ -7,17 +7,6 @@
 #include "cl_i2c.h"
 #include "vck5000.h"
 
-#ifndef SDT
-#include "../vmc_api.h"
-#include "../sensors/inc/se98a.h"
-#include "../sensors/inc/max6639.h"
-#include "../sensors/inc/qsfp.h"
-#include "../vmc_sensors.h"
-#include "../vmc_main.h"
-#include "../vmc_sc_comms.h"
-#include "../clock_throttling.h"
-#include "../vmc_asdm.h"
-#else
 #include "vmc_api.h"
 #include "se98a.h"
 #include "max6639.h"
@@ -27,7 +16,6 @@
 #include "vmc_sc_comms.h"
 #include "clock_throttling.h"
 #include "vmc_asdm.h"
-#endif
 
 #define NOMINAL_VOLTAGE 12000
 #define VCK5000_IDLE_POWER 21000000

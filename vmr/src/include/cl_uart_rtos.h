@@ -14,11 +14,7 @@
 #include "xil_types.h"
 #include "xscugic.h"
 
-#ifndef SDT
-#include "../vmc/vmc_api.h"
-#else
 #include "vmc_api.h"
-#endif
 
 
 #define MAX_LOG_SIZE	(1024u)

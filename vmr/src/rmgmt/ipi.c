@@ -9,13 +9,8 @@
 #include <xipipsu_hw.h>
 #include <xipipsu.h>
 
-#ifndef SDT
-#define IPI_INT_ID      (XPAR_XIPIPSU_0_INT_ID)
-#define TEST_CHANNEL_ID XPAR_XIPIPSU_0_DEVICE_ID
-#else
 #define IPI_INT_ID      (XPAR_XIPIPSU_0_INTR)
 #define TEST_CHANNEL_ID XPAR_XIPIPSU_0_BASEADDR
-#endif
 
 /* Allocate one callback pointer for each bit in the register */
 static IpiCallback IpiCallbacks[11];

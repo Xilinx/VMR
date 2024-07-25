@@ -15,11 +15,7 @@
 #include "cl_uart_rtos.h"
 #include "vmc_api.h"
 
-#ifndef SDT
-#include "platforms/vck5000.h"
-#else
 #include "vck5000.h"
-#endif
 
 extern uart_rtos_handle_t uart_vmcsc_log;
 
