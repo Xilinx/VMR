@@ -6,9 +6,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "rmgmt_common.h"
 #include "rmgmt_pm.h"
-#include "cl_msg.h"
 #include "cl_main.h"
 
 #include "pm_api_sys.h"
@@ -16,6 +14,9 @@
 #include "gic_setup.h"
 #include "ipi.h"
 #include "pm_init.h"
+#include "xloader_client.h"
+#include "rmgmt_common.h"
+#include "cl_msg.h"
 
 /* RPU Private Persistant Area */
 /* TODO: explian those fixed address which is from SSW code example */
@@ -23,6 +24,7 @@
 #define RPU_PPA_BAD_BOOT_OFFSET			0x10
 #define RPU_BAD_BOOT_KEY			0x37232323
 #define RPU_CLEAN_BOOT_KEY			0x0
+#define NODE_ID						(0x18700000) /* Node to configure */
 
 
 static XIpiPsu IpiInst;
@@ -60,7 +62,7 @@ static void SetNextBootState(u32 state)
 
 int rmgmt_pm_init(void)
 {
-	int Status = XST_SUCCESS;
+	int Status = XST_SUCCESS, uuid = 0;
 
 	VMR_WARN("pminit");
 
@@ -71,6 +73,20 @@ int rmgmt_pm_init(void)
 	/* Set Next boot state as clen */
 	SetNextBootState(RPU_CLEAN_BOOT_KEY);
 
+#if defined(CONFIG_RAVE)
+	/* Hardware ROM ID is eliminated on RAVE Platform, hence fetch it from PLM and
+	 * write to AXI Register
+	 */
+	Status = rmgmt_plm_get_uid(&uuid);
+
+	if(XST_SUCCESS != Status) {
+		VMR_ERR("%s: PLM UUID Read Failed st=%d",__func__, Status);
+	}
+	else {
+		/* Copy UUID to AXI UUID Register mapped to S1 AXI 0x20102002000 via qdma */
+		cl_memcpy_toio32(XPAR_BLP_BLP_LOGIC_UUID_S0_AXI_ADDR, &uuid, sizeof(uint32_t));
+	}
+#endif
 	VMR_WARN("DONE");
 	return Status;
 }
@@ -158,6 +174,41 @@ int rmgmt_eemi_pm_reset(struct cl_msg *msg)
 	while (1);
 
 done:
+	return Status;
+}
+
+int rmgmt_plm_get_uid(int* uuid)
+{
+	int Status = XST_SUCCESS;
+	XMailbox MailboxInstance;
+	XLoader_ClientInstance LoaderClientInstance;
+	XLoader_ImageInfo ImageInfo;
+
+#ifndef SDT
+	Status = XMailbox_Initialize(&MailboxInstance, 0U);
+#else
+	Status = XMailbox_Initialize(&MailboxInstance, XPAR_XIPIPSU_0_BASEADDR);
+#endif
+	if (Status != XST_SUCCESS) {
+		goto done;
+	}
+
+	Status = XLoader_ClientInit(&LoaderClientInstance, &MailboxInstance);
+	if (Status != XST_SUCCESS) {
+		goto done;
+	}
+
+	Status = XLoader_GetImageInfo(&LoaderClientInstance, NODE_ID, &ImageInfo);
+	if (XST_SUCCESS != Status) {
+		VMR_ERR("Reading Image info failed =%d uuid=%x", Status, ImageInfo.UID);
+		goto done;
+	}
+
+	*uuid = ImageInfo.UID;
+	return XST_SUCCESS;
+
+done:
+	VMR_ERR("PLM UUID Read Failed =%d uuid=%x", Status, ImageInfo.UID);
 	return Status;
 }
 
