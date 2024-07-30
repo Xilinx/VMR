@@ -8,7 +8,8 @@
 # setting up the environment #
 ##############################
 TOOL_VERSION="2024.2"
-export XILINX_VITIS=/proj/xbuilds/${TOOL_VERSION}_daily_latest/installs/lin64/Vitis/${TOOL_VERSION}
+BUILD_TA="${TOOL_VERSION}_daily_latest"
+export XILINX_VITIS=/proj/xbuilds/${BUILD_TA}/installs/lin64/Vitis/${TOOL_VERSION}
 export PYTHON_VER="python-3.8.3"
 export CMAKE_VER="cmake-3.24.2"
 export LOPPER_VER="lopper-1.1.0"
@@ -92,6 +93,35 @@ build_clean() {
     echo "*** cleaning done ***"
 }
 
+#VMR version
+make_version() {
+    echo "*** making vmr version ***"
+    VMR_VERSION_HASH=`git rev-parse --verify HEAD`
+    VMR_VERSION_HASH_DATE=`git log -1 --pretty=format:%cD`
+    VMR_BUILD_BRANCH=`git rev-parse --abbrev-ref HEAD`
+    VMR_VERSION_RELEASE="0"
+    VMR_VERSION_MAJOR="0"
+    VMR_VERSION_MINOR="0"
+    VMR_VERSION_PATCH="0"
+    VMR_BUILD_VERSION_DATE=`date +%F-%T`
+    VMR_BUILD_VERSION="$VMR_VERSION_RELEASE.$VMR_VERSION_MAJOR.$VMR_VERSION_MINOR.$VMR_VERSION_PATCH"
+
+    CL_VERSION_H="src/include/cl_version.h"
+    echo "#ifndef _VMR_VERSION_" >> $CL_VERSION_H
+    echo "#define _VMR_VERSION_" >> $CL_VERSION_H
+    echo "#define VMR_TOOL_VERSION "\""$BUILD_TA"\" >> $CL_VERSION_H
+    echo "#define VMR_GIT_HASH "\""$VMR_VERSION_HASH"\" >> $CL_VERSION_H
+    echo "#define VMR_GIT_BRANCH "\""$VMR_BUILD_BRANCH"\" >> $CL_VERSION_H
+    echo "#define VMR_GIT_HASH_DATE "\""$VMR_VERSION_HASH_DATE"\" >> $CL_VERSION_H
+    echo "#define VMR_BUILD_VERSION_DATE "\""$VMR_BUILD_VERSION_DATE"\" >> $CL_VERSION_H
+    echo "#define VMR_BUILD_VERSION "\""$VMR_BUILD_VERSION"\" >> $CL_VERSION_H
+    echo "" >> $CL_VERSION_H
+
+    #TODO
+    #put the platform specific macro into CL_VERSION_H
+    echo "#endif" >> $CL_VERSION_H
+}
+
 if [[ $BUILD_CLEAN == 1 ]];then
 	build_clean
 	exit 0;
@@ -131,6 +161,9 @@ python ${XILINX_VITIS}/data/embeddedsw/scripts/pyesw/create_app.py -d ./ -t empt
 #copying the src to the empty application
 cp -r ../vmr/src/* src/
 cp lscript_rave.ld src/lscript.ld
+
+#
+make_version
 
 #building the app
 python ${XILINX_VITIS}/data/embeddedsw/scripts/pyesw/build_app.py -s src/
