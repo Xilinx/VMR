@@ -56,7 +56,6 @@
 
 /* default ospi device */
 #define OSPIPSV_BASEADDR XPAR_XOSPIPSV_0_BASEADDR
-
 /* pdi start location offset */
 #define RPU_PDI_ADDRESS		0x0
 #define APU_PDI_ADDRESS		(RPU_PDI_ADDRESS + 0x1000000) /* RPU + 16 M */
@@ -68,6 +67,8 @@
 /***************** Macros (Inline Functions) Definitions *********************/
 
 /************************** Function Prototypes ******************************/
+
+int OspiPsvPolledFlashExample(XOspiPsv *OspiPsvInstancePtr, u16 OspiPsvDeviceId);
 
 static int FlashReadID(XOspiPsv *OspiPsvPtr);
 static int FlashErase(XOspiPsv *OspiPsvPtr, u32 Address, u32 ByteCount, u8 *WriteBfrPtr);

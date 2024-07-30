@@ -9,7 +9,7 @@
 #include <xipipsu_hw.h>
 #include <xipipsu.h>
 
-#define IPI_INT_ID      (XPAR_XIPIPSU_0_INTR)
+#define IPI_INT_ID      XPAR_XIPIPSU_0_INTR
 #define TEST_CHANNEL_ID XPAR_XIPIPSU_0_BASEADDR
 
 /* Allocate one callback pointer for each bit in the register */

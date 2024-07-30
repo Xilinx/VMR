@@ -178,7 +178,7 @@ cp -r ../vmr/src/* src/
 
 #copying specific lscript.ld
 if [[ "$PLATFORM" != rave ]]; then
-    cp lscript.ld src/lscript.ld
+    cp lscript_v70.ld src/lscript.ld
 else
     cp lscript_rave.ld src/lscript.ld
 fi

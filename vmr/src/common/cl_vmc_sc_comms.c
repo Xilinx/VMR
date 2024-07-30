@@ -48,6 +48,7 @@ void cl_vmc_sc_comms_func(void *task_args)
 {
 	cl_msg_t msg = { 0 };
 	int ret = 0;
+
 	while (1) {
 		if (cl_recv_from_queue_nowait(&msg, CL_QUEUE_SCFW_REQ) == 0) {
 			ret = process_scfw_msg(&msg);
