@@ -43,9 +43,10 @@ BUILD_CLEAN=0
 #usage
 usage() {
     echo "Usage:"
-    echo "-xsa <xsa_file>   XSA file"
-    echo "-help             Help"
-    echo "-clean            Remove build files/directories"
+    echo "-xsa <xsa_file>               XSA file"
+    echo "-platform <platform_name>     Specify Platform [eg: rave, default is v70]"
+    echo "-help                         Help"
+    echo "-clean                        Remove build files/directories"
     echo
     echo "eg:"
     echo "source build.sh -xsa hw-design.xsa"
@@ -65,6 +66,15 @@ while [ $# -gt 0 ]; do
             echo "xsa: $XSA"
             if [[ "$XSA" != *.xsa ]]; then
                 echo "Error: xsa file required"
+                usage 1
+            fi
+            shift 2
+            ;;
+        -platform)
+            PLATFORM=$2
+            echo "platform: $PLATFORM"
+            if [[ "$PLATFORM" != "rave" && "$PLATFORM" != "v70" ]]; then
+                echo "Error: Invalid platform name"
                 usage 1
             fi
             shift 2
@@ -117,8 +127,13 @@ make_version() {
     echo "#define VMR_BUILD_VERSION "\""$VMR_BUILD_VERSION"\" >> $CL_VERSION_H
     echo "" >> $CL_VERSION_H
 
-    #TODO
-    #put the platform specific macro into CL_VERSION_H
+    #set platform specific macro
+    if [[ "$PLATFORM" != "rave" ]]; then
+        echo "#define CONFIG_2024_2_VITIS" >> $CL_VERSION_H
+    else
+        echo "#define CONFIG_RAVE" >> $CL_VERSION_H
+    fi
+
     echo "#endif" >> $CL_VERSION_H
 }
 
@@ -160,9 +175,15 @@ python ${XILINX_VITIS}/data/embeddedsw/scripts/pyesw/create_app.py -d ./ -t empt
 
 #copying the src to the empty application
 cp -r ../vmr/src/* src/
-cp lscript_rave.ld src/lscript.ld
 
-#
+#copying specific lscript.ld
+if [[ "$PLATFORM" != rave ]]; then
+    cp lscript.ld src/lscript.ld
+else
+    cp lscript_rave.ld src/lscript.ld
+fi
+
+#recording the vmr git hash, ta, git branch, git hash date, vmr version
 make_version
 
 #building the app
