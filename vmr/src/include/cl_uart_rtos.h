@@ -7,6 +7,7 @@
 #define UART_RTOS_H
 
 #include <xuartpsv.h>
+#include "xinterrupt_wrap.h"
 #include <FreeRTOS.h>
 #include <event_groups.h>
 #include <semphr.h>

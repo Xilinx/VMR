@@ -201,7 +201,7 @@ static int32_t UART_RTOS_Init(uart_rtos_handle_t *handle, XScuGic *IntcInstPtr,
 
 	Cl_SecureMemset(&handle->cb_msg,0,sizeof(handle->cb_msg));
 
-
+	handle->uart_IRQ_ID = UartIntrId;
 	ret = UART_Config(handle, &handle->uartPsv, Device_BaseAddress, UartIntrId, curr_platform);
 
 	return ret;
@@ -264,6 +264,17 @@ static int32_t UART_Config(uart_rtos_handle_t *handle, XUartPsv *UartInstPtr,
 	}
 
 	/*
+	 * Connect the UART to the interrupt subsystem such that interrupts
+	 * can occur.
+	 */
+	Status = XSetupInterruptSystem(UartInstPtr, &XUartPsv_InterruptHandler,
+				Config->IntrId, Config->IntrParent,
+				XINTERRUPT_DEFAULT_PRIORITY);
+	if (Status != XST_SUCCESS) {
+		return XST_FAILURE;
+	}
+
+	/*
 	 * Setup the handlers for the UART that will be called from the
 	 * interrupt context when data has been sent and received, specify
 	 * a pointer to the UART driver instance as the callback reference
@@ -289,13 +300,6 @@ static int32_t UART_Config(uart_rtos_handle_t *handle, XUartPsv *UartInstPtr,
 	 * */
 	XUartPsv_SetOperMode(UartInstPtr, XUARTPSV_OPER_MODE_NORMAL);
 
-	handle->uart_IRQ_ID = UartIntrId;
-
-	/*
-	 * Assign interrupt handler and enable interrupt.
-	 * */
-	xPortInstallInterruptHandler(UartIntrId, (XInterruptHandler)XUartPsv_InterruptHandler, UartInstPtr);
-	vPortEnableInterrupt(UartIntrId);
 	return XST_SUCCESS;
 }
 
@@ -660,12 +664,12 @@ s32 UART_RTOS_Debug_Enable(uart_rtos_handle_t *handle, ePlatformType curr_platfo
 	static uart_rtos_config_t debugUartConig = {
 			.INTC_ID = XPAR_SCUGIC_SINGLE_DEVICE_ID,
 			.Device_BaseAddress = VMR_XPAR_XUARTPSV_0_BASEADDR,
-			.uart_IRQ_ID = XPAR_XUARTPS_0_INTR
+			.uart_IRQ_ID = XPAR_XUARTPSV_0_INTERRUPTS
 	};
 
 	if(curr_platform == eVCK5000){
 		debugUartConig.Device_BaseAddress = VMR_XPAR_XUARTPSV_1_BASEADDR;
-		debugUartConig.uart_IRQ_ID = XPAR_XUARTPS_1_INTR;
+		debugUartConig.uart_IRQ_ID = XPAR_XUARTPSV_1_INTERRUPTS;
 	}
 
 	debugUartConig.uartHandler = handle;
@@ -683,12 +687,12 @@ s32 UART_VMC_SC_Enable(uart_rtos_handle_t *handle, ePlatformType curr_platform)
 	static uart_rtos_config_t vmcscUartConfig = {
 			.INTC_ID = XPAR_SCUGIC_SINGLE_DEVICE_ID,
 			.Device_BaseAddress = VMR_XPAR_XUARTPSV_1_BASEADDR,
-			.uart_IRQ_ID = XPAR_XUARTPS_1_INTR
+			.uart_IRQ_ID = XPAR_XUARTPSV_1_INTERRUPTS
 	};
 
 	if(curr_platform == eVCK5000){
 		vmcscUartConfig.Device_BaseAddress = VMR_XPAR_XUARTPSV_0_BASEADDR;
-		vmcscUartConfig.uart_IRQ_ID = XPAR_XUARTPS_0_INTR;
+		vmcscUartConfig.uart_IRQ_ID = XPAR_XUARTPSV_0_INTERRUPTS;
 	}
 
 	vmcscUartConfig.uartHandler = handle;
