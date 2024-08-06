@@ -89,6 +89,7 @@ done
 #cleaning
 build_clean() {
     echo "*** cleaning ***"
+    rm -rf vmr.elf
     rm -rf *.yaml
     rm -rf *.cmake
     rm -rf build
@@ -188,3 +189,6 @@ make_version
 
 #building the app
 python ${XILINX_VITIS}/data/embeddedsw/scripts/pyesw/build_app.py -s src/
+
+#copying the generated .elf on the build directory
+cp build/vmr_app.elf vmr.elf
