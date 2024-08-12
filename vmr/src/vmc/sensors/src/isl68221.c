@@ -4,7 +4,7 @@
  *    * *******************************************************************************/
 
 #include "cl_i2c.h"
-#include "../inc/isl68221.h"
+#include "isl68221.h"
 
 #define STATUS_FAILURE      ( 1 )
 

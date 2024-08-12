@@ -6,7 +6,7 @@
 #include "cl_uart_rtos.h"
 #include "cl_log.h"
 #include "cl_i2c.h"
-#include "../inc/m24c128.h"
+#include "m24c128.h"
 
 u8 M24C128_ReadByte(u8 i2c_num, u8 slaveAddr, u16 *AddressOffset,u8 *RegisterValue)
 {

@@ -6,7 +6,7 @@
 #ifndef INC_PLATFORMS_V70_H_
 #define INC_PLATFORMS_V70_H_
 
-#include "../vmc_asdm.h"
+#include "vmc_asdm.h"
 
 #define V70_NUM_POWER_RAILS 	2
 #define V70_PEX_12V_I_IN_THROTTLING_LIMIT	5500
