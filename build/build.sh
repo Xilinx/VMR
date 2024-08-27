@@ -162,6 +162,7 @@ python ${XILINX_VITIS}/data/embeddedsw/scripts/pyesw/create_bsp.py -p psv_cortex
 python ${XILINX_VITIS}/data/embeddedsw/scripts/pyesw/config_bsp.py -d ./ -al xilmailbox
 python ${XILINX_VITIS}/data/embeddedsw/scripts/pyesw/config_bsp.py -d ./ -al xilpm
 python ${XILINX_VITIS}/data/embeddedsw/scripts/pyesw/config_bsp.py -d ./ -al xilfpga
+python ${XILINX_VITIS}/data/embeddedsw/scripts/pyesw/config_bsp.py -d ./ -al xilloader
 python ${XILINX_VITIS}/data/embeddedsw/scripts/pyesw/config_bsp.py -d ./ -st freertos freertos_generate_runtime_stats:0x1
 python ${XILINX_VITIS}/data/embeddedsw/scripts/pyesw/config_bsp.py -d ./ -st freertos freertos_total_heap_size:369098752
 python ${XILINX_VITIS}/data/embeddedsw/scripts/pyesw/config_bsp.py -d ./ -st freertos freertos_stream_buffer:true
