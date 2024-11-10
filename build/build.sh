@@ -42,6 +42,7 @@ BUILD_CLEAN=0
 
 #usage
 usage() {
+    echo
     echo "Usage:"
     echo "-xsa <xsa_file>               XSA file"
     echo "-platform <platform_name>     Specify Platform [eg: rave, default is v70]"
@@ -49,7 +50,7 @@ usage() {
     echo "-clean                        Remove build files/directories"
     echo
     echo "eg:"
-    echo "source build.sh -xsa hw-design.xsa"
+    echo "build.sh -xsa <xsa_file> -platform <platform_name>"
     echo
     exit $1
 }
@@ -63,25 +64,29 @@ while [ $# -gt 0 ]; do
             ;;
         -xsa)
             XSA=$2
-            echo "xsa: $XSA"
-            if [[ "$XSA" != *.xsa ]]; then
-                echo "Error: xsa file required"
+            if [ ! -f "$XSA" ] || [ "$XSA" != *.xsa ]; then
+                echo "Error: Invalid xsa: $2"
                 usage 1
             fi
+            echo "xsa: $XSA"
             shift 2
             ;;
         -platform)
             PLATFORM=$2
-            echo "platform: $PLATFORM"
             if [[ "$PLATFORM" != "rave" && "$PLATFORM" != "v70" ]]; then
-                echo "Error: Invalid platform name"
+                echo "Error: Invalid platform name: $2"
                 usage 1
             fi
+            echo "platform: $PLATFORM"
             shift 2
             ;;
         -clean)
             BUILD_CLEAN=1
             shift
+            ;;
+        * | --* | -*)
+            echo "Error: Invalid argument: $1"
+            usage 1
             ;;
     esac
 done
