@@ -64,7 +64,7 @@ while [ $# -gt 0 ]; do
             ;;
         -xsa)
             XSA=$2
-            if [ ! -f "$XSA" ] || [ "$XSA" != *.xsa ]; then
+            if [ ! -f "$XSA" ] || [[ "$XSA" != *.xsa ]]; then
                 echo "Error: Invalid xsa: $2"
                 usage 1
             fi
