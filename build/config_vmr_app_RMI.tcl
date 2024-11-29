@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-# Copyright (C) 2024 AMD, Inc.    All rights reserved.
+# Copyright (C) 2024 Advanced Micro Devices, Inc.    All rights reserved.
 
 set i 0; foreach n $argv {set [incr i] $n}
 puts "add library and path: $1 $2 "

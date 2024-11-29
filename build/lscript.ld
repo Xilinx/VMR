@@ -1,6 +1,6 @@
 /*
  * SPDX-License-Identifier: Apache-2.0
- * Copyright (C) 2024 AMD, Inc.    All rights reserved.
+ * Copyright (C) 2024 Advanced Micro Devices, Inc.    All rights reserved.
  */
 
 /*******************************************************************/
@@ -9,7 +9,7 @@
 /*                                                                 */
 /* Version: 2018.3                                                 */
 /*                                                                 */
-/* Copyright (C) 2024 AMD, Inc.    All rights reserved.            */
+/* Copyright (C) 2024 Advanced Micro Devices, Inc.    All rights reserved.            */
 /*                                                                 */
 /* Description : Cortex-R5 Linker Script                           */
 /*                                                                 */
