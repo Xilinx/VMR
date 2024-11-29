@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #
-#  Copyright (C) 2021, Xilinx Inc
+#  Copyright (C) 2024 AMD, Inc.    All rights reserved.
 #
 #  Apache License Verbiage
 #
