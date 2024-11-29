@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-# Copyright (C) 2018-2022 Xilinx, Inc. All rights reserved.
+# Copyright (C) 2024 AMD, Inc.    All rights reserved.
 
 set i 0; foreach n $argv {set [incr i] $n}
 puts "create with xsa: $1 jtag: $2"
@@ -28,6 +28,10 @@ puts "=== customize bsp libs"
 bsp setlib xilfpga
 bsp setlib xilmailbox
 bsp setlib xilpm
+
+#config and set xilloader
+bsp setlib xilloader
+bsp config xloader_mode "client"
 bsp getlibs
 puts "=== customize FreeRTOS heap size 0x16000000 (352M)"
 bsp config total_heap_size 0x16000000

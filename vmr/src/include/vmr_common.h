@@ -1,5 +1,5 @@
 /******************************************************************************
-* Copyright (C) 2021 Xilinx, Inc.  All rights reserved.
+* Copyright (C) 2024 AMD, Inc.    All rights reserved.
 * SPDX-License-Identifier: MIT
 *******************************************************************************/
 
@@ -135,12 +135,19 @@
 #define RPU_SHARED_MEMORY_ADDR(offset) (VMR_EP_RPU_SHARED_MEMORY_START + (u32)offset)
 #define APU_SHARED_MEMORY_ADDR(offset) (VMR_EP_APU_SHARED_MEMORY_START + (u32)offset)
 
+/* S0 AXI UUID Register mapped to S1 AXI 0x20102002000 via qdma */
+#if defined(CONFIG_RAVE)
+#define XPAR_BLP_BLP_LOGIC_UUID_S0_AXI_ADDR 0x80045000
+#endif
+
 #define SHUTDOWN_LATCHED_STATUS	0x01
 #define MAX_GAPPING_DEMAND_RATE 128
 #define CONVERT_TO_PERCENTAGE  100
 #define MAX_CLOCK_SPEED_PERCENTAGE 100
 
+#ifndef BIT
 #define BIT(n) 			(1UL << (n))
+#endif
 #define MIN(x, y) 		(((x) < (y)) ? (x) : (y))
 
 struct vmr_endpoints {
@@ -197,7 +204,7 @@ static inline int rmgmt_enable_pl_reset() { return -ENODEV; }
  * This is a workaround for RAVE Build only.
  */
 #undef VCCINT
-#define VCCINT 1 
+#define VCCINT 1
 #endif // endif of CONFIG_RAVE
 
 #endif //endif of VMR_COMMON_H

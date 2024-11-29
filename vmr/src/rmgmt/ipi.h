@@ -1,5 +1,5 @@
 /******************************************************************************
-* Copyright (C) 2020-2022 Xilinx, Inc.  All rights reserved.
+* Copyright (C) 2024 AMD, Inc.    All rights reserved.
 * SPDX-License-Identifier: MIT
 *******************************************************************************/
 #ifndef LIBESWPM_PM_IPI_H_
