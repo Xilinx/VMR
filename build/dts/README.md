@@ -1,3 +1,7 @@
+
+# Copyright (C) 2024 Advanced Micro Devices, Inc.    All rights reserved.
+# SPDX-License-Identifier: MIT
+
 # Instruction
 
 ## apply vck5000.dtsi on top of system.dts for vck5000 

@@ -1,3 +1,6 @@
+# Copyright (C) 2024 Advanced Micro Devices, Inc.    All rights reserved.
+# SPDX-License-Identifier: MIT
+
 FROM artifactory.xilinx.com/xrt-build-docker-images-local/xrt-centos78
 
 RUN mkdir -p /opt/vmr

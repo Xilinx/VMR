@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Copyright (C) 2024 Advanced Micro Devices, Inc.    All rights reserved.
+# SPDX-License-Identifier: MIT
+
 # TA will be passed through as an environment variable
 #cd ../build && TA=$(jq -r '.CONF_BUILD_TA' build.json)
 echo TA: ${TA}
