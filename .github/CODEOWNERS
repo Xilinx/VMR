@@ -1,3 +1,7 @@
+
+# Copyright (C) 2024 Advanced Micro Devices, Inc.    All rights reserved.
+# SPDX-License-Identifier: MIT
+
 # This file defines code ownership in VMR.
 # Each line is a file pattern followed by one or more owners.
 # Order is important. The last matching pattern has the most precedence.

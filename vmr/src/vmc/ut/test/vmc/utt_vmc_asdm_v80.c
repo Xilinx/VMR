@@ -1,3 +1,8 @@
+/******************************************************************************
+* Copyright (C) 2024 Advanced Micro Devices, Inc.    All rights reserved.
+* SPDX-License-Identifier: MIT
+*******************************************************************************/
+
 #include "utt_assert_SDRs.h"
 
 /*Macro defined in vmc_sensor.c*/

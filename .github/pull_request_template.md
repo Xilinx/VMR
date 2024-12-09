@@ -1,4 +1,7 @@
 <!-- Thanks for sending a pull request! Please fill out below, remove sections that don't apply for your pull request.  -->
+# Copyright (C) 2024 Advanced Micro Devices, Inc.    All rights reserved.
+# SPDX-License-Identifier: MIT
+
 #### Problem solved by the commit
 
 #### Bug / issue (if any) fixed, which PR introduced the bug, how it was discovered
