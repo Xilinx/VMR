@@ -1,3 +1,10 @@
+/******************************************************************************
+* Copyright (C) 2024 Advanced Micro Devices, Inc.    All rights reserved.
+* SPDX-License-Identifier: MIT
+*******************************************************************************/
+
+
+
 #include "utt_assert_SDRs.h"
 
 /*This Structure is created only for the purpose of asserting SDRs in UT*/
