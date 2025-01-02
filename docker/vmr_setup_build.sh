@@ -1,0 +1,31 @@
+#!/bin/bash
+
+# TA will be passed through as an environment variable
+#cd ../build && TA=$(jq -r '.CONF_BUILD_TA' build.json)
+echo TA: ${TA}
+cd ../build
+
+#Install XRT and APU packages
+sudo dpkg  -i /proj/xbuilds/${TA}/xbb/xrt/packages/xrt_*_20.04-amd64-xrt.deb
+#Install vck5000 packages
+#Note: cannot install both vck5000 and v70 in same server, the apu packages is exclusive.
+#sudo dpkg -i /proj/xbuilds/${TA}/xbb/packages/internal_platforms/vck5000/gen4x8_qdma/2-*-dev/xilinx-vck5000-*_all.deb
+#sudo dpkg -i /proj/xbuilds/${TA}/xbb/packages/internal_platforms/vck5000/gen4x8_qdma/base/xilinx-vck5000*-base_2-*_all.deb
+#sudo dpkg -i /proj/xbuilds/${TA}/xbb/xrt/packages/apu_packages/xrt-apu-vck5000*all.deb
+#Install V70 packages
+# sudo dpkg -i /proj/xbuilds/${TA}/xbb/packages/internal_platforms/v70/gen5x8_qdma/2-*-dev/xilinx-v70-*_all.deb
+sudo dpkg -i /proj/xbuilds/${TA}/xbb/packages/internal_platforms/v70/gen5x8_qdma/3-*-dev/xilinx-v70-*_all.deb
+# sudo dpkg -i /proj/xbuilds/${TA}/xbb/packages/internal_platforms/v70/gen5x8_qdma/base/xilinx-v70*-base_2-*_all.deb
+sudo dpkg -i /proj/xbuilds/${TA}/xbb/packages/internal_platforms/v70/gen5x8_qdma/base/xilinx-v70*-base_3-*_all.deb
+sudo dpkg -i /proj/xbuilds/${TA}/xbb/xrt/packages/apu_packages/xrt-apu_*all.deb
+
+#Run VMR build
+./build.sh
+md5sum *.elf
+
+#Source settings.sh
+source /proj/xbuilds/${TA}/installs/lin64/Vitis/HEAD/settings64.sh
+
+#Copy VMR.elf file to NFS location
+mkdir -p /proj/xbuilds/VMR-ELF/${RELEASE}/${BUILD_NUMBER} && cp *.elf *.pdi /proj/xbuilds/VMR-ELF/${RELEASE}/${BUILD_NUMBER}
+mkdir -p /proj/xbuilds/VMR/${RELEASE}/${BUILD_NUMBER} && cp upgrade_vmr.sh /proj/xbuilds/VMR/${RELEASE}/${BUILD_NUMBER}
