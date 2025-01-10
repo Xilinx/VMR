@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-# Copyright (C) 2024 Advanced Micro Devices, Inc.    All rights reserved.
+# Copyright (C) 2025 Advanced Micro Devices, Inc.    All rights reserved.
 
 collect(PROJECT_LIB_HEADERS vmc_update_sc.h)
 collect(PROJECT_LIB_HEADERS vmc_asdm.h)

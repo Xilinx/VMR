@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-# Copyright (C) 2024 Advanced Micro Devices, Inc.    All rights reserved.
+# Copyright (C) 2025 Advanced Micro Devices, Inc.    All rights reserved.
 
 collect(PROJECT_LIB_HEADERS cat34ts02.h)
 collect(PROJECT_LIB_HEADERS ina3221.h)

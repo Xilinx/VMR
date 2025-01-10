@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-# Copyright (C) 2024 Advanced Micro Devices, Inc.    All rights reserved.
+# Copyright (C) 2025 Advanced Micro Devices, Inc.    All rights reserved.
 
 collect (PROJECT_LIB_HEADERS cl_xgq_receive_plat.h)
 collect (PROJECT_LIB_HEADERS xgq_cmd_common.h)
