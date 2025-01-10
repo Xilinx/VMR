@@ -7,6 +7,7 @@
 #define UART_RTOS_H
 
 #include <xuartpsv.h>
+#include "xinterrupt_wrap.h"
 #include <FreeRTOS.h>
 #include <event_groups.h>
 #include <semphr.h>
@@ -14,7 +15,7 @@
 #include "xil_types.h"
 #include "xscugic.h"
 
-#include "../vmc/vmc_api.h"
+#include "vmc_api.h"
 
 
 #define MAX_LOG_SIZE	(1024u)
@@ -54,6 +55,7 @@ typedef struct _uart_rtos_handle_t{
 
 typedef struct _uart_rtos_config_t{
 	uart_rtos_handle_t 	*uartHandler;
+	UINTPTR					Device_BaseAddress;
 	u8					uart_ID;
 	u8					uart_IRQ_ID;
 	u8					INTC_ID;

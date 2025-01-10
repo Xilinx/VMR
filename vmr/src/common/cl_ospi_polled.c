@@ -55,7 +55,7 @@
 #include "xospipsv_flash_config.h"
 
 /* default ospi device */
-#define OSPIPSV_DEVICE_ID		XPAR_XOSPIPSV_0_DEVICE_ID /* from xparameters.h */
+#define OSPIPSV_BASEADDR XPAR_XOSPIPSV_0_BASEADDR
 /* pdi start location offset */
 #define RPU_PDI_ADDRESS		0x0
 #define APU_PDI_ADDRESS		(RPU_PDI_ADDRESS + 0x1000000) /* RPU + 16 M */
@@ -1212,7 +1212,8 @@ int ospi_flash_init()
 	/*
 	 * Initialize the OSPIPSV driver so that it's ready to use
 	 */
-	OspiPsvConfig = XOspiPsv_LookupConfig(OSPIPSV_DEVICE_ID);
+	OspiPsvConfig = XOspiPsv_LookupConfig(OSPIPSV_BASEADDR);
+
 	if (NULL == OspiPsvConfig) {
 		return XST_FAILURE;
 	}

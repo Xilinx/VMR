@@ -1,0 +1,25 @@
+# SPDX-License-Identifier: MIT
+# Copyright (C) 2025 Advanced Micro Devices, Inc.    All rights reserved.
+
+collect(PROJECT_LIB_HEADERS rmgmt_xclbin.h)
+collect(PROJECT_LIB_HEADERS xclbin.h)
+collect(PROJECT_LIB_HEADERS pm_init.h)
+collect(PROJECT_LIB_HEADERS rmgmt_ipi.h)
+collect(PROJECT_LIB_HEADERS rmgmt_common.h)
+collect(PROJECT_LIB_HEADERS rmgmt_pm.h)
+collect(PROJECT_LIB_HEADERS ipi.h)
+collect(PROJECT_LIB_HEADERS rmgmt_clock.h)
+collect(PROJECT_LIB_HEADERS rmgmt_fpt.h)
+collect(PROJECT_LIB_HEADERS gic_setup.h)
+collect(PROJECT_LIB_HEADERS rmgmt_xfer.h)
+
+collect(PROJECT_LIB_SOURCES ipi.c)
+collect(PROJECT_LIB_SOURCES rmgmt_fpt.c)
+collect(PROJECT_LIB_SOURCES gic_setup.c)
+collect(PROJECT_LIB_SOURCES rmgmt_main.c)
+collect(PROJECT_LIB_SOURCES pm_init.c)
+collect(PROJECT_LIB_SOURCES rmgmt_xfer.c)
+collect(PROJECT_LIB_SOURCES rmgmt_clock.c)
+collect(PROJECT_LIB_SOURCES rmgmt_xclbin.c)
+collect(PROJECT_LIB_SOURCES rmgmt_pm.c)
+collect(PROJECT_LIB_SOURCES rmgmt_ipi.c)

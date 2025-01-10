@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: MIT
 # Copyright (C) 2024 Advanced Micro Devices, Inc.    All rights reserved.
 
 ############################################################
@@ -23,7 +23,7 @@ Help()
     echo "  source /proj/xbuilds/2022.2_daily_latest/installs/lin64/Vitis/2022.1/setup.sh"
     echo "  source /proj/xbuilds/2022.2_daily_latest/installs/lin64/Vitis/2022.1/setup.csh"
     echo
-    echo 
+    echo
 }
 
 ############################################################
@@ -37,7 +37,7 @@ vmr=""
 AIE2=0
 
 ############################################################
-# Process the input options. 
+# Process the input options.
 ############################################################
 
 # Get the options
