@@ -6,7 +6,7 @@
 //#include "cl_uart_rtos.h"
 #include "cl_log.h"
 #include "cl_i2c.h"
-#include "../inc/cat34ts02.h"
+#include "cat34ts02.h"
 
 u8 ucCAT34TS02ReadTemperature( u8 ucI2cNum, u8 ucSlaveAddr, s16 *pssTemperatureValue )
 {

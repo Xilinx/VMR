@@ -5,16 +5,17 @@
 #include "cl_vmc.h"
 #include "cl_mem.h"
 #include "cl_i2c.h"
-#include "../vmc_api.h"
-#include "../sensors/inc/se98a.h"
-#include "../sensors/inc/max6639.h"
-#include "../sensors/inc/qsfp.h"
-#include "../vmc_sensors.h"
-#include "../vmc_main.h"
 #include "vck5000.h"
-#include "../vmc_sc_comms.h"
-#include "../clock_throttling.h"
-#include "../vmc_asdm.h"
+
+#include "vmc_api.h"
+#include "se98a.h"
+#include "max6639.h"
+#include "qsfp.h"
+#include "vmc_sensors.h"
+#include "vmc_main.h"
+#include "vmc_sc_comms.h"
+#include "clock_throttling.h"
+#include "vmc_asdm.h"
 
 #define NOMINAL_VOLTAGE 12000
 #define VCK5000_IDLE_POWER 21000000

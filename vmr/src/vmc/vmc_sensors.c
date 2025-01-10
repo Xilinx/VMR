@@ -15,9 +15,6 @@
 #include "cl_log.h"
 #include "cl_msg.h"
 #include "vmc_api.h"
-#include "sensors/inc/se98a.h"
-#include "sensors/inc/max6639.h"
-#include "sensors/inc/qsfp.h"
 #include "vmc_sensors.h"
 #include "vmc_asdm.h"
 #include "xsysmonpsv.h"
@@ -27,9 +24,12 @@
 #include "vmc_main.h"
 #include "clock_throttling.h"
 
-#include "platforms/vck5000.h"
-#include "platforms/v70.h"
-#include "platforms/v80.h"
+#include "se98a.h"
+#include "max6639.h"
+#include "qsfp.h"
+#include "vck5000.h"
+#include "v70.h"
+#include "v80.h"
 
 #include "cl_config.h"
 

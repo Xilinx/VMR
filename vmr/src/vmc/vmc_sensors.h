@@ -8,7 +8,7 @@
 
 #include "cl_config.h"
 #include "xil_types.h"
-#include "sensors/inc/qsfp.h"
+#include "qsfp.h"
 
 #ifdef BUILD_FOR_RMI
 #include "RMI/rmi_sensors.h"
