@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: MIT
 # Copyright (C) 2024 Advanced Micro Devices, Inc.    All rights reserved.
 
 set i 0; foreach n $argv {set [incr i] $n}
