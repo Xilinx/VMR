@@ -20,6 +20,7 @@
 #include "cl_rmgmt.h"
 #include "cl_vmc.h"
 #include "vmr_common.h"
+#include "xgpiops.h"
 
 #ifdef BUILD_FOR_RMI
 #include "cl_rmi.h"
@@ -27,6 +28,8 @@
 
 #define XGQ_XQUEUE_LENGTH	8
 #define XGQ_XQUEUE_WAIT_MS	10
+/* todo: remove the below macro once refected in xparameters.h file */
+#define        XPAR_XGPIOPS_0_BASEADDR        0xF1020000U
 /* 
  * use check_usage.sh to check peak usage in theory.
  * use vmr_mem_status to check peak usage in certain load.
@@ -289,6 +292,10 @@ static int cl_platform_init()
 {
 	uint32_t ret = 0;
 	uint32_t apu_channel_ready = 0;
+	XGpioPs Gpio;   /* The driver instance for GPIO Device. */
+	uint32_t  Input_Pin, Output_Pin;
+	int Status;
+	XGpioPs_Config *ConfigPtr;
 
 	ret = cl_memcpy_fromio(VMR_EP_APU_SHARED_MEMORY_START, &apu_channel_ready, sizeof(uint32_t));
 	if (ret == -1) {
@@ -306,6 +313,25 @@ static int cl_platform_init()
 		/* Initialize the 4k Aligned APU shared XGQ Ring buffer DDR memory to 0. */
 		cl_memset_io32(VMR_EP_APU_SHARED_MEMORY_START, 0, (VMR_APU_CHANNEL_XGQ_OFF + APU_RING_BUFFER_SIZE));
 	}
+
+	/* Accessing PMC GPIO by setting field to 1 */
+	ConfigPtr = XGpioPs_LookupConfig(XPAR_XGPIOPS_0_BASEADDR);
+
+	/* Below are the config parameters for XPLAT_VERSAL */
+	Gpio.PmcGpio =  1;
+	Input_Pin    = 56;
+	Output_Pin   = 52;
+
+	Status = XGpioPs_CfgInitialize(&Gpio, ConfigPtr,
+				ConfigPtr->BaseAddr);
+	if (Status != XST_SUCCESS) {
+		return XST_FAILURE;
+	}
+	XGpioPs_SetDirectionPin(&Gpio, Output_Pin, 1);
+	XGpioPs_SetOutputEnablePin(&Gpio, Output_Pin, 1);
+	/* Set the GPIO output to be high. */
+	XGpioPs_WritePin(&Gpio, Output_Pin, 0x1);
+
 	return 0;
 }
 
